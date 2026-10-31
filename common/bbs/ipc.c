@@ -553,7 +553,7 @@ ipc_unsub(uint32_t bid, aidu_t aid)
 }
 
 int
-ipc_pub(uint32_t bid, aidu_t aid, const char *text)
+ipc_pub(uint32_t bid, aidu_t aid, const char *text, uint64_t fsize)
 {
     aidu_t raw_aid = aidu_raw(aid);
     if (bid == 0 || raw_aid == 0 || !text)
@@ -567,6 +567,7 @@ ipc_pub(uint32_t bid, aidu_t aid, const char *text)
     ps.bid = bid;
     ps.timestamp = (uint32_t)time(NULL);
     ps.aid = raw_aid;
+    ps.fsize = fsize;
     STRLCPY(ps.text, text);
     size_t len = strlen(ps.text);
     while (len > 0 && (ps.text[len - 1] == '\n' || ps.text[len - 1] == '\r'))

@@ -67,15 +67,17 @@ dogetch(void)
     while (vbuf_is_empty(pvin)) {
 	refresh();
 
+	{
+	    int ev = vkey_take_event();
+	    if (ev)
+		return ev;
+	}
+
 	vkey_sync_ipc();
 	if (ipc_has_pending()) {
-	    int handled = vkey_process_ipc();
-	    if (handled > 0) {
+	    if (vkey_process_ipc() > 0)
 		refresh();
-		continue;
-	    } else if (handled < 0) {
-		return I_IPCDATA;
-	    }
+	    continue;   // re-check events; pending queue is now drained
 	}
 
 	/* Auto-reconnect is enabled only after login (ipc_init). */
@@ -125,14 +127,9 @@ dogetch(void)
 
 	if (vkctx.ipc_fd > 0 && FD_ISSET(vkctx.ipc_fd, &readfds)) {
 	    syncnow();
-	    int handled = vkey_process_ipc();
-	    if (handled > 0) {
+	    if (vkey_process_ipc() > 0)
 		refresh();
-		continue;
-	    } else if (handled < 0) {
-		return I_IPCDATA;
-	    }
-	    continue;
+	    continue;   // events are returned at the top of the loop
 	}
 
 	if (vkctx.attached_fd > 0 && FD_ISSET(vkctx.attached_fd, &readfds)) {
@@ -175,7 +172,7 @@ igetch(void)
     while (1)
     {
 	int ch = dogetch();
-	if (ch == I_TIMEOUT || ch == I_OTHERDATA || ch == I_IPCDATA)
+	if (ch == I_TIMEOUT || ch == I_OTHERDATA || ch == I_EV_PUBSUB)
 	    return ch;
 
 	ch = vkey_decode(pvin, ch);
@@ -316,14 +313,24 @@ vk_ungetc(int c)
     vkctx.peek_ch = c;
 }
 
-inline int
-vkey_poll(int ms)
+int
+vkey_poll_ex(int ms, int events)
 {
     if (vkctx.peek_ch != KEY_INCOMPLETE)
         return 1;
+    if (vkctx.ev_pending & events)
+        return 1;
     if (ms) refresh();
     // XXX handle I_OTHERDATA?
+    // Note: IPC data also wakes this up; the following vkey_ex() processes
+    // it and returns a wanted event, or keeps waiting for a key otherwise.
     return wait_input(ms / (double)MILLISECONDS, 0);
+}
+
+inline int
+vkey_poll(int ms)
+{
+    return vkey_poll_ex(ms, 0);
 }
 
 int

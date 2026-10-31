@@ -165,3 +165,55 @@ func TestIPCUnsubFireAndForget(t *testing.T) {
 		t.Fatalf("expected no active topics after unsub, got %d", stats.ActiveTopics)
 	}
 }
+
+// TestIPCPubSubFSize verifies the FSize dedupe token is relayed to
+// subscribers, and that older 144-byte PUB payloads (no FSize) still work.
+func TestIPCPubSubFSize(t *testing.T) {
+	_, sockPath := startTestService(t)
+	topic := &PubSubPayload{Bid: 9, Aid: 0x1111111}
+
+	sub, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial sub failed: %v", err)
+	}
+	defer sub.Close()
+	if _, err := sub.Write(pubsubPacket(IPCTypeSub, 1, topic)); err != nil {
+		t.Fatalf("sub write failed: %v", err)
+	}
+	if hdr, _ := readPacket(t, sub); hdr.Type != IPCTypeAck {
+		t.Fatalf("expected ACK, got 0x%04x", hdr.Type)
+	}
+
+	pub, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial pub failed: %v", err)
+	}
+	defer pub.Close()
+
+	ps := &PubSubPayload{Bid: topic.Bid, Aid: topic.Aid, FSize: 4242}
+	stringToCstr("new", ps.Text[:])
+	if _, err := pub.Write(pubsubPacket(IPCTypePub, 0, ps)); err != nil {
+		t.Fatalf("pub write failed: %v", err)
+	}
+	old := ps.Encode()[:PubSubPayloadMinSize]
+	stringToCstr("old", old[16:16+IPCTextLen])
+	oldPkt := EncodePacket(&Header{Magic: IPCMagic, Version: IPCVersion, Type: IPCTypePub}, old)
+	if _, err := pub.Write(oldPkt); err != nil {
+		t.Fatalf("old pub write failed: %v", err)
+	}
+
+	_ = sub.SetReadDeadline(time.Now().Add(2 * time.Second))
+	for _, want := range []struct {
+		text  string
+		fsize uint64
+	}{{"new", 4242}, {"old", 0}} {
+		hdr, payload := readPacket(t, sub)
+		got, err := DecodePubSubPayload(payload)
+		if err != nil || hdr.Type != IPCTypeLiveComment {
+			t.Fatalf("bad delivery: type 0x%04x err %v", hdr.Type, err)
+		}
+		if got.TextString() != want.text || got.FSize != want.fsize {
+			t.Fatalf("got %q fsize %d, want %q fsize %d", got.TextString(), got.FSize, want.text, want.fsize)
+		}
+	}
+}

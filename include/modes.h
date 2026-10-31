@@ -31,6 +31,7 @@
 #define RET_EDITPOST	    (988)
 #define RET_EDITTITLE	    (987)
 #define RET_DOVOTE	    (986)
+#define RET_LIVE	    (985)  /* pmore 'v': caller runs live mode */
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0

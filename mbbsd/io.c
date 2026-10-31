@@ -432,17 +432,42 @@ vkey_process_ipc(void)
         if (!ctx->ipc_handler)
             continue;
 
-        int r = ctx->ipc_handler(&hdr, payload);
-        if (r < 0) {
-            /* Caller notification requested (e.g. live comment). Handlers
-             * returning -1 buffer their event (the live provider keeps a
-             * ring), so keep draining and notify once for the whole batch. */
-            result = -1;
-        } else if (r > 0 && result == 0) {
+        /* Handlers consume and store their data themselves; to notify a
+         * consumer they post a vkey event (vkey_post_event). Return value:
+         * > 0 if the screen was changed and needs a refresh. */
+        if (ctx->ipc_handler(&hdr, payload) > 0)
             result = 1;
-        }
     }
     return result;
+}
+
+void
+vkey_post_event(int ev)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (ctx)
+        ctx->ev_pending |= ev;
+}
+
+int
+vkey_has_event(void)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    return ctx ? (ctx->ev_pending & ctx->ev_want) : 0;
+}
+
+int
+vkey_take_event(void)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (!ctx)
+        return 0;
+    int ev = ctx->ev_pending & ctx->ev_want;
+    if (ev & VKEY_EV_PUBSUB) {
+        ctx->ev_pending &= ~VKEY_EV_PUBSUB;
+        return I_EV_PUBSUB;
+    }
+    return 0;
 }
 
 int
@@ -476,7 +501,7 @@ vkey_decode(VBUF *inbuf, int raw_ch)
 /**
  * vkey_any(): wait for a real key for "press any key" style prompts.
  * Events that are not key presses are never taken as the answer:
- * - I_IPCDATA: IPC events are consumed by the handler; just keep waiting.
+ * - vkey events (I_EV_*) are never requested, so never delivered here.
  * - I_OTHERDATA: the attached fd (talk/chat/chess peer) is detached while
  *   waiting, so its data stays queued in the socket for the owner of the fd
  *   to read afterwards (same as the waterball reply modal). Merely ignoring
@@ -489,14 +514,38 @@ vkey_any(void)
     int ch;
     do {
         ch = vkey();
-    } while (ch == 0 || ch == I_TIMEOUT || ch == I_OTHERDATA || ch == I_IPCDATA);
+    } while (ch == 0 || ch == I_TIMEOUT || ch == I_OTHERDATA);
     if (fd > 0)
         vkey_attach(fd);
     return ch;
 }
 
+static int vkey_read(void);
+
 int
 vkey(void)
+{
+    return vkey_ex(0);
+}
+
+/* vkey_ex(events): read a key, or an I_EV_* code for a pending event in
+ * `events`. The wanted set applies only to this call: anything nested in it
+ * (e.g. a key hook running its own prompt via vkey()) gets its own. */
+int
+vkey_ex(int events)
+{
+    VKEY_CTX *ctx = vkey_get_context();
+    if (!ctx)
+        return vkey_read();
+    int saved = ctx->ev_want;
+    ctx->ev_want = events;
+    int c = vkey_read();
+    ctx->ev_want = saved;
+    return c;
+}
+
+static int
+vkey_read(void)
 {
     int c = vk_byte();
     if (c < 0x80 || IS_SPECIAL_KEY(c) || c <= 0)

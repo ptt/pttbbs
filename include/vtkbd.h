@@ -157,7 +157,7 @@ static inline bool vkey_isprint(int c) {
 /* vkey special data for additional fd to listen (ref: vkey_attach) */
 #define I_TIMEOUT       0xDD3D /* additional fd timeout for select (replaced by vkey_poll */
 #define I_OTHERDATA     0xDD3E /* data arrived in additional fd */
-#define I_IPCDATA       0xDD3F /* IPC service event for the caller (ref: vkey_set_ipc_handler) */
+#define I_EV_PUBSUB     0xDD3F /* vkey event: PubSub (live) data; only for vkey_ex(VKEY_EV_PUBSUB) */
 
 #endif // _VTKBD_H
 

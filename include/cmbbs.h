@@ -323,7 +323,7 @@ int  ipc_talk_send(const char *to_userid, const char *from_userid,
 int  ipc_chat_connect(void);
 int  ipc_sub(uint32_t bid, aidu_t aid);
 int  ipc_unsub(uint32_t bid, aidu_t aid);
-int  ipc_pub(uint32_t bid, aidu_t aid, const char *text);
+int  ipc_pub(uint32_t bid, aidu_t aid, const char *text, uint64_t fsize);
 int  ipc_chess_create_session(const char *caller, const char *callee, int sig);
 int  ipc_chess_join_session(const char *callee, const char *caller);
 int  ipc_read_packet(int fd, ipc_hdr_t *hdr, void *payload_buf, size_t bufsz);

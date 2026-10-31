@@ -466,30 +466,27 @@ vkey_is_ready()
     return VKEY_HAS_PEEK();
 }
 
-/**
- * vkey_poll(timeout): poll for timeout milliseconds and return if key is ready
- * @param timeout: 0 for non-block, INFTIM(-1) for infinite, otherwise milliseconds
- * @return: 1 for ready, otherwise 0
+/*
+ * vkey_poll_impl(timeout): vkey_poll() honoring the events wanted by the
+ * current caller (vkctx.ev_want, set by vkey_ex/vkey_poll_ex).
  */
-VKEY_PROTO int
-vkey_poll(int timeout)
+static int
+vkey_poll_impl(int timeout)
 {
     VKEYDBGLOG("vkey_poll(%d)", timeout);
 
     while (1) {
         if (vkey_process())
             return 1;
+        if (vkey_has_event())
+            return 1;
 
         vkey_sync_ipc();
         if (ipc_has_pending()) {
-            int handled = vkey_process_ipc();
-            if (handled > 0) {
+            if (vkey_process_ipc() > 0)
                 doupdate();
-                continue;
-            } else if (handled < 0) {
-                vkctx.ipc_notify = 1;
+            if (vkey_has_event())
                 return 1;
-            }
         }
 
         if (timeout == 0) {
@@ -497,11 +494,10 @@ vkey_poll(int timeout)
             if (mask & CIN_POLL_FD2)
                 return 1;
             if (mask & CIN_POLL_IPCFD) {
-                int handled = vkey_process_ipc();
-                if (handled < 0) {
-                    vkctx.ipc_notify = 1;
+                if (vkey_process_ipc() > 0)
+                    doupdate();
+                if (vkey_has_event())
                     return 1;
-                }
             }
             return 0;
         }
@@ -545,17 +541,13 @@ vkey_poll(int timeout)
         }
         if (r & CIN_POLL_IPCFD) {
             syncnow();
-            int handled = vkey_process_ipc();
-            if (handled > 0) {
-                /* Event was consumed and handled (e.g. waterball displayed),
-                 * update screen and continue waiting for user keyboard input */
+            /* Handlers consume the packets themselves (e.g. waterball shown,
+             * live comment queued); only a posted event that the current
+             * caller asked for interrupts the wait. */
+            if (vkey_process_ipc() > 0)
                 doupdate();
-                continue;
-            } else if (handled < 0) {
-                /* Event handler requested caller notification (e.g. Live comment) */
-                vkctx.ipc_notify = 1;
+            if (vkey_has_event())
                 return 1;
-            }
             continue;
         }
         if (r & CIN_POLL_FD2) {
@@ -563,6 +555,31 @@ vkey_poll(int timeout)
             return 1;
         }
     }
+}
+
+/**
+ * vkey_poll(timeout): poll for timeout milliseconds and return if key is ready
+ * @param timeout: 0 for non-block, INFTIM(-1) for infinite, otherwise milliseconds
+ * @return: 1 for ready, otherwise 0
+ */
+VKEY_PROTO int
+vkey_poll(int timeout)
+{
+    return vkey_poll_ex(timeout, 0);
+}
+
+/**
+ * vkey_poll_ex(timeout, events): like vkey_poll(), but also returns 1 when
+ * one of the given VKEY_EV_* events is pending (read it with vkey_ex()).
+ */
+VKEY_PROTO int
+vkey_poll_ex(int timeout, int events)
+{
+    int saved = vkctx.ev_want;
+    vkctx.ev_want = events;
+    int r = vkey_poll_impl(timeout);
+    vkctx.ev_want = saved;
+    return r;
 }
 
 /**
@@ -622,17 +639,17 @@ vk_byte()
     VKEYDBGLOG("vk_byte()");
 
     while (1) {
-        if (!vkey_poll(INFTIM))
+        /* impl: keep the caller's ev_want (see vkey_ex). */
+        if (!vkey_poll_impl(INFTIM))
             return KEY_UNKNOWN;
         if (VKEY_HAS_PEEK()) {
             int c = VKEY_GET_PEEK();
             VKEY_RESET_PEEK();
             return c;
         }
-        if (vkctx.ipc_notify) {
-            vkctx.ipc_notify = 0;
-            return I_IPCDATA;
-        }
+        int ev = vkey_take_event();
+        if (ev)
+            return ev;
         if (CIN_IS_VALID_FD2(vkctx.attached_fd))
             return I_OTHERDATA;
     }

@@ -99,6 +99,10 @@ typedef struct {
     uint32_t timestamp;
     aidu_t   aid;
     char     text[IPC_TEXT_LEN];
+    uint64_t fsize;         /* PUB/LIVE_COMMENT: article size right after this
+                             * comment was appended (0: unknown). Lets live
+                             * readers skip comments they already read from
+                             * the file. */
 } __attribute__((packed)) ipc_pubsub_t;
 
 /* Talk payload (IPC_TYPE_TALK_REQ) */
@@ -175,7 +179,7 @@ int  ipc_talk_send(const char *to_userid, const char *from_userid,
                    pid_t from_pid, int from_uslot, int sig, int is_urgent);
 int  ipc_sub(uint32_t bid, aidu_t aid);
 int  ipc_unsub(uint32_t bid, aidu_t aid);
-int  ipc_pub(uint32_t bid, aidu_t aid, const char *text);
+int  ipc_pub(uint32_t bid, aidu_t aid, const char *text, uint64_t fsize);
 int  ipc_broadcast(const char *from_userid, const char *text);
 int  ipc_read_packet(int fd, ipc_hdr_t *hdr, void *payload_buf, size_t bufsz);
 int  ipc_read_ack(int fd, uint32_t expected_seq, int timeout_ms);

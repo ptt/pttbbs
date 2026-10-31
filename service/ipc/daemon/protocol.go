@@ -246,19 +246,31 @@ type PubSubPayload struct {
 	Timestamp uint32
 	Aid       uint64
 	Text      [IPCTextLen]byte
+	// FSize is the article size right after the comment was appended (0:
+	// unknown), passed through to subscribers so they can skip comments they
+	// already read from the file.
+	FSize uint64
 }
 
-const PubSubPayloadSize = 4 + 4 + 8 + IPCTextLen // 144 bytes
+// PubSubPayloadMinSize is the size without FSize, still accepted from older
+// clients; PubSubPayloadSize is what we encode.
+const (
+	PubSubPayloadMinSize = 4 + 4 + 8 + IPCTextLen   // 144 bytes
+	PubSubPayloadSize    = PubSubPayloadMinSize + 8 // 152 bytes
+)
 
 func DecodePubSubPayload(data []byte) (*PubSubPayload, error) {
-	if len(data) < PubSubPayloadSize {
-		return nil, fmt.Errorf("payload too short for pubsub: %d bytes (need %d)", len(data), PubSubPayloadSize)
+	if len(data) < PubSubPayloadMinSize {
+		return nil, fmt.Errorf("payload too short for pubsub: %d bytes (need %d)", len(data), PubSubPayloadMinSize)
 	}
 	p := &PubSubPayload{}
 	p.Bid = binary.LittleEndian.Uint32(data[0:4])
 	p.Timestamp = binary.LittleEndian.Uint32(data[4:8])
 	p.Aid = binary.LittleEndian.Uint64(data[8:16]) & AiduRawMask
 	copy(p.Text[:], data[16:16+IPCTextLen])
+	if len(data) >= PubSubPayloadSize {
+		p.FSize = binary.LittleEndian.Uint64(data[PubSubPayloadMinSize:PubSubPayloadSize])
+	}
 	return p, nil
 }
 
@@ -268,6 +280,7 @@ func (p *PubSubPayload) Encode() []byte {
 	binary.LittleEndian.PutUint32(buf[4:8], p.Timestamp)
 	binary.LittleEndian.PutUint64(buf[8:16], p.Aid & AiduRawMask)
 	copy(buf[16:16+IPCTextLen], p.Text[:])
+	binary.LittleEndian.PutUint64(buf[PubSubPayloadMinSize:PubSubPayloadSize], p.FSize)
 	return buf
 }
 

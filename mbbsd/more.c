@@ -466,9 +466,15 @@ int more(const char *fpath, int promptend)
 }
 
 void
-more_on_live_comment(uint32_t bid GCC_UNUSED, aidu_t aid GCC_UNUSED, const char *text GCC_UNUSED)
+more_on_live_comment(uint32_t bid GCC_UNUSED, aidu_t aid GCC_UNUSED, const char *text GCC_UNUSED,
+                     uint64_t fsize GCC_UNUSED)
 {
     // Not supported.
+}
+
+void
+more_live_resubscribe(void)
+{
 }
 
 #else	// USE_PMORE ////////////////////////////////////////////////////////
@@ -488,9 +494,80 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
     return 0;
 }
 
-static uint32_t s_live_bid = 0;
-static aidu_t   s_live_aid = 0;
-bool          s_live_active = false;
+////////////////////////////////////////////////////////////////////////////
+// Live mode (實況)
+//
+// Pressing 'v' in pmore shows the last page and exits pmore with RET_LIVE;
+// more() then runs live_run(), which owns the screen: new comments of the
+// article (IPC PubSub) are printed below the last page and scrolled up once
+// the screen is full, with a dedicated status bar. 'B' toggles the bell and
+// any other key leaves the pager.
+////////////////////////////////////////////////////////////////////////////
+
+#define LIVE_MAX_PENDING_COMMENTS 64
+#define LIVE_CATCHUP_MAX        (16 * 1024) // max bytes of missed comments to replay
+#define LIVE_STATUS_REFRESH_MS  1000
+
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+# define MAP_ANONYMOUS MAP_ANON
+#endif
+
+typedef struct {
+    uint64_t fsize;     // article size after this comment (0: unknown)
+    char     text[IPC_TEXT_LEN];
+} live_comment_t;
+
+typedef struct {
+    uint32_t bid;
+    aidu_t   aid;
+    bool     active;    // subscribed; comments are being queued
+    int      head;
+    int      tail;
+    int      count;
+    live_comment_t *comments;
+} live_provider_t;
+
+static live_provider_t s_live;
+static bool s_live_bell = false;    // (B) bell notification, kept per session
+
+static void
+live_provider_free(void)
+{
+    if (s_live.comments) {
+        size_t sz = sizeof(live_comment_t) * LIVE_MAX_PENDING_COMMENTS;
+        munmap(s_live.comments, sz);
+        s_live.comments = NULL;
+    }
+    s_live.head = s_live.tail = s_live.count = 0;
+}
+
+static int
+live_provider_alloc(void)
+{
+    if (s_live.comments)
+        return 0;
+    size_t sz = sizeof(live_comment_t) * LIVE_MAX_PENDING_COMMENTS;
+    s_live.comments = (live_comment_t *)mmap(
+        NULL, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (s_live.comments == MAP_FAILED) {
+        s_live.comments = NULL;
+        return -1;
+    }
+    s_live.head = s_live.tail = s_live.count = 0;
+    return 0;
+}
+
+static const live_comment_t *
+live_provider_pop(void)
+{
+    if (!s_live.comments || s_live.count == 0)
+        return NULL;
+
+    const live_comment_t *c = &s_live.comments[s_live.head];
+    s_live.head = (s_live.head + 1) % LIVE_MAX_PENDING_COMMENTS;
+    s_live.count--;
+    return c;
+}
 
 static void
 get_live_target(const char *fpath, uint32_t *out_bid, aidu_t *out_aid)
@@ -515,64 +592,340 @@ get_live_target(const char *fpath, uint32_t *out_bid, aidu_t *out_aid)
         return;
 
     *out_bid = (uint32_t)bid;
-    *out_aid = aid;
+    *out_aid = aidu_raw(aid);
 }
 
+/*
+ * IPC handler for IPC_TYPE_LIVE_COMMENT: queue the comment and post
+ * VKEY_EV_PUBSUB, which only live_run() asks for. Packets for other posts or
+ * after we left live mode (already in flight when unsubscribing) are dropped.
+ */
 void
-more_on_live_comment(uint32_t bid, aidu_t aid, const char *text)
+more_on_live_comment(uint32_t bid, aidu_t aid, const char *text, uint64_t fsize)
 {
-    if (s_live_active && s_live_bid == bid && s_live_aid == aid && text && *text) {
-        pmore_feed_comment(text);
+    if (!s_live.active || !s_live.comments ||
+        s_live.bid != bid || aidu_raw(s_live.aid) != aidu_raw(aid) ||
+        !text || !*text)
+        return;
+
+    if (s_live.count >= LIVE_MAX_PENDING_COMMENTS) {
+        /* Drop oldest comment when queue is full */
+        s_live.head = (s_live.head + 1) % LIVE_MAX_PENDING_COMMENTS;
+        s_live.count--;
     }
+    s_live.comments[s_live.tail].fsize = fsize;
+    STRLCPY(s_live.comments[s_live.tail].text, text);
+    s_live.tail = (s_live.tail + 1) % LIVE_MAX_PENDING_COMMENTS;
+    s_live.count++;
+    vkey_post_event(VKEY_EV_PUBSUB);
+}
+
+/* Called after the IPC link is re-established: the daemon has no memory of
+ * our subscriptions, so re-subscribe or live updates silently stop. */
+void
+more_live_resubscribe(void)
+{
+    if (s_live.active)
+        ipc_sub(s_live.bid, aidu_raw(s_live.aid));
+}
+
+typedef struct {
+    int     row;        // next screen row to print on; >= b_lines: scroll
+    time4_t start;
+    int     received;
+    off_t   synced;     // file bytes already on screen (0: unknown)
+} live_view_t;
+
+/* Move to the row for the next line, scrolling once the screen is full. */
+static void
+live_next_row(live_view_t *v)
+{
+    if (v->row < b_lines) {
+        move(v->row++, 0);
+    } else {
+        /* Scroll the whole screen; the status bar is redrawn afterwards. */
+        move(b_lines, 0);
+        clrtoeol();
+        scroll();
+        move(b_lines - 1, 0);
+    }
+}
+
+static void
+live_print_line(live_view_t *v, const char *line)
+{
+    live_next_row(v);
+    outs(line);
+    outs(ANSI_RESET);
+    clrtoeol();
+}
+
+/* Full-width separator marking where live mode starts; "LIVE" style colors,
+ * unlike any comment, pmore footer or the live status bar. */
+#define LIVE_BANNER_COLOR   ANSI_COLOR(1;33;41)
+#define LIVE_BANNER_TEXT    "實 況 開 始"
+
+static void
+live_print_banner(live_view_t *v)
+{
+    int width = t_columns - 1;
+    int len = (int)strlen(LIVE_BANNER_TEXT);   // Big5: bytes == columns
+    int left = (width - len) / 2;
+    if (left < 0)
+        left = 0;
+    int right = width - len - left;
+
+    live_next_row(v);
+    outs(LIVE_BANNER_COLOR);
+    nblank(left);
+    outs(LIVE_BANNER_TEXT);
+    if (right > 0)
+        nblank(right);
+    outs(ANSI_RESET);
+    clrtoeol();
+}
+
+static void
+live_print_text(live_view_t *v, const char *text)
+{
+    char buf[IPC_TEXT_LEN];
+    STRLCPY(buf, text);
+
+    char *line = buf;
+    while (line) {
+        char *next = strchr(line, '\n');
+        if (next)
+            *next++ = '\0';
+        size_t len = strlen(line);
+        if (len > 0 && line[len - 1] == '\r')
+            line[--len] = '\0';
+        if (*line || next)
+            live_print_line(v, line);
+        line = next;
+    }
+}
+
+/*
+ * pmore showed the file as it was when the article was opened, which may be
+ * long ago: replay the complete lines appended since then (new comments).
+ * Called after subscribing, so nothing falls in between; comments delivered
+ * by IPC are then skipped by their fsize token if v->synced already covers
+ * them. (Until comments have unique ids, an article edit shifting the file
+ * may make this skip or repeat a few.)
+ */
+static void
+live_catchup(live_view_t *v, const char *fpath, off_t shown)
+{
+    int fd = open(fpath, O_RDONLY);
+    if (fd < 0)
+        return;
+
+    struct stat st;
+    if (fstat(fd, &st) != 0 || shown <= 0 || st.st_size < shown) {
+        /* Unknown, or the file was replaced (edited): don't filter. */
+        v->synced = 0;
+        close(fd);
+        return;
+    }
+    if (st.st_size == shown) {
+        close(fd);
+        return;
+    }
+
+    off_t from = shown;
+    bool partial_head = false;
+    if (st.st_size - from > LIVE_CATCHUP_MAX) {
+        from = st.st_size - LIVE_CATCHUP_MAX;
+        partial_head = true;
+    }
+
+    size_t len = (size_t)(st.st_size - from);
+    char *buf = (char *)malloc(len + 1);
+    ssize_t n = buf ? pread(fd, buf, len, from) : -1;
+    close(fd);
+    if (n <= 0) {
+        free(buf);
+        return;
+    }
+    buf[n] = '\0';
+
+    char *line = buf;
+    if (partial_head) {
+        char *nl = strchr(line, '\n');
+        line = nl ? nl + 1 : buf + n;
+    }
+    while (*line) {
+        char *nl = strchr(line, '\n');
+        if (!nl)
+            break;  // incomplete line being written: its PUB will follow
+        *nl = '\0';
+        size_t l = strlen(line);
+        if (l > 0 && line[l - 1] == '\r')
+            line[l - 1] = '\0';
+
+        live_print_line(v, line);
+        line = nl + 1;
+    }
+    v->synced = from + (line - buf);
+    free(buf);
+}
+
+static void
+live_flush(live_view_t *v)
+{
+    const live_comment_t *c;
+    int shown = 0;
+
+    while ((c = live_provider_pop()) != NULL) {
+        if (c->fsize && v->synced && (off_t)c->fsize <= v->synced)
+            continue;   // already shown (pmore page or catch-up)
+        live_print_text(v, c->text);
+        shown++;
+    }
+    if (shown) {
+        v->received += shown;
+        if (s_live_bell)
+            bell();
+    }
+}
+
+static void
+live_draw_status(const live_view_t *v)
+{
+    int elapsed = (int)(now - v->start);
+    if (elapsed < 0)
+        elapsed = 0;
+    AUTO_STR(part1, ANSI_COLOR(1;37;42) " 實況中 %02d:%02d - %d則訊息 ",
+            elapsed / 60, elapsed % 60, v->received);
+    AUTO_STR(part2, " (T/M/S)調時 (B)鈴聲%s 任意鍵離開\t%s",
+            s_live_bell ? "[打開]" : "[關閉]", Cdate_mdHM(&now));
+    vs_footer(part1, part2);
+}
+
+static void
+inc_timer(time4_t *start, int delta)
+{
+    if (delta > 0 && now - *start > delta)
+        *start += delta;
+
+    if (delta < 0 && now - *start < 8 * 60 * 60)
+        *start += delta;
+}
+
+/* Runs live mode after pmore returned RET_LIVE; returns a pager result. */
+static int
+live_run(const char *fpath)
+{
+    int rows = 0;
+    off_t shown = 0;
+    pmore_get_live_view(&rows, &shown);
+
+    if (!ipc_is_connected())
+        ipc_check_reconnect();
+    if (live_provider_alloc() < 0 ||
+        ipc_sub(s_live.bid, aidu_raw(s_live.aid)) != 0) {
+        /* The ACK may merely be late (busy daemon); cancel so we don't leave
+         * a phantom subscription receiving every comment. */
+        ipc_unsub(s_live.bid, aidu_raw(s_live.aid));
+        live_provider_free();
+        vmsg("實況服務暫時無法使用，請稍後再試。");
+        return FULLUPDATE;
+    }
+    s_live.active = true;
+
+    live_view_t v;
+    memset(&v, 0, sizeof(v));
+    v.row = rows;
+    v.synced = shown;
+    syncnow();
+    v.start = now;
+    live_print_banner(&v);
+    live_catchup(&v, fpath, shown);
+    bool cont = true;
+
+    while (cont) {
+        syncnow();
+        live_draw_status(&v);
+
+        if (!vkey_poll_ex(LIVE_STATUS_REFRESH_MS, VKEY_EV_PUBSUB))
+            continue;   // tick: refresh elapsed time
+
+        int ch = vkey_ex(VKEY_EV_PUBSUB);
+        switch (ch) {
+        case I_EV_PUBSUB:
+            live_flush(&v);
+            break;
+
+        case 'b':
+        case 'B':
+            s_live_bell = !s_live_bell;
+            break;
+
+        case 'T':
+            inc_timer(&v.start, 60*10);
+            break;
+        case 't':
+            inc_timer(&v.start, -60*10);
+            break;
+
+        case 'M':
+            inc_timer(&v.start, 60);
+            break;
+        case 'm':
+            inc_timer(&v.start, -60);
+            break;
+
+        case 'S':
+            inc_timer(&v.start, 1);
+            break;
+        case 's':
+            inc_timer(&v.start, -1);
+            break;
+
+        default:
+            cont = false;
+            break;
+        }
+    }
+
+    ipc_unsub(s_live.bid, aidu_raw(s_live.aid));
+    s_live.active = false;
+    live_provider_free();
+    return FULLUPDATE;
 }
 
 static int
-common_pager_live_toggle(int enable, void *ctx GCC_UNUSED)
+common_pager_can_live(void *ctx GCC_UNUSED)
 {
-    if (s_live_bid == 0 || s_live_aid == 0)
-        return -1;
-
-    if (enable) {
-        if (!ipc_is_connected())
-            ipc_check_reconnect();
-        if (ipc_sub(s_live_bid, s_live_aid) != 0)
-            return -1;
-        s_live_active = true;
-        return 0;
-    } else {
-        if (s_live_active) {
-            ipc_unsub(s_live_bid, s_live_aid);
-            s_live_active = false;
-        }
-        return 0;
-    }
+    return s_live.bid != 0 && aidu_raw(s_live.aid) != 0;
 }
 
 /* use new pager: piaip's more. */
 static const struct pmore_callbacks common_pager_cb = {
     .process_key = common_pager_key_handler,
     .footer = common_pmore_footer_handler,
-    .live_toggle = common_pager_live_toggle,
+    .can_live = common_pager_can_live,
 };
 
 int
 more(const char *fpath, int promptend)
 {
-    get_live_target(fpath, &s_live_bid, &s_live_aid);
-    s_live_active = false;
+    /* more() may be re-entered from a pager command; keep the outer target. */
+    uint32_t outer_bid = s_live.bid;
+    aidu_t outer_aid = s_live.aid;
+
+    get_live_target(fpath, &s_live.bid, &s_live.aid);
 
     struct pmore_callbacks cb = common_pager_cb;
-    if (s_live_bid == 0 || s_live_aid == 0)
-        cb.live_toggle = NULL;
+    if (s_live.bid == 0 || aidu_raw(s_live.aid) == 0)
+        cb.can_live = NULL;
 
     int r = pmore2(fpath, promptend, (void *)fpath, &cb);
+    if (r == RET_LIVE)
+        r = live_run(fpath);
 
-    if (s_live_active) {
-        ipc_unsub(s_live_bid, s_live_aid);
-        s_live_active = false;
-    }
-    s_live_bid = 0;
-    s_live_aid = 0;
+    s_live.bid = outer_bid;
+    s_live.aid = outer_aid;
 
     return common_pager_exit_handler(r, fpath);
 }
@@ -587,7 +940,9 @@ memory_pager_exit_handler(int r, const void *ctx GCC_UNUSED)
 int
 more_inmemory(void *content, int size, int promptend)
 {
-    int r = pmore2_inmemory(content, size, promptend, NULL, &common_pager_cb);
+    struct pmore_callbacks cb = common_pager_cb;
+    cb.can_live = NULL;     // in-memory content is never live
+    int r = pmore2_inmemory(content, size, promptend, NULL, &cb);
     return memory_pager_exit_handler(r, NULL);
 }
 

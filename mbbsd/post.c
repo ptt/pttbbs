@@ -15,6 +15,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
     AUTO_DIRPATH(path, direct, fhdr->filename);
     int update = 0;
     int fd;
+    off_t fsize = 0;    // file size after our append: live dedupe token
     SCOPED_STAT(STAT_DOCOMMENT);
 
     /* Lock and append, (lock may be caused other add_comment or edit_post) */
@@ -36,6 +37,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
                 }
                 lock_success = 1;
                 write(fd, formatted, strlen(formatted));
+                fsize = lseek(fd, 0, SEEK_CUR);
                 flock(fd, LOCK_UN);
                 break;
             }
@@ -46,6 +48,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
         }
         } else {
             write(fd, formatted, strlen(formatted));
+            fsize = lseek(fd, 0, SEEK_CUR);
             close(fd);
         }
     } else {
@@ -63,7 +66,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
     /* since we want to do 'modification'... */
     /* Publish live comment to IPC service (clean ASCIIZ) */
     {
-        aidu_t aid = fn2aidu(fhdr->filename);
+        aidu_t aid = aidu_raw(fn2aidu(fhdr->filename));
         int bid = currbid;
         if (bid <= 0 && board && *board)
             bid = get_board_bid(board);
@@ -73,7 +76,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
             size_t len = strlen(buf);
             while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r'))
                 buf[--len] = '\0';
-            ipc_pub((uint32_t)bid, aid, buf);
+            ipc_pub((uint32_t)bid, aid, buf, fsize > 0 ? (uint64_t)fsize : 0);
         }
     }
 

@@ -371,7 +371,8 @@ typedef struct VKEY_CTX {
     int                 peek_ch;
     int                 attached_fd;
     int                 ipc_fd;
-    int                 ipc_notify;
+    int                 ev_pending; // VKEY_EV_* posted by IPC handlers
+    int                 ev_want;    // VKEY_EV_* the current vkey_ex() caller accepts
     vkey_ipc_handler_t  ipc_handler;
     VtkbdCtx            vtkbd;
 } VKEY_CTX;
@@ -383,6 +384,18 @@ void vkey_init(void);	     // initialize virtual key system
 // key value retrieval
 int  vkey(void);	     // receive next key (KEY_*, ASCII, or decoded wchar)
 int  vkey_any(void);         // like vkey() but only returns real keys (for "press any key")
+
+// vkey events: asynchronous notifications (posted by IPC handlers after they
+// consumed and stored their data) that are delivered as an I_EV_* key code
+// ONLY to callers asking for them via vkey_ex()/vkey_poll_ex(). Plain vkey()
+// and vkey_poll() (and any nested call, e.g. from a key hook) never see them;
+// events stay pending until a caller that wants them comes along.
+#define VKEY_EV_PUBSUB  (1 << 0)    // -> I_EV_PUBSUB (live post comments)
+void vkey_post_event(int ev);       // mark event(s) pending
+int  vkey_has_event(void);          // pending & wanted by current caller?
+int  vkey_take_event(void);         // pop a wanted event as I_EV_* or 0
+int  vkey_ex(int events);           // vkey() that may also return I_EV_* for events
+int  vkey_poll_ex(int timeout, int events); // vkey_poll() that also wakes up for events
 int  vk_byte(void);	     // receive next key in raw byte mode (KEY_*, ASCII, or raw byte)
 void vk_ungetc(int c);       // push back a key into peek buffer
 int  vkey_peek(void);	     // peek one key from queue (KEY_INCOMPLETE if empty)
@@ -501,8 +514,8 @@ int  mbbsd_ipc_handler(const ipc_hdr_t *hdr, const void *payload);
 int  wmsg_on_deliver(const ipc_wmsg_t *w);
 int  talk_on_request(const ipc_talk_t *t);
 void ipc_init(const char *userid, pid_t pid, int uslot);
-void more_on_live_comment(uint32_t bid, aidu_t aid, const char *text);
-void pmore_feed_comment(const char *text);
+void more_on_live_comment(uint32_t bid, aidu_t aid, const char *text, uint64_t fsize);
+void more_live_resubscribe(void);
 void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
@@ -547,8 +560,12 @@ struct pmore_callbacks {
     int (*help)(int y, void *ctx);
     int (*vkey)(void *ctx);
     int (*exit)(void *ctx);
-    int (*live_toggle)(int enable, void *ctx);
+    int (*can_live)(void *ctx);     // non-zero: 'v' exits pmore with RET_LIVE
 };
+
+/* After pmore returned RET_LIVE: screen rows holding content on the last page
+ * and the file size it was showing. */
+void pmore_get_live_view(int *rows, off_t *shown_size);
 
 int pmore2(
         const char *fpath, int promptend, void *ctx,

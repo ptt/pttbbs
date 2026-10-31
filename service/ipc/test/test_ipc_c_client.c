@@ -120,7 +120,7 @@ int main(void) {
 
     /* Alice publishes comment to target */
     const char *comment = "推 user123: 這是一個真live！";
-    r = ipc_pub(topic_bid, topic_aid, comment);
+    r = ipc_pub(topic_bid, topic_aid, comment, 12345);
     assert(r == 0);
     printf("[test_ipc] Alice published comment to target\n");
 
@@ -134,6 +134,7 @@ int main(void) {
     assert(ps_recv->bid == topic_bid);
     assert(ps_recv->aid == aidu_raw(topic_aid));
     assert(strcmp(ps_recv->text, comment) == 0);
+    assert(ps_recv->fsize == 12345);
     printf("[test_ipc] Test 2 PASS: Live comment delivered via PubSub!\n");
 
     /* Test 2b: Aidu index hint normalization test */
@@ -141,7 +142,7 @@ int main(void) {
     aidu_t hint_aid = topic_aid | (999ULL << 45); // inject 19-bit index hint
     /* Alice publishes comment using hint_aid */
     const char *comment_hint = "comment with index hint";
-    r = ipc_pub(topic_bid, hint_aid, comment_hint);
+    r = ipc_pub(topic_bid, hint_aid, comment_hint, 0);
     assert(r == 0);
     assert(wait_readable(fd_bob, 1000));
     n = ipc_read_packet(fd_bob, &hdr, buf, sizeof(buf));
@@ -170,7 +171,7 @@ int main(void) {
     assert(ack_payload.code == 0);
     printf("[test_ipc] Bob unsubscribed from bid=%u, aid=0x%llx\n", topic_bid, (unsigned long long)topic_aid);
 
-    r = ipc_pub(topic_bid, topic_aid, "推 user456: 這句不該被收到");
+    r = ipc_pub(topic_bid, topic_aid, "推 user456: 這句不該被收到", 0);
     assert(r == 0);
 
     /* Bob should timeout and NOT receive anything */
