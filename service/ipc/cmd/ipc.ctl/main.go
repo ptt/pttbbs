@@ -338,7 +338,7 @@ func doLivePub(sockPath string, bid uint32, aid uint64, comment string) {
 	ps := &daemon.PubSubPayload{
 		Bid:       bid,
 		Timestamp: uint32(time.Now().Unix()),
-		Aid:       aid,
+		Aid:       aid & daemon.AiduRawMask,
 	}
 	copy(ps.Text[:], comment)
 
@@ -396,7 +396,7 @@ func doLiveSub(sockPath string, bid uint32, aid uint64) {
 	// 2. Subscribe
 	ps := &daemon.PubSubPayload{
 		Bid: bid,
-		Aid: aid,
+		Aid: aid & daemon.AiduRawMask,
 	}
 	psEncoded := ps.Encode()
 	pkt := append((&daemon.Header{

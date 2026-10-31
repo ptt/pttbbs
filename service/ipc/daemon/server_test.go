@@ -742,3 +742,68 @@ func TestIPCSlowSubscriberNonBlocking(t *testing.T) {
 		t.Fatalf("Fast subscriber received only %d/%d messages", receivedCount, numMsgs)
 	}
 }
+
+func TestIPCAiduNormalization(t *testing.T) {
+	tempDir := t.TempDir()
+	sockPath := filepath.Join(tempDir, "ipc.svc.sock")
+
+	svc, err := NewService(sockPath)
+	if err != nil {
+		t.Fatalf("NewService failed: %v", err)
+	}
+	if err := svc.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer svc.Stop()
+
+	connSub, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial failed: %v", err)
+	}
+	defer connSub.Close()
+
+	connPub, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatalf("Dial failed: %v", err)
+	}
+	defer connPub.Close()
+
+	// Base AID without index hint
+	baseAid := uint64(0x1730000000)
+	// AID with a 19-bit index hint (bit 45 shifted)
+	aidWithHint := baseAid | (uint64(12345) << 45)
+
+	// Subscribe with aidWithHint
+	subPayload := (&PubSubPayload{Bid: 1, Aid: aidWithHint}).Encode()
+	subHdr := (&Header{Magic: IPCMagic, Version: IPCVersion, Type: IPCTypeSub, Seq: 1, Len: uint32(len(subPayload))}).Encode()
+	_, _ = connSub.Write(append(subHdr, subPayload...))
+	ackHdr, _ := ReadHeader(connSub)
+	ackBuf := make([]byte, ackHdr.Len)
+	_, _ = io.ReadFull(connSub, ackBuf)
+
+	// Publish with baseAid (different upper bits)
+	pubPayload := (&PubSubPayload{Bid: 1, Aid: baseAid, Text: [128]byte{'h', 'e', 'l', 'l', 'o'}}).Encode()
+	pubHdr := (&Header{Magic: IPCMagic, Version: IPCVersion, Type: IPCTypePub, Seq: 0, Len: uint32(len(pubPayload))}).Encode()
+	_, _ = connPub.Write(append(pubHdr, pubPayload...))
+
+	// Subscriber should receive it because AiduRawMask normalized both to baseAid
+	_ = connSub.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	recvHdr, err := ReadHeader(connSub)
+	if err != nil {
+		t.Fatalf("Failed to read header: %v", err)
+	}
+	if recvHdr.Type != IPCTypeLiveComment {
+		t.Fatalf("Expected IPCTypeLiveComment, got 0x%04x", recvHdr.Type)
+	}
+	recvPayload := make([]byte, recvHdr.Len)
+	if _, err := io.ReadFull(connSub, recvPayload); err != nil {
+		t.Fatalf("Failed to read payload: %v", err)
+	}
+	ps, err := DecodePubSubPayload(recvPayload)
+	if err != nil {
+		t.Fatalf("Failed to decode payload: %v", err)
+	}
+	if ps.Aid != baseAid {
+		t.Fatalf("Expected normalized aid 0x%x, got 0x%x", baseAid, ps.Aid)
+	}
+}

@@ -18,7 +18,19 @@ import (
 
 const (
 	ClientSendQueueSize = 256
-	ClientWriteTimeout  = 50 * time.Millisecond
+	// ClientWriteTimeout bounds how long a single (batched) write to an mbbsd
+	// may block. Each client has its own writer goroutine, so a slow client
+	// never stalls fan-out to others; the timeout only decides when a client
+	// that stopped reading is considered dead. A partial write leaves the
+	// stream unusable, so a timeout always closes the connection. Keep this
+	// generous: mbbsd may block for a while writing to a slow terminal, and
+	// dropping the IPC link also drops its subscriptions.
+	ClientWriteTimeout = 2 * time.Second
+	// ClientWriteBatch is the maximum number of queued packets coalesced into
+	// a single writev(2). Under bursty fan-out (e.g. thousands of subscribers
+	// on one live post) this cuts syscalls and receiver wake-ups, and lets the
+	// kernel socket buffer hold far more packets (fewer, larger skbs).
+	ClientWriteBatch = 64
 )
 
 type Client struct {
@@ -44,13 +56,28 @@ func (c *Client) Close() {
 }
 
 func (c *Client) writeLoop() {
+	batch := make(net.Buffers, 0, ClientWriteBatch)
 	for {
 		select {
 		case <-c.done:
 			return
 		case pkt := <-c.sendCh:
+			batch = append(batch[:0], pkt)
+		drain:
+			for len(batch) < ClientWriteBatch {
+				select {
+				case more := <-c.sendCh:
+					batch = append(batch, more)
+				default:
+					break drain
+				}
+			}
 			_ = c.conn.SetWriteDeadline(time.Now().Add(ClientWriteTimeout))
-			if _, err := c.conn.Write(pkt); err != nil {
+			// WriteTo consumes (and nils out) the entries it writes; packets
+			// may be shared with other clients, but only the slice headers are
+			// modified, never the underlying bytes.
+			bufs := batch
+			if _, err := bufs.WriteTo(c.conn); err != nil {
 				c.Close()
 				return
 			}
@@ -74,9 +101,29 @@ func (c *Client) Enqueue(data []byte) error {
 }
 
 func (c *Client) Send(hdr *Header, payload []byte) error {
+	return c.Enqueue(EncodePacket(hdr, payload))
+}
+
+// EncodePacket serializes a header and payload into one wire packet. The
+// returned slice is treated as immutable once queued, so a single packet can
+// be enqueued to many clients during fan-out without per-client copies.
+func EncodePacket(hdr *Header, payload []byte) []byte {
 	hdr.Len = uint32(len(payload))
-	buf := append(hdr.Encode(), payload...)
-	return c.Enqueue(buf)
+	buf := make([]byte, 0, 16+len(payload))
+	buf = append(buf, hdr.Encode()...)
+	return append(buf, payload...)
+}
+
+// fanout enqueues one pre-encoded packet to every target and returns how many
+// accepted it. Clients with a full queue are skipped (never blocks).
+func fanout(targets []*Client, pkt []byte) int {
+	sent := 0
+	for _, tgt := range targets {
+		if tgt.Enqueue(pkt) == nil {
+			sent++
+		}
+	}
+	return sent
 }
 
 func (c *Client) SendAck(seq uint32, code int32, msg string) error {
@@ -290,13 +337,32 @@ func (s *Service) dispatch(client *Client, hdr *Header, payload []byte) error {
 		}
 		rawUID := reg.UserIDString()
 		normUID := strings.ToLower(rawUID)
+
+		s.mu.Lock()
+		if client.registered && client.userid != "" {
+			if clist, ok := s.byUser[client.userid]; ok {
+				var updated []*Client
+				for _, item := range clist {
+					if item != client {
+						updated = append(updated, item)
+					}
+				}
+				if len(updated) > 0 {
+					s.byUser[client.userid] = updated
+				} else {
+					delete(s.byUser, client.userid)
+				}
+			}
+			if client.pid > 0 && s.byPid[client.pid] == client {
+				delete(s.byPid, client.pid)
+			}
+		}
 		client.userid = normUID
 		client.displayUserid = rawUID
 		client.pid = reg.PID
 		client.uslot = reg.USlot
 		client.registered = true
 
-		s.mu.Lock()
 		s.byUser[normUID] = append(s.byUser[normUID], client)
 		if reg.PID > 0 {
 			s.byPid[reg.PID] = client
@@ -358,20 +424,13 @@ func (s *Service) dispatch(client *Client, hdr *Header, payload []byte) error {
 			return client.SendAck(hdr.Seq, -1, "target not online")
 		}
 
-		deliverHdr := &Header{
+		deliverPkt := EncodePacket(&Header{
 			Magic:   IPCMagic,
 			Version: IPCVersion,
 			Type:    IPCTypeWmsgDeliver,
 			Seq:     hdr.Seq,
-			Len:     uint32(len(payload)),
-		}
-
-		delivered := 0
-		for _, tgt := range targetList {
-			if err := tgt.Send(deliverHdr, payload); err == nil {
-				delivered++
-			}
-		}
+		}, payload)
+		delivered := fanout(targetList, deliverPkt)
 
 		atomic.AddInt64(&s.stats.TotalWmsgSent, 1)
 
@@ -403,20 +462,13 @@ func (s *Service) dispatch(client *Client, hdr *Header, payload []byte) error {
 			return client.SendAck(hdr.Seq, -1, "target not online")
 		}
 
-		deliverHdr := &Header{
+		deliverPkt := EncodePacket(&Header{
 			Magic:   IPCMagic,
 			Version: IPCVersion,
 			Type:    IPCTypeTalkReq,
 			Seq:     hdr.Seq,
-			Len:     uint32(len(payload)),
-		}
-
-		delivered := 0
-		for _, tgt := range targetList {
-			if err := tgt.Send(deliverHdr, payload); err == nil {
-				delivered++
-			}
-		}
+		}, payload)
+		delivered := fanout(targetList, deliverPkt)
 
 		atomic.AddInt64(&s.stats.TotalTalkReqs, 1)
 
@@ -452,6 +504,9 @@ func (s *Service) dispatch(client *Client, hdr *Header, payload []byte) error {
 		}
 
 		s.mu.Lock()
+		if client.topics == nil {
+			client.topics = make(map[TopicKey]struct{})
+		}
 		client.topics[key] = struct{}{}
 		if s.topics[key] == nil {
 			s.topics[key] = make(map[*Client]struct{})
@@ -486,38 +541,40 @@ func (s *Service) dispatch(client *Client, hdr *Header, payload []byte) error {
 		if s.verbose > 0 {
 			log.Printf("[ipc.svc] UNSUB: user=%s topic=%s", client.displayUserid, key)
 		}
+		// seq == 0 means fire-and-forget (e.g. leaving a live post): skip
+		// the ACK so the client never has to wait for or drain it.
+		if hdr.Seq == 0 {
+			return nil
+		}
 		return client.SendAck(hdr.Seq, 0, "unsubscribed")
 
 	case IPCTypePub:
 		ps, err := DecodePubSubPayload(payload)
 		if err != nil {
-			_ = client.SendAck(hdr.Seq, -1, "invalid pubsub payload")
+			if hdr.Seq != 0 {
+				_ = client.SendAck(hdr.Seq, -1, "invalid pubsub payload")
+			}
 			return err
 		}
 		key := ps.Key()
 
 		s.mu.RLock()
 		subMap := s.topics[key]
-		var subs []*Client
+		subs := make([]*Client, 0, len(subMap))
 		for sub := range subMap {
 			subs = append(subs, sub)
 		}
 		s.mu.RUnlock()
 
-		deliverHdr := &Header{
+		// Encode once and share the same immutable packet with every
+		// subscriber: a hot live post may have thousands of them.
+		deliverPkt := EncodePacket(&Header{
 			Magic:   IPCMagic,
 			Version: IPCVersion,
 			Type:    IPCTypeLiveComment,
 			Seq:     hdr.Seq,
-			Len:     uint32(len(payload)),
-		}
-
-		sentCount := 0
-		for _, sub := range subs {
-			if err := sub.Send(deliverHdr, payload); err == nil {
-				sentCount++
-			}
-		}
+		}, ps.Encode())
+		sentCount := fanout(subs, deliverPkt)
 
 		atomic.AddInt64(&s.stats.TotalLiveComments, 1)
 		atomic.AddInt64(&s.stats.TotalPublishes, 1)
@@ -527,7 +584,10 @@ func (s *Service) dispatch(client *Client, hdr *Header, payload []byte) error {
 				key, sentCount, ps.TextString())
 		}
 
-		return client.SendAck(hdr.Seq, 0, "published")
+		if hdr.Seq != 0 {
+			return client.SendAck(hdr.Seq, 0, "published")
+		}
+		return nil
 
 	case IPCTypeSysBroadcast:
 		s.mu.RLock()
@@ -537,17 +597,13 @@ func (s *Service) dispatch(client *Client, hdr *Header, payload []byte) error {
 		}
 		s.mu.RUnlock()
 
-		deliverHdr := &Header{
+		deliverPkt := EncodePacket(&Header{
 			Magic:   IPCMagic,
 			Version: IPCVersion,
 			Type:    IPCTypeSysBroadcast,
 			Seq:     hdr.Seq,
-			Len:     uint32(len(payload)),
-		}
-
-		for _, cl := range allClients {
-			_ = cl.Send(deliverHdr, payload)
-		}
+		}, payload)
+		fanout(allClients, deliverPkt)
 		return client.SendAck(hdr.Seq, 0, "broadcasted")
 
 	default:
@@ -589,7 +645,7 @@ func (s *Service) removeClient(c *Client) {
 			}
 		}
 	}
-	c.topics = nil
+	c.topics = make(map[TopicKey]struct{})
 }
 
 func (s *Service) GetStats() (onlineUsers int, activeTopics int, wmsgSent int64, talkReqs int64, liveComments int64, chatRooms int, chatUsers int) {

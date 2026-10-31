@@ -80,6 +80,54 @@ func forkDaemon(cliArgs []string) error {
 	return cmd.Start()
 }
 
+func raiseFDLimit(target uint64) {
+	if target <= 0 {
+		return
+	}
+	var rlim syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
+		log.Printf("[ipc.svc] Warning: failed to query RLIMIT_NOFILE: %v", err)
+		return
+	}
+	oldCur := rlim.Cur
+
+	if rlim.Cur >= target {
+		log.Printf("[ipc.svc] RLIMIT_NOFILE is already %d (>= %d, max: %d)", rlim.Cur, target, rlim.Max)
+		return
+	}
+
+	newRlim := rlim
+	newRlim.Cur = target
+	if newRlim.Max < target {
+		newRlim.Max = target
+	}
+
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &newRlim); err != nil {
+		// If increasing Max failed (e.g. unprivileged), try raising Cur to current Max.
+		if rlim.Cur < rlim.Max {
+			newRlim.Cur = rlim.Max
+			newRlim.Max = rlim.Max
+			if err2 := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &newRlim); err2 != nil {
+				log.Printf("[ipc.svc] Warning: failed to raise RLIMIT_NOFILE to max %d: %v", rlim.Max, err2)
+			}
+		}
+	}
+
+	_ = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim)
+	log.Printf("[ipc.svc] Adjusted RLIMIT_NOFILE from %d to %d (max: %d, requested: %d)", oldCur, rlim.Cur, rlim.Max, target)
+	if rlim.Cur < target {
+		log.Printf("[ipc.svc] Warning: RLIMIT_NOFILE (%d) is lower than requested %d. Run 'ulimit -n %d' before launching ipc.svc.", rlim.Cur, target, target)
+	}
+}
+
+func getCurrentFDLimit() uint64 {
+	var rlim syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rlim); err != nil {
+		return 0
+	}
+	return rlim.Cur
+}
+
 func main() {
 	bbsHome := os.Getenv("BBSHOME")
 	if bbsHome == "" {
@@ -92,7 +140,9 @@ func main() {
 	debugMode := flag.Bool("D", false, "Enable debug mode (log directly to stdout)")
 	flag.BoolVar(debugMode, "debug", false, "Enable debug mode (alias for -D)")
 	daemonize := flag.Bool("d", true, "Daemonize mode (fork and exit 0 after setup ok)")
-	maxProcs := flag.Int("maxprocs", 2, "GOMAXPROCS limit (default: 2)")
+	nofileLimit := flag.Int("nofile", 100000, "RLIMIT_NOFILE open files limit (default: 100000)")
+	flag.IntVar(nofileLimit, "rlimit-nofile", 100000, "Alias for -nofile")
+	maxProcs := flag.Int("maxprocs", 0, "GOMAXPROCS limit (0 or default: CPU core count)")
 	flag.Var(&verbose, "v", "Verbose mode (can be specified multiple times, e.g. -v -v or -vv)")
 	flag.Var(&verbose, "verbose", "Alias for -v")
 
@@ -124,9 +174,11 @@ func main() {
 		*logPath = filepath.Join(bbsHome, "log", "ipc.svc.log")
 	}
 
-	if *maxProcs > 0 {
-		runtime.GOMAXPROCS(*maxProcs)
+	procs := *maxProcs
+	if procs <= 0 {
+		procs = runtime.NumCPU()
 	}
+	runtime.GOMAXPROCS(procs)
 
 	if !*debugMode {
 		_ = os.MkdirAll(filepath.Dir(*logPath), 0755)
@@ -138,8 +190,13 @@ func main() {
 		log.SetOutput(f)
 	}
 
+	if *nofileLimit > 0 {
+		raiseFDLimit(uint64(*nofileLimit))
+	}
+
 	log.Printf("[ipc.svc] Starting PTT BBS IPC Service...")
 	log.Printf("[ipc.svc] BBSHOME: %s, Socket: %s, Log: %s", bbsHome, socketPath, *logPath)
+	log.Printf("[ipc.svc] Performance settings: GOMAXPROCS=%d (cores=%d), RLIMIT_NOFILE=%d", runtime.GOMAXPROCS(0), runtime.NumCPU(), getCurrentFDLimit())
 
 	_ = os.MkdirAll(filepath.Dir(socketPath), 0755)
 

@@ -14,6 +14,9 @@ const (
 	IPCUserIDLen = 16
 	IPCTopicLen  = 64
 	IPCTextLen   = 128
+
+	// AiduRawMask masks off the 19-bit .DIR index hint [63:45] in aidu_t
+	AiduRawMask uint64 = 0x00001FFFFFFFFFFF
 )
 
 const (
@@ -254,7 +257,7 @@ func DecodePubSubPayload(data []byte) (*PubSubPayload, error) {
 	p := &PubSubPayload{}
 	p.Bid = binary.LittleEndian.Uint32(data[0:4])
 	p.Timestamp = binary.LittleEndian.Uint32(data[4:8])
-	p.Aid = binary.LittleEndian.Uint64(data[8:16])
+	p.Aid = binary.LittleEndian.Uint64(data[8:16]) & AiduRawMask
 	copy(p.Text[:], data[16:16+IPCTextLen])
 	return p, nil
 }
@@ -263,13 +266,13 @@ func (p *PubSubPayload) Encode() []byte {
 	buf := make([]byte, PubSubPayloadSize)
 	binary.LittleEndian.PutUint32(buf[0:4], p.Bid)
 	binary.LittleEndian.PutUint32(buf[4:8], p.Timestamp)
-	binary.LittleEndian.PutUint64(buf[8:16], p.Aid)
+	binary.LittleEndian.PutUint64(buf[8:16], p.Aid & AiduRawMask)
 	copy(buf[16:16+IPCTextLen], p.Text[:])
 	return buf
 }
 
 func (p *PubSubPayload) Key() TopicKey {
-	return TopicKey{Bid: p.Bid, Aid: p.Aid}
+	return TopicKey{Bid: p.Bid, Aid: p.Aid & AiduRawMask}
 }
 
 func (p *PubSubPayload) TextString() string {

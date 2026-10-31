@@ -204,7 +204,7 @@ func (s *ChessServer) handleConnection(conn net.Conn) {
 		case <-sess.joinChan:
 			// Callee joined and session is active
 			return
-		case <-time.After(120 * time.Second):
+		case <-time.After(15 * time.Second):
 			s.mu.Lock()
 			if s.pending[key] == sess {
 				delete(s.pending, key)
