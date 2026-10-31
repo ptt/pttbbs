@@ -890,6 +890,8 @@ DEBUG_IO(int fd, const char *msg) {
 #ifdef  STR_GUEST
 #define TOO_MANY_GUEST_MSG  ANSI_RESET " 抱歉，目前已有太多 " STR_GUEST " 在站上。 "
 #define TOO_MANY_GUEST_YX   BOTTOM_YX
+#define NO_GUEST_ACCT_MSG   ANSI_RESET " 本站 " STR_GUEST " 帳號尚未建立。 "
+#define NO_GUEST_ACCT_YX    BOTTOM_YX
 #endif
 
 #define FN_WELCOME          BBSHOME "/etc/Welcome"
@@ -1398,6 +1400,12 @@ draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
 #ifdef STR_GUEST
     if (strcasecmp(freeid, STR_GUEST) == 0)
     {
+        if (!g_guest_usernum)
+        {
+            _mt_move_yx(conn, NO_GUEST_ACCT_YX); _mt_clrtoeol(conn);
+            _text_write(conn, NO_GUEST_ACCT_MSG, sizeof(NO_GUEST_ACCT_MSG)-1);
+            return;
+        }
         _mt_move_yx(conn, TOO_MANY_GUEST_YX); _mt_clrtoeol(conn);
         _text_write(conn, TOO_MANY_GUEST_MSG, sizeof(TOO_MANY_GUEST_MSG)-1);
         return;
@@ -1575,7 +1583,7 @@ is_tunnel_available() {
 static const char *
 auth_is_free_userid(const char *userid)
 {
-#if defined(STR_GUEST) && IS_ENABLED(CONFIG_GUEST_ACCOUNT_REG)
+#ifdef STR_GUEST
     if (strcasecmp(userid, STR_GUEST) == 0)
         return STR_GUEST;
 #endif
@@ -1615,14 +1623,6 @@ auth_check_free_userid_allowance(const char *userid)
 #ifdef STR_GUEST
     if (strcasecmp(userid, STR_GUEST) == 0)
     {
-#  ifndef MAX_GUEST
-        g_guest_too_many = 0;
-#  else
-        // if already too many guest, fast reject until next regular check.
-        // XXX TODO also cache if guest is not too many?
-        if (g_guest_too_many)
-            return 0;
-
         // now, load guest account information.
         if (!g_guest_usernum)
         {
@@ -1633,15 +1633,23 @@ auth_check_free_userid_allowance(const char *userid)
             g_guest_usernum = searchuser(STR_GUEST, NULL);
 
             if (g_guest_usernum < 1 || g_guest_usernum > MAX_USERS)
+            {
                 g_guest_usernum = 0;
-
-            // if guest is not created, it's administrator's problem...
-            assert(g_guest_usernum);
+                return 0;
+            }
         }
+
+#  ifndef MAX_GUEST
+        g_guest_too_many = 0;
+#  else
+        // if already too many guest, fast reject until next regular check.
+        // XXX TODO also cache if guest is not too many?
+        if (g_guest_too_many)
+            return 0;
 
         // update the 'too many' status.
         g_guest_too_many =
-            (!g_guest_usernum || (search_ulistn(g_guest_usernum, MAX_GUEST) != NULL));
+            (search_ulistn(g_guest_usernum, MAX_GUEST) != NULL);
 
         if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
                 " guests are %s\n", g_guest_too_many ? "TOO MANY" : "ok.");

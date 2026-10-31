@@ -124,7 +124,7 @@ bad_user_id(const char *userid)
 	return 1;
 #endif
 
-#if defined(STR_GUEST) && IS_ENABLED(CONFIG_GUEST_ACCOUNT_REG)
+#if defined(STR_GUEST) && !IS_ENABLED(CONFIG_GUEST_ACCOUNT_REG)
     if (strcasecmp(userid, STR_GUEST) == 0)
 	return 1;
 #endif
