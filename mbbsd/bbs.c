@@ -2512,6 +2512,20 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     return FULLUPDATE;
 }
 
+typedef struct {
+    int ent;
+    fileheader_t *fhdr;
+    const char *direct;
+} read_post_ctx_t;
+
+/* more_hooks_t.comment: lets live mode comment on the article being read. */
+static int
+read_post_comment(void *ctx)
+{
+    read_post_ctx_t *rp = (read_post_ctx_t *)ctx;
+    return comment(rp->ent, rp->fhdr, rp->direct);
+}
+
 static int
 read_post(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -2566,7 +2580,11 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     } while (0);
 #endif
 
-    more_result = more(genbuf, YEA);
+    {
+        read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
+        const more_hooks_t hooks = { .comment = read_post_comment, .ctx = &rp };
+        more_result = more_ex(genbuf, YEA, &hooks);
+    }
 
     LOG_IF(LOG_CONF_CRAWLER, {
            // kcwu: log crawler

@@ -547,6 +547,12 @@ void m_sob_brd(char *bname,char *fromdir);
 
 /* pager (more) */
 int more(const char *fpath, int promptend);
+/* Optional caller services for more_ex(), e.g. used by live mode. */
+typedef struct more_hooks {
+    int  (*comment)(void *ctx); // add a comment; returns FULLUPDATE/DIRCHANGED
+    void *ctx;
+} more_hooks_t;
+int more_ex(const char *fpath, int promptend, const more_hooks_t *hooks);
 int more_inmemory(void *content, int size, int promptend);
 /* piaip's new pager, pmore.c */
 int pmore (const char *fpath, int promptend);

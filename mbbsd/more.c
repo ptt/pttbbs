@@ -477,6 +477,12 @@ more_live_resubscribe(void)
 {
 }
 
+int
+more_ex(const char *fpath, int promptend, const more_hooks_t *hooks GCC_UNUSED)
+{
+    return more(fpath, promptend);
+}
+
 #else	// USE_PMORE ////////////////////////////////////////////////////////
 
 static int
@@ -504,7 +510,7 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
 // any other key leaves the pager.
 ////////////////////////////////////////////////////////////////////////////
 
-#define LIVE_MAX_PENDING_COMMENTS 64
+#define LIVE_MAX_PENDING_COMMENTS 128
 #define LIVE_CATCHUP_MAX        (16 * 1024) // max bytes of missed comments to replay
 #define LIVE_STATUS_REFRESH_MS  1000
 
@@ -790,14 +796,15 @@ live_flush(live_view_t *v)
 }
 
 static void
-live_draw_status(const live_view_t *v)
+live_draw_status(const live_view_t *v, bool can_comment)
 {
     int elapsed = (int)(now - v->start);
     if (elapsed < 0)
         elapsed = 0;
-    AUTO_STR(part1, ANSI_COLOR(1;37;42) " 實況中 %02d:%02d - %d則訊息 ",
+    AUTO_STR(part1, ANSI_COLOR(1;37;42) " 實況中 %02d:%02d [+%d] ",
             elapsed / 60, elapsed % 60, v->received);
-    AUTO_STR(part2, " (T/M/S)調時 (B)鈴聲%s 任意鍵離開\t%s",
+    AUTO_STR(part2, " %s(B)鈴聲%s (任意鍵)離開 %s\t(T/M/S)調時",
+            can_comment ? "(X)留言" : "",
             s_live_bell ? "[打開]" : "[關閉]", Cdate_mdHM(&now));
     vs_footer(part1, part2);
 }
@@ -812,10 +819,31 @@ inc_timer(time4_t *start, int delta)
         *start += delta;
 }
 
+/*
+ * 'X': comment through the caller (comment() needs the article's .DIR
+ * context). Prompts may draw above the status bar, so save and restore the
+ * screen. Nothing scrolls while typing: the prompt's vkey() calls don't take
+ * live events, so comments queue up and are flushed once we are back; our
+ * own comment comes back the same way, confirming it was posted.
+ */
+static int
+live_comment(const more_hooks_t *hooks)
+{
+    screen_backup_t old_screen;
+
+    scr_dump(&old_screen);
+    int r = hooks->comment(hooks->ctx);
+    scr_restore(&old_screen);
+    return r;
+}
+
 /* Runs live mode after pmore returned RET_LIVE; returns a pager result. */
 static int
-live_run(const char *fpath)
+live_run(const char *fpath, const more_hooks_t *hooks)
 {
+    bool can_comment = hooks && hooks->comment;
+    int result = FULLUPDATE;
+
     int rows = 0;
     off_t shown = 0;
     pmore_get_live_view(&rows, &shown);
@@ -845,7 +873,7 @@ live_run(const char *fpath)
 
     while (cont) {
         syncnow();
-        live_draw_status(&v);
+        live_draw_status(&v, can_comment);
 
         if (!vkey_poll_ex(LIVE_STATUS_REFRESH_MS, VKEY_EV_PUBSUB))
             continue;   // tick: refresh elapsed time
@@ -859,6 +887,20 @@ live_run(const char *fpath)
         case 'b':
         case 'B':
             s_live_bell = !s_live_bell;
+            break;
+
+        case '%':
+        case 'X':
+        case 'x':
+            if (!can_comment) {
+                cont = false;
+                break;
+            }
+            if (live_comment(hooks) == DIRCHANGED) {
+                /* e.g. the article is gone: leave and let the caller reload */
+                result = DIRCHANGED;
+                cont = false;
+            }
             break;
 
         case 'T':
@@ -891,7 +933,7 @@ live_run(const char *fpath)
     ipc_unsub(s_live.bid, aidu_raw(s_live.aid));
     s_live.active = false;
     live_provider_free();
-    return FULLUPDATE;
+    return result;
 }
 
 static int
@@ -910,6 +952,12 @@ static const struct pmore_callbacks common_pager_cb = {
 int
 more(const char *fpath, int promptend)
 {
+    return more_ex(fpath, promptend, NULL);
+}
+
+int
+more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
+{
     /* more() may be re-entered from a pager command; keep the outer target. */
     uint32_t outer_bid = s_live.bid;
     aidu_t outer_aid = s_live.aid;
@@ -922,7 +970,7 @@ more(const char *fpath, int promptend)
 
     int r = pmore2(fpath, promptend, (void *)fpath, &cb);
     if (r == RET_LIVE)
-        r = live_run(fpath);
+        r = live_run(fpath, hooks);
 
     s_live.bid = outer_bid;
     s_live.aid = outer_aid;

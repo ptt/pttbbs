@@ -3025,6 +3025,7 @@ const cmd_t pmore_cmds[] = {
     { 'o', "選項設定", "調整 pmore 瀏覽偏好設定", pmore_cmd_pref, 0, CMD_PRIO_NORM },
     { '\\', "色彩顯示模式", "切換 ANSI 色彩顯示模式", pmore_cmd_rawmode, 0, CMD_PRIO_NORM },
     { 'v', "實況模式", "進入實況模式 (Live) 即時顯示新推文", pmore_cmd_live, 0, CMD_PRIO_NORM },
+    { 'V', NULL, NULL, pmore_cmd_live, 0, CMD_PRIO_NONE },
 #ifdef PMORE_USE_INTERNAL_HELP
     { 'h', "說明", "顯示 pmore 操作說明", pmore_cmd_help, 0, CMD_PRIO_LOW },
     { 'H', NULL, NULL, pmore_cmd_help, 0, CMD_PRIO_NONE },
