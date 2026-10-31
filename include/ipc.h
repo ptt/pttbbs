@@ -164,10 +164,11 @@ void ipc_disconnect(void);
 int  ipc_is_connected(void);
 int  ipc_get_fd(void);
 void ipc_set_reconnect_callback(ipc_reconnect_cb_t cb);
+int  ipc_reconnect_enabled(void);
 int  ipc_try_reconnect(void);
 int  ipc_check_reconnect(void);
 int  ipc_register(const char *userid, pid_t pid, int uslot);
-int  ipc_unregister(void);
+int  ipc_has_pending(void);
 int  ipc_wmsg_send(const char *to_userid, const char *from_userid,
                    pid_t from_pid, int from_uslot, int msgmode, const char *text);
 int  ipc_talk_send(const char *to_userid, const char *from_userid,

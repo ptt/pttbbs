@@ -132,9 +132,26 @@ int main(void) {
     ipc_pubsub_t *ps_recv = (ipc_pubsub_t *)buf;
     printf("[test_ipc] Bob received LIVE_COMMENT on bid=%u, aid=0x%llx: '%s'\n", ps_recv->bid, (unsigned long long)ps_recv->aid, ps_recv->text);
     assert(ps_recv->bid == topic_bid);
-    assert(ps_recv->aid == topic_aid);
+    assert(ps_recv->aid == aidu_raw(topic_aid));
     assert(strcmp(ps_recv->text, comment) == 0);
     printf("[test_ipc] Test 2 PASS: Live comment delivered via PubSub!\n");
+
+    /* Test 2b: Aidu index hint normalization test */
+    printf("[test_ipc] Test 2b: Aidu index hint normalization test...\n");
+    aidu_t hint_aid = topic_aid | (999ULL << 45); // inject 19-bit index hint
+    /* Alice publishes comment using hint_aid */
+    const char *comment_hint = "comment with index hint";
+    r = ipc_pub(topic_bid, hint_aid, comment_hint);
+    assert(r == 0);
+    assert(wait_readable(fd_bob, 1000));
+    n = ipc_read_packet(fd_bob, &hdr, buf, sizeof(buf));
+    assert(n > 0);
+    assert(hdr.type == IPC_TYPE_LIVE_COMMENT);
+    ps_recv = (ipc_pubsub_t *)buf;
+    assert(ps_recv->bid == topic_bid);
+    assert(ps_recv->aid == aidu_raw(topic_aid));
+    assert(strcmp(ps_recv->text, comment_hint) == 0);
+    printf("[test_ipc] Test 2b PASS: Aidu with index hint normalized and delivered correctly!\n");
 
     /* Test 3: Bob unsubs, Alice publishes, Bob should NOT receive */
     printf("[test_ipc] Test 3: Unsubscribe test...\n");
@@ -284,11 +301,13 @@ int main(void) {
     assert(ipc_check_reconnect() < 0);
     assert(ipc_is_connected() == 0);
 
-    /* Wait for backoff timer (initial 1s + jitter) to elapse */
-    sleep(2);
-
-    /* Reconnect should now succeed and restore credentials & subscriptions! */
-    int new_fd = ipc_check_reconnect();
+    /* Wait for backoff timer (initial delay + random spread) to elapse */
+    int new_fd = -1;
+    for (int waited = 0; waited < 15 && new_fd < 0; waited++) {
+        sleep(1);
+        /* Reconnect should eventually succeed and restore credentials & subscriptions! */
+        new_fd = ipc_check_reconnect();
+    }
     assert(new_fd >= 0);
     assert(ipc_is_connected() == 1);
 
