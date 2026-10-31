@@ -556,6 +556,7 @@ func printUsage() {
 	fmt.Println("  backtrack [board] [-json]            Show cached max backtrack ranges for boards")
 	fmt.Println("  verbose [level] [-json]              Get or set verbose logging level (0=off, 1=miss/slow/inval, 2=all)")
 	fmt.Println("  pprof <type> [seconds] [-out file]   Collect diagnostic profile (cpu, heap, goroutine, block, mutex)")
+	fmt.Println("  diag [seconds] [-out file.tar.gz]    Collect all stats, live QPS delta, top/entries/sources & pprof bundle")
 	fmt.Println("  flush [bid]                          Flush all cached search indices (or for a specific board ID)")
 }
 
@@ -628,6 +629,9 @@ func main() {
 
 	case "pprof":
 		handlePprof(*socketPath, subArgs)
+
+	case "diag", "report", "bundle":
+		handleDiag(*socketPath, subArgs)
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown action: %s\n", action)
