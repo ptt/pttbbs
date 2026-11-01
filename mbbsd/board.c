@@ -2952,6 +2952,7 @@ static const cmd_t boardlist_cmds[] = {
     { 's', "找看板", "搜尋全站看板名稱", board_cmd_search_global, 0, CMD_PRIO_NORM },
     { '/', "搜尋", "搜尋看板中文關鍵字", board_cmd_search_keyword, 0, CMD_PRIO_NORM },
     { 'c', "新文章", "切換顯示看板編號或文章數", board_cmd_toggle_newflag, 0, CMD_PRIO_NORM },
+    { 'C', NULL, NULL, board_cmd_toggle_newflag, 0, CMD_PRIO_NONE },
     { 'S', "排序", "切換看板排序方式", board_cmd_sort, 0, CMD_PRIO_NORM },
     { 'v', "已讀/未讀", "標記看板為已讀/未讀", board_cmd_mark_read, 0, CMD_PRIO_HIGH, true },
     { 'V', NULL, NULL, board_cmd_mark_read, 0, CMD_PRIO_NONE, true },
@@ -3370,12 +3371,16 @@ fav_cmd_add_board(cmd_ctx_t *ctx) {
 
 static const cmd_t myfav_cmds[] = {
     { 'a', "增加看板", "輸入看板名稱加入最愛", fav_cmd_add_board, PERM_BASIC, CMD_PRIO_HIGH },
+    { 'A', NULL, NULL, fav_cmd_add_board, PERM_BASIC, CMD_PRIO_NONE },
     { 'i', NULL, NULL, fav_cmd_add_board, PERM_BASIC, CMD_PRIO_NONE },
     { 'y', "列出全部", "切換顯示全部看板/我的最愛", fav_cmd_yank, PERM_BASIC, CMD_PRIO_NORM },
+    { 'Y', NULL, NULL, fav_cmd_yank, PERM_BASIC, CMD_PRIO_NONE },
     { 'd', "刪除", "從我的最愛移除項目", fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_HIGH, true },
     { 'm', NULL, "將看板加入或移出最愛", fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
     { 'z', NULL, NULL, fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
+    { 'Z', NULL, NULL, fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
     { 'g', "新增目錄", "在我的最愛新增子目錄", fav_cmd_add_folder, PERM_BASIC, CMD_PRIO_HIGH },
+    { 'G', NULL, NULL, fav_cmd_add_folder, PERM_BASIC, CMD_PRIO_NONE },
     { 'M', "移動位置", "移動最愛項目順序", fav_cmd_move, PERM_BASIC, CMD_PRIO_HIGH, true },
     { 'L', "加分隔線", "新增分隔線或看板連結", fav_cmd_add_line_or_link, PERM_BASIC, CMD_PRIO_LOW },
     { 'T', "改目錄名", "修改最愛子目錄標題", fav_cmd_edit_title, PERM_BASIC, CMD_PRIO_LOW, true },
@@ -3391,8 +3396,11 @@ static const cmd_t myfav_cmds[] = {
 
 static const cmd_t board_fav_cmds[] = {
     { 'm', "加入最愛", "將看板加入或移出最愛", fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_HIGH, true },
+    { 'M', NULL, NULL, fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
     { 'z', NULL, NULL, fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
+    { 'Z', NULL, NULL, fav_cmd_toggle_or_del, PERM_BASIC, CMD_PRIO_NONE, true },
     { 'y', "只列最愛", "切換顯示全部看板/我的最愛", fav_cmd_yank, PERM_BASIC, CMD_PRIO_NORM },
+    { 'Y', NULL, NULL, fav_cmd_yank, PERM_BASIC, CMD_PRIO_NONE },
     { 'L', NULL, "新增看板連結", fav_cmd_add_line_or_link, PERM_BRD_OR_GROUPOP, CMD_PRIO_NONE },
     { '*', NULL, "反選全部標記", fav_cmd_tag_all, PERM_BASIC, CMD_PRIO_NONE, true },
     { Ctrl('A'), NULL, "將標記項目加入最愛", fav_cmd_add_tagged, PERM_BASIC, CMD_PRIO_NONE },

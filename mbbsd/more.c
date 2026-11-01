@@ -99,15 +99,18 @@ static int pager_cmd_help(cmd_ctx_t *ctx);
 
 static const cmd_t pager_reading_cmds[] = {
     { 'y', "回應", "回覆文章至看板或信箱", pager_cmd_replyall, 0, CMD_PRIO_HIGH },
+    { 'Y', NULL, NULL, pager_cmd_replyall, 0, CMD_PRIO_NONE },
     { 'X', "推文", "給予文章評論/評分", pager_cmd_comment, 0, CMD_PRIO_HIGH },
     { '%', NULL, NULL, pager_cmd_vote, 0, CMD_PRIO_NONE },
     { 's', "切換看板", "搜尋並切換至其他看板", pager_cmd_selectbrd, PERM_BASIC, CMD_PRIO_LOW },
+    { 'S', NULL, NULL, pager_cmd_selectbrd, PERM_BASIC, CMD_PRIO_NONE },
     { '#', "代碼搜尋", "以文章代碼(AID)搜尋文章", pager_cmd_selectaid, PERM_BASIC, CMD_PRIO_LOW },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
 static const cmd_t pager_mail_cmds[] = {
     { 'y', "回信", "回覆信件至信箱", pager_cmd_reply, 0, CMD_PRIO_HIGH },
+    { 'Y', NULL, NULL, pager_cmd_reply, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -138,6 +141,7 @@ static const cmd_t pager_common_cmds[] = {
     { Ctrl('T'), "存入暫存檔", "將目前文章存入個人暫存檔", pager_cmd_copy2tmp, PERM_BASIC, CMD_PRIO_LOW },
     { Ctrl('K'), NULL, NULL, pager_cmd_copy2tmp, PERM_BASIC, CMD_PRIO_NONE },
     { 'z', "棋局打譜", "進入棋局重播/打譜模式", pager_cmd_chess, PERM_BASIC, CMD_PRIO_LOW },
+    { 'Z', NULL, NULL, pager_cmd_chess, PERM_BASIC, CMD_PRIO_NONE },
 #if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
     { 'L', "執行BBSLua", "執行文章內嵌的 BBSLua 程式", pager_cmd_bbslua, PERM_BASIC, CMD_PRIO_LOW },
     { 'l', NULL, NULL, pager_cmd_bbslua, PERM_BASIC, CMD_PRIO_NONE },

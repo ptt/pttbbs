@@ -734,7 +734,9 @@ static const cmd_t menu_nav_cmds[] = {
 
 static const cmd_t menu_board_shortcut_cmds[] = {
     { 's', "選擇看板", "搜尋並切換至指定看板", menu_cmd_select_board, 0, CMD_PRIO_NORM },
+    { 'S', NULL, NULL, menu_cmd_select_board, 0, CMD_PRIO_NONE },
     { 'r', "進入看板", "進入目前看板閱讀文章", menu_cmd_read_board, 0, CMD_PRIO_NORM },
+    { 'R', NULL, NULL, menu_cmd_read_board, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 

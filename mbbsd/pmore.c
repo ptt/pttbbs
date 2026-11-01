@@ -3023,6 +3023,7 @@ const cmd_t pmore_cmds[] = {
     { KEY_LEFT, NULL, NULL, pmore_cmd_quit, 0, CMD_PRIO_NONE },
     { 'q', NULL, NULL, pmore_cmd_quit, 0, CMD_PRIO_NONE },
     { 'o', "選項設定", "調整 pmore 瀏覽偏好設定", pmore_cmd_pref, 0, CMD_PRIO_NORM },
+    { 'O', NULL, NULL, pmore_cmd_pref, 0, CMD_PRIO_NONE },
     { '\\', "色彩顯示模式", "切換 ANSI 色彩顯示模式", pmore_cmd_rawmode, 0, CMD_PRIO_NORM },
     { 'v', "實況模式", "進入實況模式 (Live) 即時顯示新推文", pmore_cmd_live, 0, CMD_PRIO_NORM },
     { 'V', NULL, NULL, pmore_cmd_live, 0, CMD_PRIO_NONE },
@@ -3037,6 +3038,7 @@ const cmd_t pmore_cmds[] = {
 const cmd_t pmore_movie_cmds[] = {
 #ifdef PMORE_USE_ASCII_MOVIE
     { 'p', "播放動畫", "重新播放 ANSI 動畫", pmore_cmd_movie, 0, CMD_PRIO_NORM },
+    { 'P', NULL, NULL, pmore_cmd_movie, 0, CMD_PRIO_NONE },
 #endif
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };

@@ -1703,13 +1703,17 @@ static const cmd_t userlist_cmds[] = {
     { 'e', NULL, NULL, userlist_cmd_quit, 0, CMD_PRIO_NONE },
     { 'E', NULL, NULL, userlist_cmd_quit, 0, CMD_PRIO_NONE },
     { 'w', "丟水球", "發送水球給選取的使用者", userlist_cmd_write, PERM_LOGINOK, CMD_PRIO_HIGH, true },
+    { 'W', NULL, NULL, userlist_cmd_write, PERM_LOGINOK, CMD_PRIO_NONE, true },
     { 'q', "查詢", "查詢選取的使用者名片檔", userlist_cmd_query, 0, CMD_PRIO_HIGH, true },
     { KEY_RIGHT, "聊天", "邀請選取的使用者聊天", userlist_cmd_talk, PERM_LOGINOK, CMD_PRIO_HIGH, true },
     { KEY_ENTER, NULL, NULL, userlist_cmd_talk, PERM_LOGINOK, CMD_PRIO_NONE, true },
     { 't', NULL, NULL, userlist_cmd_talk, PERM_LOGINOK, CMD_PRIO_NONE, true },
+    { 'T', NULL, NULL, userlist_cmd_talk, PERM_LOGINOK, CMD_PRIO_NONE, true },
     { 'm', "寄信", "寄站內信給使用者", userlist_cmd_mail, PERM_LOGINOK, CMD_PRIO_HIGH, true },
+    { 'M', NULL, NULL, userlist_cmd_mail, PERM_LOGINOK, CMD_PRIO_NONE, true },
     { KEY_TAB, "排序", "切換名單排序方式", userlist_cmd_tab, 0, CMD_PRIO_NORM },
     { 'f', "好友", "切換顯示全部/好友名單", userlist_cmd_friendlist, PERM_LOGINOK, CMD_PRIO_NORM },
+    { 'F', NULL, NULL, userlist_cmd_friendlist, PERM_LOGINOK, CMD_PRIO_NONE },
     { KEY_DOWN, NULL, "向下移動", userlist_cmd_down, 0, CMD_PRIO_NONE, true },
     { 'n', NULL, NULL, userlist_cmd_down, 0, CMD_PRIO_NONE, true },
     { 'j', NULL, NULL, userlist_cmd_down, 0, CMD_PRIO_NONE, true },
@@ -1749,6 +1753,7 @@ static const cmd_t userlist_cmds[] = {
     { '#', NULL, "顯示使用者 PID", userlist_cmd_showpid, PERM_SYSOP, CMD_PRIO_NONE },
 #endif
     { 'b', "廣播", "發送好友廣播水球", userlist_cmd_broadcast, 0, CMD_PRIO_NORM },
+    { 'B', NULL, NULL, userlist_cmd_broadcast, 0, CMD_PRIO_NONE },
     { 'S', "顯示切換", "切換故鄉/描述/戰績顯示模式", userlist_cmd_showmode, 0, CMD_PRIO_NORM },
     { 'u', "查改資料", "查詢或修改使用者帳號資料", userlist_cmd_edituser, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_LOW, true },
 
@@ -1756,18 +1761,24 @@ static const cmd_t userlist_cmds[] = {
     { 'K', NULL, NULL, userlist_cmd_kick, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_LOW, true },
 
     { 'a', "加好友", "將使用者加入好友名單", userlist_cmd_addfriend, PERM_LOGINOK, CMD_PRIO_NORM, true },
+    { 'A', NULL, NULL, userlist_cmd_addfriend, PERM_LOGINOK, CMD_PRIO_NONE, true },
     { 'd', "刪好友", "將使用者從好友名單移除", userlist_cmd_delfriend, PERM_LOGINOK, CMD_PRIO_NORM, true },
+    { 'D', NULL, NULL, userlist_cmd_delfriend, PERM_LOGINOK, CMD_PRIO_NONE, true },
     { 'o', "名單設定", "編輯好友名單設定", userlist_cmd_override, PERM_LOGINOK, CMD_PRIO_NORM },
+    { 'O', NULL, NULL, userlist_cmd_override, PERM_LOGINOK, CMD_PRIO_NONE },
 
     { 'g', "給P幣", "贈送 P 幣給使用者", userlist_cmd_givemoney, PERM_LOGINOK, CMD_PRIO_LOW, true },
+    { 'G', NULL, NULL, userlist_cmd_givemoney, PERM_LOGINOK, CMD_PRIO_NONE, true },
 
 
     { 'Q', "查指定人", "輸入帳號查詢使用者", userlist_cmd_query_input, 0, CMD_PRIO_NORM, true },
     { 'c', "寵物", "查看使用者的電子雞寵物", userlist_cmd_chicken, PERM_LOGINOK, CMD_PRIO_LOW, true },
     { 'l', "回顧水球", "檢視水球歷史記錄", userlist_cmd_review, PERM_LOGINOK, CMD_PRIO_LOW },
+    { 'L', NULL, NULL, userlist_cmd_review, PERM_LOGINOK, CMD_PRIO_NONE },
     { 'p', "呼叫器", "切換呼叫器開關模式", userlist_cmd_pager, PERM_BASIC, CMD_PRIO_NORM },
     { Ctrl('P'), "神諭呼叫", "切換小天使暫停狀態", userlist_cmd_angel_pause, PERM_ANGEL, CMD_PRIO_LOW },
     { 'r', "讀信", "閱讀個人信箱", userlist_cmd_readmail, PERM_READMAIL, CMD_PRIO_NORM },
+    { 'R', NULL, NULL, userlist_cmd_readmail, PERM_READMAIL, CMD_PRIO_NONE },
     { 'N', "改暱稱", "修改個人暫時暱稱", userlist_cmd_nickname, PERM_LOGINOK, CMD_PRIO_NORM },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };

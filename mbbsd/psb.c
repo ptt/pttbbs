@@ -2008,6 +2008,7 @@ static const cmd_t pveh_cmds[] = {
     { KEY_RIGHT, NULL, NULL, pveh_cmd_view, 0, CMD_PRIO_NONE, true },
     { 'r', NULL, NULL, pveh_cmd_view, 0, CMD_PRIO_NONE, true },
     { 'x', "存入信箱", "將此份歷史文件回存至個人信箱", pveh_cmd_mail, 0, CMD_PRIO_HIGH, true },
+    { 'X', NULL, NULL, pveh_cmd_mail, 0, CMD_PRIO_NONE, true },
     { '~', RECYCLE_BIN_NAME, "切換至資源回收筒", pveh_cmd_recycle_bin, 0, CMD_PRIO_HIGH },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
@@ -2260,7 +2261,7 @@ pvrb_cmd_mail(cmd_ctx_t *ctx) {
 static int
 pvrb_cmd_search(cmd_ctx_t *ctx) {
     pvrb_ctx *cx = (pvrb_ctx *)ctx->priv;
-    int newloc = pvrb_search(ctx->key, ctx->curr, ctx->total, cx);
+    int newloc = pvrb_search(tolower((unsigned char)ctx->key), ctx->curr, ctx->total, cx);
     ctx->redraw_footer_lines = 2;
     if (newloc == PSB_NA)
         return 0;
@@ -2276,8 +2277,10 @@ static const cmd_t pvrb_cmds[] = {
     { KEY_RIGHT, NULL, NULL, pvrb_cmd_view, 0, CMD_PRIO_NONE, true },
     { 'r', NULL, NULL, pvrb_cmd_view, 0, CMD_PRIO_NONE, true },
     { 'x', "存入信箱", "將文章最新版本存入個人信箱", pvrb_cmd_mail, 0, CMD_PRIO_HIGH, true },
+    { 'X', NULL, NULL, pvrb_cmd_mail, 0, CMD_PRIO_NONE, true },
     { '/', "搜尋", "搜尋標題關鍵字", pvrb_cmd_search, 0, CMD_PRIO_NORM, true },
     { 'a', NULL, "搜尋作者帳號", pvrb_cmd_search, 0, CMD_PRIO_NONE, true },
+    { 'A', NULL, NULL, pvrb_cmd_search, 0, CMD_PRIO_NONE, true },
     { '#', NULL, "搜尋文章代碼 (AID)", pvrb_cmd_search, 0, CMD_PRIO_NONE, true },
     { 'n', NULL, "尋找下一筆符合項目", pvrb_cmd_search, 0, CMD_PRIO_NONE, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
