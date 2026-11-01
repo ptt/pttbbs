@@ -228,6 +228,7 @@ bbs_cmd_ctrl_r(cmd_ctx_t *ctx) {
 const cmd_t bbs_global_cmds[] = {
     { 'h', "說明", "顯示操作說明", bbs_cmd_help, 0, CMD_PRIO_USAGE },
     { 'H', NULL, NULL, bbs_cmd_help, 0, CMD_PRIO_NONE },
+    { '?', NULL, NULL, bbs_cmd_help, 0, CMD_PRIO_NONE },
     { Ctrl('Z'), "隨處切換(ZA)", "快速切換到文章列表、分類、信箱、使用者名單等", bbs_cmd_za, PERM_BASIC, CMD_PRIO_NONE },
     { Ctrl('U'), "線上使用者", "查看線上使用者名單", bbs_cmd_ctrl_u, PERM_LOGINOK, CMD_PRIO_NONE },
     { Ctrl('R'), "回應水球", "即時回應剛收到的水球", bbs_cmd_ctrl_r, 0, CMD_PRIO_NONE },

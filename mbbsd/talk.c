@@ -1761,7 +1761,8 @@ static const cmd_t userlist_cmds[] = {
     { 'S', "陪ボち传", "ち传珿秏/磞瓃/驹罿陪ボ家Α", userlist_cmd_showmode, 0, CMD_PRIO_NORM },
     { 'u', "琩э戈", "琩高┪эㄏノ眀腹戈", userlist_cmd_edituser, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_LOW, true },
 
-    { 'K', "金", "盢ㄏノ金╰参", userlist_cmd_kick, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_LOW, true },
+    { Ctrl('K'), "金", "盢ㄏノ金╰参", userlist_cmd_kick, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_LOW, true },
+    { 'K', NULL, NULL, userlist_cmd_kick, PERM_ACCOUNTS | PERM_SYSOP, CMD_PRIO_LOW, true },
 
     { 'a', "ね", "盢ㄏノね虫", userlist_cmd_addfriend, PERM_LOGINOK, CMD_PRIO_NORM, true },
     { 'd', "ね", "盢ㄏノ眖ね虫簿埃", userlist_cmd_delfriend, PERM_LOGINOK, CMD_PRIO_NORM, true },

@@ -116,6 +116,7 @@ static const cmd_t pager_common_cmds[] = {
     { 'q', NULL, NULL, pager_cmd_quit, 0, CMD_PRIO_NONE },
 #ifdef USE_PMORE
     { 'h', "說明", "顯示按鍵說明", pager_cmd_help, 0, CMD_PRIO_USAGE },
+    { 'H', NULL, NULL, pager_cmd_help, 0, CMD_PRIO_NONE },
     { '?', NULL, NULL, pager_cmd_help, 0, CMD_PRIO_NONE },
 #endif
     { 'r', "回信回文", "回覆給作者或回文", pager_cmd_reply, 0, CMD_PRIO_NORM },
