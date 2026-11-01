@@ -574,10 +574,6 @@
 #define LOGINASNEW 1                  /* legacy compat */
 #endif
 
-#if !defined(NO_DOTIMEOUT) && !defined(CONFIG_TIMEOUT)
-#define CONFIG_TIMEOUT 1              /* 處理閒置時間 */
-#endif
-
 #if !defined(NO_INTERNET_EMAIL) && !defined(CONFIG_INTERNET_EMAIL)
 #define CONFIG_INTERNET_EMAIL 1       /* 支援 InterNet Email 功能(含 Forward) */
 #endif
@@ -674,11 +670,7 @@
 // #define  HAVE_LICENSE            /* 顯示 GNU 版權畫面 */
 // #define  HAVE_REPORT             /* (轉信)系統追蹤報告 */
 
-#if IS_ENABLED(CONFIG_TIMEOUT)
-# define IDLE_TIMEOUT    (43200) /* 一般情況之 timeout (12hr) */
-# define SHOW_IDLE_TIME          /* 顯示閒置時間 */
-# define DOTIMEOUT       1       /* legacy compat */
-#endif
+#define SHOW_IDLE_TIME          /* 顯示閒置時間 */
 
 #if defined(PLAY_ANGEL) && !defined(CONFIG_ANGEL)
 #define CONFIG_ANGEL 1
@@ -686,10 +678,6 @@
 
 #if defined(ALL_REEDIT_LOG) && !defined(CONFIG_ALL_REEDIT_LOG)
 #define CONFIG_ALL_REEDIT_LOG 1
-#endif
-
-#if defined(DOTIMEOUT) && !defined(CONFIG_TIMEOUT)
-#define CONFIG_TIMEOUT 1
 #endif
 
 #if defined(EDITPOST_SMARTMERGE) && !defined(CONFIG_EDITPOST_SMARTMERGE)

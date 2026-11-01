@@ -1032,10 +1032,6 @@ static int
 userlist_header(PSB_CTX *ctx)
 {
     userlist_ctx_t *cx = (userlist_ctx_t *)ctx->cmd.priv;
-    int idletime = 0;
-#ifdef SHOW_IDLE_TIME
-    idletime = 1;
-#endif
 
     redraw_title((HasUserFlag(UF_FRIEND)) ? "好友列表" : "休閒聊天", BBSNAME);
 
@@ -1063,7 +1059,7 @@ userlist_header(PSB_CTX *ctx)
     cx->vcols[6].label = "動態";
 #endif
     cx->vcols[7].label = *cx->show_pid ? "PID" : "";
-    cx->vcols[8].label = idletime ? "發呆" : "";
+    cx->vcols[8].label = "發呆";
     return 0;
 }
 
@@ -1082,9 +1078,6 @@ userlist_renderer(int idx, PSB_CTX *ctx)
     char description[30];
     char idlestr[32];
     char *mind = "";
-#ifdef SHOW_IDLE_TIME
-    int idletime;
-#endif
 
 
     if (i < 0 || i >= nPickups) {
@@ -1112,8 +1105,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
         state = (friend & ST_FRIEND) >> 2;
 
     idlestr[0] = 0;
-#ifdef SHOW_IDLE_TIME
-    idletime = time4_diff(now, uentp->lastact);
+    int idletime = (int)time4_diff(now, uentp->lastact);
     if (idletime > DAY_SECONDS)
         STRLCPY(idlestr, " -----");
     else if (idletime >= 3600)
@@ -1122,7 +1114,6 @@ userlist_renderer(int idx, PSB_CTX *ctx)
     else if (idletime > 0)
         SNPRINTF(idlestr, "%d'%02d",
                  idletime / 60, idletime % 60);
-#endif
 
     if (uentp->userlevel & PERM_VIOLATELAW)
         mind = ANSI_COLOR(1;31) "違規";
