@@ -1149,6 +1149,18 @@ load_text_screen_file(const char *filename, screen_t **pscr)
 
 static void regular_check();
 
+static int
+is_system_shutdown(void)
+{
+    return (SHM && SHM->GV2.e.shutdown);
+}
+
+static int
+is_system_banned(void)
+{
+    return (g_banned || is_system_shutdown());
+}
+
 static void
 reload_data()
 {
@@ -1164,6 +1176,7 @@ reload_data()
     load_text_screen_file(FN_GOODBYE, &goodbye_screen);
     load_text_screen_file(FN_BANIP,   &banip_screen);
     load_text_screen_file(FN_BAN,     &ban_screen);
+    g_banned = dashf(FN_BAN) || is_system_shutdown();
 
     // Loading banip table is slow - only reload if the file is really modified.
     if (dasht(FN_CONF_BANIP) != g_banip_mtime) {
@@ -1426,9 +1439,35 @@ static const char *auth_is_free_userid(const char *userid);
 
 static void login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec);
 
+static int
+is_bot_check_paused(void)
+{
+    return is_system_banned() || g_overload || !g_tunnel ||
+           ackq_size() > LOGIND_ACKQUEUE_BOUND;
+}
+
+static int
+reject_if_system_banned(login_conn_ctx *conn, int fd)
+{
+    reload_data();
+    if (!is_system_banned())
+        return 0;
+
+    STATINC(STAT_LOGIND_BANNED);
+    if (ban_screen) {
+        draw_text_screen(conn, ban_screen);
+    } else {
+        _mt_clear(conn);
+        _text_write(conn, SERVICE_FAIL_MSG "\r\n",
+                    sizeof(SERVICE_FAIL_MSG) - 1 + 2);
+    }
+    login_conn_remove(conn, fd, BAN_SLEEP_SEC);
+    return -1;
+}
+
 static int bot_check_post_auth_ban(login_conn_ctx *conn, int fd)
 {
-    if (!conn || !conn->ctx.userid[0])
+    if (!conn || !conn->ctx.userid[0] || is_bot_check_paused())
         return 0;
 
     int delay_sec = 1;
@@ -1450,7 +1489,7 @@ static int bot_check_post_auth_ban(login_conn_ctx *conn, int fd)
 
 static int bot_check_user_login(login_conn_ctx *conn, int fd)
 {
-    if (!conn->ctx.userid[0])
+    if (!conn->ctx.userid[0] || is_bot_check_paused())
         return 0;
 
     int delay_sec = 1;
@@ -1476,15 +1515,19 @@ regular_check()
 {
     // cache results
     static time_t last_check_time = 0;
+    static int last_shutdown = 0;
+    int shutdown_now = is_system_shutdown();
     time4_t now = time(0);
 
-    if ( time4_diff(now, last_check_time) < LOGIND_REGULAR_CHECK_DURATION)
+    if (shutdown_now == last_shutdown &&
+        time4_diff(now, last_check_time) < LOGIND_REGULAR_CHECK_DURATION)
         return;
 
     int was_overload = g_overload;
     last_check_time = now;
+    last_shutdown = shutdown_now;
     g_overload = 0;
-    g_banned   = 0;
+    g_banned   = shutdown_now ? 1 : 0;
 
 #ifndef LOGIND_DONT_CHECK_FREE_USERID
     g_guest_too_many = 0;
@@ -1522,6 +1565,11 @@ regular_check()
     {
         g_banned = 1;
         load_text_screen_file(FN_BAN, &ban_screen);
+    }
+    else if (ban_screen)
+    {
+        screen_free(ban_screen);
+        ban_screen = NULL;
     }
 
     const char *files[] = {
@@ -1563,6 +1611,7 @@ is_tunnel_available() {
     }
 
 #ifdef LOGIND_TUNNEL_BUFFER_BOUND
+    if (g_tunnel > 0)
     {
         int nwrite = 0, sndbuf = g_tunnel_send_buffer_size;
 
@@ -2477,6 +2526,9 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     // (backward behavior compatible)
                     uid[IDLEN] = 0;
 
+                    if (reject_if_system_banned(conn, fd) < 0)
+                        return -1;
+
                     if (bot_check_user_login(conn, fd) < 0)
                         return -1;
 
@@ -2498,6 +2550,8 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
             case LOGIN_HANDLE_START_AUTH:
             {
                 draw_input_end(conn);
+                if (reject_if_system_banned(conn, fd) < 0)
+                    return -1;
                 int r = auth_start(fd, conn);
                 if (r != AUTH_RESULT_RETRY && r != AUTH_RESULT_NEED_2FA)
                 {
@@ -2614,12 +2668,8 @@ login_ctx_activate(login_conn_ctx *conn, int fd)
 
     _mt_disable_wrap(conn);
 
-    if (g_banned) {
-        STATINC(STAT_LOGIND_BANNED);
-        draw_text_screen (conn, ban_screen);
-        login_conn_remove(conn, fd, BAN_SLEEP_SEC);
+    if (reject_if_system_banned(conn, fd) < 0)
         return -1;
-    }
 
     if ((banmsg = in_banip_list_addr(g_banip, conn->ctx.addr.sin_addr.s_addr)))
     {
