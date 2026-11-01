@@ -507,8 +507,7 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
 // Pressing 'v' in pmore shows the last page and exits pmore with RET_LIVE;
 // more() then runs live_run(), which owns the screen: new comments of the
 // article (IPC PubSub) are printed below the last page and scrolled up once
-// the screen is full, with a dedicated status bar. 'B' toggles the bell and
-// any other key leaves the pager.
+// the screen is full, with a dedicated status bar. 'q'/'Q' leaves live mode.
 ////////////////////////////////////////////////////////////////////////////
 
 #define LIVE_MAX_PENDING_COMMENTS 128
@@ -804,8 +803,8 @@ live_draw_status(const live_view_t *v, bool can_comment)
         elapsed = 0;
     AUTO_STR(part1, ANSI_COLOR(1;37;42) " 實況中 %02d:%02d [+%d] ",
             elapsed / 60, elapsed % 60, v->received);
-    AUTO_STR(part2, " %s(B)鈴聲%s (任意鍵)離開 %s\t(T/M/S)調時",
-            can_comment ? "(X)留言" : "",
+    AUTO_STR(part2, " %s(B)鈴聲%s (T/M/S)調時 (q)離開\t%s",
+            can_comment ? "(X)留言 " : "",
             s_live_bell ? "[打開]" : "[關閉]", Cdate_mdHM(&now));
     vs_footer(part1, part2);
 }
@@ -885,6 +884,12 @@ live_run(const char *fpath, const more_hooks_t *hooks)
             live_flush(&v);
             break;
 
+        case EOF:
+        case 'q':
+        case 'Q':
+            cont = false;
+            break;
+
         case 'b':
         case 'B':
             s_live_bell = !s_live_bell;
@@ -893,10 +898,8 @@ live_run(const char *fpath, const more_hooks_t *hooks)
         case '%':
         case 'X':
         case 'x':
-            if (!can_comment) {
-                cont = false;
+            if (!can_comment)
                 break;
-            }
             if (live_comment(hooks) == DIRCHANGED) {
                 /* e.g. the article is gone: leave and let the caller reload */
                 result = DIRCHANGED;
@@ -926,7 +929,6 @@ live_run(const char *fpath, const more_hooks_t *hooks)
             break;
 
         default:
-            cont = false;
             break;
         }
     }
