@@ -111,7 +111,7 @@ DATETIME := $(shell date '+%Y%m%d%H%M')
 
 all: $(PROG)
 
-$(PROG): testsz $(OBJS)
+$(PROG): testsz $(OBJS) $(SRCROOT)/util/newvers.sh
 	sh $(SRCROOT)/util/newvers.sh
 	@printf "\033[0;1;32m"
 	@[ -z "$(DEBUG)" ] || printf "\033[31m+DEBUG \033[32m"
