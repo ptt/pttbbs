@@ -195,6 +195,7 @@ enum {
     LOGIN_HANDLE_PROMPT_PASSWD,
     LOGIN_HANDLE_START_AUTH,
 
+    AUTH_RESULT_BOT_BAN       = -8,
     AUTH_RESULT_FAIL_2FA      = -7,
     AUTH_RESULT_NEED_2FA      = -6,
     AUTH_RESULT_INVALID_ID    = -5,
@@ -2014,15 +2015,16 @@ auth_start(int fd, login_conn_ctx *conn)
                 return AUTH_RESULT_STOP;
             }
 
+            if (bot_check_post_auth_ban(conn, fd) < 0) {
+                return AUTH_RESULT_BOT_BAN;
+            }
+
             draw_auth_success(conn, isfree);
             if (!start_service(fd, conn))
             {
                 // too bad, we can't start service.
                 retry_service();
                 draw_service_failure(conn);
-                return AUTH_RESULT_STOP;
-            }
-            if (bot_check_post_auth_ban(conn, fd) < 0) {
                 return AUTH_RESULT_STOP;
             }
             STATINC(STAT_LOGIND_SERVSTART);
@@ -2555,9 +2557,9 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                 int r = auth_start(fd, conn);
                 if (r != AUTH_RESULT_RETRY && r != AUTH_RESULT_NEED_2FA)
                 {
-                    // for AUTH_RESULT_OK, the connection is handled in
-                    // login_conn_end_ack.
-                    if (r != AUTH_RESULT_OK)
+                    // for AUTH_RESULT_OK and AUTH_RESULT_BOT_BAN, connection
+                    // removal is already scheduled.
+                    if (r != AUTH_RESULT_OK && r != AUTH_RESULT_BOT_BAN)
                         login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
                     return -1;
                 }
