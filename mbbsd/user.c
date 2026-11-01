@@ -277,13 +277,13 @@ user_display(const userec_t * u, int adminmode)
 	}
 
 	if (total == 0) {
-	    prints("\t瘁任板主: (無)\n");
+	    prints("\t擔任板主: (無)\n");
 	} else {
 	    const int max_col = 78;
 	    int col = 18; // 	 (8) + "..." (10) = 18
 	    int printed = 0;
 
-	    outs("	瘁任板主: ");
+	    outs("	擔任板主: ");
 
 	    for (i = num_boards(), bhdr = bcache; i > 0; i--, bhdr++) {
 		if (!is_user_board_moderator(bhdr, unum, u->firstlogin))
