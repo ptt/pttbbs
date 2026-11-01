@@ -2947,6 +2947,7 @@ static const cmd_t boardlist_cmds[] = {
     { 'e', NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
     { EOF, NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
     { 'q', NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'Q', NULL, NULL, board_cmd_quit, 0, CMD_PRIO_NONE },
     { KEY_RIGHT, "進入", "進入選取的看板或目錄", board_cmd_select, 0, CMD_PRIO_NORM, true },
     { 's', "找看板", "搜尋全站看板名稱", board_cmd_search_global, 0, CMD_PRIO_NORM },
     { '/', "搜尋", "搜尋看板中文關鍵字", board_cmd_search_keyword, 0, CMD_PRIO_NORM },

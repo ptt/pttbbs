@@ -1211,6 +1211,7 @@ static const cmd_t read_nav_cmds[] = {
     { '9', NULL, NULL, read_cmd_num, 0, CMD_PRIO_NONE, true },
     { KEY_LEFT, "離開", "離開列表或結束搜尋", read_cmd_quit, 0, CMD_PRIO_QUIT },
     { 'q', NULL, NULL, read_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'Q', NULL, NULL, read_cmd_quit, 0, CMD_PRIO_NONE },
     { 'e', NULL, NULL, read_cmd_quit, 0, CMD_PRIO_NONE },
     { 'p', NULL, "向上移動", read_cmd_up, 0, CMD_PRIO_NONE, true },
     { 'k', NULL, NULL, read_cmd_up, 0, CMD_PRIO_NONE, true },
