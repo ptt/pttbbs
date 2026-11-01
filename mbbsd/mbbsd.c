@@ -918,12 +918,6 @@ user_login(void)
     struct tm       ptime, lasttime;
     int             nowusers, i;
 
-    /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
-     * 否則可藉機 race condition 達到 multi-login */
-
-    /* 初始化 uinfo、flag、mode */
-    setup_utmp(LOGIN);
-
     /* log usies */
     STATINC(STAT_MBBSD_ENTER);
     log_usies("ENTER", fromhost);
@@ -964,9 +958,7 @@ user_login(void)
     }
 
     do_aloha();
-    if (currutmp) {
-        ipc_init(currutmp->userid, currutmp->pid, get_utmp_slot(currutmp));
-    }
+    ipc_init(currutmp->userid, currutmp->pid, get_utmp_slot(currutmp));
 
     if (cuser.userlevel) {	/* not guest */
 	move(t_lines - 4, 0);
@@ -1113,8 +1105,10 @@ start_client(struct ProgramOption *option)
         signal_restart(SIGUSR2, write_request);
     }
 
+    // We expect the special user loading - register or recover - should be
+    // finished within a timing window, otherwise abort.
     Signal(SIGALRM, abort_bbs);
-    alarm(600);
+    alarm(2400);
 
     now = time(0);
 
@@ -1128,10 +1122,18 @@ start_client(struct ProgramOption *option)
     load_current_user(option->flag_user);
     last_login_time = cuser.lastlogin;	// keep a backup
 
+    /* NOTE! 在 setup_utmp 之前, 不應該有任何 blocking/slow function,
+     * 否則可藉機 race condition 達到 multi-login */
+    /* 初始化 uinfo、flag、mode */
+    setup_utmp(LOGIN);
+
+    alarm(0);
+    Signal(SIGALRM, SIG_IGN);
+
+    // user_login includes viewing files via pager so it could take a long time.
     user_login();
     auto_close_polls();		/* 自動開票 */
 
-    Signal(SIGALRM, SIG_IGN);
     return 0;
 }
 
