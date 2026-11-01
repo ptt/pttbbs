@@ -208,16 +208,6 @@ mail_send_text(const char *recipient, const char *title, const char *message, co
     return save_mailbox(sender, recipient, title, message, NULL, 0, MAILSEND_FLAG_NONE, NULL) == MAILSEND_OK ? 0 : -1;
 }
 
-
-
-// TODO add header option?
-
-
-void
-m_init(void)
-{
-}
-
 static void
 loadmailusage(void)
 {

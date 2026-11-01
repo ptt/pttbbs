@@ -474,7 +474,6 @@ int hold_mail(const char *fpath, const char *receiver, const char *title);
 void keep_copy(const char *fpath, const char *title);
 int user_is_mail_quota_exempt(const userec_t *u);
 int user_get_daily_free_mail_limit(const userec_t *u);
-void m_init(void);
 int chkmailbox(void);
 int chkmailbox_hard_limit(void);
 int mail_man(void);

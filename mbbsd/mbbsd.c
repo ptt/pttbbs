@@ -1128,7 +1128,6 @@ start_client(struct ProgramOption *option)
     load_current_user(option->flag_user);
     last_login_time = cuser.lastlogin;	// keep a backup
 
-    m_init();			/* init the user mail path */
     user_login();
     auto_close_polls();		/* 自動開票 */
 
