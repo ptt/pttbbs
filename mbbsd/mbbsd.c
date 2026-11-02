@@ -84,6 +84,17 @@ void LogClientCode()
 }
 #endif
 
+// Fingerprint of the terminal client, or 0 without DETECT_CLIENT.
+uint32_t
+get_client_code(void)
+{
+#ifdef DETECT_CLIENT
+    return client_code;
+#else
+    return 0;
+#endif
+}
+
 /* set signal handler, which won't be reset once signal comes */
 static void
 signal_restart(int signum, void (*handler) (int))

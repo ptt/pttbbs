@@ -248,6 +248,7 @@ int start_services()
     const char *services[] = {
         "utmp", "friend", "search", "stat", "ipc",
         CONDITIONAL_SVC(ENTROPY, "entropy")
+        CONDITIONAL_SVC(ACTIVITY, "activity")
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {

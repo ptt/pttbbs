@@ -541,9 +541,6 @@
 #ifndef LOG_CONF_POST           // 記錄發文
 #define LOG_CONF_POST           (0)
 #endif
-#ifndef LOG_CONF_CRAWLER        // 記錄 crawlers
-#define LOG_CONF_CRAWLER        (0)
-#endif
 #ifndef LOG_CONF_CROSSPOST      // 記錄轉錄
 #define LOG_CONF_CROSSPOST      (0)
 #endif
@@ -739,6 +736,9 @@
 #endif
 #ifndef CONFIG_ENTROPY_SVC
 #define CONFIG_ENTROPY_SVC 0
+#endif
+#ifndef CONFIG_ACTIVITY_SVC
+#define CONFIG_ACTIVITY_SVC 0
 #endif
 #ifndef CONFIG_IPC_SVC_FALLBACK
 #define CONFIG_IPC_SVC_FALLBACK 1

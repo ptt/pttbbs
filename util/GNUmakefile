@@ -23,7 +23,7 @@ CPROG_WITH_UTIL := \
 	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
-	munin		useractive_munin	chkfnlen	showbot	\
+	munin		useractive_munin	chkfnlen	\
 	check_moderators	showboard	checkvotes	\
 	$(END)
 

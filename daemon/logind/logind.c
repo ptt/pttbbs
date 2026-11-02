@@ -186,6 +186,7 @@ enum {
     LOGIN_STATE_2FA,
     LOGIN_STATE_AUTH,
     LOGIN_STATE_WAITACK,
+    LOGIN_STATE_ACTIVITY_WAIT,    // Authenticated, waiting for activity.svc verdict
 
     LOGIN_HANDLE_WAIT = 1,
     LOGIN_HANDLE_BEEP,
@@ -195,7 +196,7 @@ enum {
     LOGIN_HANDLE_PROMPT_PASSWD,
     LOGIN_HANDLE_START_AUTH,
 
-    AUTH_RESULT_BOT_BAN       = -8,
+    AUTH_RESULT_ACTIVITY_WAIT      = -8,
     AUTH_RESULT_FAIL_2FA      = -7,
     AUTH_RESULT_NEED_2FA      = -6,
     AUTH_RESULT_INVALID_ID    = -5,
@@ -247,6 +248,9 @@ typedef struct {
     VtkbdCtx     vtkbd;
     login_ctx    ctx;
     int          state;
+    uint32_t     activity_reqid;     // Pending activity.svc verdict (LOGIN_STATE_ACTIVITY_WAIT)
+    void        *activity_next;
+    int          activity_tarpit;    // Counted in the tarpit limits
 } login_conn_ctx;
 
 typedef struct {
@@ -1434,14 +1438,14 @@ draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
 ///////////////////////////////////////////////////////////////////////
 static const char *auth_is_free_userid(const char *userid);
 ///////////////////////////////////////////////////////////////////////
-// Bot Module Hooks
+// Activity Service Hooks
 
-#include "bot.h"
+#include "activity.h"
 
 static void login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec);
 
 static int
-is_bot_check_paused(void)
+is_activity_check_paused(void)
 {
     return is_system_banned() || g_overload || !g_tunnel ||
            ackq_size() > LOGIND_ACKQUEUE_BOUND;
@@ -1466,47 +1470,215 @@ reject_if_system_banned(login_conn_ctx *conn, int fd)
     return -1;
 }
 
-static int bot_check_post_auth_ban(login_conn_ctx *conn, int fd)
+// activity.svc verdicts arrive asynchronously on the client socket. The client
+// may close or replace its socket inside any activity_* call, so the socket is
+// unwatched before and re-watched after each call.
+
+static struct event ev_activity;
+static int ev_activity_fd = -1;
+static login_conn_ctx *g_activity_waiting;   // Connections in LOGIN_STATE_ACTIVITY_WAIT
+
+static int auth_finish(int fd, login_conn_ctx *conn, int isfree);
+static void activity_read_cb(int fd, short event, void *arg);
+
+static void
+activity_unwatch(void)
 {
-    if (!conn || !conn->ctx.userid[0] || is_bot_check_paused())
-        return 0;
-
-    int delay_sec = 1;
-    char msg[512];
-    msg[0] = '\0';
-
-    if (bot_on_auth_result(conn->ctx.userid, conn->ctx.hostip,
-                           auth_is_free_userid(conn->ctx.userid) != NULL,
-                           conn->ctx.is_exempt,
-                           &delay_sec, msg, sizeof(msg)) < 0) {
-        _mt_clear(conn);
-        if (msg[0])
-            _text_write(conn, msg, strlen(msg));
-        login_conn_remove(conn, fd, delay_sec);
-        return -1;
-    }
-    return 0;
+    if (ev_activity_fd >= 0)
+        event_del(&ev_activity);
+    ev_activity_fd = -1;
 }
 
-static int bot_check_user_login(login_conn_ctx *conn, int fd)
+static void
+activity_watch(void)
 {
-    if (!conn->ctx.userid[0] || is_bot_check_paused())
+    int fd = activity_client_fd();
+    if (fd < 0 || fd == ev_activity_fd)
+        return;
+    activity_unwatch();
+    event_set(&ev_activity, fd, EV_READ | EV_PERSIST, activity_read_cb, NULL);
+    event_add(&ev_activity, NULL);
+    ev_activity_fd = fd;
+}
+
+static void
+activity_waiting_del(login_conn_ctx *conn)
+{
+    login_conn_ctx **p;
+    for (p = &g_activity_waiting; *p; p = (login_conn_ctx **)&(*p)->activity_next) {
+        if (*p == conn) {
+            *p = conn->activity_next;
+            break;
+        }
+    }
+    conn->activity_next = NULL;
+    conn->activity_reqid = 0;
+}
+
+// Tarpit accounting: denied connections held open, per IP and in total.
+typedef struct {
+    char ip[IPV4LEN + 1];
+    int  n;
+} activity_tarpit_slot;
+#define ACTIVITY_TARPIT_SLOTS (4096)
+static activity_tarpit_slot g_activity_tarpit[ACTIVITY_TARPIT_SLOTS];
+static int g_activity_tarpit_total;
+
+static activity_tarpit_slot *
+activity_tarpit_slot_of(const char *ip, int create)
+{
+    activity_tarpit_slot *reuse = NULL;
+    unsigned h = 5381;
+    const char *p;
+    int i;
+
+    for (p = ip; *p; p++)
+        h = h * 33 + (unsigned char)*p;
+    for (i = 0; i < ACTIVITY_TARPIT_SLOTS; i++) {
+        activity_tarpit_slot *s = &g_activity_tarpit[(h + i) % ACTIVITY_TARPIT_SLOTS];
+        if (!s->ip[0]) {
+            if (!reuse)
+                reuse = s;
+            break;
+        }
+        if (strcmp(s->ip, ip) == 0)
+            return s;
+        if (!s->n && !reuse)
+            reuse = s;
+    }
+    if (!create || !reuse)
+        return NULL;
+    strlcpy(reuse->ip, ip, sizeof(reuse->ip));
+    reuse->n = 0;
+    return reuse;
+}
+
+// Returns 1 if conn may be held in the tarpit (and counts it).
+static int
+activity_tarpit_acquire(login_conn_ctx *conn)
+{
+    const char *ip = conn->ctx.hostip[0] ? conn->ctx.hostip : "-";
+    activity_tarpit_slot *s;
+
+    if (g_activity_tarpit_total >= ACTIVITY_TARPIT_MAX)
+        return 0;
+    if (!(s = activity_tarpit_slot_of(ip, 1)) || s->n >= ACTIVITY_TARPIT_PER_IP)
+        return 0;
+    s->n++;
+    g_activity_tarpit_total++;
+    conn->activity_tarpit = 1;
+    return 1;
+}
+
+static void
+activity_tarpit_release(login_conn_ctx *conn)
+{
+    const char *ip = conn->ctx.hostip[0] ? conn->ctx.hostip : "-";
+    activity_tarpit_slot *s;
+
+    if (!conn->activity_tarpit)
+        return;
+    conn->activity_tarpit = 0;
+    g_activity_tarpit_total--;
+    if ((s = activity_tarpit_slot_of(ip, 0)) != NULL && s->n > 0)
+        s->n--;
+}
+
+// Continue a login after its verdict (or timeout).
+static void
+activity_resume(login_conn_ctx *conn, int deny, int delay_sec, const char *msg)
+{
+    int fd = conn->telnet.fd;
+
+    activity_waiting_del(conn);
+    event_del(&conn->ev);
+    conn->ctx.state = LOGIN_STATE_AUTH;
+
+    if (deny) {
+        // Hold the connection (tarpit) so the client does not reconnect
+        // right away and the user can read the message.
+        int hold = MIN(delay_sec, ACTIVITY_TARPIT_SEC);
+        if (hold > 1 && !activity_tarpit_acquire(conn))
+            hold = 1;
+        _mt_clear(conn);
+        if (msg && *msg)
+            _text_write(conn, msg, strlen(msg));
+        login_conn_remove(conn, fd, hold > 0 ? hold : 1);
+        return;
+    }
+    // On success the connection is handled by login_conn_end_ack.
+    if (auth_finish(fd, conn, 0) != AUTH_RESULT_OK)
+        login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
+}
+
+static void
+activity_verdict(uint32_t reqid, int deny, int delay_sec, const char *msg,
+            void *arg GCC_UNUSED)
+{
+    login_conn_ctx *conn;
+    for (conn = g_activity_waiting; conn; conn = conn->activity_next) {
+        if (conn->activity_reqid == reqid) {
+            activity_resume(conn, deny, delay_sec, msg);
+            return;
+        }
+    }
+}
+
+static void
+activity_read_cb(int fd GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED)
+{
+    activity_unwatch();
+    activity_client_dispatch(activity_verdict, NULL);
+    activity_watch();
+}
+
+static void
+activity_timeout_cb(int fd GCC_UNUSED, short event GCC_UNUSED, void *arg)
+{
+    login_conn_ctx *conn = (login_conn_ctx *)arg;
+
+    activity_unwatch();
+    activity_client_timeout();
+    activity_watch();
+    activity_resume(conn, 0, 0, NULL);   // No verdict in time: accept
+}
+
+static void
+activity_login_failed_notify(login_conn_ctx *conn)
+{
+    if (!conn->ctx.userid[0] || is_activity_check_paused())
+        return;
+    activity_unwatch();
+    activity_login_failed(conn->ctx.userid, conn->ctx.hostip);
+    activity_watch();
+}
+
+// Asks activity.svc about an authenticated login. Returns 1 if the connection now
+// waits for a verdict, or 0 to continue right away.
+static int
+activity_start_query(login_conn_ctx *conn, int fd)
+{
+    struct timeval tv = { 0, ACTIVITY_SVC_VERDICT_MS * 1000 };
+    uint32_t reqid;
+
+    if (!conn->ctx.userid[0] || is_activity_check_paused())
+        return 0;
+    activity_unwatch();
+    reqid = activity_login_query(conn->ctx.userid, conn->ctx.hostip,
+                            conn->ctx.is_exempt);
+    activity_watch();
+    if (!reqid)
         return 0;
 
-    int delay_sec = 1;
-    char msg[512];
-    msg[0] = '\0';
+    conn->ctx.state = LOGIN_STATE_ACTIVITY_WAIT;
+    conn->activity_reqid = reqid;
+    conn->activity_next = g_activity_waiting;
+    g_activity_waiting = conn;
 
-    if (bot_on_login_attempt(conn->ctx.userid, conn->ctx.hostip,
-                             auth_is_free_userid(conn->ctx.userid) != NULL,
-                             &delay_sec, msg, sizeof(msg)) < 0) {
-        _mt_clear(conn);
-        if (msg[0])
-            _text_write(conn, msg, strlen(msg));
-        login_conn_remove(conn, fd, delay_sec);
-        return -1;
-    }
-    return 0;
+    event_del(&conn->ev);
+    event_set(&conn->ev, fd, 0, activity_timeout_cb, conn);
+    event_add(&conn->ev, &tv);
+    return 1;
 }
 
 // BBS Logic
@@ -1746,7 +1918,7 @@ auth_user_challenge(login_ctx *ctx)
     // normalize user id
     strlcpy(uid, user.userid, IDLEN + 1);
 
-    if ((user.userlevel & (PERM_BM | PERM_ADMIN)) != 0)
+    if ((user.userlevel & ACTIVITY_EXEMPT_PERMS) != 0)
         ctx->is_exempt = 1;
 
     if (ctx->state == LOGIN_STATE_2FA || ctx->totp[0] != '\0')
@@ -1947,6 +2119,22 @@ auth_fail(int fd, login_conn_ctx *conn, draw_prompt_func draw_prompt)
     return AUTH_RESULT_RETRY;
 }
 
+// Hands an authenticated connection over to mbbsd.
+static int
+auth_finish(int fd, login_conn_ctx *conn, int isfree)
+{
+    draw_auth_success(conn, isfree);
+    if (!start_service(fd, conn))
+    {
+        // too bad, we can't start service.
+        retry_service();
+        draw_service_failure(conn);
+        return AUTH_RESULT_STOP;
+    }
+    STATINC(STAT_LOGIND_SERVSTART);
+    return AUTH_RESULT_OK;
+}
+
 static int
 auth_start(int fd, login_conn_ctx *conn)
 {
@@ -1987,6 +2175,7 @@ auth_start(int fd, login_conn_ctx *conn)
         case AUTH_RESULT_FAIL:
             // logattempt(ctx->userid , '-', time(0), ctx->hostip);
             logattempt2(ctx->userid , '-', time(0), ctx->hostip);
+            activity_login_failed_notify(conn);
             break;
 
         case AUTH_RESULT_FREEID:
@@ -2015,20 +2204,10 @@ auth_start(int fd, login_conn_ctx *conn)
                 return AUTH_RESULT_STOP;
             }
 
-            if (bot_check_post_auth_ban(conn, fd) < 0) {
-                return AUTH_RESULT_BOT_BAN;
-            }
+            if (!isfree && activity_start_query(conn, fd))
+                return AUTH_RESULT_ACTIVITY_WAIT;
 
-            draw_auth_success(conn, isfree);
-            if (!start_service(fd, conn))
-            {
-                // too bad, we can't start service.
-                retry_service();
-                draw_service_failure(conn);
-                return AUTH_RESULT_STOP;
-            }
-            STATINC(STAT_LOGIND_SERVSTART);
-            return AUTH_RESULT_OK;
+            return auth_finish(fd, conn, isfree);
 
         default:
             assert(!"unknown auth state.");
@@ -2088,6 +2267,9 @@ endconn_cb(int fd, short event GCC_UNUSED, void *arg)
         // it should be already inside.
         ackq_del(conn);
     }
+    if (conn->ctx.state == LOGIN_STATE_ACTIVITY_WAIT)
+        activity_waiting_del(conn);
+    activity_tarpit_release(conn);
 
     event_del(&conn->ev);
     bufferevent_free(conn->bufev);
@@ -2531,9 +2713,6 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     if (reject_if_system_banned(conn, fd) < 0)
                         return -1;
 
-                    if (bot_check_user_login(conn, fd) < 0)
-                        return -1;
-
                     // accounts except free_auth [guest / new]
                     // require passwd.
                     if (!auth_is_free_userid(uid))
@@ -2557,9 +2736,10 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                 int r = auth_start(fd, conn);
                 if (r != AUTH_RESULT_RETRY && r != AUTH_RESULT_NEED_2FA)
                 {
-                    // for AUTH_RESULT_OK and AUTH_RESULT_BOT_BAN, connection
-                    // removal is already scheduled.
-                    if (r != AUTH_RESULT_OK && r != AUTH_RESULT_BOT_BAN)
+                    // for AUTH_RESULT_OK, the connection is handled in
+                    // login_conn_end_ack; for AUTH_RESULT_ACTIVITY_WAIT, in
+                    // activity_resume.
+                    if (r != AUTH_RESULT_OK && r != AUTH_RESULT_ACTIVITY_WAIT)
                         login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
                     return -1;
                 }

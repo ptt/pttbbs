@@ -3,13 +3,7 @@ include $(SRCROOT)/pttbbs.mk
 
 SRCS:=	log.c money.c names.c path.c time.c string.c fhdr_stamp.c cache.c \
 	passwd.c filehdr.c boardhdr.c banip.c search.c shm.c cgo.c message.c \
-	friend.c 2fa.c aids.c svc.c stat.c ipc.c
-BOT_C = $(wildcard $(SRCROOT)/mbbsd/local/bot.c)
-ifneq ($(BOT_C),)
-SRCS += $(BOT_C)
-else
-SRCS += bot_stub.c
-endif
+	friend.c 2fa.c aids.c svc.c stat.c ipc.c activity.c
 LIB:=	libcmbbs.a
 OBJS:=	$(SRCS:.c=.o)
 
@@ -18,6 +12,7 @@ OBJS:=	$(SRCS:.c=.o)
 all:	$(SRCROOT)/include/var.h $(LIB)
 
 $(LIB): $(OBJS)
+	rm -f $@
 	$(AR) rcs $@ $^
 
 %.o: %.c

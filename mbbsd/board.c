@@ -1,6 +1,6 @@
 #include "bbs.h"
 #include "psb.h"
-#include "bot.h"
+#include "activity.h"
 
 /* personal board state
  * 相對於看板的 attr (BRD_* in ../include/pttstruct.h),
@@ -115,18 +115,17 @@ int enter_board(const char *boardname)
     setbdir(currdirect, currboard);
 
     {
-#ifdef DETECT_CLIENT
-        extern Fnv32_t client_code;
-        uint32_t cc = client_code;
-#else
-        uint32_t cc = 0;
-#endif
-        int is_exempt = HasUserPerm(PERM_BM | PERM_ADMIN | PERM_POLICE | PERM_POLICE_MAN);
-        if (bot_on_mbbsd_nav(cuser.userid, cuser.firstlogin, fromhost,
-                             cc, is_exempt, BOT_NAV_BOARD_SWITCH, currbid) < 0) {
+        uint32_t cc = get_client_code();
+        int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
+        int delay_ms = 0;
+        if (activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
+                               cc, is_exempt, ACTIVITY_NAV_BOARD_SWITCH, currbid,
+                               0, &delay_ms) < 0) {
             vmsg("偵測到異常高頻切換看板行為，請關閉自動掃描腳本或更新連線 App！");
             abort_bbs(0);
         }
+        if (delay_ms > 0)
+            usleep(delay_ms * 1000);
     }
 
     return 0;

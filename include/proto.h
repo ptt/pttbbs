@@ -513,6 +513,7 @@ bool is_local_mail_address(const char *addr);
 bool parse_mail_address(const char *addr, char *out_userid, size_t out_userid_len);
 
 /* mbbsd */
+uint32_t get_client_code(void);
 void show_call_in(int save, int which);
 void write_request (int sig);
 int  mbbsd_ipc_handler(const ipc_hdr_t *hdr, const void *payload);

@@ -1,6 +1,6 @@
 #include "bbs.h"
 #include "psb.h"
-#include "bot.h"
+#include "activity.h"
 
 static int headers_size = 0;
 static fileheader_t *headers = NULL;
@@ -571,18 +571,17 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
     if(aidu > 0)
     {
 	{
-#ifdef DETECT_CLIENT
-	    extern Fnv32_t client_code;
-	    uint32_t cc = client_code;
-#else
-	    uint32_t cc = 0;
-#endif
-	    int is_exempt = HasUserPerm(PERM_BM | PERM_ADMIN | PERM_POLICE | PERM_POLICE_MAN);
-	    if (bot_on_mbbsd_nav(cuser.userid, cuser.firstlogin, fromhost,
-	                         cc, is_exempt, BOT_NAV_SEARCH_AID, currbid) < 0) {
+	    uint32_t cc = get_client_code();
+	    int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
+	    int delay_ms = 0;
+	    if (activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
+	                           cc, is_exempt, ACTIVITY_NAV_SEARCH_AID, currbid,
+	                           0, &delay_ms) < 0) {
 		vmsg("偵測到異常高頻自動搜尋行為，請關閉自動掃描腳本或更新連線 App！");
 		abort_bbs(0);
 	    }
+	    if (delay_ms > 0)
+	        usleep(delay_ms * 1000);
 	}
 	/* search bottom in boardheader_t.bottom[] */
 	if (currbid > 0) {
@@ -821,17 +820,24 @@ select_read(read_ctx_t *cx, int sr_mode)
 
     int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
     {
-#ifdef DETECT_CLIENT
-        extern Fnv32_t client_code;
-        uint32_t cc = client_code;
-#else
-        uint32_t cc = 0;
-#endif
-        int is_exempt = HasUserPerm(PERM_BM | PERM_ADMIN | PERM_POLICE | PERM_POLICE_MAN);
-        if (bot_on_mbbsd_nav(cuser.userid, cuser.firstlogin, fromhost,
-                             cc, is_exempt, BOT_NAV_SEARCH_SR, bid) < 0) {
+        uint32_t cc = get_client_code();
+        int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
+        int delay_ms = 0, r;
+        int rating = (sr_mode & RS_RATING) != 0;
+        r = activity_nav_track(cuser.userid, cuser.firstlogin, fromhost, cc,
+                               is_exempt, rating ? ACTIVITY_NAV_SEARCH_RATING :
+                               ACTIVITY_NAV_SEARCH_SR, bid,
+                               rating ? predicate.rating : 0, &delay_ms);
+        if (r < 0) {
             vmsg("偵測到異常高頻自動搜尋行為，請關閉自動掃描腳本或更新連線 App！");
             abort_bbs(0);
+        }
+        if (delay_ms > 0)
+            usleep(delay_ms * 1000);
+        if (r > 0) {
+            // Polling: answer as if nothing matched.
+            vmsg("找不到符合條件的文章。");
+            return READ_REDRAW;
         }
     }
     int total = 0;

@@ -1,6 +1,7 @@
 
 #include "bbs.h"
 #include "daemons.h"
+#include "activity.h"
 #include <arpa/inet.h>
 
 #define SMHASHLEN (64/8)
@@ -2583,22 +2584,21 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
     {
+        // Report the read; the activity service may ask to slow down.
+        int delay_ms = 0;
+        activity_read_post(cuser.userid, cuser.firstlogin, get_client_code(),
+                           HasUserPerm(ACTIVITY_EXEMPT_PERMS), currbid,
+                           fhdr->filename, &delay_ms);
+        if (delay_ms > 0)
+            usleep(delay_ms * 1000);
+    }
+
+    // Real read.
+    {
         read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
         const more_hooks_t hooks = { .comment = read_post_comment, .ctx = &rp };
         more_result = more_ex(genbuf, YEA, &hooks);
     }
-
-    LOG_IF(LOG_CONF_CRAWLER, {
-           // kcwu: log crawler
-           static int read_count = 0;
-           extern Fnv32_t client_code;
-           ++read_count;
-           syncnow();
-           if (read_count % 1000 == 0)
-               file_appendf("log/read_alot",
-                        "%d %s %d %s %08x %d\n", (int)now, Cdate(&now), getpid(),
-                        cuser.userid, client_code, read_count);
-           });
 
     {
 	time4_t posttime = get_fhdr_stamp_ts(fhdr->filename);
