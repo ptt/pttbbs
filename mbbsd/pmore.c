@@ -2598,9 +2598,21 @@ typedef struct {
 } pmore_exec_ctx_t;
 
 /*
- * 'v': hand the screen over to the caller's live mode. Show the last page,
- * remember how many rows hold content (live output continues below them,
- * then scrolls) and how much of the file was shown, then exit with RET_LIVE.
+ * Show the last page and remember how many rows hold content (live output
+ * continues below them, then scrolls) and how much of the file was shown.
+ */
+static void
+mf_enter_live(void)
+{
+    mf_goBottom();
+    mf_display();
+    mf_live_rows = mf_disprows;
+    mf_live_size = mf.len;
+}
+
+/*
+ * 'v': hand the screen over to the caller's live mode (see mf_enter_live),
+ * then exit with RET_LIVE.
  */
 MFPROTO int
 pmore_cmd_live(cmd_ctx_t *ctx)
@@ -2609,10 +2621,7 @@ pmore_cmd_live(cmd_ctx_t *ctx)
     if (!p || !p->cb || !p->cb->can_live || !p->cb->can_live(p->user_ctx))
         return 0;
 
-    mf_goBottom();
-    mf_display();
-    mf_live_rows = mf_disprows;
-    mf_live_size = mf.len;
+    mf_enter_live();
     ctx->redraw = false;
     ctx->quit = true;
     p->retval = RET_LIVE;
@@ -3097,6 +3106,16 @@ _pmore2(
     }
 
     clear();
+
+    /* Caller asked to start in live mode: same as pressing 'v' at once. */
+    if (cb->start_live && cb->can_live &&
+        cb->start_live(ctx) && cb->can_live(ctx))
+    {
+        mf_enter_live();
+        retval = RET_LIVE;
+        flExit = 1;
+    }
+
     while (!flExit)
     {
         if (invalidate)

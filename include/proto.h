@@ -573,6 +573,8 @@ struct pmore_callbacks {
     int (*vkey)(void *ctx);
     int (*exit)(void *ctx);
     int (*can_live)(void *ctx);     // non-zero: 'v' exits pmore with RET_LIVE
+    int (*start_live)(void *ctx);   // non-zero: enter live mode right away, as
+                                    // if 'v' was pressed (needs can_live)
 };
 
 /* After pmore returned RET_LIVE: screen rows holding content on the last page

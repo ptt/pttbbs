@@ -518,6 +518,12 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
 #define LIVE_CATCHUP_MAX        (16 * 1024) // max bytes of missed comments to replay
 #define LIVE_STATUS_REFRESH_MS  1000
 
+// After a user opened the same article this many times in a row (likely
+// re-entering to refresh new comments), offer live mode on the next open.
+#ifndef LIVE_AUTO_PROMPT_REPEAT
+#define LIVE_AUTO_PROMPT_REPEAT 10
+#endif
+
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
 # define MAP_ANONYMOUS MAP_ANON
 #endif
@@ -539,6 +545,14 @@ typedef struct {
 
 static live_provider_t s_live;
 static bool s_live_bell = false;    // (B) bell notification, kept per session
+
+// Consecutive opens of one article, kept per session.
+static struct {
+    uint32_t bid;
+    aidu_t   aid;
+    int      count;
+} s_live_repeat;
+static bool s_live_autostart = false;   // answer of the live mode prompt
 
 static void
 live_provider_free(void)
@@ -949,11 +963,51 @@ common_pager_can_live(void *ctx GCC_UNUSED)
     return s_live.bid != 0 && aidu_raw(s_live.aid) != 0;
 }
 
+static int
+common_pager_start_live(void *ctx GCC_UNUSED)
+{
+    return s_live_autostart;
+}
+
+/*
+ * Counts consecutive opens of the same article. Once it was opened
+ * LIVE_AUTO_PROMPT_REPEAT times in a row, asks (on this open) whether to go
+ * straight into live mode. The count restarts whenever the user was asked.
+ * Returns true if the user wants live mode.
+ */
+static bool
+live_check_repeat(uint32_t bid, aidu_t aid)
+{
+    if (bid == 0 || aidu_raw(aid) == 0)
+        return false;
+
+    if (s_live_repeat.bid != bid ||
+        aidu_raw(s_live_repeat.aid) != aidu_raw(aid)) {
+        s_live_repeat.bid = bid;
+        s_live_repeat.aid = aid;
+        s_live_repeat.count = 0;
+    }
+    if (s_live_repeat.count < LIVE_AUTO_PROMPT_REPEAT) {
+        s_live_repeat.count++;
+        return false;
+    }
+
+    /* Don't offer what live_run() can't deliver; keep the count to retry. */
+    if (!ipc_is_connected())
+        ipc_check_reconnect();
+    if (!ipc_is_connected())
+        return false;
+
+    s_live_repeat.count = 0;
+    return vans("要直接進入實況模式看新推文嗎？ [Y/n]: ") != 'n';
+}
+
 /* use new pager: piaip's more. */
 static const struct pmore_callbacks common_pager_cb = {
     .process_key = common_pager_key_handler,
     .footer = common_pmore_footer_handler,
     .can_live = common_pager_can_live,
+    .start_live = common_pager_start_live,
 };
 
 int
@@ -975,9 +1029,13 @@ more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
     if (s_live.bid == 0 || aidu_raw(s_live.aid) == 0)
         cb.can_live = NULL;
 
+    s_live_autostart = cb.can_live && live_check_repeat(s_live.bid, s_live.aid);
     int r = pmore2(fpath, promptend, (void *)fpath, &cb);
-    if (r == RET_LIVE)
+    s_live_autostart = false;
+    if (r == RET_LIVE) {
+        s_live_repeat.count = 0;    // already knows live mode
         r = live_run(fpath, hooks);
+    }
 
     s_live.bid = outer_bid;
     s_live.aid = outer_aid;
