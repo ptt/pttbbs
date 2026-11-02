@@ -29,8 +29,9 @@
 //   verdict <reqid> deny <delay_sec> <message>  message (Big5) runs to the end
 //   reads <userid> <count> <delay_ms>           new posts read across sessions,
 //                                               and how long to pause
-//   pace <userid> <delay_ms> [deny]             reply to nav: how long to pause,
-//                                               and "deny": answer with nothing
+//   pace <userid> <delay_ms> [deny <type>]      reply to nav: how long to pause,
+//                                               and "deny": answer this type of
+//                                               request with nothing
 //   kick <userid> <sec>                         end this session (instead of pace)
 //
 // A login waits at most ACTIVITY_SVC_VERDICT_MS for its verdict and is

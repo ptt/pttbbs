@@ -146,7 +146,7 @@ static uint32_t g_inflight_sum;
 static int g_kicked;
 static int g_delay_ms;              // Pause requested by the latest "reads"
 static int g_nav_delay_ms;          // Pause requested by the latest "pace"
-static int g_nav_deny;              // The latest "pace" said "deny"
+static int g_nav_deny;              // Request type the latest "pace" denied, or 0
 
 static void
 act_inflight_clear(void)
@@ -216,7 +216,10 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg)
     } else if (strcmp(tok[0], "pace") == 0 && n >= 3) {
         if (strcasecmp(tok[1], g_tracked) == 0) {
             g_nav_delay_ms = atoi(tok[2]);
-            g_nav_deny = n >= 4 && strncmp(tok[3], "deny", 4) == 0;
+            // "deny <type>"; a bare "deny" (older services) is for ratings.
+            g_nav_deny = 0;
+            if (n >= 4 && strcmp(tok[3], "deny") == 0)
+                g_nav_deny = p ? atoi(p) : ACTIVITY_NAV_SEARCH_RATING;
         }
     } else if (strcmp(tok[0], "kick") == 0 && n >= 2) {
         if (strcasecmp(tok[1], g_tracked) == 0)
@@ -408,8 +411,8 @@ activity_nav_track(const char *userid, time4_t firstlogin,
     }
     if (delay_ms)
         *delay_ms = g_nav_delay_ms;
-    // A late reply may belong to an earlier request: only ratings are denied.
-    deny = g_nav_deny && nav_type == ACTIVITY_NAV_SEARCH_RATING;
+    // A late reply may belong to an earlier request: deny only the same type.
+    deny = g_nav_deny && g_nav_deny == nav_type;
     g_nav_delay_ms = g_nav_deny = 0;    // Apply each once
     return g_kicked ? -1 : deny ? 1 : 0;
 }

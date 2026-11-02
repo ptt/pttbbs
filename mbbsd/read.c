@@ -573,15 +573,18 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	{
 	    uint32_t cc = get_client_code();
 	    int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
-	    int delay_ms = 0;
-	    if (activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
+	    int delay_ms = 0, r;
+	    r = activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
 	                           cc, is_exempt, ACTIVITY_NAV_SEARCH_AID, currbid,
-	                           0, &delay_ms) < 0) {
+	                           0, &delay_ms);
+	    if (r < 0) {
 		vmsg("偵測到異常高頻自動搜尋行為，請關閉自動掃描腳本或更新連線 App！");
 		abort_bbs(0);
 	    }
 	    if (delay_ms > 0)
 	        usleep(delay_ms * 1000);
+	    if (r > 0)  // Scraping: answer as if the post did not exist.
+		goto not_found;
 	}
 	/* search bottom in boardheader_t.bottom[] */
 	if (currbid > 0) {
@@ -652,6 +655,7 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	}
     }  /* if(aidu > 0) */
 
+not_found:
     if(n < 0)
     {
 	move(21, 0);
