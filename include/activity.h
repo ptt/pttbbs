@@ -27,12 +27,12 @@
 // Service -> client:
 //   verdict <reqid> ok
 //   verdict <reqid> deny <delay_sec> <message>  message (Big5) runs to the end
-//   reads <userid> <count> <delay_ms>           new posts read across sessions,
-//                                               and how long to pause
+//   reads <userid> <count> <delay_ms>           reply to read: how long to pause
+//                                               (count: new posts read across
+//                                               sessions, for logs; not used)
 //   pace <userid> <delay_ms> [deny <type>]      reply to nav: how long to pause,
 //                                               and "deny": answer this type of
 //                                               request with nothing
-//   kick <userid> <sec>                         end this session (instead of pace)
 //
 // A login waits at most ACTIVITY_SVC_VERDICT_MS for its verdict and is
 // accepted without one. A denied login is held for min(delay_sec,
@@ -83,18 +83,16 @@ void activity_client_dispatch(activity_verdict_cb cb, void *arg);
 // logind: a verdict did not arrive in time.
 void activity_client_timeout(void);
 
-// mbbsd: reports reading post `filename` on board `bid`. Returns the number of
-// distinct posts read across sessions in the service's window, and sets
-// *delay_ms to how long the caller should pause (0 without the service).
-// Without the service it counts this process only.
-uint32_t activity_read_post(const char *userid, time4_t firstlogin,
-                            uint32_t client_code, int is_exempt,
-                            int bid, const char *filename, int *delay_ms);
+// mbbsd: reports reading post `filename` on board `bid`, and sets *delay_ms to
+// how long the caller should pause (0 without the service).
+void activity_read_post(const char *userid, time4_t firstlogin,
+                        uint32_t client_code, int is_exempt,
+                        int bid, const char *filename, int *delay_ms);
 
 // mbbsd: reports navigation (`value`: the threshold for SEARCH_RATING, else 0).
-// Returns -1 if the session should end, 1 if this request should be answered
-// with nothing (e.g. polling), else 0; sets *delay_ms to how long the caller
-// should pause first (0 without the service).
+// Returns 1 if this request should be answered with nothing (e.g. polling),
+// else 0; sets *delay_ms to how long the caller should pause first (0 without
+// the service).
 int activity_nav_track(const char *userid, time4_t firstlogin,
                        const char *hostip, uint32_t client_code,
                        int is_exempt, int nav_type, int target_bid,

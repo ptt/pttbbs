@@ -24,8 +24,6 @@ static time_t g_retry_at;       // No connection attempts before this time
 static int g_timeouts;          // Consecutive verdict timeouts
 static uint32_t g_reqid;
 
-static void act_inflight_lost(void);
-
 // Closes the connection. If `backoff`, no reconnection is tried for
 // ACTIVITY_SVC_RETRY_SEC; otherwise the next call reconnects right away (e.g.
 // after the service restarted), and only a failed connect starts the wait.
@@ -37,7 +35,6 @@ act_disconnect(int backoff)
     g_fd = -1;
     g_timeouts = 0;
     g_retry_at = backoff ? time(NULL) + ACTIVITY_SVC_RETRY_SEC : 0;
-    act_inflight_lost();
 }
 
 static int
@@ -53,7 +50,6 @@ act_connect(void)
         close(g_fd);
         g_fd = -1;
         g_retry_at = 0;
-        act_inflight_lost();
     }
     if (g_fd >= 0)
         return 0;
@@ -135,58 +131,19 @@ activity_client_timeout(void)
 ///////////////////////////////////////////////////////////////////////////
 // Replies
 
-static char g_tracked[IDLEN + 1];   // mbbsd: the user of this process
-static uint32_t g_reads;            // Latest count from the service (or local)
-// Read deltas sent but not yet answered (one reply per "read", in order), so
-// the result includes reads still in flight.
-static uint32_t g_inflight[64];
-static unsigned g_inflight_head, g_inflight_len;
-static uint32_t g_inflight_sum;
-
-static int g_kicked;
-static int g_delay_ms;              // Pause requested by the latest "reads"
-static int g_nav_delay_ms;          // Pause requested by the latest "pace"
-static int g_nav_deny;              // Request type the latest "pace" denied, or 0
+// The mbbsd request waiting for its reply (mbbsd sends one at a time). Replies
+// nobody waits for, e.g. ones that arrive too late, are dropped.
+enum { ACT_WAIT_READ = 1, ACT_WAIT_NAV };
+struct act_wait {
+    int kind;               // ACT_WAIT_*
+    int type;               // NAV: the request type
+    int done;
+    int delay_ms;           // pause requested
+    int deny;               // NAV: answer with nothing
+};
 
 static void
-act_inflight_clear(void)
-{
-    g_inflight_head = g_inflight_len = 0;
-    g_inflight_sum = 0;
-}
-
-// The connection is gone: in-flight reads will not be answered, keep them.
-static void
-act_inflight_lost(void)
-{
-    g_reads += g_inflight_sum;
-    act_inflight_clear();
-}
-
-static void
-act_inflight_pop(void)
-{
-    if (!g_inflight_len)
-        return;
-    g_inflight_sum -= g_inflight[g_inflight_head];
-    g_inflight_head = (g_inflight_head + 1) % ARRAY_SIZE(g_inflight);
-    g_inflight_len--;
-}
-
-static void
-act_inflight_push(uint32_t delta)
-{
-    if (g_inflight_len == ARRAY_SIZE(g_inflight)) {
-        g_reads += g_inflight[g_inflight_head];     // Assume it was counted
-        act_inflight_pop();
-    }
-    g_inflight[(g_inflight_head + g_inflight_len) % ARRAY_SIZE(g_inflight)] = delta;
-    g_inflight_len++;
-    g_inflight_sum += delta;
-}
-
-static void
-act_handle(char *msg, activity_verdict_cb cb, void *arg)
+act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
 {
     char *p = msg, *tok[4];
     int n;
@@ -208,31 +165,27 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg)
         else
             cb(reqid, 0, 0, NULL, arg);
     } else if (strcmp(tok[0], "reads") == 0 && n >= 3) {
-        if (strcasecmp(tok[1], g_tracked) == 0) {
-            act_inflight_pop();
-            g_reads = (uint32_t)strtoul(tok[2], NULL, 10);
-            g_delay_ms = n >= 4 ? atoi(tok[3]) : 0;
+        // "reads <userid> <count> <delay_ms>": the count is not used.
+        if (w && w->kind == ACT_WAIT_READ && !w->done) {
+            w->delay_ms = n >= 4 ? atoi(tok[3]) : 0;
+            w->done = 1;
         }
     } else if (strcmp(tok[0], "pace") == 0 && n >= 3) {
-        if (strcasecmp(tok[1], g_tracked) == 0) {
-            g_nav_delay_ms = atoi(tok[2]);
+        if (w && w->kind == ACT_WAIT_NAV && !w->done) {
+            w->delay_ms = atoi(tok[2]);
             // "deny <type>"; a bare "deny" (older services) is for ratings.
-            g_nav_deny = 0;
+            // A late reply may belong to an earlier request: deny only the
+            // same type.
             if (n >= 4 && strcmp(tok[3], "deny") == 0)
-                g_nav_deny = p ? atoi(p) : ACTIVITY_NAV_SEARCH_RATING;
+                w->deny = (p ? atoi(p) : ACTIVITY_NAV_SEARCH_RATING) == w->type;
+            w->done = 1;
         }
-    } else if (strcmp(tok[0], "kick") == 0 && n >= 2) {
-        if (strcasecmp(tok[1], g_tracked) == 0)
-            g_kicked = 1;
     }
 }
 
-void
-activity_client_dispatch(activity_verdict_cb cb, void *arg)
+static void
+act_dispatch(activity_verdict_cb cb, void *arg, struct act_wait *w)
 {
-    if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
-        return;
-
     char buf[ACTIVITY_SVC_MSG_MAX];
 
     if (activity_client_fd() < 0)
@@ -249,7 +202,34 @@ activity_client_dispatch(activity_verdict_cb cb, void *arg)
             return;
         }
         buf[n] = '\0';
-        act_handle(buf, cb, arg);
+        act_handle(buf, cb, arg, w);
+    }
+}
+
+void
+activity_client_dispatch(activity_verdict_cb cb, void *arg)
+{
+    if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
+        return;
+    act_dispatch(cb, arg, NULL);
+}
+
+// Waits up to timeout_ms for the reply to w. Other replies (e.g. a late one
+// to an earlier request) may come first.
+static void
+act_wait_reply(struct act_wait *w, int timeout_ms)
+{
+    struct timespec start, t;
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    while (!w->done && g_fd >= 0) {
+        clock_gettime(CLOCK_MONOTONIC, &t);
+        int left = timeout_ms - (int)((t.tv_sec - start.tv_sec) * 1000 +
+                                      (t.tv_nsec - start.tv_nsec) / 1000000);
+        struct pollfd pfd = { g_fd, POLLIN, 0 };
+        if (left <= 0 || poll(&pfd, 1, left) <= 0)
+            break;
+        act_dispatch(NULL, NULL, w);
     }
 }
 
@@ -324,58 +304,28 @@ activity_login_query(const char *userid, const char *hostip, int is_exempt)
     return g_reqid;
 }
 
-static void
-act_track_user(const char *userid)
-{
-    if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
-        return;
-
-    if (strcasecmp(g_tracked, userid) != 0) {
-        strlcpy(g_tracked, userid, sizeof(g_tracked));
-        g_reads = 0;
-        act_inflight_clear();
-        g_kicked = 0;
-        g_delay_ms = 0;
-        g_nav_delay_ms = 0;
-        g_nav_deny = 0;
-    }
-}
-
-uint32_t
+void
 activity_read_post(const char *userid, time4_t firstlogin,
                    uint32_t client_code, int is_exempt,
                    int bid, const char *filename, int *delay_ms)
 {
+    struct act_wait w = { .kind = ACT_WAIT_READ };
+
     if (delay_ms)
         *delay_ms = 0;
     if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
-        return 0;
-    if (!act_field_ok(userid))
-        return 0;
-    act_track_user(userid);
-    if (is_exempt || !act_field_ok(filename)) {
-        g_reads++;
-        return g_reads + g_inflight_sum;
-    }
+        return;
+    if (is_exempt || !act_field_ok(userid) || !act_field_ok(filename))
+        return;
 
-    activity_client_dispatch(NULL, NULL);
+    act_dispatch(NULL, NULL, NULL);     // Drop stale replies
+    // The service answers in microseconds; a short wait gets the verdict for
+    // this read.
     if (act_send("read %s %d %x %d %s", userid, (int)firstlogin, client_code,
-                 bid, filename) == 0) {
-        act_inflight_push(1);   // Estimate until the reply arrives
-        // The service answers in microseconds; a short wait gets the verdict
-        // for this read instead of applying it on the next one.
-        struct pollfd pfd = { g_fd, POLLIN, 0 };
-        if (poll(&pfd, 1, ACTIVITY_READ_WAIT_MS) > 0)
-            activity_client_dispatch(NULL, NULL);
-    } else {
-        g_reads++;              // Not sent: count locally
-    }
-
-    if (delay_ms) {
-        *delay_ms = g_delay_ms;
-        g_delay_ms = 0;         // Apply each delay once
-    }
-    return g_reads + g_inflight_sum;
+                 bid, filename) == 0)
+        act_wait_reply(&w, ACTIVITY_READ_WAIT_MS);
+    if (delay_ms)
+        *delay_ms = w.delay_ms;
 }
 
 int
@@ -384,7 +334,7 @@ activity_nav_track(const char *userid, time4_t firstlogin,
                    int is_exempt, int nav_type, int target_bid,
                    int value, int *delay_ms)
 {
-    int deny;
+    struct act_wait w = { .kind = ACT_WAIT_NAV, .type = nav_type };
 
     if (delay_ms)
         *delay_ms = 0;
@@ -395,24 +345,15 @@ activity_nav_track(const char *userid, time4_t firstlogin,
 
     if (is_exempt || !act_field_ok(userid))
         return 0;
-    act_track_user(userid);
-    activity_client_dispatch(NULL, NULL);
-    g_nav_delay_ms = g_nav_deny = 0;    // Only this request's reply counts
+    act_dispatch(NULL, NULL, NULL);     // Drop stale replies
     act_norm_ip(hostip, ip, sizeof(ip));
     if ((nav_type == ACTIVITY_NAV_SEARCH_RATING ?
          act_send("nav %s %d %s %x %d %d %d", userid, (int)firstlogin, ip,
                   client_code, nav_type, target_bid, value) :
          act_send("nav %s %d %s %x %d %d", userid, (int)firstlogin, ip,
-                  client_code, nav_type, target_bid)) == 0) {
-        // Like reads: a short wait gets the pace (or kick) for this operation.
-        struct pollfd pfd = { g_fd, POLLIN, 0 };
-        if (poll(&pfd, 1, ACTIVITY_READ_WAIT_MS) > 0)
-            activity_client_dispatch(NULL, NULL);
-    }
+                  client_code, nav_type, target_bid)) == 0)
+        act_wait_reply(&w, ACTIVITY_READ_WAIT_MS);
     if (delay_ms)
-        *delay_ms = g_nav_delay_ms;
-    // A late reply may belong to an earlier request: deny only the same type.
-    deny = g_nav_deny && g_nav_deny == nav_type;
-    g_nav_delay_ms = g_nav_deny = 0;    // Apply each once
-    return g_kicked ? -1 : deny ? 1 : 0;
+        *delay_ms = w.delay_ms;
+    return w.deny;
 }

@@ -577,10 +577,6 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	    r = activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
 	                           cc, is_exempt, ACTIVITY_NAV_SEARCH_AID, currbid,
 	                           0, &delay_ms);
-	    if (r < 0) {
-		vmsg("偵測到異常高頻自動搜尋行為，請關閉自動掃描腳本或更新連線 App！");
-		abort_bbs(0);
-	    }
 	    if (delay_ms > 0)
 	        usleep(delay_ms * 1000);
 	    if (r > 0)  // Scraping: answer as if the post did not exist.
@@ -832,10 +828,6 @@ select_read(read_ctx_t *cx, int sr_mode)
                                is_exempt, rating ? ACTIVITY_NAV_SEARCH_RATING :
                                ACTIVITY_NAV_SEARCH_SR, bid,
                                rating ? predicate.rating : 0, &delay_ms);
-        if (r < 0) {
-            vmsg("偵測到異常高頻自動搜尋行為，請關閉自動掃描腳本或更新連線 App！");
-            abort_bbs(0);
-        }
         if (delay_ms > 0)
             usleep(delay_ms * 1000);
         if (r > 0) {

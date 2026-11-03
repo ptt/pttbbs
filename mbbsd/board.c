@@ -118,12 +118,9 @@ int enter_board(const char *boardname)
         uint32_t cc = get_client_code();
         int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
         int delay_ms = 0;
-        if (activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
-                               cc, is_exempt, ACTIVITY_NAV_BOARD_SWITCH, currbid,
-                               0, &delay_ms) < 0) {
-            vmsg("偵測到異常高頻切換看板行為，請關閉自動掃描腳本或更新連線 App！");
-            abort_bbs(0);
-        }
+        activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
+                           cc, is_exempt, ACTIVITY_NAV_BOARD_SWITCH, currbid,
+                           0, &delay_ms);
         if (delay_ms > 0)
             usleep(delay_ms * 1000);
     }
