@@ -436,18 +436,6 @@ append_record_forward(char *fpath, fileheader_t * record, int size,
     chomp(address);
     strip_blank(address, address);
 
-    if (get_num_records(fpath, sizeof(fileheader_t)) > MAX_KEEPMAIL_HARDLIMIT) {
-        unlink(fwd_path);
-        // TODO add a mail so that origid knows what happened.
-        LOG_IF(LOG_CONF_INTERNETMAIL,
-               log_filef("log/internet_mail.log",
-                         "[%s] (%s -> %s) mailbox overflow (%d > %d)\n",
-                         __FUNCTION__,
-                         origid, address,
-                         get_num_records(fpath, sizeof(fileheader_t)),
-                         MAX_KEEPMAIL_HARDLIMIT));
-        return 0;
-    }
 
 
     if (!*address ||

@@ -883,6 +883,29 @@ format_multilist_title(char *buf, size_t sz, const char *prefix, int count)
         snprintf(buf, sz, "名單： (共 %d 名)", count);
 }
 
+// Returns why uid (a valid userid) cannot be in a list with flags, or NULL.
+static const char *
+multilist_problem(const char *uid, int flags)
+{
+    if (strcasecmp(uid, STR_GUEST) == 0)
+        return "guest";
+    if ((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(uid, cuser.userid) == 0)
+        return "自己";
+    if ((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid))
+        return "拒收";
+    if (flags & MULTILIST_CHECK_MAILBOX) {
+        switch (mail_check_recipient(uid)) {
+        case MAILSEND_OK:
+            break;
+        case MAILSEND_ERR_QUOTA:
+            return "信箱已滿";
+        default:
+            return "無法收信";
+        }
+    }
+    return NULL;
+}
+
 void
 multi_user_list(struct Vector *namelist, int *recipient,
                 const char *title, const char *msg_prefix, int flags)
@@ -890,6 +913,7 @@ multi_user_list(struct Vector *namelist, int *recipient,
     char uid[IDLEN + 1];
     char genbuf[PATHLEN];
     char msg_title[80];
+    const char *why;
     int i, cRemoved;
 
     while (1) {
@@ -922,6 +946,8 @@ multi_user_list(struct Vector *namelist, int *recipient,
                     outs("不能加入 guest！");
                 else if ((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid))
                     outs("對方拒收信件！");
+                else if ((why = multilist_problem(uid, flags)) != NULL)
+                    prints("對方%s！", why);
                 else if (Vector_search(namelist, uid) < 0) {
                     Vector_add(namelist, uid);
                     (*recipient)++;
@@ -993,10 +1019,10 @@ multi_user_list(struct Vector *namelist, int *recipient,
                              tok = strtok_r(NULL, " \t\r\n,;.", &saveptr)) {
                             if (!isalpha((unsigned char)tok[0]))
                                 continue;
+                            // Problems are shown when the list is confirmed.
                             if (searchuser(tok, uid) &&
                                 strcasecmp(uid, STR_GUEST) != 0 &&
                                 !((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(uid, cuser.userid) == 0) &&
-                                !((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid)) &&
                                 Vector_search(namelist, uid) < 0) {
                                 Vector_add(namelist, uid);
                                 (*recipient)++;
@@ -1037,22 +1063,29 @@ multi_user_list(struct Vector *namelist, int *recipient,
             outs("\n正在檢查名單... \n");
             doupdate();
             cRemoved = 0;
-            for (i = 0; i < Vector_length(namelist); i++) {
-                const char *p = Vector_get(namelist, i);
-                if (searchuser(p, uid) &&
-                    strcasecmp(STR_GUEST, uid) != 0 &&
-                    !((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(cuser.userid, uid) == 0) &&
-                    !((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid)))
-                    continue;
-                if (!cRemoved)
-                    outs("下列 ID 無效或無法加入，已自名單移除；"
-                         "請重新確認名單。\n\n");
-                cRemoved++;
-                prints("%-.*s ", IDLEN, p);
-                Vector_remove(namelist, p);
-                i--;
-                if ((cRemoved + 1) * (IDLEN + 1) >= t_columns)
-                    outs("\n");
+            {
+                int col = 0;
+                for (i = 0; i < Vector_length(namelist); i++) {
+                    char p[IDLEN + 1];
+                    strlcpy(p, Vector_get(namelist, i), sizeof(p));
+                    if (!searchuser(p, uid))
+                        why = "無效";
+                    else if (!(why = multilist_problem(uid, flags)))
+                        continue;
+                    if (!cRemoved)
+                        outs("下列 ID 無法加入，已自名單移除；"
+                             "請重新確認名單。\n\n");
+                    cRemoved++;
+                    snprintf(genbuf, sizeof(genbuf), "%s(%s) ", p, why);
+                    if (col + strlen(genbuf) >= (size_t)t_columns) {
+                        outs("\n");
+                        col = 0;
+                    }
+                    outs(genbuf);
+                    col += strlen(genbuf);
+                    Vector_remove(namelist, p);
+                    i--;
+                }
             }
             *recipient = Vector_length(namelist);
             if (cRemoved) {

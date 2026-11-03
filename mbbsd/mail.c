@@ -267,27 +267,75 @@ get_user_mailbox_limit(const char *userid)
     return limit;
 }
 
-#define MAILBOX_LIM_OK   0
-#define MAILBOX_LIM_KEEP 1
-#define MAILBOX_LIM_HARD  2
+// Mailbox states by the number of mails kept, relative to its limit
+// (get_max_keepmail). See MAILBOX_TIDY_FACTOR in config.h.
+#define MAILBOX_LIMIT_OK   0
+#define MAILBOX_LIMIT_WARN 1    // Over the limit: reminded to clean up
+#define MAILBOX_LIMIT_TIDY 2    // Over MAILBOX_TIDY_FACTOR times: must clean up
+#define MAILBOX_LIMIT_RECV 3    // Over MAILBOX_RECV_FACTOR times: receives no mail
+
+static int
+mailbox_limit_state(int keep, int limit, int is_admin)
+{
+    if (limit <= 0 || keep <= limit)
+        return MAILBOX_LIMIT_OK;
+    if (is_admin)
+        return MAILBOX_LIMIT_WARN;
+    if (keep > limit * MAILBOX_RECV_FACTOR)
+        return MAILBOX_LIMIT_RECV;
+    if (keep > limit * MAILBOX_TIDY_FACTOR)
+        return MAILBOX_LIMIT_TIDY;
+    return MAILBOX_LIMIT_WARN;
+}
+
+static int
+user_mailbox_limit_state(const userec_t *u)
+{
+    return mailbox_limit_state(get_user_mailbox_usage(u->userid), get_max_keepmail(u),
+                         u->userlevel & PERM_ADMIN);
+}
+
+// Returns 1 if userid's mailbox is over MAILBOX_LIMIT_RECV.
+static int
+mailbox_over_recv_limit(const char *userid)
+{
+    userec_t u = {};
+    int r = passwd_load_user(userid, &u) > 0 &&
+            user_mailbox_limit_state(&u) >= MAILBOX_LIMIT_RECV;
+    memset(&u, 0, sizeof(u));
+    return r;
+}
+
+// Returns MAILSEND_OK if userid can receive a mail from cuser now, else
+// MAILSEND_ERR_NOUSER, MAILSEND_ERR_NOPERM (cannot read mail) or
+// MAILSEND_ERR_QUOTA (mailbox over MAILBOX_LIMIT_RECV). Check this before the
+// user writes the mail, not when sending it.
+int
+mail_check_recipient(const char *userid)
+{
+    userec_t u;
+
+    if (!getuser(userid, &u))
+	return MAILSEND_ERR_NOUSER;
+    if (!(u.userlevel & PERM_READMAIL))
+	return MAILSEND_ERR_NOPERM;
+    if (strcasecmp(u.userid, cuser.userid) == 0)
+	return MAILSEND_OK;
+    if (user_mailbox_limit_state(&u) >= MAILBOX_LIMIT_RECV)
+	return MAILSEND_ERR_QUOTA;
+    return MAILSEND_OK;
+}
 
 static int
 chk_cuser_mailbox_limit(void)
 {
     if (HasUserPerm(PERM_SYSOP) || HasUserPerm(PERM_MAILLIMIT))
-	return MAILBOX_LIM_OK;
+	return MAILBOX_LIMIT_OK;
 
     if (!mailkeep)
 	setupmailusage();
 
-    if (mailkeep <= mailmaxkeep)
-        return MAILBOX_LIM_OK;
-
-    if ((mailkeep / 50 < mailmaxkeep)
-        || HasUserPerm(PERM_ADMIN))
-        return MAILBOX_LIM_KEEP;
-    else
-        return MAILBOX_LIM_HARD;
+    return mailbox_limit_state(mailkeep, mailmaxkeep, HasUserPerm(PERM_ADMIN));
 }
 
 static void
@@ -395,6 +443,9 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
                 return MAILSEND_ERR_QUOTA;
         }
     }
+    if ((send_flags & MAILSEND_FLAG_CHECK_RECV_LIMIT) &&
+        strcmp(rightid, cuser.userid) != 0 && mailbox_over_recv_limit(rightid))
+        return MAILSEND_ERR_QUOTA;
 
     sethomepath(dst_fpath, rightid);
     if (stampfile(dst_fpath, &mhdr) < 0)
@@ -618,7 +669,7 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
 
     if (newtitle) strlcpy(newtitle, save_title, STRLEN);
 
-    MailSendResult ret = save_mailbox(cuser.userid, userid, save_title, NULL, tmp_fpath, 0, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD, mfpath);
+    MailSendResult ret = save_mailbox(cuser.userid, userid, save_title, NULL, tmp_fpath, 0, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD | MAILSEND_FLAG_CHECK_RECV_LIMIT, mfpath);
     unlink(tmp_fpath);
     setutmpmode(oldstat);
     return ret;
@@ -869,9 +920,10 @@ int
 chkmailbox(void)
 {
     switch (chk_cuser_mailbox_limit()) {
-	case MAILBOX_LIM_HARD:
+	case MAILBOX_LIMIT_RECV:
+	case MAILBOX_LIMIT_TIDY:
 	    bell();
-	case MAILBOX_LIM_KEEP:
+	case MAILBOX_LIMIT_WARN:
 	    bell();
 	    vmsgf("您保存信件數目 %d 超出上限 %d, 請整理", mailkeep, mailmaxkeep);
 	    return mailkeep;
@@ -882,8 +934,8 @@ chkmailbox(void)
 }
 
 int
-chkmailbox_hard_limit() {
-    if (chk_cuser_mailbox_limit() == MAILBOX_LIM_HARD) {
+chkmailbox_tidy_limit() {
+    if (chk_cuser_mailbox_limit() >= MAILBOX_LIMIT_TIDY) {
         vmsgf("您保存信件數目 %d 遠超出上限 %d, 請整理", mailkeep, mailmaxkeep);
         return 1;
     }
@@ -912,15 +964,21 @@ int
 mail_ui_send(const char *userid, const char *title)
 {
     char            fpath[PATHLEN];
-    userec_t        xuser;
     int             ret;
     char            save_title[STRLEN];
 
     STATINC(STAT_DOSEND);
-    if (!getuser(userid, &xuser))
+    // Before editing: refuse recipients that cannot receive it.
+    switch (mail_check_recipient(userid)) {
+    case MAILSEND_OK:
+	break;
+    case MAILSEND_ERR_NOUSER:
 	return -1;
-    if (!(xuser.userlevel & PERM_READMAIL))
+    case MAILSEND_ERR_QUOTA:
+	return MAILSEND_ERR_QUOTA;
+    default:
 	return -3;
+    }
     if (strcasecmp(userid, cuser.userid) != 0 && !mail_precheck_quota(1))
 	return -2;
 
@@ -956,6 +1014,9 @@ my_send(const char *uident)
     case -3:
 	prints("使用者 [%s] 無法收信", uident);
 	break;
+    case MAILSEND_ERR_QUOTA:
+	prints("使用者 [%s] 信箱已滿，無法收信", uident);
+	break;
     }
     pressanykey();
 }
@@ -981,6 +1042,9 @@ m_send(void)
 	    break;
 	case -3:
 	    prints("使用者 [%s] 無法收信", uident);
+	    break;
+	case MAILSEND_ERR_QUOTA:
+	    prints("使用者 [%s] 信箱已滿，無法收信", uident);
 	    break;
 	}
 	pressanykey();
@@ -1042,7 +1106,8 @@ multi_send(const char *title)
             pressanykey();
         }
     }
-    multi_user_list(&namelist, &recipient, "群組寄信名單", msg_cc, MULTILIST_CHECK_REJECT);
+    multi_user_list(&namelist, &recipient, "群組寄信名單", msg_cc,
+                    MULTILIST_CHECK_REJECT | MULTILIST_CHECK_MAILBOX);
     move(1, 0);
     clrtobot();
 
@@ -1106,11 +1171,25 @@ multi_send(const char *title)
 	sigaddset(&mask_set, SIGXCPU);
 	sigprocmask(SIG_BLOCK, &mask_set, &old_set);
 
+	struct Vector failed;
+	Vector_init(&failed, IDLEN+1);
 	for (i = 0; i < Vector_length(&namelist); i++) {
 	    p = Vector_get(&namelist, i);
-	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD, NULL) != MAILSEND_OK)
-		vmsg(ERR_UID);
+	    // Checked when the list was confirmed; this only fails if something
+	    // changed while writing.
+	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD | MAILSEND_FLAG_CHECK_RECV_LIMIT, NULL) != MAILSEND_OK)
+		Vector_add(&failed, p);
 	}
+	if (Vector_length(&failed)) {
+	    // One screen for all of them, not one key press each.
+	    char msg[STRLEN];
+	    snprintf(msg, sizeof(msg), "下列 %d 人無法收信，未寄出：",
+		     Vector_length(&failed));
+	    clear();
+	    ShowVector(&failed, 1, 0, msg, 0);
+	    pressanykey();
+	}
+	Vector_delete(&failed);
 	hold_mail(fpath, NULL, save_title);
 	unlink(fpath);
 	sigprocmask(SIG_SETMASK, &old_set, NULL);
@@ -1362,6 +1441,9 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 	break;
     case -3:
 	prints("使用者 [%s] 無法收信", uid);
+	break;
+    case MAILSEND_ERR_QUOTA:
+	prints("使用者 [%s] 信箱已滿，無法收信", uid);
 	break;
     }
     pressanykey();
@@ -1918,6 +2000,9 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 	break;
     case -3:
 	prints("使用者 [%s] 無法收信", uid);
+	break;
+    case MAILSEND_ERR_QUOTA:
+	prints("使用者 [%s] 信箱已滿，無法收信", uid);
 	break;
 
     case 0:

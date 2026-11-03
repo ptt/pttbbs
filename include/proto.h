@@ -475,7 +475,7 @@ void keep_copy(const char *fpath, const char *title);
 int user_is_mail_quota_exempt(const userec_t *u);
 int user_get_daily_free_mail_limit(const userec_t *u);
 int chkmailbox(void);
-int chkmailbox_hard_limit(void);
+int chkmailbox_tidy_limit(void);
 int mail_man(void);
 int m_new(void);
 int m_send(void);
@@ -500,11 +500,14 @@ typedef enum {
     MAILSEND_FLAG_CHECK_QUOTA   = (1 << 0),
     MAILSEND_FLAG_USER_CONTENT  = (1 << 1),
     MAILSEND_FLAG_ALLOW_FORWARD = (1 << 2),
+    // Refuse if the recipient's mailbox is over MAILBOX_LIMIT_RECV.
+    MAILSEND_FLAG_CHECK_RECV_LIMIT = (1 << 3),
     // The auto-forward was already reported to the activity service.
     MAILSEND_FLAG_FORWARD_CHECKED  = (1 << 4),
 } MailSendFlag;
 
 int mail_ui_send(const char *userid, const char *title);
+int mail_check_recipient(const char *userid);
 int do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle);
 void my_send(const char *uident);
 void setupmailusage(void);
@@ -607,6 +610,7 @@ void ToggleVector(struct Vector *list, int *recipient, const char *listfile, con
 #define MAX_MULTILIST           (1500)
 #define MULTILIST_CHECK_REJECT  (0x01)
 #define MULTILIST_EXCLUDE_SELF  (0x02)
+#define MULTILIST_CHECK_MAILBOX (0x04)  /* Recipients must be able to receive mail */
 void multi_user_list(struct Vector *namelist, int *recipient,
                      const char *title, const char *msg_prefix, int flags);
 

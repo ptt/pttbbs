@@ -912,7 +912,7 @@ static void check_mailbox_quota(void)
 
     if (chkmailbox()) do {
         m_read();
-    } while (chkmailbox_hard_limit());
+    } while (chkmailbox_tidy_limit());
 }
 
 static void init_guest_info(void)

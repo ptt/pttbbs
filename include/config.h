@@ -489,12 +489,17 @@
 #define MAX_KEEPMAIL            (200)   /* 一般 user 最多保留幾封 MAIL？ */
 #endif
 
-#ifndef MAX_KEEPMAIL_SOFTLIMIT
-#define MAX_KEEPMAIL_SOFTLIMIT  (2500)  /* 除 admin 外，無法寄給此人 */
+/* 信件數超過上限（MAX_KEEPMAIL 等，見 get_max_keepmail）時：
+ *   超過上限                     提示整理（MAILBOX_LIMIT_WARN）
+ *   超過 MAILBOX_TIDY_FACTOR 倍  登入後必須先整理（MAILBOX_LIMIT_TIDY）
+ *   超過 MAILBOX_RECV_FACTOR 倍  別人無法寄信給他（MAILBOX_LIMIT_RECV）
+ * admin 只會被提示。 */
+#ifndef MAILBOX_TIDY_FACTOR
+#define MAILBOX_TIDY_FACTOR     (40)
 #endif
 
-#ifndef MAX_KEEPMAIL_HARDLIMIT
-#define MAX_KEEPMAIL_HARDLIMIT  (20000) /* 信箱數量的上限，超過就不給寄信 */
+#ifndef MAILBOX_RECV_FACTOR
+#define MAILBOX_RECV_FACTOR     (50)
 #endif
 
 #ifndef BADCIDCHARS

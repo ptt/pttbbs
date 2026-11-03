@@ -56,7 +56,14 @@ validate_song_address(const vform_field_t *f GCC_UNUSED, const void *val, void *
         return "找不到此使用者，請輸入站內有效 ID 或直接留空";
     if (is_rejected(resolved))
         return "對方拒收您的信件";
-    return NULL;
+    switch (mail_check_recipient(resolved)) {
+    case MAILSEND_OK:
+        return NULL;
+    case MAILSEND_ERR_QUOTA:
+        return "對方信箱已滿，無法收信";
+    default:
+        return "對方無法收信";
+    }
 }
 
 static const vform_field_t order_song_fields[] = {
@@ -294,7 +301,7 @@ do_order_song(void)
     SNPRINTF(save_title, "%s:%s", sender, say);
     hold_mail(filename, receiver, save_title);
     if (*address) {
-	save_mailbox(cuser.userid, address, save_title, NULL, filename, 0, MAILSEND_FLAG_ALLOW_FORWARD, NULL);
+	save_mailbox(cuser.userid, address, save_title, NULL, filename, 0, MAILSEND_FLAG_ALLOW_FORWARD | MAILSEND_FLAG_CHECK_RECV_LIMIT, NULL);
     }
 
     clear();
