@@ -622,10 +622,6 @@
 #define SITE_MAIL_FACTOR (1.0)
 #endif
 
-#ifndef POST_KEYWORDS_MAX
-#define POST_KEYWORDS_MAX (0)
-#endif
-
 #if !defined(NO_REJECT_FLOOD_POST) && !defined(CONFIG_REJECT_FLOOD_POST)
 #define CONFIG_REJECT_FLOOD_POST 1    /* ¨¾¤îBlahBlah¦¡Äé¤ô */
 #endif
@@ -744,6 +740,13 @@
 #endif
 #ifndef CONFIG_ACTIVITY_SVC
 #define CONFIG_ACTIVITY_SVC 0
+#endif
+#ifndef CONFIG_CONTENT_SVC
+#define CONFIG_CONTENT_SVC 0
+#endif
+/* is_new_account(): accounts logged in on fewer days than this */
+#ifndef NEW_ACCOUNT_LOGINDAYS
+#define NEW_ACCOUNT_LOGINDAYS (30)
 #endif
 #ifndef CONFIG_IPC_SVC_FALLBACK
 #define CONFIG_IPC_SVC_FALLBACK 1

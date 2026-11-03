@@ -168,13 +168,16 @@ post_newboard(const char *bgroup, const char *bname, const char *bms)
 	     "[系統]");
 }
 
-void post_policelog_spam(const char *bname, const char *attach_file)
+// reporter: who detected it, NULL for the system.
+void post_policelog_spam(const char *bname, const char *attach_file,
+			 const char *reporter)
 {
     char fpath[PATHLEN] = "";
     if (post_msg2(BN_POLICELOG,
 		  TEMPFORMAT(STRLEN, "[報告] %s:偵測到不當發言", cuser.userid),
-		  TEMPFORMAT(ANSILINELEN, "系統偵測到 %s 試圖於 %s %s 發表不當言論，\n"
+		  TEMPFORMAT(ANSILINELEN, "%s 偵測到 %s 試圖於 %s %s 發表不當言論，\n"
 			     "原文如下 (不予發出，但有備份至使用者信箱):\n%s\n\n",
+			     reporter ? reporter : "系統",
 			     cuser.userid, bname ? "看板" : "郵件", bname ? bname : "",
 			     MSG_SEPARATOR),
 		  "[系統]", fpath))

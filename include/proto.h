@@ -471,7 +471,6 @@ int mail_reply(int ent, fileheader_t *fhdr, const char *direct);
 int bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from);
 int notify_password_change(const char *userid, const char *email);
 int hold_mail(const char *fpath, const char *receiver, const char *title);
-void keep_copy(const char *fpath, const char *title);
 int user_is_mail_quota_exempt(const userec_t *u);
 int user_get_daily_free_mail_limit(const userec_t *u);
 int chkmailbox(void);
@@ -836,7 +835,7 @@ void post_policelog(const char *bname, const char *atitle, const char *action,
                     const char *reason, const int toggle);
 void post_policelog2(const char *bname, const char *atitle, const char *action,
                      const char *reason, const int toggle, const char *attach_file);
-void post_policelog_spam(const char *bname, const char *attach_file);
+void post_policelog_spam(const char *bname, const char *attach_file, const char *reporter);
 
 /* tag */
 struct TagItem;
@@ -907,6 +906,7 @@ int  topsong(void);
 
 /* user */
 int kill_user(int num, const char *userid);
+bool is_new_account(const userec_t *u);
 int u_set_mind();
 void user_display(const userec_t *u, int real);
 int isvalidemail(char *email);

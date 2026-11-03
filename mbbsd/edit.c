@@ -28,6 +28,7 @@
  * 當操作到一段落之後才 check b_lines 是否有改變.
  */
 #include "bbs.h"
+#include "content.h"
 
 #define EDIT_SIZE_LIMIT (32768*1024)
 #define EDIT_LINE_LIMIT (65530) // (1048576)
@@ -2422,6 +2423,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
 	    edit_fprintf_line(fp, msg);
 	}
     }
+    textline_t *currline0 = curr_buf->currline;
     curr_buf->currline = NULL;
 
     if (aborted)
@@ -2448,6 +2450,13 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
     }
 
     fclose(fp);
+
+    // Check what is to be posted or sent, signature included; if denied, the
+    // user can fix it and save again.
+    if (content_check_saved(fpath, mytitle)) {
+	curr_buf->currline = currline0;
+	return KEEP_EDITING;
+    }
     return 0;
 }
 

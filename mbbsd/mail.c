@@ -1,5 +1,6 @@
 #include "bbs.h"
 #include "activity.h"
+#include "content.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Build configuration
@@ -517,12 +518,6 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
     return MAILSEND_OK;
 }
 
-void
-keep_copy(const char *fpath, const char *title)
-{
-    mail_save_memo(fpath, NULL, cuser.userid, title);
-}
-
 #ifndef FN_MAIL_QUOTA_EXEMPT
 #define FN_MAIL_QUOTA_EXEMPT    ".mail_quota_exempt"
 #endif
@@ -541,7 +536,7 @@ user_is_mail_quota_exempt(const userec_t *u)
 int
 user_get_daily_free_mail_limit(const userec_t *u)
 {
-    if (u->numlogindays < 30 && NEWUSER_DAILY_FREE_MAILS < MAX_DAILY_FREE_MAILS)
+    if (is_new_account(u) && NEWUSER_DAILY_FREE_MAILS < MAX_DAILY_FREE_MAILS)
         return NEWUSER_DAILY_FREE_MAILS;
     return MAX_DAILY_FREE_MAILS;
 }
@@ -652,8 +647,16 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     stampfile(tmp_fpath, NULL);
     STRLCPY(save_title, title ? title : "");
 
-    if (vedit2(tmp_fpath, YEA, save_title,
-               EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
+    if (content_precheck(CONTENT_KIND_MAIL, userid)) {
+        unlink(tmp_fpath);
+        setutmpmode(oldstat);
+        return -2;
+    }
+    content_set_context(CONTENT_KIND_MAIL, userid, 0, 1);
+    int edit_ret = vedit2(tmp_fpath, YEA, save_title,
+                          EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL);
+    content_set_context(0, NULL, 0, 0);
+    if (edit_ret == EDIT_ABORTED) {
         unlink(tmp_fpath);
         setutmpmode(oldstat);
         return -2;
@@ -1150,7 +1153,19 @@ multi_send(const char *title)
 	    fclose(fp);
 	}
 
-	if (vedit2(fpath, YEA, save_title, EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED) {
+	if (content_precheck(CONTENT_KIND_MAIL, NULL)) {
+	    unlink(fpath);
+	    Vector_delete(&namelist);
+	    return;
+	}
+	content_set_context(CONTENT_KIND_MAIL,
+			    Vector_length(&namelist) ?
+			    Vector_get(&namelist, 0) : NULL,
+			    CONTENT_F_MULTI, Vector_length(&namelist));
+	int edit_ret = vedit2(fpath, YEA, save_title,
+			      EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL);
+	content_set_context(0, NULL, 0, 0);
+	if (edit_ret == EDIT_ABORTED) {
 	    unlink(fpath);
 	    Vector_delete(&namelist);
 	    vmsg(MSG_CANCEL);

@@ -6,6 +6,7 @@
  */
 
 #include "bbs.h"
+#include "content.h"
 
 // When shown on screen, the format is
 // star[2] [IDLEN] space[1] [msg] space[1] prevent-col80[NUL]
@@ -664,6 +665,11 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         return 0;
     }
 
+    if (is_interactive && content_precheck(CONTENT_KIND_WMSG, destid)) {
+        watermode = -1;
+        return 0;
+    }
+
     int currstat0 = currstat;
     char c0 = currutmp->chatid[0];
     unsigned char mode0 = currutmp->mode;
@@ -702,6 +708,13 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     }
 
     int fri_stat = friend_stat(currutmp, uin);
+
+    if (content_check(CONTENT_KIND_WMSG, destid,
+                      (fri_stat & HFM) ? CONTENT_F_FRIEND : 0, 0, NULL, NULL,
+                      msg)) {
+        my_write_restore_state(c0, mode0, currstat0);
+        return 0;
+    }
 
     if (flag != WATERBALL_ALOHA) {
         if (!my_write_log_to_file(destid, msg)) {

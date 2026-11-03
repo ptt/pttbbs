@@ -23,6 +23,13 @@ kill_user(int num, const char *userid)
     return purge_user_account(num, userid, "KILL ");
 }
 
+// New accounts get fewer free mails and stricter content checks.
+bool
+is_new_account(const userec_t *u)
+{
+    return u->numlogindays < NEW_ACCOUNT_LOGINDAYS;
+}
+
 int
 u_loginview(void)
 {

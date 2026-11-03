@@ -2,6 +2,7 @@
 #include "bbs.h"
 #include "daemons.h"
 #include "activity.h"
+#include "content.h"
 #include <arpa/inet.h>
 
 #define SMHASHLEN (64/8)
@@ -289,93 +290,6 @@ save_violatelaw(void)
     u_exit("save_violate");
     exit(0);
     return 0;
-}
-
-static void
-warn_post_contents(const char *msg)
-{
-    vs_hdr2("廣告及違法發言偵測", "疑似不當內容");
-    outs("\n\n請注意: 你的訊息已被判定為可能有廣告或其它違法內容。\n\n");
-    outs("注意系統偵測是機器判定未經人工介入，判定可能有誤所以此訊息\n"
-         "只是警告與提醒，但多次發送此類訊息可能會被" ANSI_COLOR(1;31)
-         "開罰單或停權。" ANSI_RESET "\n\n");
-    outs("原文未送出，但已留存至你的信箱。\n");
-    if (msg)
-        outs(msg);
-    vkey_purge();
-    while (1) {
-        char x = 'a' + arc4random_uniform(26);
-        if (tolower(vmsgf(
-                "為確定你有看到上面訊息，請按<%c>繼續，其它鍵不起作用",
-                x)) == x)
-            break;
-        bell();
-    }
-}
-
-// Be aware find_keywords IS case sensitive.
-static int
-find_keywords(const char *fpath, const char *keywords_fpath)
-{
-    int ret = 0;
-    FILE *fp = fopen(keywords_fpath, "r");
-    if (!fp)
-        return ret;
-
-    off_t sz = dashs(fpath);
-    int fd = open(fpath, O_RDONLY);
-    if (fd < 0) {
-        fclose(fp);
-        return ret;
-    }
-    uint8_t *start = mmap(NULL, sz, PROT_READ, MAP_SHARED, fd, 0);
-    if (!start) {
-        close(fd);
-        fclose(fp);
-        return ret;
-    }
-
-    char buf[STRLEN];
-    while (fgets(buf, sizeof(buf), fp)) {
-        char *lf = strchr(buf, '\n');
-        if (lf)
-            *lf = '\0';
-        buf[sizeof(buf) - 1] = '\0';
-        size_t szbuf = strlen(buf);
-        if (!szbuf)
-            continue;
-        off_t remains = sz;
-        for (uint8_t *ptr = start;
-             remains > 0 && (ptr = memmem(ptr, remains, buf, szbuf));
-             ptr += szbuf, remains = sz - (ptr - start))
-        {
-            ret++;
-        }
-    }
-    munmap(start, sz);
-    close(fd);
-    fclose(fp);
-    return ret;
-}
-
-// Returns false if the contents do not look good.
-static bool
-check_post_contents(const char *fpath, const boardheader_t *bp)
-{
-    // Define this in `pttbbs.conf` if you want keywords based content checking.
-    // Alert if = MAX.
-    if (POST_KEYWORDS_MAX < 1)
-        return true;
-
-    // Ignore if the user or board is restricted.
-    if (HasUserPerm(PERM_ADMIN | PERM_BM) ||
-        (bp->brdattr & (BRD_HIDE | BRD_RESTRICTEDPOST |
-                        BRD_GUESTPOST)))
-        return true;
-
-    int keywords = find_keywords(fpath, FN_POST_KEYWORDS);
-    bool r = keywords < POST_KEYWORDS_MAX;
-    return r;
 }
 
 static time4_t  *board_note_time = NULL;
@@ -1412,6 +1326,9 @@ do_post_article(int edflags)
 	   "發表文章",
 	   currboard, bp->desc);
 
+    if (content_precheck(CONTENT_KIND_POST, NULL))
+	return FULLUPDATE;
+
     if (quote_file[0])
         do_reply_title(20, currtitle, str_reply, save_title,
                        sizeof(save_title));
@@ -1487,6 +1404,9 @@ do_post_article(int edflags)
     if (save_title[0] == '\0')
 	return FULLUPDATE;
 
+    if (content_check(CONTENT_KIND_TITLE, NULL, 0, 0, NULL, save_title, NULL))
+	return FULLUPDATE;
+
     setutmpmode(POSTING);
 
     /* build filename */
@@ -1513,18 +1433,13 @@ do_post_article(int edflags)
 	currbrdattr |= BRD_DEFAULTANONYMOUS;
     };
 
-    if (vedit2(fpath, YEA, save_title, edflags) == EDIT_ABORTED) {
+    content_set_context(CONTENT_KIND_POST, NULL, 0, 0);
+    int edit_ret = vedit2(fpath, YEA, save_title, edflags);
+    content_set_context(0, NULL, 0, 0);
+    if (edit_ret == EDIT_ABORTED) {
 	unlink(fpath);
 	pressanykey();
 	return FULLUPDATE;
-    }
-
-    if (!check_post_contents(fpath, bp)) {
-        keep_copy(fpath, "[發文退回]");
-        post_policelog_spam(bp->brdname, fpath);
-        unlink(fpath);
-        warn_post_contents(NULL);
-        return FULLUPDATE;
     }
 
     // check TN_ANNOUNCE again for non-BMs...
@@ -2037,6 +1952,9 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     edflags = EDITFLAG_ALLOWTITLE;
     edflags = solveEdFlagByBoard(bp->brdname, edflags);
 
+    if (content_precheck(CONTENT_KIND_POST, NULL))
+	return FULLUPDATE;
+
     setutmpmode(REEDIT);
 
     // TODO 由於現在檔案都是直接蓋回原檔，
@@ -2070,7 +1988,10 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         }
     }
 
-    if (vedit2(fpath, 0, save_title, edflags) == EDIT_ABORTED) {
+    content_set_context(CONTENT_KIND_POST, NULL, CONTENT_F_REEDIT, 0);
+    int edit_ret = vedit2(fpath, 0, save_title, edflags);
+    content_set_context(0, NULL, 0, 0);
+    if (edit_ret == EDIT_ABORTED) {
         unlink(fpath);
         return FULLUPDATE;
     }
@@ -3036,6 +2957,8 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	}
     }
 
+    if (content_precheck(CONTENT_KIND_COMMENT, NULL))
+	return FULLUPDATE;
 
     type = RECTYPE_GOOD;
 
@@ -3204,6 +3127,10 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
         } else
             return FULLUPDATE;
     }
+
+    if (content_check(CONTENT_KIND_COMMENT, NULL, 0, 0, NULL, NULL, msg))
+	return FULLUPDATE;
+
     STATINC(STAT_COMMENT);
     LOG_IF(LOG_CONF_PUSH, file_appendf("log/push",
                                     "%d %s %s %s\n", (int)now,

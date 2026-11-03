@@ -9,7 +9,7 @@ SCRIPT_DIR := $(SRCROOT)/mk
 
 PROG      := mbbsd
 COREOBJS  := bbs.o announce.o read.o board.o brc.o mail.o record.o fav.o
-ABUSEOBJS := captcha.o
+ABUSEOBJS := captcha.o contentcheck.o
 ACCOBJS   := user.o acl.o register.o passwd.o emaildb.o
 NETOBJS   := mbbsd.o io.o term.o telnet.o ipc.o
 TALKOBJS  := friend.o talk.o ccw.o wmsg.o
