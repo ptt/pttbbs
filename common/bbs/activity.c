@@ -133,13 +133,14 @@ activity_client_timeout(void)
 
 // The mbbsd request waiting for its reply (mbbsd sends one at a time). Replies
 // nobody waits for, e.g. ones that arrive too late, are dropped.
-enum { ACT_WAIT_READ = 1, ACT_WAIT_NAV };
+enum { ACT_WAIT_READ = 1, ACT_WAIT_NAV, ACT_WAIT_FWD };
 struct act_wait {
     int kind;               // ACT_WAIT_*
     int type;               // NAV: the request type
+    uint32_t reqid;         // FWD
     int done;
-    int delay_ms;           // pause requested
-    int deny;               // NAV: answer with nothing
+    int delay_ms;           // READ, NAV: pause requested
+    int deny;               // NAV, FWD: answer with nothing / do not send
 };
 
 static void
@@ -157,13 +158,17 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
 
     if (strcmp(tok[0], "verdict") == 0 && n >= 3) {
         uint32_t reqid = (uint32_t)strtoul(tok[1], NULL, 10);
+        int deny = strcmp(tok[2], "deny") == 0;
         g_timeouts = 0;
-        if (!cb)
-            return;
-        if (strcmp(tok[2], "deny") == 0)
-            cb(reqid, 1, n >= 4 ? atoi(tok[3]) : 1, p ? p : "", arg);
-        else
-            cb(reqid, 0, 0, NULL, arg);
+        if (cb) {
+            if (deny)
+                cb(reqid, 1, n >= 4 ? atoi(tok[3]) : 1, p ? p : "", arg);
+            else
+                cb(reqid, 0, 0, NULL, arg);
+        } else if (w && w->kind == ACT_WAIT_FWD && w->reqid == reqid) {
+            w->deny = deny;
+            w->done = 1;
+        }
     } else if (strcmp(tok[0], "reads") == 0 && n >= 3) {
         // "reads <userid> <count> <delay_ms>": the count is not used.
         if (w && w->kind == ACT_WAIT_READ && !w->done) {
@@ -355,5 +360,33 @@ activity_nav_track(const char *userid, time4_t firstlogin,
         act_wait_reply(&w, ACTIVITY_READ_WAIT_MS);
     if (delay_ms)
         *delay_ms = w.delay_ms;
+    return w.deny;
+}
+
+int
+activity_forward(const char *userid, time4_t firstlogin,
+                 const char *hostip, uint32_t client_code, int is_exempt,
+                 int bid, const char *filename, int kind,
+                 const char *address, const char *via)
+{
+    if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
+        return 0;
+
+    char ip[64];
+    struct act_wait w = { .kind = ACT_WAIT_FWD };
+
+    if (is_exempt || !act_field_ok(userid))
+        return 0;
+    act_dispatch(NULL, NULL, NULL);     // Drop stale replies
+    if (++g_reqid == 0)
+        g_reqid = 1;
+    w.reqid = g_reqid;
+    act_norm_ip(hostip, ip, sizeof(ip));
+    if (act_send("fwd %u %s %d %s %x %d %s %d %s %s", w.reqid, userid,
+                 (int)firstlogin, ip, client_code, bid,
+                 act_field_ok(filename) ? filename : "-", kind,
+                 act_field_ok(address) ? address : "-",
+                 act_field_ok(via) ? via : "-") == 0)
+        act_wait_reply(&w, ACTIVITY_FORWARD_WAIT_MS);
     return w.deny;
 }

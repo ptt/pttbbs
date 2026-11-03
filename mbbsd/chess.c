@@ -838,7 +838,7 @@ ChessGenLogUser(ChessInfo* info, ChessGameResult result)
 
 	sethomedir(fname, cuser.userid);
 	append_record_forward(fname, &log_header, sizeof(log_header),
-		cuser.userid);
+		cuser.userid, 0);
     }
 }
 

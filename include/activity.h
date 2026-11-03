@@ -23,10 +23,17 @@
 //   nav <userid> <firstlogin> <ip> <client_hex> <type> <bid> [<value>]
 //                                               mbbsd navigation (ACTIVITY_NAV_*);
 //                                               value only for SEARCH_RATING (threshold)
+//   fwd <reqid> <userid> <firstlogin> <ip> <client_hex> <bid> <filename> <kind> <address> <via>
+//                                               a post (bid > 0) or mail (bid 0) sent out as
+//                                               Internet mail: kind is ACTIVITY_FWD_*, address
+//                                               the Internet address (or the local userid for
+//                                               ACTIVITY_FWD_LOCAL), via the local mailbox
+//                                               that auto-forwards (or "-"); expects a verdict
 //
 // Service -> client:
-//   verdict <reqid> ok
-//   verdict <reqid> deny <delay_sec> <message>  message (Big5) runs to the end
+//   verdict <reqid> ok                          reply to login or fwd
+//   verdict <reqid> deny <delay_sec> <message>  message (Big5) runs to the end;
+//                                               for fwd: do not send (no delay or message)
 //   reads <userid> <count> <delay_ms>           reply to read: how long to pause
 //                                               (count: new posts read across
 //                                               sessions, for logs; not used)
@@ -44,6 +51,7 @@
 #define ACTIVITY_SVC_MAX_TIMEOUTS   (3)     // Consecutive timeouts before reconnect
 #define ACTIVITY_SVC_MSG_MAX        (4096)
 #define ACTIVITY_READ_WAIT_MS       (5)     // mbbsd: wait for a read/nav reply
+#define ACTIVITY_FORWARD_WAIT_MS    (50)    // mbbsd: wait for a fwd reply (rare, by hand)
 
 // logind holds denied connections open (tarpit) for up to this long, so
 // clients that reconnect as soon as they are disconnected slow down and
@@ -97,5 +105,22 @@ int activity_nav_track(const char *userid, time4_t firstlogin,
                        const char *hostip, uint32_t client_code,
                        int is_exempt, int nav_type, int target_bid,
                        int value, int *delay_ms);
+
+// Kinds of "fwd", from the most to the least responsible sender.
+enum {
+    ACTIVITY_FWD_LOCAL    = 0,  // 'F' inside the BBS (counted only)
+    ACTIVITY_FWD_INTERNET = 1,  // 'F' to an Internet address
+    ACTIVITY_FWD_OWN      = 2,  // To one's own mailbox that auto-forwards
+    ACTIVITY_FWD_OTHER    = 3,  // To another's mailbox that auto-forwards
+};
+
+// mbbsd: reports sending `filename` on board `bid` (0: a mail) out as Internet
+// mail to `address` (kind ACTIVITY_FWD_*; `via`: the auto-forwarding mailbox,
+// or NULL). Returns 1 if it should be denied, else 0 (always 0 without the
+// service or a reply in time).
+int activity_forward(const char *userid, time4_t firstlogin,
+                     const char *hostip, uint32_t client_code, int is_exempt,
+                     int bid, const char *filename, int kind,
+                     const char *address, const char *via);
 
 #endif // INCLUDE_ACTIVITY_H

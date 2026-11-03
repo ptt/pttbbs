@@ -1,4 +1,5 @@
 #include "bbs.h"
+#include "activity.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Build configuration
@@ -438,7 +439,8 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
 
     sethomedir(dir_fpath, rightid);
     if (send_flags & MAILSEND_FLAG_ALLOW_FORWARD) {
-        if (append_record_forward(dir_fpath, &mhdr, sizeof(mhdr), rightid) == -1)
+        if (append_record_forward(dir_fpath, &mhdr, sizeof(mhdr), rightid,
+                                  send_flags & MAILSEND_FLAG_FORWARD_CHECKED) == -1)
             return MAILSEND_ERR_PARAM;
     } else {
         if (append_fileheader(dir_fpath, &mhdr) == -1)
@@ -1370,6 +1372,44 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     return FULLUPDATE;
 }
 
+// Reports a forward of fh to address to the activity service. A local
+// mailbox that auto-forwards (FN_FORWARD) is reported with its forward address
+// (ACTIVITY_FWD_OWN or ACTIVITY_FWD_OTHER), so forwarding to a mailbox does
+// not get around the limits. Returns 0 if the forward is denied.
+static int
+report_forward(const fileheader_t *fh, const char *address)
+{
+    char uid[IDLEN + 1] = "", fwd[64] = "", fpath[PATHLEN];
+    const char *rcpt = address, *via = NULL;
+    int kind = ACTIVITY_FWD_INTERNET;
+    int bid = (currstat != RMAIL && currboard[0] && currbid > 0) ? currbid : 0;
+
+    if (parse_mail_address(address, uid, sizeof(uid))) {
+	FILE *fp;
+
+	kind = ACTIVITY_FWD_LOCAL;
+	rcpt = uid;
+	if (is_validuserid(uid) && searchuser(uid, uid) > 0) {
+	    sethomefile(fpath, uid, FN_FORWARD);
+	    if ((fp = fopen(fpath, "r")) != NULL) {
+		if (fscanf(fp, "%63s", fwd) != 1)
+		    fwd[0] = '\0';
+		fclose(fp);
+	    }
+	    if (strchr(fwd, '@') && !is_local_mail_address(fwd)) {
+		kind = strcasecmp(uid, cuser.userid) == 0 ? ACTIVITY_FWD_OWN :
+		       ACTIVITY_FWD_OTHER;
+		rcpt = fwd;
+		via = uid;
+	    }
+	}
+    }
+    return !activity_forward(cuser.userid, cuser.firstlogin, fromhost,
+                             get_client_code(),
+                             HasUserPerm(ACTIVITY_EXEMPT_PERMS), bid,
+                             fh->filename, kind, rcpt, via);
+}
+
 int
 doforward(const char *direct, const fileheader_t * fh, int mode)
 {
@@ -1481,6 +1521,14 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
         }
     } while (0);
 
+    // Report the forward to the activity service ('Z' has its own weekly
+    // limit). Denied explicitly: dropping silently only makes scripts send
+    // everything again.
+    if (mode != 'Z' && !report_forward(fh, address)) {
+	vmsg("轉寄太頻繁，請稍後再試。");
+	return 1;
+    }
+
     {
 	char xid[IDLEN+1], *dot;
 	STRLCPY(xid, address);
@@ -1553,7 +1601,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     }
 
     if (is_local_mail_address(address)) {
-        return_no = save_mailbox(cuser.userid, address, fh->title, NULL, fname, 0, MAILSEND_FLAG_CHECK_QUOTA | MAILSEND_FLAG_ALLOW_FORWARD, NULL);
+        return_no = save_mailbox(cuser.userid, address, fh->title, NULL, fname, 0, MAILSEND_FLAG_CHECK_QUOTA | MAILSEND_FLAG_ALLOW_FORWARD | MAILSEND_FLAG_FORWARD_CHECKED, NULL);
     } else {
         return_no = bsmtp(fname, fh->title, address, NULL);
     }

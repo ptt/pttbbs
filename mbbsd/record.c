@@ -1,5 +1,6 @@
 
 #include "bbs.h"
+#include "activity.h"
 
 #ifdef _BBS_UTIL_C_
 #error sorry, mbbsd/record.c does not support utility mode anymore. please use libcmbbs or libcmsys instead.
@@ -398,8 +399,12 @@ stampadir(char *fpath, fileheader_t * fh, int large_set)
     return 0;
 }
 
+// Appends record to the mailbox fpath of origid, and sends it to its auto
+// forward address. Unless `checked` (doforward already asked), the activity
+// service is asked first; if it denies, the mail stays in the mailbox only.
 int
-append_record_forward(char *fpath, fileheader_t * record, int size, const char *origid)
+append_record_forward(char *fpath, fileheader_t * record, int size,
+                      const char *origid, int checked)
 {
     FILE *fp;
     char address[64] = "";
@@ -462,6 +467,21 @@ append_record_forward(char *fpath, fileheader_t * record, int size, const char *
     // and again because some really stupid user
     // does not understand they've set auto-forward,
     // let's mark this in the title.
+    if (!checked &&
+        activity_forward(cuser.userid, cuser.firstlogin, fromhost,
+                         get_client_code(), HasUserPerm(ACTIVITY_EXEMPT_PERMS),
+                         0, record->filename,
+                         strcasecmp(origid, cuser.userid) == 0 ?
+                         ACTIVITY_FWD_OWN : ACTIVITY_FWD_OTHER,
+                         address, origid)) {
+        LOG_IF(LOG_CONF_INTERNETMAIL,
+               log_filef("log/internet_mail.log",
+                         "[%s] %s -> (%s) %s: denied by activity: %s\n",
+                         __FUNCTION__,
+                         cuser.userid, origid, address, record->title));
+        return 0;
+    }
+
     snprintf(fwd_title, sizeof(fwd_title)-1,
              "[¦Û°ÊÂà±H] %s", record->title);
     bsmtp(TEMP_DIRPATH(fpath, record->filename), fwd_title, address, origid);

@@ -500,6 +500,8 @@ typedef enum {
     MAILSEND_FLAG_CHECK_QUOTA   = (1 << 0),
     MAILSEND_FLAG_USER_CONTENT  = (1 << 1),
     MAILSEND_FLAG_ALLOW_FORWARD = (1 << 2),
+    // The auto-forward was already reported to the activity service.
+    MAILSEND_FLAG_FORWARD_CHECKED  = (1 << 4),
 } MailSendFlag;
 
 int mail_ui_send(const char *userid, const char *title);
@@ -685,8 +687,8 @@ int safe_article_delete_range(const char *direct, int from, int to);
 int delete_file(const char *dirname, int size, int ent, int (*filecheck)());
 int delete_range(const char *fpath, int id1, int id2);
 int search_rec(const char* dirname, int (*filecheck)());
-int append_record_forward(char *fpath, fileheader_t *record, int size, 
-                          const char *origid);
+int append_record_forward(char *fpath, fileheader_t *record, int size,
+                          const char *origid, int checked);
 int get_sum_records(const char* fpath, int size);
 int rotate_text_logfile(const char *filename, off_t max_size, 
                         float keep_ratio);
