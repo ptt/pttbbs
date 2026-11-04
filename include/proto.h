@@ -76,7 +76,6 @@ int CheckPostPerm(void);
 void check_new_perm(void);
 int CheckPostRestriction(int);
 void anticrosspost(void);
-int Select(void);
 void do_reply_title(int row, const char *title, const char *prefix, char *result, int len);
 void outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *username);
 int edit_title(int ent, fileheader_t *fhdr, const char *direct);

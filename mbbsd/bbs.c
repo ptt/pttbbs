@@ -858,6 +858,31 @@ whereami(void)
 }
 
 
+/* The board 's' chose in a board's list or its post reader. Read() enters it
+ * once that list has closed, for a list of its own: entering it right there
+ * would change the board under the list, set up for the old one (its board,
+ * position, search), or under whatever else the reader was opened from. */
+static char read_next[BRDNAME_SIZE];
+
+/* 's' in a board's list or its post reader: chooses another board to read,
+ * closing the list if it can be entered. */
+static int
+select_board_to_read(void)
+{
+    char            bname[BRDNAME_SIZE];
+
+    setutmpmode(SELECT);
+    move(0, 0);
+    clrtoeol();
+    // bname must be the array itself: CompleteBoard() takes sizeof(bname).
+    CompleteBoard(MSG_SELECT_BOARD, bname);
+    // As do_select(), quietly stay if it can't be entered.
+    if (board_enterable(bname) < 0)
+	return FULLUPDATE;
+    STRLCPY(read_next, bname);
+    return DOQUIT;
+}
+
 static int
 do_select(void)
 {
@@ -2491,7 +2516,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     {
         read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
         const more_hooks_t hooks = { .comment = read_post_comment, .ctx = &rp,
-                                     .select_board = Select };
+                                     .select_board = select_board_to_read };
         more_result = more_ex(genbuf, YEA, &hooks);
     }
 
@@ -4409,7 +4434,7 @@ DEFINE_READ_NOITEM_CMD(bbs_cmd_join_gamble, join_gamble)
 DEFINE_READ_ITEM_CMD(bbs_cmd_good_post, good_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_mark_post, mark_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_read_post, read_post)
-DEFINE_READ_NOITEM_CMD(bbs_cmd_select_board, do_select)
+DEFINE_READ_NOITEM_CMD(bbs_cmd_select_board, select_board_to_read)
 DEFINE_READ_ITEM_CMD(bbs_cmd_mark_read, b_mark_read_unread)
 DEFINE_READ_ITEM_CMD(bbs_cmd_call_in, b_call_in)
 DEFINE_READ_ITEM_CMD(bbs_cmd_reply_post, reply_post)
@@ -4463,6 +4488,16 @@ const cmd_t read_comms[] = {
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
+/* Says why enter_board() failed. */
+static void
+say_enter_failed(int enter_ret)
+{
+    if (enter_ret == -2)
+	vmsg("您沒有進入此看板的權限！");
+    else if (enter_ret == -3)
+	vmsg("無法建立或進入看板目錄！");
+}
+
 int
 Read(void)
 {
@@ -4472,30 +4507,49 @@ Read(void)
     const char *bname = currboard[0] ? currboard : DEFAULT_BOARD;
     int enter_ret = enter_board(bname);
     if (enter_ret < 0) {
-        if (enter_ret == -2)
-            vmsg("您沒有進入此看板的權限！");
-        else if (enter_ret == -3)
-            vmsg("無法建立或進入看板目錄！");
+	say_enter_failed(enter_ret);
         return 0;
     }
 
-    setutmpmode(READING);
+    for (;;) {
+	setutmpmode(READING);
+	read_next[0] = 0;
 
-    if (currbid != bnote_lastbid &&
-	board_note_time && *board_note_time) {
-	int mr;
+	if (currbid != bnote_lastbid &&
+	    board_note_time && *board_note_time) {
+	    int mr;
 
-	mr = more(TEMP_BFILE(currboard, fn_notes), NA);
-	if(mr == -1)
-            *board_note_time=0;
-	else if (mr != READ_NEXT)
-	    pressanykey();
+	    mr = more(TEMP_BFILE(currboard, fn_notes), NA);
+	    if(mr == -1)
+		*board_note_time=0;
+	    else if (mr != READ_NEXT)
+		pressanykey();
+	}
+	bnote_lastbid = currbid;
+	i_read(READING, currdirect, readtitle, readdoent, read_comms,
+	       currbid);
+	currmode &= ~MODE_POSTCHECKED;
+	brc_update();
+	// 's' chose another board: read it in a list of its own, or the old
+	// one again if it can't be entered. If a ZA switch was chosen at its
+	// prompt (Ctrl-U), go there once the board is entered.
+	if (!read_next[0])
+	    break;
+	char next[BRDNAME_SIZE], old[BRDNAME_SIZE];
+	STRLCPY(next, read_next);
+	STRLCPY(old, currboard);
+	if ((enter_ret = enter_board(next)) < 0) {
+	    say_enter_failed(enter_ret);
+	    if (enter_board(old) < 0)
+		break;
+	}
+	if (ZA_Waiting())
+	    break;
     }
-    bnote_lastbid = currbid;
-    i_read(READING, currdirect, readtitle, readdoent, read_comms,
-	   currbid);
-    currmode &= ~MODE_POSTCHECKED;
-    brc_update();
+    read_next[0] = 0;
+    // A list closed without leaving digest mode (by a ZA switch, or by 's'
+    // when no board is entered after it) is still in it.
+    currmode &= ~MODE_DIGEST;
     setutmpbid(tmpbid);
     currutmp->mode = mode0;
     currstat = stat0;
@@ -4524,10 +4578,4 @@ ReadSelect(void)
     currutmp->mode = mode0;
     currstat = stat0;
     return changed;
-}
-
-int
-Select(void)
-{
-    return do_select();
 }
