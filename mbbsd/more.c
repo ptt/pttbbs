@@ -209,7 +209,7 @@ common_pager_key_handler(int ch, void *ctx GCC_UNUSED)
 #endif
 
 static int
-common_pager_exit_handler(int r, const char *fpath)
+common_pager_exit_handler(int r, const char *fpath, const more_hooks_t *hooks)
 {
     // post processing
     switch(r)
@@ -242,8 +242,13 @@ common_pager_exit_handler(int r, const char *fpath)
 
 	case RET_SELECTBRD:
 	    r = FULLUPDATE;
-	    if (currstat == READING)
-		r = Select();
+	    // Only where the caller allows it (see more_hooks_t.select_board);
+	    // other readers are opened from flows that go on with their board
+	    // (vote results, a post's edit history or the recycle bin).
+	    if (hooks && hooks->select_board)
+		r = hooks->select_board();
+	    else
+		vmsg("這裡不能切換看板。");
 	    break;
 
 	case RET_DOCHESSREPLAY:
@@ -348,6 +353,12 @@ static const cmd_t minimore_nav_cmds[] = {
 // minimore: a mini pager in exactly 130 lines
 #define PAGER_MAXLINES (2048)
 int more(const char *fpath, int promptend)
+{
+    return more_ex(fpath, promptend, NULL);
+}
+
+int
+more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
 {
     FILE *fp = fopen(fpath, "rt");
     int  lineno = 0, lines = 0, oldlineno = -1;
@@ -468,7 +479,7 @@ int more(const char *fpath, int promptend)
 	    lineno = 0;
     }
     fclose(fp);
-    return abort > 0 ? common_pager_exit_handler(abort, fpath) : 0;
+    return abort > 0 ? common_pager_exit_handler(abort, fpath, hooks) : 0;
 }
 
 void
@@ -481,12 +492,6 @@ more_on_live_comment(uint32_t bid GCC_UNUSED, aidu_t aid GCC_UNUSED, const char 
 void
 more_live_resubscribe(void)
 {
-}
-
-int
-more_ex(const char *fpath, int promptend, const more_hooks_t *hooks GCC_UNUSED)
-{
-    return more(fpath, promptend);
 }
 
 #else	// USE_PMORE ////////////////////////////////////////////////////////
@@ -1086,7 +1091,7 @@ more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
     s_live.bid = outer_bid;
     s_live.aid = outer_aid;
 
-    return common_pager_exit_handler(r, fpath);
+    return common_pager_exit_handler(r, fpath, hooks);
 }
 
 static int

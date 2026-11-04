@@ -563,6 +563,10 @@ int more(const char *fpath, int promptend);
 typedef struct more_hooks {
     int  (*comment)(void *ctx); // add a comment; returns FULLUPDATE/DIRCHANGED
     void *ctx;
+    // 's': switch boards; set only in a post read from a board's list, not
+    // in readers opened from other flows, which go on with the old board
+    // (vote results, a post's edit history or the recycle bin)
+    int  (*select_board)(void);
 } more_hooks_t;
 int more_ex(const char *fpath, int promptend, const more_hooks_t *hooks);
 int more_inmemory(void *content, int size, int promptend);

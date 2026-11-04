@@ -2490,7 +2490,8 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     // Real read.
     {
         read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
-        const more_hooks_t hooks = { .comment = read_post_comment, .ctx = &rp };
+        const more_hooks_t hooks = { .comment = read_post_comment, .ctx = &rp,
+                                     .select_board = Select };
         more_result = more_ex(genbuf, YEA, &hooks);
     }
 
