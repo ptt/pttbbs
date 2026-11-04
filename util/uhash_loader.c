@@ -26,7 +26,8 @@ void load_uhash(void) {
         exit(1);
     }
 
-    if (is_new) {
+    // version 0: the SHM exists but was never initialized
+    if (is_new || SHM->version == 0) {
         SHM->number = SHM->loaded = 0;
         SHM->version = SHM_VERSION;
         SHM->size    = sizeof(SHM_t);
