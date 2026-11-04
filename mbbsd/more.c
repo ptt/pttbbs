@@ -511,7 +511,8 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
 // Pressing 'v' in pmore shows the last page and exits pmore with RET_LIVE;
 // more() then runs live_run(), which owns the screen: new comments of the
 // article (IPC PubSub) are printed below the last page and scrolled up once
-// the screen is full, with a dedicated status bar. 'q'/'Q' leaves live mode.
+// the screen is full, with a dedicated status bar. 'q'/'Q' or LEFT leaves
+// live mode.
 ////////////////////////////////////////////////////////////////////////////
 
 #define LIVE_MAX_PENDING_COMMENTS 128
@@ -821,7 +822,7 @@ live_draw_status(const live_view_t *v, bool can_comment)
         elapsed = 0;
     AUTO_STR(part1, ANSI_COLOR(1;37;42) " 實況中 %02d:%02d [+%d] ",
             elapsed / 60, elapsed % 60, v->received);
-    AUTO_STR(part2, " %s(B)鈴聲%s (T/M/S)調時 (q)離開\t%s",
+    AUTO_STR(part2, " %s(B)鈴聲%s (T/M/S)調時 (←/q)離開\t%s",
             can_comment ? "(X)留言 " : "",
             s_live_bell ? "[打開]" : "[關閉]", Cdate_mdHM(&now));
     vs_footer(part1, part2);
@@ -905,6 +906,7 @@ live_run(const char *fpath, const more_hooks_t *hooks)
         case EOF:
         case 'q':
         case 'Q':
+        case KEY_LEFT:
             cont = false;
             break;
 
@@ -972,7 +974,8 @@ common_pager_start_live(void *ctx GCC_UNUSED)
 /*
  * Counts consecutive opens of the same article. Once it was opened
  * LIVE_AUTO_PROMPT_REPEAT times in a row, asks (on this open) whether to go
- * straight into live mode. The count restarts whenever the user was asked.
+ * straight into live mode. The count restarts whenever the user was asked,
+ * or left the article by anything but a plain quit (see more_ex).
  * Returns true if the user wants live mode.
  */
 static bool
@@ -991,6 +994,11 @@ live_check_repeat(uint32_t bid, aidu_t aid)
         s_live_repeat.count++;
         return false;
     }
+
+    /* Keys typed ahead (e.g. the next comment) would answer the prompt;
+     * keep the count and ask on a later open. */
+    if (vkey_is_typeahead())
+        return false;
 
     /* Don't offer what live_run() can't deliver; keep the count to retry. */
     if (!ipc_is_connected())
@@ -1035,6 +1043,10 @@ more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
     if (r == RET_LIVE) {
         s_live_repeat.count = 0;    // already knows live mode
         r = live_run(fpath, hooks);
+    } else if (r >= RET_MIN_SPECIAL) {
+        /* Left the article to do something (comment, reply, ...), not
+         * just re-entering to refresh: start over. */
+        s_live_repeat.count = 0;
     }
 
     s_live.bid = outer_bid;

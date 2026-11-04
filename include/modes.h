@@ -32,6 +32,7 @@
 #define RET_EDITTITLE	    (987)
 #define RET_DOVOTE	    (986)
 #define RET_LIVE	    (985)  /* pmore 'v': caller runs live mode */
+#define RET_MIN_SPECIAL     (900)   // A sentinel indicating special return.
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0
