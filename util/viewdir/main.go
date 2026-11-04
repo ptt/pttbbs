@@ -27,13 +27,14 @@ type RawFileHeader struct {
 	Pad2     byte
 	Multi    uint32
 	Filemode uint16
-	Pad3     [2]byte
+	Comments uint16
 }
 
 type ArticleHeader struct {
 	Filename string
 	Modified uint32
 	Rating   int16
+	Comments uint16
 	Owner    string
 	Date     string
 	Title    string
@@ -221,6 +222,7 @@ func parseDirFile(dirPath string) ([]ArticleHeader, error) {
 			Filename: filename,
 			Modified: raw.Modified,
 			Rating:   raw.Rating,
+			Comments: raw.Comments,
 			Owner:    owner,
 			Date:     date,
 			Title:    title,

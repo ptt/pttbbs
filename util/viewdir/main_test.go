@@ -14,6 +14,9 @@ func createMockDirFile(t *testing.T, dirFile string, articles []ArticleHeader) {
 	for _, art := range articles {
 		var raw RawFileHeader
 		copy(raw.Filename[:], art.Filename)
+		raw.Modified = art.Modified
+		raw.Rating = art.Rating
+		raw.Comments = art.Comments
 		copy(raw.Owner[:], art.Owner)
 		copy(raw.Date[:], art.Date)
 		b5Title := encodeToBig5(art.Title)

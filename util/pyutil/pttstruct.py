@@ -155,6 +155,9 @@ BRD_OVER18             = 0x01000000      # 十八禁
 BRD_NOREPLY            = 0x02000000      # 不可回文
 BRD_ALIGNEDCMT         = 0x04000000      # 對齊式的推文
 BRD_NOSELFDELPOST      = 0x08000000      # 不可自刪
+BRD_BM_MASK_CONTENT    = 0x10000000      # 允許板主刪除特定文字
+BRD_RATING             = 0x20000000      # 開放評分
+BRD_NOSELFEDITCMT      = 0x40000000      # 禁刪改留言
 
 
 FNLEN = 28  # Length of filename
@@ -171,7 +174,7 @@ FILEHEADER_FMT = (
         ("pad2", "B"),
         ("multi", "i"),
         ("filemode", "H"),
-        ("pad3", "2s"))
+        ("comments", "H"))
 
 FILEHEADER_SIZE = 128
 

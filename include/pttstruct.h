@@ -289,6 +289,8 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 #define BRD_ALIGNEDCMT		0x04000000	/* 對齊式的推文 */
 #define BRD_NOSELFDELPOST       0x08000000      /* 不可自刪 */
 #define BRD_BM_MASK_CONTENT	0x10000000	/* 允許板主刪除特定文字 */
+#define BRD_RATING		0x20000000	/* 開放評分 */
+#define BRD_NOSELFEDITCMT	0x40000000	/* 禁刪改留言 */
 
 // Board group linked-list type. Used for array index of firstchild and next.
 #define BRD_GROUP_LL_TYPE_NAME  (0)
@@ -329,7 +331,7 @@ typedef struct fileheader_t { /* 128 bytes */
     }	    multi;
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     uint16_t  filemode;         /* was uint8_t, must be last field @ boards.c */
-    char    pad3[2];
+    uint16_t comments;
 } PACKSTRUCT fileheader_t;
 
 #define FILE_LOCAL      0x0001  /* local saved,  non-mail */

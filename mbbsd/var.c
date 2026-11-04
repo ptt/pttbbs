@@ -101,12 +101,12 @@ const char * const str_permboard[] = {
     "禁止快速推文",		/* BRD_NOFASTRECMD */
     "推文記錄 IP",		/* BRD_IPLOGRECMD */
     "十八禁",			/* BRD_OVER18 */
+    "不可回文",			/* BRD_NOREPLY */
     "對齊式推文",		/* BRD_ALIGNEDCMT */
     "不可自刪",                 /* BRD_NOSELFDELPOST */
     "板主可刪特定文字",         /* BRD_BM_MASK_CONTENT */
-    "沒想到",
-    "沒想到",
-    "沒想到",
+    "開放評分",                 /* BRD_RATING */
+    "禁刪改留言",               /* BRD_NOSELFEDITCMT */
     "沒想到",
 };
 
