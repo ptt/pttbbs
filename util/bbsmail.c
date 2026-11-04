@@ -163,9 +163,6 @@ int mail2bbs(char *userid)
     if( strchr(sender, '@') == NULL )	/* ¥Ñ local host ±H«H */
 	STRLCAT(sender, "@" MYHOSTNAME);
 
-/* allocate a file for the new mail */
-    stampfile(filename, &mymail);
-
 #ifdef HMM_USE_ANTI_SPAM
     for (n = 0; notitle[n]; n++) {
 	if (mbs_strstr(title, notitle[n])) {
@@ -177,13 +174,17 @@ int mail2bbs(char *userid)
     }
     for (n = 0; nofrom[n]; n++) {
 	if (mbs_strstr(sender, nofrom[n])) {
-	    snprintf(genbuf, sizeof(genbuf) "From <%s> not accepted", sender);
+	    snprintf(genbuf, sizeof(genbuf), "From <%s> not accepted", sender);
 	    puts(genbuf);
 	    mailog(genbuf);
 	    return -1;
 	}
     }
 #endif
+
+/* allocate a file for the new mail, after the checks above so that a
+ * rejected mail does not leave an empty file behind */
+    stampfile(filename, &mymail);
 
     if ((fout = fopen(filename, "w")) == NULL)
     {
