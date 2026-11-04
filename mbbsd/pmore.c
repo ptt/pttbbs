@@ -1469,6 +1469,26 @@ MFDISP_PREDICT_LINEWIDTH(unsigned char *p)
     return off;
 }
 
+/* Column limit for URL text starting at col, where p points to the rest of
+ * the line. Normal text may use the indicator column, or the full terminal
+ * width with PMORE_TRADITIONAL_FULLCOL, if the rest of the line fits. URLs
+ * must follow the same rule, or a URL ending at column 79 or 80 would be
+ * wrapped one or two characters early.
+ */
+MFFPROTO int
+MFDISP_URL_LIMIT(int col, unsigned char *p, int maxcol)
+{
+    int linew = col + MFDISP_PREDICT_LINEWIDTH(p);
+
+    if (linew <= maxcol + 2)
+        return maxcol + 2;
+#ifdef PMORE_TRADITIONAL_FULLCOL
+    if (linew <= t_columns)
+        return t_columns;
+#endif
+    return maxcol + 1;
+}
+
 MFFPROTO int
 MFDISP_DBCS_HEADERWIDTH(int originalw)
 {
@@ -2067,12 +2087,15 @@ mf_display()
                             }
 
                             int ulen = 0;
+                            int url_limit = limit;
 
                             if (!url_state.in_url && (c == 'h' || c == 'H') &&
                                 match_url((const char *)mf.dispe, (int)(mf.end - mf.dispe), &ulen))
                             {
                                 url_tracker_init(&url_state, (const char *)mf.dispe, ulen, (const char *)mf.end, col);
-                                if (!url_state.cont_next_line && col + ulen <= limit)
+                                if (bpref.rawmode == MFDISP_RAW_NA && col + ulen > limit)
+                                    url_limit = MFDISP_URL_LIMIT(col, mf.dispe, maxcol);
+                                if (!url_state.cont_next_line && col + ulen <= url_limit)
                                     url_state.in_url = false;
                             }
 
@@ -2080,14 +2103,17 @@ mf_display()
                                 (!url_state.cont_ptr || mf.dispe >= (const unsigned char *)url_state.cont_ptr))
                             {
                                 url_state.cont_ptr = NULL;
-                                if (col < limit)
+                                if (bpref.rawmode == MFDISP_RAW_NA &&
+                                    col + url_state.cur_line_bytes_left > limit)
+                                    url_limit = MFDISP_URL_LIMIT(col, mf.dispe, maxcol);
+                                if (col < url_limit)
                                 {
                                     if (bpref.rawmode == MFDISP_RAW_NA)
                                         start_url(url_state.url);
                                     else
                                         outs(ANSI_COLOR(4;36));
 
-                                    while (url_state.cur_line_bytes_left > 0 && col < limit)
+                                    while (url_state.cur_line_bytes_left > 0 && col < url_limit)
                                     {
                                         char ch = *mf.dispe;
                                         if (xprefix > 0)
@@ -2100,6 +2126,10 @@ mf_display()
                                         mf.dispe++;
                                         url_state.cur_line_bytes_left--;
                                     }
+
+                                    // Same as PMORE_TRADITIONAL_FULLCOL for normal text.
+                                    if (col > maxcol + 2)
+                                        newline = MFDISP_NEWLINE_MOVE;
 
                                     if (bpref.rawmode == MFDISP_RAW_NA)
                                         end_url();
