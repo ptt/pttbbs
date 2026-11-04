@@ -38,6 +38,13 @@ on_crosspost(const char *board GCC_UNUSED, const char *fname GCC_UNUSED,
 {
 }
 
+// Describes the system load (cpuload()) in system information.
+GCC_WEAK const char *
+get_loading_str(int load)
+{
+    return load < 5 ? "良好" : (load < 20 ? "尚可" : "過重");
+}
+
 // Called when we need a per-title(category) max pay.
 GCC_WEAK int
 get_max_pay_by_post_title(const char *title GCC_UNUSED)

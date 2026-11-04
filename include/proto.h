@@ -770,6 +770,7 @@ void grayout_rect(int y, int end, int x_start, int x_end, int level);
 
 /* hooks (weak; a site may override them) */
 void on_user_login(void);
+const char *get_loading_str(int load);
 const char *is_rejected_email(const char *email);
 bool is_rejected_forward(const char *address);
 bool can_forward(const char *title);

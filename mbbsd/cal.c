@@ -677,12 +677,7 @@ p_sysinfo(void)
 #endif
 
     load = cpuload(NULL);
-#ifdef USE_FANCY_LOAD
-    // You have to define your own fancy_load function.
-    cpuloadstr = fancy_load(load);
-#else
-    cpuloadstr = (load < 5 ? "良好" : (load < 20 ? "尚可" : "過重"));
-#endif
+    cpuloadstr = get_loading_str(load);
 
     vs_hdr("系統資訊");
     move(2, 0);
