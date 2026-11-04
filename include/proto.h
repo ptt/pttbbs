@@ -586,6 +586,11 @@ struct pmore_callbacks {
  * and the file size it was showing. */
 void pmore_get_live_view(int *rows, off_t *shown_size);
 
+/* After pmore returned RET_LIVE: how the last page rendered new format
+ * comments. Returns 0 if they were shown raw (not rendered). */
+int pmore_get_live_comment_view(char *op_author, size_t szop_author,
+                                int *theme);
+
 int pmore2(
         const char *fpath, int promptend, void *ctx,
         const struct pmore_callbacks *cb);

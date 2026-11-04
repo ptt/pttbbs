@@ -507,6 +507,7 @@ MmappedFile mf = {
 static int   mf_disprows = 0;
 static int   mf_live_rows = 0;
 static off_t mf_live_size = 0;
+static char  mf_live_op_author[IDLEN + 1] = "";
 
 /* mf_* navigation commands return value meanings */
 enum MF_NAV_COMMANDS {
@@ -1708,12 +1709,13 @@ mf_display()
         .comments_start = mf.comments_start,
         .op_author = fh.op_author,
         .show_comment_ip = 1,
-        .max_width = headerw,
+        .max_width = t_columns - 1,
         .theme = bpref.comment_theme,
         .cur_is_op = 0,
     };
 
-    if (mf.disps >= mf.comments_start && strncmp((const char *)mf.disps, "  ", 2) == 0)
+    /* Page starts in the middle of a comment: find its header. */
+    if (mf.disps >= mf.comments_start && strncmp((const char *)mf.disps, "| ", 2) == 0)
         comment_init_op_state(&cmt_ctx, mf.disps);
 
     while (lines < MFDISP_PAGE)
@@ -2646,6 +2648,7 @@ mf_enter_live(void)
     mf_display();
     mf_live_rows = mf_disprows;
     mf_live_size = mf.len;
+    strlcpy(mf_live_op_author, fh.op_author, sizeof(mf_live_op_author));
 }
 
 /*
@@ -2673,6 +2676,16 @@ pmore_get_live_view(int *rows, off_t *shown_size)
         *rows = mf_live_rows;
     if (shown_size)
         *shown_size = mf_live_size;
+}
+
+int
+pmore_get_live_comment_view(char *op_author, size_t szop_author, int *theme)
+{
+    if (op_author && szop_author)
+        strlcpy(op_author, mf_live_op_author, szop_author);
+    if (theme)
+        *theme = bpref.comment_theme;
+    return bpref.rawmode == MFDISP_RAW_NA;
 }
 
 MFPROTO int

@@ -9,12 +9,18 @@
 #include "bbs.h"
 #include "ansi.h"
 
+#ifndef COMMENT_LINE_LEN
+#define COMMENT_LINE_LEN 65
+#endif
+
 enum {
     COMMENT_THEME_CLASSIC = 0,
     COMMENT_THEME_SIMPLE,
-    COMMENT_THEME_BORDERED,
+    COMMENT_THEME_ALIGNED,
     COMMENT_THEMES
 };
+
+#define COMMENT_THEME_BORDERED COMMENT_THEME_ALIGNED
 
 typedef struct {
     const char *name;
@@ -37,9 +43,11 @@ typedef struct {
     const unsigned char *comments_start;/* mf.comments_start */
     const char *op_author;              /* fh.op_author */
     int show_comment_ip;                /* mf.show_comment_ip */
-    int max_width;                      /* headerw (usually t_columns - 2) */
+    int max_width;                      /* usually t_columns - 1 (e.g. 79) */
     int theme;                          /* bpref.comment_theme */
     int cur_is_op;                      /* state: is current comment by OP */
+    int cur_header_width;               /* state: indentation width of current comment */
+    int cur_is_tombstone;               /* state: is current comment a tombstone */
 } comment_ctx_t;
 
 /* Theme info & preference helpers */
@@ -96,5 +104,14 @@ int comment_match_ref(const unsigned char *p,
 
 /* Returns current body text color according to theme and OP state */
 const char *comment_get_body_color(const comment_ctx_t *ctx);
+
+/* Renders a standalone line (not in a pager buffer, e.g. live mode) in the
+ * new comment format: a header "|userid|..." or a body line "| text".
+ * The buffer fields of ctx are not used. The state (OP, indentation,
+ * tombstone) carries over from the previous call, so pass lines in order.
+ * Returns 1 if the line was rendered, or 0 (nothing output, state reset) if
+ * it is not a new format comment line.
+ */
+int comment_render_line(comment_ctx_t *ctx, const char *line, int len);
 
 #endif /* _COMMENTS_H_ */

@@ -1,4 +1,5 @@
 #include "bbs.h"
+#include "comments.h"
 
 /*
  * more.c
@@ -661,6 +662,9 @@ typedef struct {
     int     received;
     off_t   synced;     // file bytes already on screen (0: unknown)
     bool    countdown;  // timer is negative: counting down to the event
+    bool    render_comments;    // render new format comments (comments.c)
+    char    op_author[IDLEN + 1];
+    comment_ctx_t cmt;  // state of the new format comment being printed
 } live_view_t;
 
 /* Move to the row for the next line, scrolling once the screen is full. */
@@ -682,7 +686,9 @@ static void
 live_print_line(live_view_t *v, const char *line)
 {
     live_next_row(v);
-    outs(line);
+    if (!v->render_comments ||
+        !comment_render_line(&v->cmt, line, (int)strlen(line)))
+        outs(line);
     outs(ANSI_RESET);
     clrtoeol();
 }
@@ -906,6 +912,11 @@ live_run(const char *fpath, const more_hooks_t *hooks)
     memset(&v, 0, sizeof(v));
     v.row = rows;
     v.synced = shown;
+    v.render_comments = pmore_get_live_comment_view(
+        v.op_author, sizeof(v.op_author), &v.cmt.theme);
+    v.cmt.op_author = v.op_author;
+    v.cmt.show_comment_ip = 1;
+    v.cmt.max_width = t_columns - 1;
     syncnow();
     v.start = now;
     live_print_banner(&v);
