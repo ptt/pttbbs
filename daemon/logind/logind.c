@@ -897,6 +897,11 @@ DEBUG_IO(int fd, const char *msg) {
 #define TOO_MANY_GUEST_YX   BOTTOM_YX
 #define NO_GUEST_ACCT_MSG   ANSI_RESET " 本站 " STR_GUEST " 帳號尚未建立。 "
 #define NO_GUEST_ACCT_YX    BOTTOM_YX
+#ifdef  CONFIG_REDIRECT_GUEST_TO_WEB
+#define REDIRECT_GUEST_MSG  ANSI_RESET ANSI_COLOR(1;32) " 請改用網頁版 " \
+                            CONFIG_REDIRECT_GUEST_TO_WEB " " ANSI_RESET
+#define REDIRECT_GUEST_YX   BOTTOM_YX
+#endif
 #endif
 
 #define FN_WELCOME          BBSHOME "/etc/Welcome"
@@ -1418,6 +1423,11 @@ draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
 #ifdef STR_GUEST
     if (strcasecmp(freeid, STR_GUEST) == 0)
     {
+#ifdef CONFIG_REDIRECT_GUEST_TO_WEB
+        _mt_move_yx(conn, REDIRECT_GUEST_YX); _mt_clrtoeol(conn);
+        _text_write(conn, REDIRECT_GUEST_MSG, sizeof(REDIRECT_GUEST_MSG)-1);
+        return;
+#endif
         if (!g_guest_usernum)
         {
             _mt_move_yx(conn, NO_GUEST_ACCT_YX); _mt_clrtoeol(conn);
@@ -1845,6 +1855,10 @@ auth_check_free_userid_allowance(const char *userid)
 #ifdef STR_GUEST
     if (strcasecmp(userid, STR_GUEST) == 0)
     {
+#ifdef CONFIG_REDIRECT_GUEST_TO_WEB
+        // guest logins are closed; draw_reject_free_userid shows the URL.
+        return 0;
+#endif
         // now, load guest account information.
         if (!g_guest_usernum)
         {
