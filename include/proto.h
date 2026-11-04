@@ -102,6 +102,7 @@ int crosspost_target_ok(int bid, const char *bname);
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;
 int is_readonly_board(const char *bname);
+int board_enterable(const char *boardname);
 int enter_board(const char *boardname);
 int HasBoardPerm(boardheader_t *bptr);
 int BoardPermNeedsSysopOverride(boardheader_t *bptr);

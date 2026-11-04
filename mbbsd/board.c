@@ -67,6 +67,34 @@ is_readonly_board(const char *bname)
 	    strcasecmp(bname, BN_ALLPOST ) == 0 );
 }
 
+/* Whether enter_board() can enter board boardname: its bid if so, or the
+ * error enter_board() returns. */
+int board_enterable(const char *boardname)
+{
+    boardheader_t  *bh;
+    int bid;
+    char bpath[PATHLEN];
+    struct stat     st;
+
+    if (boardname[0] == '\0' || !(bid = getbnum(boardname)))
+	return -1;
+    assert(0<=bid-1 && bid-1<MAX_BOARD);
+    bh = getbcache(bid);
+    if (!HasBoardPerm(bh))
+	return -2;
+    if (IS_GROUP(bh))
+	return -1;
+    if (bh->brdname[0] == '\0')
+	return -3;
+
+    setbpath(bpath, bh->brdname);
+    // Mkdir(bpath);
+    if (stat(bpath, &st) == -1) {
+	return -3;
+    }
+    return bid;
+}
+
 /**
  * @param[in]	boardname	board name, case insensitive
  * @return	0	if success
@@ -83,28 +111,15 @@ int enter_board(const char *boardname)
     boardheader_t  *bh;
     int bid;
     char bname[BRDNAME_SIZE];
-    char bpath[60];
-    struct stat     st;
 
     /* checking ... */
-    if (boardname[0] == '\0' || !(bid = getbnum(boardname)))
-	return -1;
-    assert(0<=bid-1 && bid-1<MAX_BOARD);
+    if ((bid = board_enterable(boardname)) < 0)
+	return bid;
     bh = getbcache(bid);
-    if (!HasBoardPerm(bh))
-	return -2;
-    if (IS_GROUP(bh))
-	return -1;
-
     STRLCPY(bname, bh->brdname);
+    // Deleted since board_enterable() looked.
     if (bname[0] == '\0')
 	return -3;
-
-    setbpath(bpath, bname);
-    // Mkdir(bpath);
-    if (stat(bpath, &st) == -1) {
-	return -3;
-    }
 
     /* really enter board */
     brc_update();
