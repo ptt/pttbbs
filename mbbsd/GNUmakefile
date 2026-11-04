@@ -13,7 +13,8 @@ ABUSEOBJS := captcha.o contentcheck.o
 ACCOBJS   := user.o acl.o register.o passwd.o emaildb.o
 NETOBJS   := mbbsd.o io.o term.o telnet.o ipc.o
 TALKOBJS  := friend.o talk.o ccw.o wmsg.o
-UTILOBJS  := stuff.o kaede.o convert.o name.o syspost.o cache.o cal.o tag.o
+UTILOBJS  := stuff.o kaede.o convert.o name.o syspost.o cache.o cal.o tag.o \
+	     hooks.o
 UIOBJS    := menu.o vtuikit.o psb.o vform.o
 PAGEROBJS := more.o pmore.o
 PLUGOBJS  := ordersong.o angel.o timecap.o

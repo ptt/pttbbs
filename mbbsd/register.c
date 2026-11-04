@@ -1266,6 +1266,16 @@ register_email_input(email_input_t *ein)
     if (!check_regmail(ein))
 	return REGISTER_ERR_INVALID_EMAIL;
 
+    if (!ein->allow_untrusted) {
+	const char *reason = is_rejected_email(email);
+	if (reason) {
+	    move(15, 0); clrtobot();
+	    mvouts(17, 0, reason);
+	    pressanykey();
+	    return REGISTER_ERR_INVALID_EMAIL;
+	}
+    }
+
     if (ein->is_trusted) {
 	int email_count = register_count_email(ein->u, email);
 	if (email_count < 0)

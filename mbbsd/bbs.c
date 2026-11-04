@@ -1140,24 +1140,6 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     }
 }
 
-
-GCC_WEAK int
-get_max_pay_by_post_title(const char *title GCC_UNUSED)
-{
-    return MAX_POST_MONEY;
-}
-
-GCC_WEAK int
-calc_post_cap(int post_count, int base_cap)
-{
-    if (base_cap <= 0)
-        return 0;
-    int cap = base_cap - post_count;
-    if (cap < POST_CAP_MIN)
-        cap = POST_CAP_MIN;
-    return cap;
-}
-
 int
 check_title_change_fee(const fileheader_t *fhdr, const char *new_title)
 {
@@ -2417,6 +2399,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
                          cuser.userid, cuser.lasthost,
                          (unsigned) getpid(),
                          currboard, xboard, fhdr->filename, fhdr->title));
+
+	on_crosspost(currboard, fhdr->filename, xboard, xfile.filename);
 
 	// update crosspost record
 	if (is_board_moderator(xbid)) {

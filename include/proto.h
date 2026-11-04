@@ -768,6 +768,14 @@ void grayout_rect(int y, int end, int x_start, int x_end, int level);
 /* AIDS */
 /* end of AIDS */
 
+/* hooks (weak; a site may override them) */
+void on_user_login(void);
+const char *is_rejected_email(const char *email);
+bool is_rejected_forward(const char *address);
+bool can_forward(const char *title);
+void on_crosspost(const char *board, const char *fname,
+                  const char *xboard, const char *xfname);
+
 /* stuff */
 #define isprint2(ch) (((ch) & 0x80) || isprint((unsigned char)(ch)))
 #define not_alpha(ch) (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z')

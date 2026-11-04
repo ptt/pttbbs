@@ -1574,6 +1574,9 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     outmsg("轉寄中請稍候...");
     refresh();
 
+    if (hostaddr && is_rejected_forward(address))
+	return 0;
+
     /* 追蹤使用者 */
     if (HasUserPerm(PERM_LOGUSER))
 	log_user("mailforward to %s ",address);
@@ -2077,6 +2080,8 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	if (violatecp++ >= MAX_CROSSNUM)
 	    return DONOTHING;
     }
+    if (!can_forward(fhdr->title))
+	return DONOTHING;
 
     move(2, 0);
     clrtoeol();

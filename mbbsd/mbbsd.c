@@ -1525,6 +1525,7 @@ main(int argc, char *argv[], char *envp[])
     start_client(option);
     free_program_option(option);
     is_login_ready = 1;
+    on_user_login();
 
     // tail recursion!
     return main_menu();

@@ -679,6 +679,9 @@ forward_file(const fileheader_t * fhdr, const char *direct)
     char            buf[PATHLEN];
     char           *p;
 
+    if (!can_forward(fhdr->title))
+	return;
+
     STRLCPY(buf, direct);
     if ((p = strrchr(buf, '/')))
 	*p = '\0';
