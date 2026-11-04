@@ -72,11 +72,19 @@ void dumpdetail(void)
     }
 }
 
+static char visited[MAX_BOARD + 1];
+
 void dumpclass(int gid)
 {
     boardheader_t  *bptr;
     int bid;
     const int type = BRD_GROUP_LL_TYPE_NAME;
+
+    // a broken class tree may have loops
+    if (visited[gid])
+	return;
+    visited[gid] = 1;
+
     bptr = getbcache(gid);
     if (bptr->firstchild[type] == 0 || bptr->childcount <= 0)
 	resolve_board_group(gid, type);
@@ -120,7 +128,7 @@ void dumpallbrdname(void)
 	bptr = &bcache[i];
 	
 	if( !bptr->brdname[0] ||
-	    (bptr->brdattr & (BRD_HIDE | BRD_TOP | BRD_GROUPBOARD)) ||
+	    (bptr->brdattr & (BRD_HIDE | BRD_TOP | BRD_GROUPBOARD | BRD_SYMBOLIC)) ||
 	    (bptr->level && !(bptr->brdattr & BRD_POSTMASK) &&
 	     (bptr->level & 
 	      ~(PERM_BASIC|PERM_CHAT|PERM_PAGE|PERM_POST|PERM_LOGINOK))) )
