@@ -518,6 +518,7 @@ common_pmore_footer_handler(int ratio GCC_UNUSED,
 #define LIVE_MAX_PENDING_COMMENTS 128
 #define LIVE_CATCHUP_MAX        (16 * 1024) // max bytes of missed comments to replay
 #define LIVE_STATUS_REFRESH_MS  1000
+#define LIVE_TIMER_MAX_SEC      (8 * 60 * 60)   // timer range: +/- 8 hours
 
 // After a user opened the same article this many times in a row (likely
 // re-entering to refresh new comments), offer live mode on the next open.
@@ -659,6 +660,7 @@ typedef struct {
     time4_t start;
     int     received;
     off_t   synced;     // file bytes already on screen (0: unknown)
+    bool    countdown;  // timer is negative: counting down to the event
 } live_view_t;
 
 /* Move to the row for the next line, scrolling once the screen is full. */
@@ -817,25 +819,45 @@ live_flush(live_view_t *v)
 static void
 live_draw_status(const live_view_t *v, bool can_comment)
 {
+    /* Negative: counting down to the start of the event (see inc_timer). */
     int elapsed = (int)(now - v->start);
-    if (elapsed < 0)
-        elapsed = 0;
-    AUTO_STR(part1, ANSI_COLOR(1;37;42) " 實況中 %02d:%02d [+%d] ",
-            elapsed / 60, elapsed % 60, v->received);
+    const char *sign = "";
+    if (elapsed < 0) {
+        sign = "-";
+        elapsed = -elapsed;
+    }
+    AUTO_STR(part1, ANSI_COLOR(1;37;42) " 實況中 %s%02d:%02d [+%d] ",
+            sign, elapsed / 60, elapsed % 60, v->received);
     AUTO_STR(part2, " %s(B)鈴聲%s (T/M/S)調時 (←/q)離開\t%s",
             can_comment ? "(X)留言 " : "",
             s_live_bell ? "[打開]" : "[關閉]", Cdate_mdHM(&now));
     vs_footer(part1, part2);
 }
 
+/*
+ * T/M/S: align the timer with the event (e.g. a game) by moving its start;
+ * the shown time changes by -delta. It may go negative, counting down to
+ * the start like a live stream does, within +/- LIVE_TIMER_MAX_SEC.
+ */
 static void
-inc_timer(time4_t *start, int delta)
+inc_timer(live_view_t *v, int delta)
 {
-    if (delta > 0 && now - *start > delta)
-        *start += delta;
+    int64_t elapsed = (int64_t)now - (int64_t)v->start - delta;
+    if (elapsed < -LIVE_TIMER_MAX_SEC || elapsed > LIVE_TIMER_MAX_SEC)
+        return;
+    v->start += delta;
+    /* Adjusting by hand is not the countdown reaching zero. */
+    v->countdown = now < v->start;
+}
 
-    if (delta < 0 && now - *start < 8 * 60 * 60)
-        *start += delta;
+/* Rings (if the bell is on) when the countdown reaches zero. */
+static void
+live_check_countdown(live_view_t *v)
+{
+    bool countdown = now < v->start;
+    if (v->countdown && !countdown && s_live_bell)
+        bell();
+    v->countdown = countdown;
 }
 
 /*
@@ -892,6 +914,7 @@ live_run(const char *fpath, const more_hooks_t *hooks)
 
     while (cont) {
         syncnow();
+        live_check_countdown(&v);
         live_draw_status(&v, can_comment);
 
         if (!vkey_poll_ex(LIVE_STATUS_REFRESH_MS, VKEY_EV_PUBSUB))
@@ -928,24 +951,24 @@ live_run(const char *fpath, const more_hooks_t *hooks)
             break;
 
         case 'T':
-            inc_timer(&v.start, 60*10);
+            inc_timer(&v, 60*10);
             break;
         case 't':
-            inc_timer(&v.start, -60*10);
+            inc_timer(&v, -60*10);
             break;
 
         case 'M':
-            inc_timer(&v.start, 60);
+            inc_timer(&v, 60);
             break;
         case 'm':
-            inc_timer(&v.start, -60);
+            inc_timer(&v, -60);
             break;
 
         case 'S':
-            inc_timer(&v.start, 1);
+            inc_timer(&v, 1);
             break;
         case 's':
-            inc_timer(&v.start, -1);
+            inc_timer(&v, -1);
             break;
 
         default:
