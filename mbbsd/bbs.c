@@ -2531,6 +2531,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	case RET_DOREPLYALL:
 	    do_reply(fhdr);
             return FULLUPDATE;
+	case RET_DORATING: // Use comment until the rating/vote system is ready.
 	case RET_DOCOMMENT:
             comment(ent, fhdr, direct);
 	    return FULLUPDATE;
