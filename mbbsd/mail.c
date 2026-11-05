@@ -1472,9 +1472,11 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 // Reports a forward of fh to address to the activity service. A local
 // mailbox that auto-forwards (FN_FORWARD) is reported with its forward address
 // (ACTIVITY_FWD_OWN or ACTIVITY_FWD_OTHER), so forwarding to a mailbox does
-// not get around the limits. Returns 0 if the forward is denied.
+// not get around the limits. Returns 0 if the forward is denied, with why in
+// `msg` ("" if not told).
 static int
-report_forward(const fileheader_t *fh, const char *address)
+report_forward(const fileheader_t *fh, const char *address, char *msg,
+               size_t msgsz)
 {
     char uid[IDLEN + 1] = "", fwd[64] = "", fpath[PATHLEN];
     const char *rcpt = address, *via = NULL;
@@ -1504,7 +1506,7 @@ report_forward(const fileheader_t *fh, const char *address)
     return !activity_forward(cuser.userid, cuser.firstlogin, fromhost,
                              get_client_code(),
                              HasUserPerm(ACTIVITY_EXEMPT_PERMS), bid,
-                             fh->filename, kind, rcpt, via);
+                             fh->filename, kind, rcpt, via, msg, msgsz);
 }
 
 int
@@ -1624,9 +1626,16 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     // Report the forward to the activity service ('Z' has its own weekly
     // limit). Denied explicitly: dropping silently only makes scripts send
     // everything again.
-    if (mode != 'Z' && !report_forward(fh, address)) {
-	vmsg("轉寄太頻繁，請稍後再試。");
-	return 1;
+    if (mode != 'Z') {
+	char msg[ACTIVITY_DENY_MSG_MAX];
+	if (!report_forward(fh, address, msg, sizeof(msg))) {
+	    // Denied: why and until when (or how long to wait).
+	    if (*msg)
+		activity_alert(msg, " 未寄出 ");
+	    else    // An older service: not told
+		vmsg("轉寄太頻繁，請稍後再試。");
+	    return 1;
+	}
     }
 
     {

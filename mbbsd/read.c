@@ -574,13 +574,19 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	    uint32_t cc = get_client_code();
 	    int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
 	    int delay_ms = 0, r;
+	    char msg[ACTIVITY_DENY_MSG_MAX];
 	    r = activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
 	                           cc, is_exempt, ACTIVITY_NAV_SEARCH_AID, currbid,
-	                           0, &delay_ms);
+	                           0, &delay_ms, msg, sizeof(msg));
 	    if (delay_ms > 0)
 	        usleep(delay_ms * 1000);
-	    if (r > 0)  // Scraping: answer as if the post did not exist.
-		goto not_found;
+	    if (r > 0) {
+		// Denied (e.g. a scraper): say why and until when.
+		if (!*msg)
+		    goto not_found;     // An older service: not told
+		activity_alert(msg, " 未搜尋 ");
+		return FULLUPDATE;
+	    }
 	}
 	/* search bottom in boardheader_t.bottom[] */
 	if (currbid > 0) {
@@ -827,15 +833,20 @@ select_read(read_ctx_t *cx, int sr_mode)
         int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
         int delay_ms = 0, r;
         int rating = (sr_mode & RS_RATING) != 0;
+        char msg[ACTIVITY_DENY_MSG_MAX];
         r = activity_nav_track(cuser.userid, cuser.firstlogin, fromhost, cc,
                                is_exempt, rating ? ACTIVITY_NAV_SEARCH_RATING :
                                ACTIVITY_NAV_SEARCH_SR, bid,
-                               rating ? predicate.rating : 0, &delay_ms);
+                               rating ? predicate.rating : 0, &delay_ms,
+                               msg, sizeof(msg));
         if (delay_ms > 0)
             usleep(delay_ms * 1000);
         if (r > 0) {
-            // Polling: answer as if nothing matched.
-            vmsg("找不到符合條件的文章。");
+            // Denied (polling, scrapers): say why and until when.
+            if (*msg)
+                activity_alert(msg, " 未搜尋 ");
+            else    // An older service: not told
+                vmsg("找不到符合條件的文章。");
             return READ_REDRAW;
         }
     }

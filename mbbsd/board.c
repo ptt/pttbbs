@@ -120,7 +120,7 @@ int enter_board(const char *boardname)
         int delay_ms = 0;
         activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
                            cc, is_exempt, ACTIVITY_NAV_BOARD_SWITCH, currbid,
-                           0, &delay_ms);
+                           0, &delay_ms, NULL, 0);
         if (delay_ms > 0)
             usleep(delay_ms * 1000);
     }

@@ -777,6 +777,15 @@ bool can_forward(const char *title);
 void on_crosspost(const char *board, const char *fname,
                   const char *xboard, const char *xfname);
 
+/* contentcheck */
+// A system alert over the current screen (restored afterwards): `title` and
+// `status` in the header, `reason` (lines) highlighted, `shown` (may be NULL)
+// below, then the site notes in `notes` (a file, may be NULL).
+void alert_screen(const char *title, const char *status, const char *reason,
+                  const char *shown, const char *notes);
+// The alert of a denial by activity.svc (`msg`: what, why and until when).
+void activity_alert(const char *msg, const char *status);
+
 /* stuff */
 #define isprint2(ch) (((ch) & 0x80) || isprint((unsigned char)(ch)))
 #define not_alpha(ch) (ch < 'A' || (ch > 'Z' && ch < 'a') || ch > 'z')

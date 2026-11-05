@@ -3,6 +3,7 @@
 
 #include "bbs.h"
 #include "content.h"
+#include "activity.h"
 
 #define CONTENT_POLICE BBSMNAME " 系統警察"
 
@@ -37,18 +38,19 @@ content_collect_flags(int kind)
     return flags;
 }
 
-// The content alert: why, site notes, and what was found. Shown over the
-// current screen, which is restored afterwards.
-static void
-content_alert(const content_verdict_t *v, const char *text)
+// A system alert: why, what was found, and site notes. Shown over the current
+// screen, which is restored afterwards. Used by content checks and by
+// activity_alert().
+void
+alert_screen(const char *title, const char *status, const char *reason,
+             const char *shown, const char *notes)
 {
-    const char *shown = v->details[0] ? v->details : text;
     screen_backup_t old_screen;
 
     scr_dump(&old_screen);
-    vs_hdr2(" 內容檢查 ", " 未送出");
+    vs_hdr2(title, status);
     outs("\n");
-    for (const char *p = v->reason; *p; ) {
+    for (const char *p = reason ? reason : ""; *p; ) {
         int n = strcspn(p, "\n");
         prints("  " ANSI_COLOR(1) "%.*s" ANSI_RESET "\n", n, p);
         p += n;
@@ -59,16 +61,35 @@ content_alert(const content_verdict_t *v, const char *text)
         outs("\n  有問題的內容:\n\n");
         prints(ANSI_COLOR(1;33) "%.*s" ANSI_RESET "\n", ANSILINELEN * 2, shown);
     }
-    if (dashf(FN_CONTENT_ALERT)) {
+    if (notes && dashf(notes)) {
         // Site specific notes, e.g. what is not allowed and where to appeal.
         int y, x;
         getyx(&y, &x);
         if (b_lines - y - 2 > 0)
-            show_file(FN_CONTENT_ALERT, y + 1, b_lines - y - 2, SHOWFILE_ALLOW_COLOR);
+            show_file(notes, y + 1, b_lines - y - 2, SHOWFILE_ALLOW_COLOR);
     }
     vkey_purge();
     pressanykey();
     scr_restore(&old_screen);
+}
+
+// The activity alert: a denial by activity.svc (`msg`, Big5: what, why and
+// until when), and the site notes (FN_ACTIVITY_ALERT).
+void
+activity_alert(const char *msg, const char *status)
+{
+    char reason[ACTIVITY_DENY_MSG_MAX + 32];
+
+    snprintf(reason, sizeof(reason), ANSI_COLOR(1;31) "%s" ANSI_RESET, msg);
+    alert_screen(" 使用限制 ", status, reason, NULL, FN_ACTIVITY_ALERT);
+}
+
+// The content alert: why, what was found, and site notes.
+static void
+content_alert(const content_verdict_t *v, const char *text)
+{
+    alert_screen(" 內容檢查 ", " 未送出", v->reason,
+                 v->details[0] ? v->details : text, FN_CONTENT_ALERT);
 }
 
 // A ban: suspended, posted with the details, mailed to the user, and all

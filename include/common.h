@@ -58,6 +58,7 @@
 #define FN_MAIL_ACCOUNT_SYSOP "etc/mail_account_sysop"  // 帳號站長信箱列表
 #define FN_MAIL_ACCOUNT_SYSOP_DESC "etc/mail_account_sysop_desc"  // 帳號站長信箱說明
 #define FN_CONTENT_ALERT "etc/content/alert"  // Notes in content alerts (content.svc)
+#define FN_ACTIVITY_ALERT "etc/activity_alert" // Notes in activity alerts (activity.svc)
 #define FN_POSTTYPE	"posttype"
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 #define FN_BADLOGIN	"logins.bad"	// in BBSHOME & user directory

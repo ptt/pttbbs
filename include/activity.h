@@ -33,13 +33,21 @@
 // Service -> client:
 //   verdict <reqid> ok                          reply to login or fwd
 //   verdict <reqid> deny <delay_sec> <message>  message (Big5) runs to the end;
-//                                               for fwd: do not send (no delay or message)
+//                                               for fwd: do not send (delay 0), and
+//                                               the message (may be absent) says
+//                                               why and until when
 //   reads <userid> <count> <delay_ms>           reply to read: how long to pause
 //                                               (count: new posts read across
 //                                               sessions, for logs; not used)
-//   pace <userid> <delay_ms> [deny <type>]      reply to nav: how long to pause,
-//                                               and "deny": answer this type of
-//                                               request with nothing
+//   pace <userid> <delay_ms> [deny <type> [<message>]]
+//                                               reply to nav: how long to pause,
+//                                               and "deny": deny this type of
+//                                               request; the message (Big5, to
+//                                               the end, may be absent) says why
+//                                               and until when
+//
+// Denial messages are shown with activity_alert() (and FN_ACTIVITY_ALERT, the
+// site notes, e.g. where to report mistakes), at most ACTIVITY_DENY_MSG_MAX.
 //
 // A login waits at most ACTIVITY_SVC_VERDICT_MS for its verdict and is
 // accepted without one. A denied login is held for min(delay_sec,
@@ -52,6 +60,7 @@
 #define ACTIVITY_SVC_MSG_MAX        (4096)
 #define ACTIVITY_READ_WAIT_MS       (5)     // mbbsd: wait for a read/nav reply
 #define ACTIVITY_FORWARD_WAIT_MS    (50)    // mbbsd: wait for a fwd reply (rare, by hand)
+#define ACTIVITY_DENY_MSG_MAX       (256)   // mbbsd: denial messages kept
 
 // logind holds denied connections open (tarpit) for up to this long, so
 // clients that reconnect as soon as they are disconnected slow down and
@@ -98,13 +107,13 @@ void activity_read_post(const char *userid, time4_t firstlogin,
                         int bid, const char *filename, int *delay_ms);
 
 // mbbsd: reports navigation (`value`: the threshold for SEARCH_RATING, else 0).
-// Returns 1 if this request should be answered with nothing (e.g. polling),
-// else 0; sets *delay_ms to how long the caller should pause first (0 without
-// the service).
+// Returns 1 if this request is denied (e.g. polling), else 0; sets *delay_ms to
+// how long the caller should pause first (0 without the service), and `msg`
+// (if not NULL, `msgsz` bytes) to why it is denied ("" if not told).
 int activity_nav_track(const char *userid, time4_t firstlogin,
                        const char *hostip, uint32_t client_code,
                        int is_exempt, int nav_type, int target_bid,
-                       int value, int *delay_ms);
+                       int value, int *delay_ms, char *msg, size_t msgsz);
 
 // Kinds of "fwd", from the most to the least responsible sender.
 enum {
@@ -117,10 +126,12 @@ enum {
 // mbbsd: reports sending `filename` on board `bid` (0: a mail) out as Internet
 // mail to `address` (kind ACTIVITY_FWD_*; `via`: the auto-forwarding mailbox,
 // or NULL). Returns 1 if it should be denied, else 0 (always 0 without the
-// service or a reply in time).
+// service or a reply in time); sets `msg` (if not NULL, `msgsz` bytes) to why
+// it is denied ("" if not told).
 int activity_forward(const char *userid, time4_t firstlogin,
                      const char *hostip, uint32_t client_code, int is_exempt,
                      int bid, const char *filename, int kind,
-                     const char *address, const char *via);
+                     const char *address, const char *via,
+                     char *msg, size_t msgsz);
 
 #endif // INCLUDE_ACTIVITY_H

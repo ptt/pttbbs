@@ -140,8 +140,18 @@ struct act_wait {
     uint32_t reqid;         // FWD
     int done;
     int delay_ms;           // READ, NAV: pause requested
-    int deny;               // NAV, FWD: answer with nothing / do not send
+    int deny;               // NAV, FWD: deny this request / do not send
+    char *msg;              // NAV, FWD: why denied (may be NULL)
+    size_t msgsz;
 };
+
+// Keeps a denial message (the rest of a reply) in w.
+static void
+act_keep_msg(struct act_wait *w, const char *msg)
+{
+    if (w->msg && w->msgsz)
+        strlcpy(w->msg, msg ? msg : "", w->msgsz);
+}
 
 static void
 act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
@@ -167,6 +177,8 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
                 cb(reqid, 0, 0, NULL, arg);
         } else if (w && w->kind == ACT_WAIT_FWD && w->reqid == reqid) {
             w->deny = deny;
+            if (deny)   // "deny 0 <message>"
+                act_keep_msg(w, p);
             w->done = 1;
         }
     } else if (strcmp(tok[0], "reads") == 0 && n >= 3) {
@@ -181,8 +193,12 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
             // "deny <type>"; a bare "deny" (older services) is for ratings.
             // A late reply may belong to an earlier request: deny only the
             // same type.
-            if (n >= 4 && strcmp(tok[3], "deny") == 0)
+            if (n >= 4 && strcmp(tok[3], "deny") == 0) {
                 w->deny = (p ? atoi(p) : ACTIVITY_NAV_SEARCH_RATING) == w->type;
+                // "deny <type> <message>"
+                if (w->deny)
+                    act_keep_msg(w, p && strchr(p, ' ') ? strchr(p, ' ') + 1 : NULL);
+            }
             w->done = 1;
         }
     }
@@ -337,12 +353,15 @@ int
 activity_nav_track(const char *userid, time4_t firstlogin,
                    const char *hostip, uint32_t client_code,
                    int is_exempt, int nav_type, int target_bid,
-                   int value, int *delay_ms)
+                   int value, int *delay_ms, char *msg, size_t msgsz)
 {
-    struct act_wait w = { .kind = ACT_WAIT_NAV, .type = nav_type };
+    struct act_wait w = { .kind = ACT_WAIT_NAV, .type = nav_type,
+                          .msg = msg, .msgsz = msgsz };
 
     if (delay_ms)
         *delay_ms = 0;
+    if (msg && msgsz)
+        *msg = '\0';
     if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
         return 0;
 
@@ -367,13 +386,16 @@ int
 activity_forward(const char *userid, time4_t firstlogin,
                  const char *hostip, uint32_t client_code, int is_exempt,
                  int bid, const char *filename, int kind,
-                 const char *address, const char *via)
+                 const char *address, const char *via,
+                 char *msg, size_t msgsz)
 {
+    if (msg && msgsz)
+        *msg = '\0';
     if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
         return 0;
 
     char ip[64];
-    struct act_wait w = { .kind = ACT_WAIT_FWD };
+    struct act_wait w = { .kind = ACT_WAIT_FWD, .msg = msg, .msgsz = msgsz };
 
     if (is_exempt || !act_field_ok(userid))
         return 0;
