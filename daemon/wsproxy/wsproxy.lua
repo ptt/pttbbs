@@ -133,7 +133,13 @@ local function start_websocket_server()
         max_payload_len = 65535,
     })
     if not ws then
-        ngx.log(ngx.ERR, "failed to new websocket: ", err)
+        -- A flush failure means the client went away while we were sending
+        -- the handshake response; that is routine, not a server error.
+        local level = ngx.ERR
+        if err and err:find("^failed to flush") then
+            level = ngx.INFO
+        end
+        ngx.log(level, "failed to new websocket: ", err)
         return
     end
     return ws
@@ -212,6 +218,11 @@ local function main()
     -- Start websocket first to make protocol-level dos harder.
     local ws = start_websocket_server()
     if not ws then
+        if ngx.headers_sent then
+            -- Handshake already sent (e.g. client vanished mid-flush);
+            -- the status can no longer change, so just drop the connection.
+            return ngx.exit(ngx_close_conn_code)
+        end
         return ngx.exit(400)
     end
 
