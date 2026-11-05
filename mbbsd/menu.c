@@ -1,6 +1,6 @@
 #include "bbs.h"
 
-// UNREGONLY 改為由 BASIC 來判斷是否為 guest.
+// UNREGONLY: 有 BASIC 但尚未完成註冊 (LOGINOK) 的帳號才看得到.
 
 #define CheckMenuPerm(x) \
     ( (x == MENU_UNREGONLY)? \

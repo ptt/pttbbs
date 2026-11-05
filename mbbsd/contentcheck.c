@@ -31,7 +31,7 @@ content_collect_flags(int kind)
         if (bp && ((bp->brdattr & BRD_HIDE) ||
                    (bp->level && !(bp->brdattr & BRD_POSTMASK))))
             flags |= CONTENT_F_HIDDEN;
-        if (bp && (bp->brdattr & (BRD_RESTRICTEDPOST | BRD_GUESTPOST)))
+        if (bp && (bp->brdattr & (BRD_RESTRICTEDPOST | BRD_NOREG_CAN_POST)))
             flags |= CONTENT_F_RESTRICTED;
     }
     return flags;

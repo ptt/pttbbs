@@ -425,7 +425,6 @@ type UtmpCandidate struct {
 	FriendTotal   int
 	Mode          int
 	BrcID         int
-	IsGuest       bool
 	IsValidUserID bool
 	UserExists    bool
 }
@@ -458,7 +457,6 @@ func (c *SHMClient) GetUtmpCandidates() []UtmpCandidate {
 			FriendTotal:   int(cand.friendtotal),
 			Mode:          int(cand.mode),
 			BrcID:         int(cand.brc_id),
-			IsGuest:       cand.is_guest != 0,
 			IsValidUserID: cand.is_userid_valid != 0,
 			UserExists:    cand.user_exists != 0,
 		}

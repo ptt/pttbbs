@@ -1904,7 +1904,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // user and permission check
     // reason 1: BM may alter post restrictions to this board
     // reason 2: this account may be occupied by someone else.
-    if (!HasUserPerm(PERM_BASIC) ||	// including guests
+    if (!HasUserPerm(PERM_BASIC) ||
 	!CheckPostPerm() ||		// edit needs post perm (cannot be changed in digest mode)
 	!CheckPostRestriction(currbid)
 	)
@@ -2724,7 +2724,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 	// owners need the same permission as edit_post
 	// reason 1: BM may alter post restrictions to this board
 	// reason 2: this account may be occupied by someone else.
-	if (!HasUserPerm(PERM_BASIC) ||	// excludes guests
+	if (!HasUserPerm(PERM_BASIC) ||
 	    !CheckPostPerm2(&reason)) {
 	    vmsgf("無法修改標題: %s", reason);
 	    return FULLUPDATE;
@@ -2842,7 +2842,6 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     boardheader_t  *bp;
     static time4_t  lastcomment = 0;
     static char lastcomment_fname[FNLEN] = "";
-    int isGuest = (strcmp(cuser.userid, STR_GUEST) == EQUSTR);
     int logIP = 0;
     int ymsg = b_lines -1;
     const char *reason = "權限不足";
@@ -2858,7 +2857,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("抱歉, 禁止推薦");
 	return FULLUPDATE;
     }
-    if (!CheckPostPerm2(&reason) || isGuest)
+    if (!CheckPostPerm2(&reason))
     {
 	vmsgf("無法推文: %s", reason); //  "(可按大寫 I 查看限制)"
 	return FULLUPDATE;
@@ -3053,7 +3052,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	1 /* space */ -
 	6 /* time */;
 
-    if (bp->brdattr & BRD_IPLOGRECMD || isGuest)
+    if (bp->brdattr & BRD_IPLOGRECMD)
     {
 	maxlength -= 15 /* IP */;
 	logIP = 1;
@@ -3397,14 +3396,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         (not_owned || !is_file_owner(fhdr, &cuser)))
             return DONOTHING;
 
-    if (((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_BOARDS)) ||
-	!strcmp(cuser.userid, STR_GUEST))
+    if ((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_BOARDS))
 	return DONOTHING;
 
     // user and permission check
     // reason 1: BM may alter post restrictions to this board
     // reason 2: this account may be occupied by someone else.
-    if (!HasUserPerm(PERM_BASIC) ||	// including guests
+    if (!HasUserPerm(PERM_BASIC) ||
 	!( (currmode & MODE_DIGEST) ? CBRD_IS_BM() : CheckPostPerm() ) || // allow BM to delete posts in digest mode
 	!CheckPostRestriction(currbid)
 	)

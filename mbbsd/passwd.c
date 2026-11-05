@@ -588,27 +588,3 @@ int pwcuInitAdminPerm	()
 	PERM_CHATROOM | PERM_BOARDS | PERM_SYSOP | PERM_BBSADM;
     PWCU_END();
 }
-
-void pwcuInitGuestPerm	()
-{
-    cuser.userlevel = 0;
-    cuser.uflag = UF_BRDSORT;
-    cuser.pager = PAGER_OFF;
-    if (IS_ENABLED(CONFIG_GUEST_DEFAULT_DBCS_NOINTRESC))
-	_ENABLE_BIT(cuser.uflag, UF_DBCS_NOINTRESC);
-}
-
-void pwcuInitGuestInfo	()
-{
-    int i;
-    char *nick[] = {
-	"椰子", "貝殼", "內衣", "寶特瓶", "翻車魚",
-	"樹葉", "浮萍", "鞋子", "潛水艇", "魔王",
-	"鐵罐", "考卷", "大美女"
-    };
-
-    i = arc4random_uniform(ARRAY_SIZE(nick));
-    SNPRINTF(cuser.nickname, "海邊漂來的%s", nick[i]);
-    STRLCPY(currutmp->nickname, cuser.nickname);
-    STRLCPY(cuser.realname, "guest");
-}

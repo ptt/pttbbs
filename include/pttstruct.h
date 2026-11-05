@@ -279,7 +279,7 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 #define BRD_NOBOO		0x00010000	/* 不可噓 */
 //#define BRD_LOCALSAVE		0x00020000	/* 預設 Local Save */
 #define BRD_RESTRICTEDPOST	0x00040000	/* 板友才能發文 */
-#define BRD_GUESTPOST		0x00080000	/* guest能 post */
+#define BRD_NOREG_CAN_POST	0x00080000	/* 未完成註冊者也能 post */
 #define BRD_COOLDOWN		0x00100000	/* 冷靜 */
 #define BRD_CPLOG		0x00200000	/* 自動留轉錄記錄 */
 #define BRD_NOFASTRECMD		0x00400000	/* 禁止快速推文 */

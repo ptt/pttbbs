@@ -91,7 +91,7 @@ const char * const str_permboard[] = {
     "不可噓",                   /* BRD_NOBOO */
     "(無作用)",                 /* deprecated: BRD_LOCALSAVE */
     "限看板會員發文",           /* BRD_RESTRICTEDPOST */
-    "Guest可以發表",            /* BRD_GUESTPOST */
+    "未註冊可發表",             /* BRD_NOREG_CAN_POST */
     "冷靜",			/* BRD_COOLDOWN */
 #ifdef USE_AUTOCPLOG
     "自動留轉錄記錄",		/* BRD_CPLOG */

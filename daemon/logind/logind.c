@@ -18,7 +18,7 @@
 // --------------------------------------------------------------------------
 
 // TODO:
-// 1. [done] cache guest's usernum and check if too many guests online
+// 1. [drop] cache guest's usernum and check if too many guests online
 // 2. [drop] change close connection to 'wait until user hit then close'
 // 3. [done] regular check text screen files instead of HUP?
 // 4. [done] re-start mbbsd if pipe broken?
@@ -156,8 +156,6 @@ int  g_retry_times;
 // cache data
 int g_reload_data = 1;  // request to reload data
 time4_t g_welcome_mtime;
-int g_guest_usernum  = 0;  // numeric uid of guest account
-int g_guest_too_many = 0;  // 1 if exceed MAX_GUEST
 
 // banned ip
 BanIpList *g_banip;
@@ -892,17 +890,9 @@ DEBUG_IO(int fd, const char *msg) {
 #define REJECT_FREE_UID_MSG ANSI_RESET " 抱歉，此帳號或服務已達上限。 "
 #define REJECT_FREE_UID_YX  BOTTOM_YX
 
-#ifdef  STR_GUEST
-#define TOO_MANY_GUEST_MSG  ANSI_RESET " 抱歉，目前已有太多 " STR_GUEST " 在站上。 "
-#define TOO_MANY_GUEST_YX   BOTTOM_YX
-#define NO_GUEST_ACCT_MSG   ANSI_RESET " 本站 " STR_GUEST " 帳號尚未建立。 "
-#define NO_GUEST_ACCT_YX    BOTTOM_YX
-#ifdef  CONFIG_REDIRECT_GUEST_TO_WEB
 #define REDIRECT_GUEST_MSG  ANSI_RESET ANSI_COLOR(1;32) " 請改用網頁版 " \
-                            CONFIG_REDIRECT_GUEST_TO_WEB " " ANSI_RESET
+                            GUEST_URL " " ANSI_RESET
 #define REDIRECT_GUEST_YX   BOTTOM_YX
-#endif
-#endif
 
 #define FN_WELCOME          BBSHOME "/etc/Welcome"
 #define FN_GOODBYE          BBSHOME "/etc/goodbye"
@@ -1417,25 +1407,15 @@ draw_overload(login_conn_ctx *conn, int type)
 }
 
 static void
-draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
+draw_reject_free_userid(login_conn_ctx *conn, const char *freeid GCC_UNUSED)
 {
     _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
 #ifdef STR_GUEST
-    if (strcasecmp(freeid, STR_GUEST) == 0)
+    if (IS_ENABLED(CONFIG_GUEST_URL) &&
+        strcasecmp(freeid, STR_GUEST) == 0)
     {
-#ifdef CONFIG_REDIRECT_GUEST_TO_WEB
         _mt_move_yx(conn, REDIRECT_GUEST_YX); _mt_clrtoeol(conn);
         _text_write(conn, REDIRECT_GUEST_MSG, sizeof(REDIRECT_GUEST_MSG)-1);
-        return;
-#endif
-        if (!g_guest_usernum)
-        {
-            _mt_move_yx(conn, NO_GUEST_ACCT_YX); _mt_clrtoeol(conn);
-            _text_write(conn, NO_GUEST_ACCT_MSG, sizeof(NO_GUEST_ACCT_MSG)-1);
-            return;
-        }
-        _mt_move_yx(conn, TOO_MANY_GUEST_YX); _mt_clrtoeol(conn);
-        _text_write(conn, TOO_MANY_GUEST_MSG, sizeof(TOO_MANY_GUEST_MSG)-1);
         return;
     }
 #endif
@@ -1712,11 +1692,6 @@ regular_check()
     g_overload = 0;
     g_banned   = shutdown_now ? 1 : 0;
 
-#ifndef LOGIND_DONT_CHECK_FREE_USERID
-    g_guest_too_many = 0;
-    g_guest_usernum  = 0;
-#endif
-
     int cpu = cpuload(NULL);
     if (cpu > MAX_CPULOAD)
     {
@@ -1835,6 +1810,17 @@ auth_is_free_userid(const char *userid)
 static int
 auth_check_free_userid_allowance(const char *userid)
 {
+#ifdef STR_GUEST
+    if (strcasecmp(userid, STR_GUEST) == 0)
+    {
+        // guest logins are closed; draw_reject_free_userid shows the URL.
+        if (IS_ENABLED(CONFIG_GUEST_URL))
+            return 0;
+        // let mbbsd decide.
+        return 1;
+    }
+#endif
+
 #ifdef LOGIND_DONT_CHECK_FREE_USERID
     // XXX experimental to disable free id checking
     return 1;
@@ -1851,49 +1837,6 @@ auth_check_free_userid_allowance(const char *userid)
     if (strcasecmp(userid, STR_RECOVER) == 0)
         return 1;
 #endif
-
-#ifdef STR_GUEST
-    if (strcasecmp(userid, STR_GUEST) == 0)
-    {
-#ifdef CONFIG_REDIRECT_GUEST_TO_WEB
-        // guest logins are closed; draw_reject_free_userid shows the URL.
-        return 0;
-#endif
-        // now, load guest account information.
-        if (!g_guest_usernum)
-        {
-            if (g_verbose > VERBOSE_INFO)
-                fprintf(stderr, LOG_PREFIX " reload guest information\n");
-
-            // reload guest information
-            g_guest_usernum = searchuser(STR_GUEST, NULL);
-
-            if (g_guest_usernum < 1 || g_guest_usernum > MAX_USERS)
-            {
-                g_guest_usernum = 0;
-                return 0;
-            }
-        }
-
-#  ifndef MAX_GUEST
-        g_guest_too_many = 0;
-#  else
-        // if already too many guest, fast reject until next regular check.
-        // XXX TODO also cache if guest is not too many?
-        if (g_guest_too_many)
-            return 0;
-
-        // update the 'too many' status.
-        g_guest_too_many =
-            (search_ulistn(g_guest_usernum, MAX_GUEST) != NULL);
-
-        if (g_verbose > VERBOSE_INFO) fprintf(stderr, LOG_PREFIX
-                " guests are %s\n", g_guest_too_many ? "TOO MANY" : "ok.");
-
-#  endif // MAX_GUEST
-        return g_guest_too_many ? 0 : 1;
-    }
-#endif // STR_GUEST
 
     // shall never reach here.
     assert(!"unknown free userid");
@@ -2727,7 +2670,7 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
                     if (reject_if_system_banned(conn, fd) < 0)
                         return -1;
 
-                    // accounts except free_auth [guest / new]
+                    // accounts except free_auth [guest redirect / new / recover]
                     // require passwd.
                     if (!auth_is_free_userid(uid))
                     {

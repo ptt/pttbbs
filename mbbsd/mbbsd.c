@@ -213,7 +213,6 @@ u_exit(const char *mode)
     save_brdbuf();
     brc_finalize();
 
-    // XXX TOTO for guests, skip the save process?
     pwcuExitSave();
     setutmpbid(0);
 
@@ -437,13 +436,6 @@ multi_user_check(void)
 		abort_bbs(0);	/* Goodbye(); */
 	    }
 	}
-    } else {
-	/* allow multiple guest user */
-	if (search_ulistn(usernum, MAX_GUEST) != NULL) {
-	    sleep(1);
-	    vmsg("抱歉，目前已有太多 guest 在站上, 請用new註冊。");
-	    exit(1);
-	}
     }
 }
 
@@ -502,11 +494,11 @@ load_current_user(const char *uid)
     // --------------------------------------------------- GUEST ACCOUNT
 
 #ifdef STR_GUEST
-    if (!is_admin_only && strcasecmp(uid, STR_GUEST) == 0) {
-	if (initcuser(STR_GUEST)< 1) exit (0) ;
-	pwcuInitGuestPerm();
-	// can we prevent mkuserdir() here?
-	mkuserdir(cuser.userid);
+    // guest is no longer supported. logind may still pass it as a free
+    // (password-less) userid, so never load it as a regular account.
+    if (strcasecmp(uid, STR_GUEST) == 0) {
+	puts("\r\n本站已不提供 " STR_GUEST " 參觀。\r\n");
+	exit(0);
     } else
 #endif
 
@@ -618,7 +610,7 @@ login_query(char *ruid)
 	prints("current pid: %d ", getpid());
 #endif
 
-	if (getdata(20, 0, "請輸入代號，或以 guest 參觀，或以 new 註冊: ",
+	if (getdata(20, 0, "請輸入代號，或以 new 註冊: ",
 		uid, sizeof(uid), DOECHO) < 1)
 	{
 	    // got nothing
@@ -645,21 +637,10 @@ login_query(char *ruid)
 	if (0) {
 	    assert(false);
 
-#ifdef STR_GUEST
-	} else if (strcasecmp(uid, STR_GUEST) == 0) {	/* guest */
-
-	    strlcpy(ruid, STR_GUEST, IDLEN+1);
-	    break;
-#endif
-
 #ifdef STR_REGNEW
 	} else if (strcasecmp(uid, STR_REGNEW) == 0) {
 	    if (!IS_ENABLED(CONFIG_LOGINASNEW)) {
-		outs("本系統目前無法以 " STR_REGNEW " 註冊"
-# ifdef STR_GUEST
-		     ", 請用 " STR_GUEST " 進入"
-# endif  // STR_GUEST
-		     "\n");
+		outs("本系統目前無法以 " STR_REGNEW " 註冊\n");
 		continue;
 	    }
 
@@ -797,8 +778,7 @@ setup_utmp(int mode)
     }
 
     /* Sync friend_online via friend.svc. */
-    if( strcmp(cuser.userid, STR_GUEST) != 0 ) // guest 不處理好友
-	friend_load();
+    friend_load();
 
     nice(3);
 }
@@ -915,14 +895,6 @@ static void check_mailbox_quota(void)
     } while (chkmailbox_tidy_limit());
 }
 
-static void init_guest_info(void)
-{
-    pwcuInitGuestInfo();
-    currutmp->pager = PAGER_DISABLE;
-}
-
-
-
 static void
 user_login(void)
 {
@@ -971,7 +943,7 @@ user_login(void)
     do_aloha();
     ipc_init(currutmp->userid, currutmp->pid, get_utmp_slot(currutmp));
 
-    if (cuser.userlevel) {	/* not guest */
+    if (cuser.userlevel) {
 	move(t_lines - 4, 0);
 	clrtobot();
 	welcome_msg();
@@ -996,13 +968,8 @@ user_login(void)
         }
 
 
-    } else if (strcmp(cuser.userid, STR_GUEST) == 0) { /* guest */
-
-	init_guest_info();
-	pressanykey();
-
     } else {
-	// XXX no userlevel, no guest - what is this?
+	// No userlevel - broken or suspended account.
 	clear();
 	outs("抱歉，您的帳號資料異常或已被停權。\n");
 	pressanykey();
@@ -1064,8 +1031,7 @@ user_login(void)
 void
 do_aloha(void)
 {
-    if (strcmp(currutmp->userid, STR_GUEST) == 0 ||
-        (HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) ||
+    if ((HasUserPerm(PERM_SYSOP) && HasUserPerm(PERM_SYSOPHIDE)) ||
         HasUserRole(ROLE_HIDE_FROM) || currutmp->invisible) {
         return;
     }

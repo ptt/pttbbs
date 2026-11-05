@@ -242,10 +242,6 @@
 #define USHM_SIZE         ((MAX_ACTIVE) * 41 / 40)
 #endif
 
-#ifndef MAX_GUEST
-#define MAX_GUEST         (100)          /* 最多 guest 上站人數 */
-#endif
-
 #ifndef MAX_CPULOAD
 #define MAX_CPULOAD       (70)           /* CPU 最高load */
 #endif
@@ -644,10 +640,6 @@
 #define CONFIG_SYSOP_ACCOUNT 1
 #endif
 
-#if !defined(NO_GUEST_ACCOUNT_REG) && !defined(CONFIG_GUEST_ACCOUNT_REG)
-#define CONFIG_GUEST_ACCOUNT_REG 1
-#endif
-
 #if !defined(NO_INSCREEN) && !defined(CONFIG_INSCREEN)
 #define CONFIG_INSCREEN 1
 #endif
@@ -702,9 +694,6 @@
 #if defined(COLORDATE) && !defined(CONFIG_COLORDATE)
 #define CONFIG_COLORDATE 1
 #endif
-#if defined(GUEST_DEFAULT_DBCS_NOINTRESC) && !defined(CONFIG_GUEST_DEFAULT_DBCS_NOINTRESC)
-#define CONFIG_GUEST_DEFAULT_DBCS_NOINTRESC 1
-#endif
 #if defined(SAFE_ARTICLE_DELETE) && !defined(CONFIG_SAFE_ARTICLE_DELETE)
 #define CONFIG_SAFE_ARTICLE_DELETE 1
 #endif
@@ -750,6 +739,14 @@
 #endif
 #ifndef CONFIG_IPC_SVC_FALLBACK
 #define CONFIG_IPC_SVC_FALLBACK 1
+#endif
+
+/* GUEST_URL: if defined, logins as STR_GUEST are redirected to this URL. */
+#ifdef GUEST_URL
+#define CONFIG_GUEST_URL 1
+#else
+#define CONFIG_GUEST_URL 0
+#define GUEST_URL ""
 #endif
 
 #ifdef DEBUG

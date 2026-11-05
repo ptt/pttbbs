@@ -2226,10 +2226,6 @@ addsignature(FILE * fp, int ifuseanony)
 
     char            ch;
 
-    if (!strcmp(cuser.userid, STR_GUEST)) {
-        addsimplesignature(fp, NULL);
-	return;
-    }
     if (!ifuseanony) {
 
 	int browsing = 0;

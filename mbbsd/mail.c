@@ -1928,7 +1928,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     int		    oent = ent;
     char save_title[STRLEN];
 
-    // do not allow guest to use this
+    // do not allow users without basic permission to use this
     if (!HasUserPerm(PERM_BASIC))
 	return DONOTHING;
 

@@ -1106,7 +1106,7 @@ is_hidden_board_friend(int bid, int uid)
     if (i >= 0)
 	return i;
     userid = getuserid(uid);
-    if (!userid || !*userid || strcasecmp(STR_GUEST, userid) == 0)
+    if (!userid || !*userid)
 	return 0;
     setbfile(buf, bcache[bid - 1].brdname, FN_VISABLE);
     return file_exist_entry(buf, userid) ? 1 : 0;

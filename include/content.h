@@ -63,7 +63,7 @@ enum {
 #define CONTENT_F_PERM_BM      (0x02)  // Has PERM_BM (moderates some board)
 #define CONTENT_F_BOARD_BM     (0x04)  // Moderates the current board
 #define CONTENT_F_HIDDEN       (0x08)  // Board is hidden or read restricted
-#define CONTENT_F_RESTRICTED   (0x10)  // Board is post restricted or guest post
+#define CONTENT_F_RESTRICTED   (0x10)  // Board is post restricted or no-reg post
 #define CONTENT_F_FRIEND       (0x20)  // The target has the user as a friend
 #define CONTENT_F_MULTI        (0x40)  // Group mail
 #define CONTENT_F_REEDIT       (0x80)  // Editing an existing post

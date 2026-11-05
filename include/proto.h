@@ -1041,8 +1041,6 @@ int pwcuDeMoney		(int money);
 
 // initialization
 void pwcuInitZero	(void);
-void pwcuInitGuestPerm	(void);
-void pwcuInitGuestInfo	(void);
 int  pwcuInitAdminPerm	(void);
 
 int verify_captcha(const char *reason);

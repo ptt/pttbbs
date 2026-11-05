@@ -113,7 +113,7 @@ void chkhbf(boardheader_t *bptr)
 		chkuser[i] = 0;
 		break;
 	    }
-	if( passwd_load_user(chkuser, &xuser) < 1 || strcasecmp(chkuser, STR_GUEST) == 0 ){
+	if( passwd_load_user(chkuser, &xuser) < 1 ){
 	    add_exp_entry(chkuser, 0, -1, &nEXP);
 	}
 	else if( (time4_days_elapsed(now, xuser.lastlogin) > 90) &&

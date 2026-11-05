@@ -124,7 +124,7 @@ bad_user_id(const char *userid)
 	return 1;
 #endif
 
-#if defined(STR_GUEST) && !IS_ENABLED(CONFIG_GUEST_ACCOUNT_REG)
+#ifdef STR_GUEST
     if (strcasecmp(userid, STR_GUEST) == 0)
 	return 1;
 #endif
@@ -226,7 +226,7 @@ compute_user_value(const userec_t * urec, time4_t clock)
     /* if (urec) has XEMPT permission, don't kick it */
     if ((urec->userid[0] == '\0') || (urec->userlevel & PERM_XEMPT)
     /* || (urec->userlevel & PERM_LOGINOK) */
-	|| !strcmp(STR_GUEST, urec->userid))
+	)
 	return 999999;
 #if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
     /* str_sysop gets admin permissions on login (see load_current_user) */

@@ -887,8 +887,6 @@ format_multilist_title(char *buf, size_t sz, const char *prefix, int count)
 static const char *
 multilist_problem(const char *uid, int flags)
 {
-    if (strcasecmp(uid, STR_GUEST) == 0)
-        return "guest";
     if ((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(uid, cuser.userid) == 0)
         return "自己";
     if ((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid))
@@ -942,8 +940,6 @@ multi_user_list(struct Vector *namelist, int *recipient,
                     outs(ERR_UID);
                 else if ((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(uid, cuser.userid) == 0)
                     outs("不能加入自己喔！");
-                else if (strcasecmp(uid, STR_GUEST) == 0)
-                    outs("不能加入 guest！");
                 else if ((flags & MULTILIST_CHECK_REJECT) && is_rejected(uid))
                     outs("對方拒收信件！");
                 else if ((why = multilist_problem(uid, flags)) != NULL)
@@ -1021,7 +1017,6 @@ multi_user_list(struct Vector *namelist, int *recipient,
                                 continue;
                             // Problems are shown when the list is confirmed.
                             if (searchuser(tok, uid) &&
-                                strcasecmp(uid, STR_GUEST) != 0 &&
                                 !((flags & MULTILIST_EXCLUDE_SELF) && strcasecmp(uid, cuser.userid) == 0) &&
                                 Vector_search(namelist, uid) < 0) {
                                 Vector_add(namelist, uid);

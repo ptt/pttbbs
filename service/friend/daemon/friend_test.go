@@ -167,7 +167,6 @@ func TestHBFLHiddenBoardFriends(t *testing.T) {
 
 	// Write 600 users to boards/S/Secret/visable (exceeding legacy MAX_FRIEND=256 cap)
 	var secretLines []string
-	secretLines = append(secretLines, "guest should_be_ignored")
 	for i := 1; i <= 600; i++ {
 		secretLines = append(secretLines, fmt.Sprintf("member%03d comment %d", i, i))
 	}

@@ -219,7 +219,7 @@ postperm_msg(const char *bname)
     assert(0<=i-1 && i-1<MAX_BOARD);
     bp = getbcache(i);
 
-    if (bp->brdattr & BRD_GUESTPOST)
+    if (bp->brdattr & BRD_NOREG_CAN_POST)
         return NULL;
 
     if (!HasUserPerm(PERM_POST))

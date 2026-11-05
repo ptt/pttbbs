@@ -373,7 +373,6 @@ typedef struct {
     int friendtotal;
     int mode;
     int brc_id;
-    int is_guest;
     int is_userid_valid;
     int user_exists;
 } cgo_utmp_candidate_t;

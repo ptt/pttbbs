@@ -461,7 +461,6 @@ get_utmp_candidates(cgo_utmp_candidate_t *out_candidates, int max_candidates, in
         c->friendtotal = u->friendtotal;
         c->mode = u->mode;
         c->brc_id = u->brc_id;
-        c->is_guest = (strcasecmp(u->userid, STR_GUEST) == 0) ? 1 : 0;
         int valid_name = (isalpha((unsigned char)u->userid[0]) &&
                           memchr(u->userid, '\0', IDLEN + 1) != NULL);
         int valid_friends = (u->friendtotal >= 0 && u->friendtotal <= MAX_FRIEND_ONLINE);

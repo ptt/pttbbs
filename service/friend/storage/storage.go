@@ -96,7 +96,7 @@ func LoadBoardVisableFile(bbsHome string, brdname string) (targets []string, mod
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		targetID := extractASCIIUserID(scanner.Bytes())
-		if targetID == "" || strings.EqualFold(targetID, "guest") {
+		if targetID == "" {
 			continue
 		}
 		lower := strings.ToLower(targetID)

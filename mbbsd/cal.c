@@ -433,7 +433,7 @@ give_money_ui_list(struct Vector *namelist)
     for (i = 0; i < count; i++) {
         const char *id = Vector_get(namelist, i);
         int u = searchuser(id, NULL);
-        if (u > 0 && strcasecmp(id, cuser.userid) != 0 && strcasecmp(id, STR_GUEST) != 0) {
+        if (u > 0 && strcasecmp(id, cuser.userid) != 0) {
             if (valid_count == 0)
                 first_valid_id = id;
             uids[i] = u;
