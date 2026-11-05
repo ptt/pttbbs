@@ -987,9 +987,9 @@ mf_sync_lineno()
         mf.lineno = mf.maxlinenoS;
     } else {
         mf.lineno = 0;
-        for (p = mf.start; p < mf.disps; p++)
-            if (*p == '\n')
-                mf.lineno ++;
+        for (p = mf.start; p < mf.disps &&
+             (p = memchr(p, '\n', mf.disps - p)) != NULL; p++)
+            mf.lineno ++;
 
         if (mf.disps == mf.maxdisps && mf.maxlinenoS < 0)
             mf.maxlinenoS = mf.lineno;
@@ -1032,8 +1032,14 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
         if (p >= mf.start && *p == '\n')
             p--;
 
-        while (p >= mf.start) {
-            if (*p == '\n') {
+        unsigned char *scan_end = (p >= mf.start) ? p + 1 : mf.start;
+        int stopped = 0;
+
+        while (scan_end > mf.start) {
+            p = memrchr(mf.start, '\n', scan_end - mf.start);
+            if (!p)
+                break;
+            {
                 unsigned char *line_start = p + 1;
                 real_moved++;
 
@@ -1056,15 +1062,17 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
                 }
 
                 /* If both determined, stop early! */
-                if (lines_backed >= target_lines && found_comments)
+                if (lines_backed >= target_lines && found_comments) {
+                    stopped = 1;
                     break;
+                }
 
                 next_line = line_start;
             }
-            p--;
+            scan_end = p;
         }
 
-        if (p < mf.start) {
+        if (!stopped) {
             unsigned char *line_start = mf.start;
             real_moved++;
             if (!found_comments) {
