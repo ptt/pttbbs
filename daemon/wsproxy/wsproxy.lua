@@ -41,6 +41,32 @@ local function check_origin()
     end
 end
 
+-- The only subprotocol we speak: each message is a chunk of the raw telnet
+-- byte stream from/to mbbsd, without extra framing.
+local bbs_subprotocol = "telnet"
+
+-- Accepts clients that ask for no subprotocol (e.g. PttChrome) or offer
+-- "telnet" (e.g. ptt-term), and rejects the rest before upgrading because
+-- they would misinterpret our bytes. Must run before server:new(), which
+-- sends the handshake response headers.
+local function check_subprotocol()
+    local value = ngx.req.get_headers()["sec-websocket-protocol"]
+    if not value then
+        return
+    end
+    if type(value) == "table" then
+        value = table.concat(value, ",")
+    end
+    for p in value:gmatch("[^,%s]+") do
+        if p == bbs_subprotocol then
+            ngx.header["Sec-WebSocket-Protocol"] = bbs_subprotocol
+            return
+        end
+    end
+    ngx.log(ngx.ERR, "unsupported websocket subprotocol: ", value)
+    return ngx.exit(400)
+end
+
 local function build_conn_data()
     ffi.cdef[[
     typedef struct
@@ -175,6 +201,7 @@ end
 
 local function main()
     check_origin()
+    check_subprotocol()
 
     -- Start websocket first to make protocol-level dos harder.
     local ws = start_websocket_server()

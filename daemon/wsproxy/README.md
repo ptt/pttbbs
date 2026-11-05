@@ -40,6 +40,12 @@ server {
 }
 ```
 
+- Subprotocol
+
+Clients may ask for no subprotocol or for `telnet` (`new WebSocket(url, "telnet")`);
+each message carries a chunk of the raw telnet byte stream. Requests that only
+offer other subprotocols are rejected with 400 before the upgrade.
+
 - Configure logind (etc/bindports.conf)
 
 ```
