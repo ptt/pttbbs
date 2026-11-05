@@ -23,7 +23,7 @@ SOFTWARE.
 --]]
 
 local server = require "resty.websocket.server"
-local ffi = require "ffi"
+local bit = require "bit"
 
 local timeout_ms = 7*24*60*60*1000
 local bbs_receive_size = 4096
@@ -67,35 +67,41 @@ local function check_subprotocol()
     return ngx.exit(400)
 end
 
+-- Little-endian integer encoders; we only run on little-endian hosts.
+local function u16(n)
+    return string.char(bit.band(n, 0xff), bit.band(bit.rshift(n, 8), 0xff))
+end
+
+local function u32(n)
+    return u16(bit.band(n, 0xffff)) .. u16(bit.band(bit.rshift(n, 16), 0xffff))
+end
+
+local conn_data_size = 36
+
+-- Serializes the packed `conn_data` struct (include/daemons.h) that logind
+-- expects as the first message; the byte layout must match it exactly.
+--
+-- Do not use ffi.cdef here: content_by_lua_file re-runs this chunk on every
+-- request, and each cdef of the struct allocated new ctypes until LuaJIT
+-- failed with "table overflow" after a few thousand connections per worker.
 local function build_conn_data()
-    ffi.cdef[[
-    typedef struct
-    {
-        // size of current structure
-        uint32_t cb;
-        uint32_t encoding;
-        uint32_t raddr_len;
-        uint8_t  raddr[16];
-        uint16_t rport;
-        uint16_t lport;
-        uint32_t flags;
-    } __attribute__ ((packed)) conn_data;
-    ]]
     local flags = 0
     local bbs_lport = tonumber(ngx.var.bbs_lport)
     local bbs_secure = tonumber(ngx.var.bbs_secure)
     if bbs_secure == 1 then
         flags = flags + 1 -- CONN_FLAG_SECURE
     end
-    return ffi.string(ffi.new("conn_data", {
-        cb = 36,
-        encoding = 0,
-        raddr_len = ngx.var.binary_remote_addr:len(),
-        raddr = ngx.var.binary_remote_addr,
-        rport = tonumber(ngx.var.remote_port) or 0,
-        lport = bbs_lport or tonumber(ngx.var.server_port) or 0,
-        flags = flags,
-    }), ffi.sizeof("conn_data"))
+    local raddr = ngx.var.binary_remote_addr
+    local lport = bbs_lport or tonumber(ngx.var.server_port) or 0
+    local data = u32(conn_data_size)                    -- cb
+        .. u32(0)                                       -- encoding
+        .. u32(#raddr)                                  -- raddr_len
+        .. raddr .. string.rep("\0", 16 - #raddr)       -- raddr[16]
+        .. u16(tonumber(ngx.var.remote_port) or 0)      -- rport
+        .. u16(lport)                                   -- lport
+        .. u32(flags)                                   -- flags
+    assert(#data == conn_data_size)
+    return data
 end
 
 local function connect_mbbsd()
