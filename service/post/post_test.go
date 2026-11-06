@@ -2794,12 +2794,33 @@ func TestServerCommunityCommands(t *testing.T) {
 		t.Fatalf("DELETE_COMMUNITY of a deleted board: %s", resp)
 	}
 	resp, body := ipc("LIST_COMMUNITIES")
-	if resp != "OK 2" || !strings.Contains(body, fmt.Sprintf("%d NewBoard ", oldID)) || strings.HasSuffix(strings.SplitN(body, "\n", 2)[0], " 0") {
+	if first := strings.Split(strings.SplitN(body, "\n", 2)[0], "\t"); resp != "OK 2" || len(first) != 8 ||
+		first[0] != fmt.Sprint(oldID) || first[1] != "NewBoard" || first[3] == "0" {
 		t.Fatalf("LIST_COMMUNITIES: %s\n%s", resp, body)
 	}
 	if resp, _ := ipc("PURGE_COMMUNITY NewBoard"); !strings.HasPrefix(resp, "ERR") {
 		t.Fatalf("PURGE_COMMUNITY by the name of a deleted board: %s", resp)
 	}
+	// UPSERT_COMMUNITY mirrors a board header (text may be in Big5).
+	header := "Title: " + string(big5uao.Encode("八卦板")) + "\nFlags: 16777216\nModerator: 4294967297 sysop\n"
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn.Write([]byte(fmt.Sprintf("UPSERT_COMMUNITY other %d\n%s", len(header), header)))
+	upResp, _ := bufio.NewReader(conn).ReadString('\n')
+	conn.Close()
+	otherID, _ := st.Communities().Lookup("Other")
+	if strings.TrimSpace(upResp) != fmt.Sprintf("OK %d", otherID) {
+		t.Fatalf("UPSERT_COMMUNITY: %s", upResp)
+	}
+	resp, body = ipc("GET_COMMUNITY Other")
+	got, err := model.DecodeRFC822Community([]byte(body), nil)
+	if !strings.HasPrefix(resp, "OK ") || err != nil || got.ID != otherID || got.Name != "Other" || got.Title != "八卦板" ||
+		!got.NSFW || len(got.Moderators) != 1 || got.Moderators[0].PersonName != "sysop" {
+		t.Fatalf("GET_COMMUNITY: %s %+v %v", resp, got, err)
+	}
+
 	if resp, _ := ipc(fmt.Sprintf("PURGE_COMMUNITY #%d", oldID)); resp != fmt.Sprintf("OK %d 1 0", oldID) {
 		t.Fatalf("PURGE_COMMUNITY #id: %s", resp)
 	}

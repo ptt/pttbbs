@@ -460,6 +460,87 @@ func TestShardedMergeAcrossShards(t *testing.T) {
 	}
 }
 
+func TestCommunityUpsert(t *testing.T) {
+	dir := t.TempDir()
+	reg, err := OpenCommunityRegistry(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sysop := model.MakePersonID(1, 1600000000)
+	other := model.MakePersonID(2, 1600000001)
+	id, err := reg.Upsert(&model.Community{
+		Name:        "Test",
+		Title:       "測試",
+		Description: "about",
+		Category:    "站務",
+		Flags:       model.BrdOver18,
+		BID:         3,
+		Moderators:  []model.CommunityModerator{{PersonID: sysop, PersonName: "SYSOP"}},
+	})
+	if err != nil || id == 0 {
+		t.Fatalf("Upsert = %d, %v", id, err)
+	}
+	c, ok := reg.GetByName("test")
+	if !ok || c.ID != id || c.Title != "測試" || !c.NSFW || c.Published == 0 || len(c.Moderators) != 1 || c.Moderators[0].CommunityID != id {
+		t.Fatalf("after upsert: %+v", c)
+	}
+	firstSeen := c.Moderators[0].Published
+
+	// A second upsert (by any case of the name) updates it in place and
+	// replaces the moderators; the description is kept as .BRD has none.
+	if id2, err := reg.Upsert(&model.Community{
+		Name:       "TEST",
+		Title:      "測試二",
+		Flags:      model.BrdHide,
+		Moderators: []model.CommunityModerator{{PersonID: other, PersonName: "other"}, {PersonID: sysop, PersonName: "SYSOP"}, {PersonID: other}},
+	}); err != nil || id2 != id {
+		t.Fatalf("second Upsert = %d, %v", id2, err)
+	}
+	reg.Close()
+
+	reg, err = OpenCommunityRegistry(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reg.Close()
+	c, _ = reg.Get(id)
+	if c.Name != "Test" || c.Title != "測試二" || c.Description != "about" || c.NSFW || !c.Hidden || c.Category != "" {
+		t.Fatalf("after second upsert and reopen: %+v", c)
+	}
+	if len(c.Moderators) != 2 || c.Moderators[0].PersonID != sysop || c.Moderators[0].Published != firstSeen || c.Moderators[1].PersonID != other {
+		t.Fatalf("moderators: %+v", c.Moderators)
+	}
+	if list := reg.List(); len(list) != 1 || len(list[0].Moderators) != 2 {
+		t.Fatalf("List: %+v", list)
+	}
+
+	// A board renamed in .BRD (same bid, new name) does not become a
+	// second community.
+	if _, err := reg.Upsert(&model.Community{Name: "Test", BID: 3, Moderators: c.Moderators}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reg.Upsert(&model.Community{Name: "Renamed", BID: 3}); !errors.Is(err, ErrCommunityExists) {
+		t.Fatalf("upsert of a renamed board: err = %v, want ErrCommunityExists", err)
+	}
+	if _, ok := reg.Lookup("Renamed"); ok {
+		t.Fatalf("upsert of a renamed board registered it")
+	}
+	if _, err := reg.Upsert(&model.Community{Name: "Test", BID: 3}); err != nil {
+		t.Fatalf("upsert of the same board: %v", err)
+	}
+
+	// Upserting a deleted name registers a new community.
+	if _, err := reg.SoftDelete("Test"); err != nil {
+		t.Fatal(err)
+	}
+	if id3, _ := reg.Upsert(&model.Community{Name: "Test"}); id3 == id {
+		t.Fatalf("upsert of a deleted name reused #%d", id)
+	}
+	if err := reg.Remove(id); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestShardedRoutingSurvivesReopen(t *testing.T) {
 	dir := t.TempDir()
 	locations := make([]config.EngineLocation, 3)

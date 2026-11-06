@@ -299,6 +299,14 @@ func (s *Server) writeRenderOutput(conn net.Conn, p *model.Post, outputPath stri
 	conn.Write([]byte(fmt.Sprintf("OK %d\n", len(rendered))))
 }
 
+// decodeText converts text that mbbsd sent in Big5 to UTF-8.
+func (s *Server) decodeText(text string) string {
+	if s.cfg.IsBig5() && !utf8.ValidString(text) {
+		return big5uao.Decode([]byte(text))
+	}
+	return text
+}
+
 // resolveCommunityRef resolves an active community name, or #<id> for any
 // registered community (including soft-deleted ones), to its ID.
 func (s *Server) resolveCommunityRef(ref string) (int64, error) {
@@ -1546,15 +1554,107 @@ func (s *Server) handleIPC(conn net.Conn) {
 
 	case "LIST_COMMUNITIES":
 		// LIST_COMMUNITIES
-		// Replies OK <count>, then one line per community:
-		// <id> <name> <created_at> <deleted_at>
+		// Replies OK <count>, then one line per community, tab-separated:
+		// <id> <name> <published> <deleted_at> <flags> <category> <title> <moderators>
+		// where moderators is a comma-separated list of names (or person IDs).
 		list := s.storage.Communities().List()
 		var buf bytes.Buffer
 		buf.WriteString(fmt.Sprintf("OK %d\n", len(list)))
+		clean := strings.NewReplacer("\t", " ", "\n", " ", "\r", " ")
 		for _, c := range list {
-			buf.WriteString(fmt.Sprintf("%d %s %d %d\n", c.ID, c.Name, c.Published, c.DeletedAt))
+			var mods []string
+			for _, m := range c.Moderators {
+				if m.PersonName != "" {
+					mods = append(mods, m.PersonName)
+				} else {
+					mods = append(mods, m.PersonID.String())
+				}
+			}
+			buf.WriteString(fmt.Sprintf("%d\t%s\t%d\t%d\t%d\t%s\t%s\t%s\n", c.ID, c.Name, c.Published, c.DeletedAt, c.Flags,
+				clean.Replace(c.Category), clean.Replace(c.Title), strings.Join(mods, ",")))
 		}
 		conn.Write(buf.Bytes())
+
+	case "GET_COMMUNITY":
+		// GET_COMMUNITY <community>|#<id>
+		// Replies OK <bytes>, then the community as RFC 822 headers (see
+		// model.EncodeRFC822Community).
+		if len(parts) < 2 || parts[1] == "" {
+			conn.Write([]byte("ERR invalid arguments for GET_COMMUNITY\n"))
+			return
+		}
+		id, err := s.resolveCommunityRef(parts[1])
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		c, _ := s.storage.Communities().Get(id)
+		payload := model.EncodeRFC822Community(&c)
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", len(payload))))
+		conn.Write(payload)
+
+	case "UPSERT_COMMUNITY":
+		// UPSERT_COMMUNITY <community> <bytes>\n<RFC 822 community>
+		// Mirrors a board header (see model.EncodeRFC822Community): sets
+		// the fields of the community (registering it if needed) and
+		// replaces its moderators, whose names are looked up if they are
+		// still the same accounts. Text in Big5 is converted to UTF-8.
+		// Replies OK <id>.
+		if len(parts) < 3 || parts[1] == "" {
+			conn.Write([]byte("ERR invalid arguments for UPSERT_COMMUNITY\n"))
+			return
+		}
+		n, err := strconv.Atoi(parts[2])
+		if err != nil || n < 0 || n > 1<<20 {
+			conn.Write([]byte(fmt.Sprintf("ERR invalid payload size: %s\n", parts[2])))
+			return
+		}
+		payload := make([]byte, n)
+		if _, err := io.ReadFull(reader, payload); err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR read payload failed: %v\n", err)))
+			return
+		}
+		// The name is in the command; a payload may leave it out.
+		payload = append([]byte("Name: "+parts[1]+"\n"), payload...)
+		c, err := model.DecodeRFC822Community(payload, s.decodeText)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		c.Name = parts[1]
+		// mbbsd sends only the person IDs of the moderators.
+		if s.users != nil {
+			for i, m := range c.Moderators {
+				if userid, firstlogin, ok := s.users.LookupUsernum(m.PersonID.Usernum()); ok && firstlogin == m.PersonID.Firstlogin() {
+					c.Moderators[i].PersonName = userid
+				}
+			}
+		}
+		id, err := s.storage.Communities().Upsert(c)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", id)))
+
+	case "IMPORT_BOARDS":
+		// IMPORT_BOARDS [dryrun:0|1]
+		// Mirrors every board of $BBSHOME/.BRD. Replies an ERR_DETAIL line
+		// per board that failed, then OK <records> <upserted> <skipped> <failed>.
+		stats, err := importer.ImportBoards(s.storage, importer.ImportBoardsOptions{
+			BBSHome: s.cfg.BBSHome,
+			IsBig5:  s.cfg.IsBig5(),
+			Users:   s.users,
+			DryRun:  len(parts) >= 2 && (parts[1] == "1" || strings.EqualFold(parts[1], "dryrun")),
+		})
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		for _, e := range stats.Errors {
+			conn.Write([]byte(fmt.Sprintf("ERR_DETAIL %s\n", e)))
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d\n", stats.Records, stats.Upserted, stats.Skipped, stats.Failed)))
 
 	case "PURGE_POST":
 		// PURGE_POST <post_id>

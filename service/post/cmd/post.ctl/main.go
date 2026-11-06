@@ -1308,10 +1308,10 @@ func main() {
 			log.Fatalf("communities failed: %s", resp)
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
-		fmt.Fprintf(w, "ID\tNAME\tCREATED\tDELETED\n")
+		fmt.Fprintf(w, "ID\tNAME\tCATEGORY\tFLAGS\tCREATED\tDELETED\tMODERATORS\tTITLE\n")
 		for _, line := range strings.Split(strings.TrimRight(string(payload), "\n"), "\n") {
-			cols := strings.Fields(line)
-			if len(cols) < 4 {
+			cols := strings.Split(line, "\t")
+			if len(cols) < 8 {
 				continue
 			}
 			created, _ := strconv.ParseInt(cols[2], 10, 64)
@@ -1320,9 +1320,56 @@ func main() {
 			if deleted != 0 {
 				deletedStr = time.Unix(deleted, 0).Format("2006-01-02 15:04")
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", cols[0], cols[1], time.Unix(created, 0).Format("2006-01-02 15:04"), deletedStr)
+			flags, _ := strconv.ParseUint(cols[4], 10, 32)
+			fmt.Fprintf(w, "%s\t%s\t%s\t0x%08x\t%s\t%s\t%s\t%s\n", cols[0], cols[1], cols[5], flags,
+				time.Unix(created, 0).Format("2006-01-02 15:04"), deletedStr, cols[7], cols[6])
 		}
 		w.Flush()
+
+	case "community", "get-community":
+		if len(args) < 2 {
+			log.Fatalf("Usage: post.ctl community <community>|#<id>")
+		}
+		resp, payload, err := sendCmd(fmt.Sprintf("GET_COMMUNITY %s\n", args[1]), nil)
+		if err != nil {
+			log.Fatalf("community failed: %v", err)
+		}
+		if !strings.HasPrefix(resp, "OK") {
+			log.Fatalf("community failed: %s", resp)
+		}
+		os.Stdout.Write(payload)
+		if len(payload) > 0 && payload[len(payload)-1] != '\n' {
+			fmt.Println()
+		}
+
+	case "import-boards":
+		dryRun := len(args) >= 2 && strings.TrimLeft(args[1], "-") == "dry-run"
+		dryStr := "0"
+		if dryRun {
+			dryStr = "1"
+		}
+		first, rest, err := sendCmd(fmt.Sprintf("IMPORT_BOARDS %s\n", dryStr), nil)
+		if err != nil {
+			log.Fatalf("import-boards failed: %v", err)
+		}
+		// ERR_DETAIL lines (boards that failed) come before the result.
+		var resp string
+		for _, line := range strings.Split(first+"\n"+string(rest), "\n") {
+			if detail, ok := strings.CutPrefix(line, "ERR_DETAIL "); ok {
+				fmt.Printf("[!] %s\n", detail)
+			} else if line != "" {
+				resp = line
+			}
+		}
+		parts := strings.Fields(resp)
+		if len(parts) < 5 || parts[0] != "OK" {
+			log.Fatalf("import-boards failed: %s", resp)
+		}
+		verb := "Imported"
+		if dryRun {
+			verb = "Would import"
+		}
+		fmt.Printf("%s %s boards of %s records in .BRD (%s empty or links skipped, %s failed).\n", verb, parts[2], parts[1], parts[3], parts[4])
 
 	case "purge", "purge-post", "purge-post-file":
 		if len(args) < 2 {
@@ -1482,6 +1529,8 @@ Usage:
   post.ctl undelete <post>
   post.ctl purge <post>
   post.ctl communities
+  post.ctl community <community>|#<id>
+  post.ctl import-boards [--dry-run]
   post.ctl rename-community <old> <new>
   post.ctl merge-community <from> <to>
   post.ctl delete-community <community>       (soft delete; posts are kept)

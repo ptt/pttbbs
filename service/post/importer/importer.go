@@ -719,6 +719,12 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 	if opts.Overwrite && !opts.DryRun {
 		_, _, _ = engine.ClearCommunity(opts.Board)
 	}
+	// Mirror the board header first, so the community has its fields.
+	if !opts.DryRun {
+		if err := importBoardHeader(engine, opts.BBSHome, opts.Board, opts.Users, opts.IsBig5); err != nil {
+			return nil, fmt.Errorf("import board header failed: %w", err)
+		}
+	}
 
 	dirFile, err := os.Open(dirPath)
 	if err != nil {
