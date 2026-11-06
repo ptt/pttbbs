@@ -24,7 +24,7 @@ CPROG_WITH_UTIL := \
 	uhash_loader	timecap_buildref showuser	removebm \
 	redir		permreport	setrole 	update_online \
 	munin		useractive_munin	chkfnlen	\
-	check_moderators	showboard	checkvotes	\
+	check_moderators	showboard	checkpolls	\
 	$(END)
 
 # 下面是 C++ 的程式

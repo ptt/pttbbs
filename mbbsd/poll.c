@@ -2,8 +2,8 @@
 
 // XXX TODO 開票還是給獨立的 utility 或 daemon 去跑比較好
 
-#define MAX_VOTE_NR	(20)
-#define MAX_VOTE_PAGE	(5)
+#define MAX_POLL_NR	(20)
+#define MAX_POLL_PAGE	(5)
 #define ITEM_PER_PAGE	(30)
 
 static const char * const STR_bv_control = "control";	/* 投票日期 選項 */
@@ -33,17 +33,17 @@ typedef struct {
     char lock    [sizeof("vlockXX\0")   ];
     char logs    [sizeof("vlogsXX\0")   ];
     char logconf [sizeof("logconfXX\0") ];
-} vote_buffer_t;
+} poll_buffer_t;
 
 typedef struct {
     int log_id;
     int log_ip;
     int log_date;
     int log_choice;
-} vote_logconf_t;
+} poll_logconf_t;
 
 static void
-votebuf_init(vote_buffer_t *vbuf, int n)
+pollbuf_init(poll_buffer_t *vbuf, int n)
 {
     assert(vbuf);
     SNPRINTF(vbuf->ballots, "%s%d", STR_bv_ballots, n);
@@ -59,10 +59,10 @@ votebuf_init(vote_buffer_t *vbuf, int n)
     SNPRINTF(vbuf->logconf, "%s%d", STR_bv_logconf, n);
 }
 
-// Removes the files of a vote but its control file and its lock. Callers
-// remove the control file first, so that the vote is gone before the rest.
+// Removes the files of a poll but its control file and its lock. Callers
+// remove the control file first, so that the poll is gone before the rest.
 static void
-vote_unlink_files(const vote_buffer_t *vbuf, const char *bname)
+poll_unlink_files(const poll_buffer_t *vbuf, const char *bname)
 {
     const char *names[] = {
         vbuf->flags, vbuf->ballots, vbuf->desc, vbuf->limited,
@@ -77,11 +77,11 @@ vote_unlink_files(const vote_buffer_t *vbuf, const char *bname)
     }
 }
 
-// The number of items in a vote's control file: 0 when it has none, or its
-// head cannot be read as user_vote_one() reads it, as for an opening not
+// The number of items in a poll's control file: 0 when it has none, or its
+// head cannot be read as poll_vote_one() reads it, as for an opening not
 // done or cut off at the items.
 static int
-vote_item_count(const vote_buffer_t *vbuf, const char *bname)
+poll_item_count(const poll_buffer_t *vbuf, const char *bname)
 {
     char buf[PATHLEN];
     short n = 0, tickets;
@@ -97,23 +97,23 @@ vote_item_count(const vote_buffer_t *vbuf, const char *bname)
     return n > 0 ? n : 0;
 }
 
-// The number of votes on a board: the slots with a control file, as
-// b_result() closes them and vote_view_all() lists them. bvote is set to
+// The number of polls on a board: the slots with a control file, as
+// b_result() closes them and poll_view_all() lists them. npolls is set to
 // this rather than counted up and down, so that it follows the files: an
-// opening cut off before bvote++ left a vote that b_result_one() then
+// opening cut off before npolls++ left a poll that b_result_one() then
 // counted down. Two counts at once can still leave a stale one, until the
 // next. An empty control file is not counted: older mbbsd, still running
 // during an upgrade, keeps it so while the items are typed, and counts the
-// vote only when they are in.
+// poll only when they are in.
 static int
-vote_count(const char *bname)
+poll_count(const char *bname)
 {
-    vote_buffer_t vbuf;
+    poll_buffer_t vbuf;
     char buf[PATHLEN];
     int i, n = 0;
 
-    for (i = 0; i < MAX_VOTE_NR; i++) {
-        votebuf_init(&vbuf, i);
+    for (i = 0; i < MAX_POLL_NR; i++) {
+        pollbuf_init(&vbuf, i);
         setbfile(buf, bname, vbuf.control);
         if (dashs(buf) > 0)
             n++;
@@ -121,23 +121,23 @@ vote_count(const char *bname)
     return n;
 }
 
-// Sets bvote of board pos from its files, and saves it, when it has
+// Sets npolls of board pos from its files, and saves it, when it has
 // drifted from them, as older code could leave it.
 static void
-vote_repair_count(boardheader_t *fhp, int pos)
+poll_repair_count(boardheader_t *fhp, int pos)
 {
-    int n = vote_count(fhp->brdname);
+    int n = poll_count(fhp->brdname);
 
-    if (fhp->bvote == n)
+    if (fhp->npolls == n)
         return;
-    fhp->bvote = n;
+    fhp->npolls = n;
     if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
         outs(ERR_BOARD_UPDATE);
     reset_board(pos);
 }
 
 static int
-vote_stampfile(char *filepath, const char *boardname)
+poll_stampfile(char *filepath, const char *boardname)
 {
     fileheader_t    fh;
     char	    buf[PATHLEN];
@@ -237,7 +237,7 @@ b_nonzeroNum(const char *buf)
 }
 
 static void
-vote_report(const char *bname, const char *post_bname, const char *fname)
+poll_report(const char *bname, const char *post_bname, const char *fname)
 {
     int bid;
     char buf[PATHLEN];
@@ -258,7 +258,7 @@ vote_report(const char *bname, const char *post_bname, const char *fname)
 }
 
 static void
-b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
+b_result_one(const poll_buffer_t *vbuf, boardheader_t * fh, int *total)
 {
     FILE           *cfp, *tfp, *xfp;
     int             lockfd;
@@ -279,7 +279,7 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 	return;
     close(lockfd);
 
-    // XXX TODO backup vote files?
+    // XXX TODO backup poll files?
 
     // Read in the control file
     setbfile(b_control, bname, vbuf->control);
@@ -298,11 +298,11 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
 	sscanf(inbuf, "%d", &closetime) != 1)
 	closetime = now;	// closed now
 
-    // A vote without items, as an opening cut off at the items leaves:
+    // A poll without items, as an opening cut off at the items leaves:
     // nothing to report, so drop it with its files and the lock.
     if (item_num <= 0) {
 	fclose(cfp);
-	vote_unlink_files(vbuf, bname);
+	poll_unlink_files(vbuf, bname);
 	setbfile(buf, bname, vbuf->lock);
 	unlink(buf);
 	return;
@@ -321,8 +321,8 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     unlink(buf);
 
     // Start of the report
-    // Create a temp file to hold the vote report
-    if (vote_stampfile(b_report, bname) < 0 ||
+    // Create a temp file to hold the poll report
+    if (poll_stampfile(b_report, bname) < 0 ||
 	(tfp = fopen(b_report, "w")) == NULL) {
 	free(counts);
 	fclose(cfp);
@@ -338,7 +338,7 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     }
     fprintf(tfp, "%s\n◆ 投票中止於: %s\n\n\n◆ 票選題目描述:\n\n",
 	    MSG_SEPARATOR, Cdate(&closetime));
-    fh->vtime = now;
+    fh->poll_close_time = now;
 
     // Report: description part
     setbfile(buf, bname, vbuf->desc);
@@ -385,9 +385,9 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     fclose(tfp);
 
     // Post to boards
-    vote_report(bname, bname, b_report);
+    poll_report(bname, bname, b_report);
     if (!(fh->brdattr & (BRD_NOCOUNT|BRD_HIDE))) { // from ptt2 local modification
-	vote_report(bname, BN_RECORD, b_report);
+	poll_report(bname, BN_RECORD, b_report);
     }
 
     // Reuse the report file, and append old results after it.
@@ -398,7 +398,7 @@ b_result_one(const vote_buffer_t *vbuf, boardheader_t * fh, int *total)
     Rename(b_report, buf);
 
     // and the files not taken in above: title, limited, limits
-    vote_unlink_files(vbuf, bname);
+    poll_unlink_files(vbuf, bname);
 
     // Remove the lock file
     setbfile(buf, bname, vbuf->lock);
@@ -413,10 +413,10 @@ b_result(boardheader_t * fh)
     int             i, total;
     char            buf[STRLEN];
     char            temp[STRLEN];
-    vote_buffer_t   vbuf;
+    poll_buffer_t   vbuf;
 
-    for (i = 0; i < MAX_VOTE_NR; i++) {
-	votebuf_init(&vbuf, i);
+    for (i = 0; i < MAX_POLL_NR; i++) {
+	pollbuf_init(&vbuf, i);
 	setbfile(buf, fh->brdname, vbuf.control);
 	cfp = fopen(buf, "r");
 	if (!cfp)
@@ -432,9 +432,9 @@ b_result(boardheader_t * fh)
 	if (time4_lt(closetime, now))
 	    b_result_one(&vbuf, fh, &total);
     }
-    // Set bvote from the files once all are closed. This also repairs a
-    // bvote that has drifted too high, as older code could leave it.
-    fh->bvote = vote_count(fh->brdname);
+    // Set npolls from the files once all are closed. This also repairs a
+    // npolls that has drifted too high, as older code could leave it.
+    fh->npolls = poll_count(fh->brdname);
 }
 
 static int
@@ -452,11 +452,11 @@ b_closepolls(void)
     int             total;
 
 #ifndef BARRIER_HAS_BEEN_IN_SHM
-    char    *fn_vote_polling = ".polling";
+    char    *fn_polling = ".polling";
     unsigned long  last;
     FILE           *cfp;
     /* XXX necessary to lock ? */
-    if ((cfp = fopen(fn_vote_polling, "r"))) {
+    if ((cfp = fopen(fn_polling, "r"))) {
 	char timebuf[100];
 	fgets(timebuf, sizeof(timebuf), cfp);
 	sscanf(timebuf, "%lu", &last);
@@ -464,14 +464,14 @@ b_closepolls(void)
 	if (last + 3600 >= (unsigned long)now)
 	    return 0;
     }
-    if ((cfp = fopen(fn_vote_polling, "w")) == NULL)
+    if ((cfp = fopen(fn_polling, "w")) == NULL)
 	return 0;
     fprintf(cfp, "%d\n%s\n\n", now, Cdate(&now));
     fclose(cfp);
 #endif
 
     for (fhp = bcache, pos = 1, total = num_boards(); pos <= total; fhp++, pos++) {
-	if (fhp->bvote && b_close(fhp)) {
+	if (fhp->npolls && b_close(fhp)) {
 	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 		outs(ERR_BOARD_UPDATE);
 	    else
@@ -486,14 +486,14 @@ void
 auto_close_polls(void)
 {
     /* 最多一天開票一次 */
-    if (time4_diff(now, SHM->close_vote_time) > DAY_SECONDS) {
+    if (time4_diff(now, SHM->close_poll_time) > DAY_SECONDS) {
 	b_closepolls();
-	SHM->close_vote_time = now;
+	SHM->close_poll_time = now;
     }
 }
 
 static int
-vote_view(const vote_buffer_t *vbuf, const char *bname)
+poll_view(const poll_buffer_t *vbuf, const char *bname)
 {
     boardheader_t  *fhp;
     FILE           *fp;
@@ -575,15 +575,15 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 
 	setbfile(buf, bname, vbuf->control);
 	unlink(buf);
-	vote_unlink_files(vbuf, bname);
-	fhp->bvote = vote_count(bname);
+	poll_unlink_files(vbuf, bname);
+	fhp->npolls = poll_count(bname);
 
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	    outs(ERR_BOARD_UPDATE);
 	reset_board(pos);
     } else if (genbuf[0] == 'b') {
 	b_result_one(vbuf, fhp, &total);
-	fhp->bvote = vote_count(bname);
+	fhp->npolls = poll_count(bname);
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	    outs(ERR_BOARD_UPDATE);
 
@@ -593,18 +593,18 @@ vote_view(const vote_buffer_t *vbuf, const char *bname)
 }
 
 static int
-vote_view_all(const char *bname)
+poll_view_all(const char *bname)
 {
     int             i;
     int             x = -1;
     FILE           *fp, *xfp;
     char            buf[STRLEN], genbuf[STRLEN];
     char            inbuf[80];
-    vote_buffer_t   vbuf;
+    poll_buffer_t   vbuf;
 
     move(0, 0);
-    for (i = 0; i < MAX_VOTE_NR; i++) {
-	votebuf_init(&vbuf, i);
+    for (i = 0; i < MAX_POLL_NR; i++) {
+	pollbuf_init(&vbuf, i);
 	setbfile(buf, bname, vbuf.control);
 	if ((fp = fopen(buf, "r"))) {
 	    prints("(%d) ", i);
@@ -628,37 +628,37 @@ vote_view_all(const char *bname)
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
 
     // x: default (the last one listed), i: user selection. Enter alone
-    // gives "", which atoi() reads as vote 0, so take the default for it.
+    // gives "", which atoi() reads as poll 0, so take the default for it.
     // Other text (e.g. q) leaves, as it did. A number must be one of the
-    // votes listed above: the next screen can cancel the vote, so never
-    // show another one instead; vote_view() says when there is none.
+    // polls listed above: the next screen can cancel the poll, so never
+    // show another one instead; poll_view() says when there is none.
     if (genbuf[0] && !isdigit((unsigned char)genbuf[0]))
 	return FULLUPDATE;
     i = genbuf[0] ? atoi(genbuf) : x;
-    if (i < 0 || i >= MAX_VOTE_NR) {
+    if (i < 0 || i >= MAX_POLL_NR) {
 	vmsg("沒有這號投票。");
 	return FULLUPDATE;
     }
-    votebuf_init(&vbuf, i);
-    return vote_view(&vbuf, bname);
+    pollbuf_init(&vbuf, i);
+    return poll_view(&vbuf, bname);
 }
 
 static void
-vote_logconf_init(vote_logconf_t *logconf) {
+poll_logconf_init(poll_logconf_t *logconf) {
     memset(logconf, 0, sizeof(*logconf));
 }
 
-static const vform_field_t vote_logconf_fields[] = {
-    VFORM_FIELD_BOOL("記錄投票帳號", "是否於投票時記錄投票者 ID", vote_logconf_t, log_id),
-    VFORM_FIELD_BOOL("記錄投票 IP", "是否於投票時記錄投票者來源 IP", vote_logconf_t, log_ip),
-    VFORM_FIELD_BOOL("記錄投票時間", "是否於投票時記錄投票確切時間", vote_logconf_t, log_date),
-    VFORM_FIELD_BOOL("記錄投票選項", "是否記錄投票者的具體選擇 (記名投票)", vote_logconf_t, log_choice),
+static const vform_field_t poll_logconf_fields[] = {
+    VFORM_FIELD_BOOL("記錄投票帳號", "是否於投票時記錄投票者 ID", poll_logconf_t, log_id),
+    VFORM_FIELD_BOOL("記錄投票 IP", "是否於投票時記錄投票者來源 IP", poll_logconf_t, log_ip),
+    VFORM_FIELD_BOOL("記錄投票時間", "是否於投票時記錄投票確切時間", poll_logconf_t, log_date),
+    VFORM_FIELD_BOOL("記錄投票選項", "是否記錄投票者的具體選擇 (記名投票)", poll_logconf_t, log_choice),
 };
 
 static const char *
-validate_vote_logconf(const vform_def_t *def GCC_UNUSED, const void *data, void *priv GCC_UNUSED)
+validate_poll_logconf(const vform_def_t *def GCC_UNUSED, const void *data, void *priv GCC_UNUSED)
 {
-    const vote_logconf_t *lc = (const vote_logconf_t *)data;
+    const poll_logconf_t *lc = (const poll_logconf_t *)data;
     if (lc->log_id && lc->log_choice) {
         if (vans("本次投票包含帳號與選項(記名投票)，確定嗎？[y/N]: ") != 'y')
             return "已取消記名設定，請重新確認";
@@ -666,23 +666,23 @@ validate_vote_logconf(const vform_def_t *def GCC_UNUSED, const void *data, void 
     return NULL;
 }
 
-static const vform_def_t vote_logconf_form = {
+static const vform_def_t poll_logconf_form = {
     .title        = "投票記錄選項設定",
     .subtitle     = "若欲記錄以下項目，請務必於投票前事先公告",
     .mode         = VFORM_MODE_INPLACE,
-    .fields       = vote_logconf_fields,
-    .num_fields   = ARRAY_SIZE(vote_logconf_fields),
-    .form_validator = validate_vote_logconf,
+    .fields       = poll_logconf_fields,
+    .num_fields   = ARRAY_SIZE(poll_logconf_fields),
+    .form_validator = validate_poll_logconf,
 };
 
 static void
-vote_logconf_ask(vote_logconf_t *logconf) {
-    vote_logconf_init(logconf);
-    vform_run(&vote_logconf_form, logconf, NULL);
+poll_logconf_ask(poll_logconf_t *logconf) {
+    poll_logconf_init(logconf);
+    vform_run(&poll_logconf_form, logconf, NULL);
 }
 
 static int
-vote_logconf_save(const vote_logconf_t *logconf, const char *fpath) {
+poll_logconf_save(const poll_logconf_t *logconf, const char *fpath) {
     FILE *fp = fopen(fpath, "w");
 
     if (!fp)
@@ -695,8 +695,8 @@ vote_logconf_save(const vote_logconf_t *logconf, const char *fpath) {
 }
 
 static int
-vote_logconf_load(const char *fpath, vote_logconf_t *logconf) {
-    vote_logconf_init(logconf);
+poll_logconf_load(const char *fpath, poll_logconf_t *logconf) {
+    poll_logconf_init(logconf);
 
     FILE *fp = fopen(fpath, "r");
     if (!fp)
@@ -704,7 +704,7 @@ vote_logconf_load(const char *fpath, vote_logconf_t *logconf) {
 
     if (fscanf(fp, "%d%d%d%d", &logconf->log_id, &logconf->log_ip,
     		&logconf->log_date, &logconf->log_choice) != 4) {
-	vote_logconf_init(logconf);
+	poll_logconf_init(logconf);
 	fclose(fp);
 	return 0;
     }
@@ -713,14 +713,14 @@ vote_logconf_load(const char *fpath, vote_logconf_t *logconf) {
 }
 
 static void
-print_vote_logconf_feature(int enabled, const char *feature) {
+print_poll_logconf_feature(int enabled, const char *feature) {
     prints("     本次投票將 %s" ANSI_RESET "記錄並公開您的 %s%s" ANSI_RESET "\n",
 	   enabled ? ANSI_COLOR(1;31) "會   " : ANSI_COLOR(1;37) "不會 ",
 	   enabled ? ANSI_COLOR(1;31) : ANSI_COLOR(1;37), feature);
 }
 
 static void
-vote_logconf_print(const vote_logconf_t *logconf) {
+poll_logconf_print(const poll_logconf_t *logconf) {
     if (logconf->log_id && logconf->log_choice) {
         move(15, 5);
         prints("請特別注意 " ANSI_COLOR(1;31) "本次投票為記名投票，"
@@ -728,16 +728,16 @@ vote_logconf_print(const vote_logconf_t *logconf) {
     }
 
     move(18, 0);
-    print_vote_logconf_feature(logconf->log_id, "帳號 (ID)");
-    print_vote_logconf_feature(logconf->log_ip, "IP 位址");
-    print_vote_logconf_feature(logconf->log_date, "投票的時間");
-    print_vote_logconf_feature(logconf->log_choice, "投下的選項");
+    print_poll_logconf_feature(logconf->log_id, "帳號 (ID)");
+    print_poll_logconf_feature(logconf->log_ip, "IP 位址");
+    print_poll_logconf_feature(logconf->log_date, "投票的時間");
+    print_poll_logconf_feature(logconf->log_choice, "投下的選項");
 
     vmsg("詳閱完畢後請按任意鍵繼續");
 }
 
 static int
-vote_maintain(const char *bname)
+poll_maintain(const char *bname)
 {
     FILE           *fp = NULL;
     char            inbuf[STRLEN], buf[STRLEN];
@@ -745,7 +745,7 @@ vote_maintain(const char *bname)
     time4_t         closetime;
     boardheader_t  *fhp;
     char            genbuf[4];
-    vote_buffer_t   vbuf;
+    poll_buffer_t   vbuf;
 
     if (!CBRD_IS_BM())
 	return 0;
@@ -755,36 +755,36 @@ vote_maintain(const char *bname)
     assert(0<=pos-1 && pos-1<MAX_BOARD);
     fhp = bcache + pos - 1;
 
-    // before going by bvote
-    vote_repair_count(fhp, pos);
+    // before going by npolls
+    poll_repair_count(fhp, pos);
 
-    if (fhp->bvote != 0) {
+    if (fhp->npolls != 0) {
 
 	getdata(b_lines - 1, 0,
 		"(V)觀察目前投票 (M)舉辦新投票 (A)取消所有投票 (Q)繼續 [Q]",
 		genbuf, 4, LCECHO);
 	if (genbuf[0] == 'v')
-	    return vote_view_all(bname);
+	    return poll_view_all(bname);
 	else if (genbuf[0] == 'a') {
             getdata(b_lines - 1, 0, "請再次確認取消所有投票 (Y/N) [N] ", genbuf,
                     4, LCECHO);
             if (genbuf[0] != 'y')
                 return FULLUPDATE;
 
-	    for (i = 0; i < MAX_VOTE_NR; i++) {
-		votebuf_init(&vbuf, i);
+	    for (i = 0; i < MAX_POLL_NR; i++) {
+		pollbuf_init(&vbuf, i);
 		setbfile(buf, bname, vbuf.control);
 		unlink(buf);
-		vote_unlink_files(&vbuf, bname);
+		poll_unlink_files(&vbuf, bname);
 	    }
-	    // 0, unless a vote was opened meanwhile
-	    fhp->bvote = vote_count(bname);
+	    // 0, unless a poll was opened meanwhile
+	    fhp->npolls = poll_count(bname);
 	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 		outs(ERR_BOARD_UPDATE);
 
 	    return FULLUPDATE;
 	} else if (genbuf[0] != 'm') {
-	    if (fhp->bvote >= MAX_VOTE_NR)
+	    if (fhp->npolls >= MAX_POLL_NR)
 		vmsg("不得舉辦過多投票");
 	    return FULLUPDATE;
 	}
@@ -792,13 +792,13 @@ vote_maintain(const char *bname)
 
     x = 1;
     do {
-	votebuf_init(&vbuf, x);
+	pollbuf_init(&vbuf, x);
 	setbfile(buf, bname, vbuf.control);
 	x++;
-    } while (dashf(buf) && x <= MAX_VOTE_NR);
+    } while (dashf(buf) && x <= MAX_POLL_NR);
 
     --x;
-    if (x >= MAX_VOTE_NR)
+    if (x >= MAX_POLL_NR)
 	return FULLUPDATE;
 
     getdata(b_lines - 1, 0,
@@ -808,10 +808,10 @@ vote_maintain(const char *bname)
 	return FULLUPDATE;
 
     vs_hdr("舉辦投票");
-    votebuf_init(&vbuf, x);
+    pollbuf_init(&vbuf, x);
     // A slot without a control file may still hold files of an earlier
-    // vote, as one closed without items left them: they are not this one's.
-    vote_unlink_files(&vbuf, bname);
+    // poll, as one closed without items left them: they are not this one's.
+    poll_unlink_files(&vbuf, bname);
     setbfile(buf, bname, vbuf.lock);
     unlink(buf);
 
@@ -855,7 +855,7 @@ vote_maintain(const char *bname)
 	    .allow_clean = 1,
 	    .import_fn = NULL,
 	};
-	edit_user_list(TEMP_BFILE(bname, FN_CANVOTE), &cfg);
+	edit_user_list(TEMP_BFILE(bname, FN_POLL_VOTERS), &cfg);
     } else {
 	if (dashf(buf))
 	    unlink(buf);
@@ -893,9 +893,9 @@ vote_maintain(const char *bname)
     setbfile(buf, bname, vbuf.logconf);
 
     {
-	vote_logconf_t logconf;
-	vote_logconf_ask(&logconf);
-	vote_logconf_save(&logconf, buf);
+	poll_logconf_t logconf;
+	poll_logconf_ask(&logconf);
+	poll_logconf_save(&logconf, buf);
     }
 
     clear();
@@ -911,7 +911,7 @@ vote_maintain(const char *bname)
     // Write the control file's head to a temp file and link it in place,
     // so that the control file is never seen without its close time; the
     // items then go on in the same file. A link, unlike a rename, does not
-    // replace a vote another opening has put in this slot meanwhile.
+    // replace a poll another opening has put in this slot meanwhile.
     char tmpctl[PATHLEN];
     setbfile(buf, bname, vbuf.control);
     snprintf(tmpctl, sizeof(tmpctl), "%s.new%d", buf, (int)currpid);
@@ -927,10 +927,10 @@ vote_maintain(const char *bname)
 	return FULLUPDATE;
     }
     unlink(tmpctl);
-    // Count the vote now: one whose opening is cut off at the items then
-    // stays counted, so that b_closepolls(), which skips boards whose bvote
+    // Count the poll now: one whose opening is cut off at the items then
+    // stays counted, so that b_closepolls(), which skips boards whose npolls
     // is 0, gets to close it.
-    fhp->bvote = vote_count(bname);
+    fhp->npolls = poll_count(bname);
     if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	outs(ERR_BOARD_UPDATE);
     reset_board(pos);
@@ -952,7 +952,7 @@ vote_maintain(const char *bname)
 	    fprintf(fp, "%1c) %s\n", (num + 'A'), inbuf);
 	    num++;
 	}
-	if ((*inbuf == '\0' && num >= 1) || x == MAX_VOTE_PAGE)
+	if ((*inbuf == '\0' && num >= 1) || x == MAX_POLL_PAGE)
 	    aborted = 1;
 	if (num == ITEM_PER_PAGE) {
 	    x++;
@@ -972,7 +972,7 @@ vote_maintain(const char *bname)
     fprintf(fp, "%3d,%3d\n", x * ITEM_PER_PAGE + num, MAX(1, atoi(inbuf)));
     fclose(fp);
 
-    fhp->bvote = vote_count(bname);
+    fhp->npolls = poll_count(bname);
 
     if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	outs(ERR_BOARD_UPDATE);
@@ -983,7 +983,7 @@ vote_maintain(const char *bname)
 }
 
 static int
-vote_flag(const vote_buffer_t *vbuf, const char *bname, char val)
+poll_flag(const poll_buffer_t *vbuf, const char *bname, char val)
 {
     char            buf[256], flag;
     int             fd, num, size;
@@ -1009,7 +1009,7 @@ vote_flag(const vote_buffer_t *vbuf, const char *bname, char val)
 }
 
 static int
-maybe_log_vote(const vote_logconf_t *logconf, const char *chosen, int nitems,
+maybe_log_poll_vote(const poll_logconf_t *logconf, const char *chosen, int nitems,
 	       const char *logfile)
 {
     if (!logconf->log_id && !logconf->log_ip && !logconf->log_date &&
@@ -1051,7 +1051,7 @@ maybe_log_vote(const vote_logconf_t *logconf, const char *chosen, int nitems,
 }
 
 static int
-user_vote_one(const vote_buffer_t *vbuf, const char *bname)
+poll_vote_one(const poll_buffer_t *vbuf, const char *bname)
 {
     FILE           *cfp;
     char            buf[STRLEN], redo;
@@ -1059,9 +1059,9 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     short	    curr_page, item_num, max_page;
     char            inbuf[80], choices[ITEM_PER_PAGE+1], vote[4], *chosen;
     time4_t         closetime;
-    vote_logconf_t  logconf;
+    poll_logconf_t  logconf;
 
-    vote_logconf_init(&logconf);
+    poll_logconf_init(&logconf);
 
     // bid = boaord id, must be at least one int.
     // fd should be int.
@@ -1075,7 +1075,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 
     setbfile(buf, bname, vbuf->limited);	/* Ptt */
     if (dashf(buf)) {
-	setbfile(buf, bname, FN_CANVOTE);
+	setbfile(buf, bname, FN_POLL_VOTERS);
 	if (!file_exist_entry(buf, cuser.userid)) {
 	    vmsg("對不起! 這是私人投票..你並沒有受邀唷!");
 	    return FULLUPDATE;
@@ -1092,7 +1092,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	assert(lfp);
 	fscanf(lfp, "%d%d%d", &closetime, &limits_logins, &limits_posts);
 	fclose(lfp);
-	// XXX if this is a private vote (limited), I think we don't need to check limits?
+	// XXX if this is a private poll (limited), I think we don't need to check limits?
 	if (time4_gt(cuser.firstlogin, closetime))
             reason = "註冊時間";
         else if (cuser.numlogindays < (uint32_t)limits_logins)
@@ -1104,13 +1104,13 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	    return FULLUPDATE;
 	}
     }
-    if (vote_flag(vbuf, bname, '\0')) {
+    if (poll_flag(vbuf, bname, '\0')) {
 	vmsg("此次投票，你已投過了！");
 	return FULLUPDATE;
     }
 
     setbfile(buf, bname, vbuf->logconf);
-    if (dashf(buf) && !vote_logconf_load(buf, &logconf)) {
+    if (dashf(buf) && !poll_logconf_load(buf, &logconf)) {
 	vmsg("投票設定損毀, 請至 " BN_SYSOP " 回報!");
 	return FULLUPDATE;
     }
@@ -1123,7 +1123,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     prints(" " ANSI_COLOR(1;31)
 	   "若您完成投票即代表您同意將您本次投票的以下資訊公開。 "
 	   ANSI_RESET "\n");
-    vote_logconf_print(&logconf);
+    poll_logconf_print(&logconf);
 
     setutmpmode(VOTING);
     setbfile(buf, bname, vbuf->desc);
@@ -1148,7 +1148,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
     }
 
     assert(cfp);
-    // Read again: the vote may have been cancelled and its slot taken by
+    // Read again: the poll may have been cancelled and its slot taken by
     // an opening not done, while the user read the description.
     if (fscanf(cfp, "%hd,%hd\n%d\n", &item_num, &tickets, &closetime) != 3 ||
 	item_num <= 0) {
@@ -1248,7 +1248,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 	    continue;
 	}
 
-	if (vote_flag(vbuf, bname, vote[0]) != 0)
+	if (poll_flag(vbuf, bname, vote[0]) != 0)
 	    outs("重複投票! 不予計票。");
 	else {
 	    setbfile(buf, bname, vbuf->ballots);
@@ -1272,7 +1272,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 		 * of the log. */
 		char b_logs[STRLEN];
 		setbfile(b_logs, bname, vbuf->logs);
-		maybe_log_vote(&logconf, chosen, item_num, b_logs);
+		maybe_log_poll_vote(&logconf, chosen, item_num, b_logs);
 
 		if (vans("您對這次投票有什麼寶貴的意見嗎？(y/N)[N]: ") == 'y') {
 		    char comments[V_MULTILINE_BUFSZ(3)] = "";
@@ -1301,7 +1301,7 @@ user_vote_one(const vote_buffer_t *vbuf, const char *bname)
 }
 
 static const char *
-voteperm_msg(const char *bname)
+poll_perm_msg(const char *bname)
 {
     const char *msg;
 
@@ -1318,7 +1318,7 @@ voteperm_msg(const char *bname)
 }
 
 static int
-user_vote(const char *bname)
+poll_vote(const char *bname)
 {
     int             bid;
     boardheader_t  *bh;
@@ -1327,7 +1327,7 @@ user_vote(const char *bname)
     int             i, x = -1;
     char            genbuf[STRLEN];
     char            inbuf[80];
-    vote_buffer_t   vbuf;
+    poll_buffer_t   vbuf;
     const char *msg;
 
     if ((bid = getbnum(bname)) <= 0)
@@ -1338,24 +1338,24 @@ user_vote(const char *bname)
 
     clear();
 
-    // A board whose bvote has drifted to 0 hides its votes: repair it.
-    if (bh->bvote == 0)
-	vote_repair_count(bh, bid);
-    if (bh->bvote == 0) {
+    // A board whose npolls has drifted to 0 hides its polls: repair it.
+    if (bh->npolls == 0)
+	poll_repair_count(bh, bid);
+    if (bh->npolls == 0) {
 	vmsg("目前並沒有任何投票舉行。");
 	return FULLUPDATE;
     }
-    if ((msg = voteperm_msg(bname)) != NULL) {
+    if ((msg = poll_perm_msg(bname)) != NULL) {
         vmsg(msg);
         return FULLUPDATE;
     }
 
     // XXX I think such loop is ineffective...
-    // According to the creation code, the vote is ranged as [1..MAX_VOTE_NR]
-    for (i = 1; i < MAX_VOTE_NR; i++) {
-	votebuf_init(&vbuf, i);
+    // According to the creation code, the poll is ranged as [1..MAX_POLL_NR]
+    for (i = 1; i < MAX_POLL_NR; i++) {
+	pollbuf_init(&vbuf, i);
 	// one without items cannot be voted in
-	if (vote_item_count(&vbuf, bname) <= 0)
+	if (poll_item_count(&vbuf, bname) <= 0)
 	    continue;
 
 	x = i;
@@ -1381,20 +1381,20 @@ user_vote(const char *bname)
     i = atoi(genbuf);
 
     // x: default (max), i: user selection
-    if (i < 1 || i >= MAX_VOTE_NR)
+    if (i < 1 || i >= MAX_POLL_NR)
 	i = x;
 
-    votebuf_init(&vbuf, i);
+    pollbuf_init(&vbuf, i);
     // only one of those listed
-    if (vote_item_count(&vbuf, bname) <= 0) {
+    if (poll_item_count(&vbuf, bname) <= 0) {
 	vmsg("沒有這號投票。");
 	return FULLUPDATE;
     }
-    return user_vote_one(&vbuf, bname);
+    return poll_vote_one(&vbuf, bname);
 }
 
 static int
-vote_results(const char *bname)
+poll_results(const char *bname)
 {
     char            buf[STRLEN];
 
@@ -1405,19 +1405,19 @@ vote_results(const char *bname)
 }
 
 int
-b_vote_maintain(void)
+b_poll_maintain(void)
 {
-    return vote_maintain(currboard);
+    return poll_maintain(currboard);
 }
 
 int
-b_vote(void)
+b_poll(void)
 {
-    return user_vote(currboard);
+    return poll_vote(currboard);
 }
 
 int
-b_results(void)
+b_poll_results(void)
 {
-    return vote_results(currboard);
+    return poll_results(currboard);
 }

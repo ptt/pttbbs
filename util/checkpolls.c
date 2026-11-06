@@ -1,33 +1,33 @@
 /*
- * checkvotes: lists the boards whose votes need care, and archives the
- * votes older code left stuck.
+ * checkpolls: lists the boards whose polls need care, and archives the
+ * polls older code left stuck.
  *
- * mbbsd is to set bvote, the vote count kept in .BRD, from the votes'
- * control files (vote_count() in mbbsd/vote.c) rather than count it up and
- * down. Older code let bvote drift, and a board whose bvote fell to 0
- * keeps its votes unlisted and unclosed. This lists:
+ * mbbsd is to set npolls, the poll count kept in .BRD, from the polls'
+ * control files (poll_count() in mbbsd/poll.c) rather than count it up and
+ * down. Older code let npolls drift, and a board whose npolls fell to 0
+ * keeps its polls unlisted and unclosed. This lists:
  *
- *   - boards whose bvote differs from the number of control files;
- *   - votes past their close time that are not closed;
- *   - votes without items ("000,000"), as an opening cut off at the items
+ *   - boards whose npolls differs from the number of control files;
+ *   - polls past their close time that are not closed;
+ *   - polls without items ("000,000"), as an opening cut off at the items
  *     leaves;
  *   - control files without a close time, or that cannot be opened;
- *   - votes whose lock file is left, which b_result_one() never closes;
+ *   - polls whose lock file is left, which b_result_one() never closes;
  *
- * with what mbbsd with vote_count() does with each.
+ * with what mbbsd with poll_count() does with each.
  *
- * With -a, the votes on boards whose bvote is 0 that closed more than
+ * With -a, the polls on boards whose npolls is 0 that closed more than
  * ARCHIVE_AGE ago are to be archived: their files are moved to
  * DIR/<board>/, keeping their names, so that mbbsd does not close them
  * years late and post their results. A control file without a close time
  * goes by its modification time instead. Nothing is moved without -y.
  *
- * Run it before mbbsd with vote_count() is deployed: that mbbsd repairs a
- * bvote of 0 when a moderator or a user looks at the votes, and then
- * reads them. Older mbbsd does not read the votes of a board whose bvote
+ * Run it before mbbsd with poll_count() is deployed: that mbbsd repairs a
+ * npolls of 0 when a moderator or a user looks at the polls, and then
+ * reads them. Older mbbsd does not read the polls of a board whose npolls
  * is 0, and an opening only takes a slot without a control file, so this
- * can run while the site is up. It reads the board's bvote again just
- * before moving each vote, from .BRD and from the shared memory mbbsd goes
+ * can run while the site is up. It reads the board's npolls again just
+ * before moving each poll, from .BRD and from the shared memory mbbsd goes
  * by when it is there, never writes .BRD, and never replaces a
  * file: each file is linked to its new name and then unlinked, or, when DIR
  * is on another file system than the board, copied, synced and then
@@ -35,9 +35,9 @@
  * file cannot be moved, those moved go back, the control file last and
  * only if all the others did.
  *
- *   checkvotes [-v] [-a DIR [-y]] [BBSHOME]
+ *   checkpolls [-v] [-a DIR [-y]] [BBSHOME]
  *
- * -v lists every board with a vote or a bvote, not only those that need
+ * -v lists every board with a poll or an npolls, not only those that need
  * care.
  */
 #define _UTIL_C_
@@ -45,22 +45,22 @@
 
 #include <getopt.h>
 
-// as in mbbsd/vote.c: slots 0 to MAX_VOTE_NR - 1. Older user_vote() also
-// lists slot MAX_VOTE_NR, which nothing else counts or closes.
-#define MAX_VOTE_NR (20)
-#define NUM_SLOTS (MAX_VOTE_NR + 1)
+// as in mbbsd/poll.c: slots 0 to MAX_POLL_NR - 1. Older poll_vote() also
+// lists slot MAX_POLL_NR, which nothing else counts or closes.
+#define MAX_POLL_NR (20)
+#define NUM_SLOTS (MAX_POLL_NR + 1)
 
 #define ARCHIVE_AGE (7 * DAY_SECONDS)
 
-// The files of a vote, as in mbbsd/vote.c. The control file goes first:
-// once it is moved, the vote is gone.
-static const char *const vote_files[] = {
+// The files of a poll, as in mbbsd/poll.c. The control file goes first:
+// once it is moved, the poll is gone.
+static const char *const poll_files[] = {
     "control", "ballots", "flags", "desc", "comments", "limited",
     "limits", "vtitle", "vlogs", "logconf", "vlock",
 };
-#define NUM_FILES ((int)ARRAY_SIZE(vote_files))
+#define NUM_FILES ((int)ARRAY_SIZE(poll_files))
 
-enum vote_state {
+enum poll_state {
     VS_OPEN,
     VS_PAST,
     VS_NO_ITEMS,
@@ -77,27 +77,27 @@ static const char *const vs_name[VS_COUNT] = {
     "control file cannot be opened",
 };
 
-// What mbbsd with vote_count() does with it.
+// What mbbsd with poll_count() does with it.
 static const char *const vs_fate[VS_COUNT] = {
     "",
     "closed with a report at the next daily close",
     "dropped without a report at its close time",
     ("closed a day after it was last written, if counted or on a board"
-     " holding another vote (an empty one is not counted)"),
+     " holding another poll (an empty one is not counted)"),
     "counted but never closed",
 };
 
 typedef struct {
     int slot, items, locked, archive;
-    enum vote_state state;
+    enum poll_state state;
     time4_t closetime, mtime;
-} vote_t;
+} poll_t;
 
 typedef struct {
     int boards;         // boards listed
-    int votes;
+    int polls;
     int too_low, too_high;
-    int stuck;          // votes on a board with bvote 0
+    int stuck;          // polls on a board with npolls 0
     int locked;
     int state[VS_COUNT];
     int archive, archived, failed;
@@ -110,8 +110,8 @@ static int brd_fd = -1;
 
 // Reads a control file as b_result() and b_result_one() do: the first
 // line is "items,tickets", the second the close time.
-static enum vote_state
-read_control(const char *path, vote_t *v)
+static enum poll_state
+read_control(const char *path, poll_t *v)
 {
     FILE *fp;
     char line[256];
@@ -141,7 +141,7 @@ read_control(const char *path, vote_t *v)
 }
 
 static void
-vote_path(char *buf, const char *bname, const char *file, int slot)
+poll_path(char *buf, const char *bname, const char *file, int slot)
 {
     char name[32];
 
@@ -251,12 +251,12 @@ move_file(const char *src, const char *dst)
     return 0;
 }
 
-// Moves the files of a vote to archive_dir/<board>/, the control file
+// Moves the files of a poll to archive_dir/<board>/, the control file
 // first. Gives up before moving any when one of them is there already,
 // and moves those moved back when one cannot be moved. Returns 0 when all
 // are moved, -1 when none is, -2 when some could not be put back.
 static int
-archive_vote(const char *bname, int slot, int *nfiles)
+archive_poll(const char *bname, int slot, int *nfiles)
 {
     char src[PATHLEN], dst[PATHLEN];
     int moved[NUM_FILES], i, n = 0;
@@ -269,18 +269,18 @@ archive_vote(const char *bname, int slot, int *nfiles)
         return -1;
     }
     for (i = 0; i < NUM_FILES; i++) {
-        vote_path(src, bname, vote_files[i], slot);
-        if (archive_path(dst, bname, vote_files[i], slot) != 0)
+        poll_path(src, bname, poll_files[i], slot);
+        if (archive_path(dst, bname, poll_files[i], slot) != 0)
             return -1;
         if (access(src, F_OK) == 0 && access(dst, F_OK) == 0) {
-            fprintf(stderr, "%s: there already, vote %d of %s not moved\n",
+            fprintf(stderr, "%s: there already, poll %d of %s not moved\n",
                     dst, slot, bname);
             return -1;
         }
     }
     for (i = 0; i < NUM_FILES; i++) {
-        vote_path(src, bname, vote_files[i], slot);
-        archive_path(dst, bname, vote_files[i], slot);
+        poll_path(src, bname, poll_files[i], slot);
+        archive_path(dst, bname, poll_files[i], slot);
         if (access(src, F_OK) != 0)
             continue;
         if (move_file(src, dst) == 0) {
@@ -289,20 +289,20 @@ archive_vote(const char *bname, int slot, int *nfiles)
         }
         fprintf(stderr, "%s -> %s: %s\n", src, dst, strerror(errno));
         // Put back what was moved, the control file last, and only when
-        // the others are back: a vote missing some of its files must not
+        // the others are back: a poll missing some of its files must not
         // come back.
         {
             int put_back = 1;
 
             while (n-- > 0) {
                 if (moved[n] == 0 && !put_back) {
-                    fprintf(stderr, "LEFT IN %s/%s: control%d, so that vote %d"
+                    fprintf(stderr, "LEFT IN %s/%s: control%d, so that poll %d"
                             " stays closed; its other files are on the board"
                             " or there\n", archive_dir, bname, slot, slot);
                     return -2;
                 }
-                vote_path(src, bname, vote_files[moved[n]], slot);
-                archive_path(dst, bname, vote_files[moved[n]], slot);
+                poll_path(src, bname, poll_files[moved[n]], slot);
+                archive_path(dst, bname, poll_files[moved[n]], slot);
                 if (move_file(dst, src) != 0) {
                     put_back = 0;
                     fprintf(stderr, "PUT BACK FAILED: %s -> %s: %s\n", dst,
@@ -316,11 +316,11 @@ archive_vote(const char *bname, int slot, int *nfiles)
     return 0;
 }
 
-// The board's bvote now, in .BRD and in the shared memory mbbsd goes by
+// The board's npolls now, in .BRD and in the shared memory mbbsd goes by
 // when attached (it changes that copy first): 0 only when both are, -1
 // when the record is not that board.
 static int
-current_bvote(int bid, const char *bname)
+current_npolls(int bid, const char *bname)
 {
     boardheader_t bh;
 
@@ -330,74 +330,74 @@ current_bvote(int bid, const char *bname)
     bh.brdname[sizeof(bh.brdname) - 1] = '\0';
     if (strcmp(bh.brdname, bname) != 0)
         return -1;
-    if (bh.bvote == 0 && SHM && bid <= MAX_BOARD) {
+    if (bh.npolls == 0 && SHM && bid <= MAX_BOARD) {
         const boardheader_t *sh = &bcache[bid - 1];
 
         if (strncmp(sh->brdname, bname, sizeof(sh->brdname)) != 0)
             return -1;
-        return sh->bvote;
+        return sh->npolls;
     }
-    return bh.bvote;
+    return bh.npolls;
 }
 
 static void
 check_board(int bid, const boardheader_t *bh, int verbose, totals_t *tot)
 {
-    vote_t votes[NUM_SLOTS];
+    poll_t polls[NUM_SLOTS];
     char path[PATHLEN];
     int i, n = 0, counted = 0, care = 0;
 
     for (i = 0; i < NUM_SLOTS; i++) {
-        vote_t *v = &votes[n];
+        poll_t *v = &polls[n];
         time4_t age;
 
-        vote_path(path, bh->brdname, "control", i);
+        poll_path(path, bh->brdname, "control", i);
         if (!dashf(path))
             continue;
         memset(v, 0, sizeof(*v));
         v->slot = i;
         v->state = read_control(path, v);
-        vote_path(path, bh->brdname, "vlock", i);
+        poll_path(path, bh->brdname, "vlock", i);
         v->locked = dashf(path);
         age = v->state >= VS_NO_TIME ? v->mtime : v->closetime;
-        v->archive = archive_dir && bh->bvote == 0 && v->state != VS_OPEN &&
+        v->archive = archive_dir && bh->npolls == 0 && v->state != VS_OPEN &&
                      age < now_time - ARCHIVE_AGE;
-        if (v->state != VS_OPEN || v->locked || i >= MAX_VOTE_NR)
+        if (v->state != VS_OPEN || v->locked || i >= MAX_POLL_NR)
             care = 1;
-        if (i < MAX_VOTE_NR)
+        if (i < MAX_POLL_NR)
             counted++;
         n++;
     }
-    if (n == 0 && bh->bvote == 0)
+    if (n == 0 && bh->npolls == 0)
         return;
-    if (counted != bh->bvote)
+    if (counted != bh->npolls)
         care = 1;
     if (!care && !verbose)
         return;
 
     tot->boards++;
-    tot->votes += n;
-    printf("%5d %-13s bvote %d, %d vote%s", bid, bh->brdname, bh->bvote,
+    tot->polls += n;
+    printf("%5d %-13s npolls %d, %d poll%s", bid, bh->brdname, bh->npolls,
            n, n == 1 ? "" : "s");
-    if (bh->bvote < counted) {
+    if (bh->npolls < counted) {
         tot->too_low++;
-        printf("  [bvote too low%s]", bh->bvote == 0 ?
-               ": its votes are neither listed nor closed" : "");
-    } else if (bh->bvote > counted) {
+        printf("  [npolls too low%s]", bh->npolls == 0 ?
+               ": its polls are neither listed nor closed" : "");
+    } else if (bh->npolls > counted) {
         tot->too_high++;
-        printf("  [bvote too high]");
+        printf("  [npolls too high]");
     }
     printf("\n");
 
     for (i = 0; i < n; i++) {
-        vote_t *v = &votes[i];
+        poll_t *v = &polls[i];
 
         tot->state[v->state]++;
-        if (bh->bvote == 0)
+        if (bh->npolls == 0)
             tot->stuck++;
         if (v->locked)
             tot->locked++;
-        printf("        vote %2d: %s", v->slot, vs_name[v->state]);
+        printf("        poll %2d: %s", v->slot, vs_name[v->state]);
         if (v->state < VS_NO_TIME)
             printf(", %d item%s, closes %s", v->items,
                    v->items == 1 ? "" : "s", Cdate(&v->closetime));
@@ -412,10 +412,10 @@ check_board(int bid, const boardheader_t *bh, int verbose, totals_t *tot)
                 continue;
             }
             // as late as can be: a moderator may have counted it meanwhile
-            if (current_bvote(bid, bh->brdname) != 0) {
+            if (current_npolls(bid, bh->brdname) != 0) {
                 tot->failed++;
-                printf(": NOT archived, as bvote is no longer 0\n");
-            } else if ((rc = archive_vote(bh->brdname, v->slot,
+                printf(": NOT archived, as npolls is no longer 0\n");
+            } else if ((rc = archive_poll(bh->brdname, v->slot,
                                           &nfiles)) == 0) {
                 tot->archived++;
                 printf(": archived, %d file%s\n", nfiles,
@@ -429,17 +429,17 @@ check_board(int bid, const boardheader_t *bh, int verbose, totals_t *tot)
             }
             continue;
         }
-        if (v->slot >= MAX_VOTE_NR)
-            printf(": a slot only older user_vote() lists, never counted or"
+        if (v->slot >= MAX_POLL_NR)
+            printf(": a slot only older poll_vote() lists, never counted or"
                    " closed");
         else if (v->locked)
             printf(", lock file left: never closed until vlock%d is removed",
                    v->slot);
         else if (vs_fate[v->state][0])
             printf(": %s%s", vs_fate[v->state],
-                   bh->bvote == 0 && v->state != VS_CANNOT_OPEN ?
-                   ", once bvote is repaired (a moderator entering the vote"
-                   " menu, or a user the vote list)" : "");
+                   bh->npolls == 0 && v->state != VS_CANNOT_OPEN ?
+                   ", once npolls is repaired (a moderator entering the poll"
+                   " menu, or a user the poll list)" : "");
         printf("\n");
     }
 }
@@ -515,7 +515,7 @@ main(int argc, char **argv)
 
     while (read(brd_fd, &bh, sizeof(bh)) == sizeof(bh)) {
         bid++;
-        // links have no vote files of their own
+        // links have no poll files of their own
         if (!bh.brdname[0] || (bh.brdattr & BRD_SYMBOLIC))
             continue;
         bh.brdname[sizeof(bh.brdname) - 1] = '\0';
@@ -523,22 +523,22 @@ main(int argc, char **argv)
     }
     close(brd_fd);
 
-    printf("\n%d board%s listed, %d vote%s on them\n",
+    printf("\n%d board%s listed, %d poll%s on them\n",
            tot.boards, tot.boards == 1 ? "" : "s",
-           tot.votes, tot.votes == 1 ? "" : "s");
-    printf("bvote too low: %d board%s (votes on boards with bvote 0: %d)\n",
+           tot.polls, tot.polls == 1 ? "" : "s");
+    printf("npolls too low: %d board%s (polls on boards with npolls 0: %d)\n",
            tot.too_low, tot.too_low == 1 ? "" : "s", tot.stuck);
-    printf("bvote too high: %d board%s\n",
+    printf("npolls too high: %d board%s\n",
            tot.too_high, tot.too_high == 1 ? "" : "s");
     for (c = VS_PAST; c < VS_COUNT; c++)
         printf("%s: %d\n", vs_name[c], tot.state[c]);
     printf("lock file left: %d\n", tot.locked);
     if (archive_dir) {
         if (apply)
-            printf("archived to %s: %d vote%s, %d not\n", archive_dir,
+            printf("archived to %s: %d poll%s, %d not\n", archive_dir,
                    tot.archived, tot.archived == 1 ? "" : "s", tot.failed);
         else
-            printf("to archive to %s: %d vote%s (run again with -y)\n",
+            printf("to archive to %s: %d poll%s (run again with -y)\n",
                    archive_dir, tot.archive, tot.archive == 1 ? "" : "s");
     }
     return tot.failed ? 1 : 0;

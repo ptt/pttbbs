@@ -579,7 +579,7 @@ readtitle(PSB_CTX *ctx)
     if (get_boardheader(&bh, currbid) <= 0)
         bh = *bp;
 
-    if(bp->bvote != 2 && bp->bvote)
+    if(bp->npolls != 2 && bp->npolls)
 	brd_title = "本看板進行投票中";
     else
 	brd_title = bh.desc;
@@ -4473,10 +4473,10 @@ DEFINE_READ_ITEM_CMD(bbs_cmd_forward_post, forward_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_config, b_config)
 DEFINE_READ_ITEM_CMD(bbs_cmd_solve_post, solve_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_view_postinfo, view_postinfo)
-DEFINE_READ_NOITEM_CMD(bbs_cmd_vote_results, b_results)
+DEFINE_READ_NOITEM_CMD(bbs_cmd_poll_results, b_poll_results)
 DEFINE_READ_ITEM_CMD(bbs_cmd_edit_title, edit_title)
 DEFINE_READ_ITEM_CMD(bbs_cmd_quick_acl, b_quick_acl)
-DEFINE_READ_NOITEM_CMD(bbs_cmd_vote, b_vote)
+DEFINE_READ_NOITEM_CMD(bbs_cmd_poll, b_poll)
 DEFINE_READ_ITEM_CMD(bbs_cmd_pin_post, pin_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_notes, b_notes)
 DEFINE_READ_ITEM_CMD(bbs_cmd_cite_post, cite_post)
@@ -4520,8 +4520,8 @@ const cmd_t read_comms[] = {
     { Ctrl('W'), NULL, NULL, bbs_cmd_whereami, 0, CMD_PRIO_NONE },
     { 'F', NULL, "轉寄文章至信箱", bbs_cmd_forward_post, PERM_FORWARD, CMD_PRIO_NONE, true },
     { Ctrl('V'), NULL, "發起活動連署", bbs_cmd_post_petition, 0, CMD_PRIO_NONE },
-    { 'V', NULL, "參與看板投票", bbs_cmd_vote, 0, CMD_PRIO_NONE },
-    { 'R', NULL, "查看投票結果", bbs_cmd_vote_results, 0, CMD_PRIO_NONE },
+    { 'V', NULL, "參與看板投票", bbs_cmd_poll, 0, CMD_PRIO_NONE },
+    { 'R', NULL, "查看投票結果", bbs_cmd_poll_results, 0, CMD_PRIO_NONE },
     { 'f', NULL, "參與看板樂透投注", bbs_cmd_join_gamble, PERM_LOGINOK, CMD_PRIO_NONE },
     { 'Q', NULL, "查詢文章詳細資訊", bbs_cmd_view_postinfo, 0, CMD_PRIO_NONE, true },
     { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, PERM_BM | PERM_GROUP_OP | PERM_GROUP_LEAD, CMD_PRIO_NONE, true },

@@ -966,9 +966,9 @@ int verifydb_admin_search_display();
 /* vote */
 void b_suckinfile(FILE *fp, const char *fname);
 void b_suckinfile_invis(FILE * fp, const char *fname, const char *boardname);
-int b_results(void);
-int b_vote(void);
-int b_vote_maintain(void);
+int b_poll_results(void);
+int b_poll(void);
+int b_poll_maintain(void);
 void auto_close_polls(void);
 
 /* petition */

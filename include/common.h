@@ -38,7 +38,7 @@
 #define FN_MUTED_ANNOUNCE "muted.announce"  // 禁言公告
 #define FN_USER_MUTED_HISTORY "muted.history"  // 使用者禁言歷史記錄
 #define FN_BADPOST_HISTORY "badpost.history"  // 劣文歷史記錄
-#define FN_CANVOTE      "can_vote"
+#define FN_POLL_VOTERS  "can_vote"
 #define FN_VISABLE      "visable"	// 不知道是誰拼錯的，將錯就錯吧...
 #define FN_ALOHAED      "alohaed"       // 上站要通知我的名單 (編輯用)
 #define FN_USIES        "usies"         /* BBS log */

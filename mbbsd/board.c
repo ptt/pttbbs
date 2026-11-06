@@ -1107,7 +1107,7 @@ bcfg_set_visible(cmd_ctx_t *ctx)
 }
 
 static int
-bcfg_set_canvote(cmd_ctx_t *ctx)
+bcfg_set_poll_voters(cmd_ctx_t *ctx)
 {
     static const user_list_cfg_t cfg = {
         .title = "私人投票名單",
@@ -1119,17 +1119,17 @@ bcfg_set_canvote(cmd_ctx_t *ctx)
     };
     ctx->reload = true;
     clear();
-    edit_user_list(TEMP_BFILE(currboard, FN_CANVOTE), &cfg);
+    edit_user_list(TEMP_BFILE(currboard, FN_POLL_VOTERS), &cfg);
     clear();
     return 0;
 }
 
 static int
-bcfg_set_vote_maintain(cmd_ctx_t *ctx)
+bcfg_set_poll_maintain(cmd_ctx_t *ctx)
 {
     ctx->reload = true;
     clear();
-    b_vote_maintain();
+    b_poll_maintain();
     clear();
     return 0;
 }
@@ -1190,8 +1190,8 @@ static const BConfigItem bconfig_items[] = {
     { 0,   "預設連署限制 (登入/退文)", NULL, NULL, 0, PERM_BM, bcfg_get_petition_limits, bcfg_set_petition_limits },
     { 'w', "[名單] 設定禁言名單(水桶)", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_muted },
     { 'v', "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible },
-    { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_canvote },
-    { 'm', "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_vote_maintain },
+    { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_poll_voters },
+    { 'm', "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_poll_maintain },
     { 'c', "[管理] 文章類別設定", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_posttype },
     { 'n', "[管理] 發文注意事項", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_postnote },
     { 'p', "[管理] 編輯進板畫面", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_notes_edit },
@@ -2176,7 +2176,7 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     else if (bh.brdattr & BRD_COOLDOWN)
         SNPRINTF(col_nuser, "靜 ");
     else if (bh.nuser < 1)
-        SNPRINTF(col_nuser, " %c ", bh.bvote ? 'V' : ' ');
+        SNPRINTF(col_nuser, " %c ", bh.npolls ? 'V' : ' ');
     else if (bh.nuser <= 10)
         SNPRINTF(col_nuser, "%2d ", bh.nuser);
     else if (bh.nuser <= 50)

@@ -236,8 +236,8 @@ typedef struct boardheader_t { /* 256 bytes */
     uint8_t fastrecommend_pause;    /* е硉硈崩丁筳 */
     uint8_t post_limit_logins;	    /* 祇ゅ彻 : 祅Ω计 */
     uint8_t post_limit_badpost;	    /* 祇ゅ彻 : ゅ */
-    uint8_t bvote;		    /* タ羭快 Vote 计 */
-    time4_t vtime;		    /* Vote close time */
+    uint8_t npolls;		    /* タ羭快щ布 (poll) 计 */
+    time4_t poll_close_time;	    /* Poll close time */
     uint32_t level;		    /* 狾舦 */
     time4_t perm_reload;	    /* 程砞﹚狾丁 */
     int32_t gid;		    /* 狾┮妮摸 ID */
@@ -603,7 +603,7 @@ typedef struct {
     time4_t Btouchtime;
     int     Bnumber;
     int     Bbusystate;
-    time4_t close_vote_time;
+    time4_t close_poll_time;
 
     /* pttcache */
     char    notes[MAX_ADBANNER][256*MAX_ADBANNER_HEIGHT];

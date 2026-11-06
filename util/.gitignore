@@ -7,7 +7,7 @@ broadcast
 buildir
 buildir2
 check_moderators
-checkvotes
+checkpolls
 chkhbf
 chkfnlen
 deluserfile

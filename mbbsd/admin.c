@@ -1286,14 +1286,14 @@ m_mod_board(char *bname)
 	break;
     case 'b':
 	if (HasUserPerm(PERM_BOARDS)) {
-	    char            bvotebuf[10];
+	    char            npollsbuf[10];
 
 	    memcpy(&newbh, &bh, sizeof(bh));
-	    SNPRINTF(bvotebuf, "%d", newbh.bvote);
+	    SNPRINTF(npollsbuf, "%d", newbh.npolls);
 	    move(20, 0);
-	    prints("看板 %s 原來的 BVote：%d", bh.brdname, bh.bvote);
-	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, NUMECHO, bvotebuf);
-	    newbh.bvote = atoi(genbuf);
+	    prints("看板 %s 原來的 BVote：%d", bh.brdname, bh.npolls);
+	    getdata_str(21, 0, "新的 Bvote：", genbuf, 5, NUMECHO, npollsbuf);
+	    newbh.npolls = atoi(genbuf);
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
 	    if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_OP))
 		break;
