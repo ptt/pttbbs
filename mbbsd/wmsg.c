@@ -615,7 +615,7 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
         return;
 
     if (res < 0) {
-        if (!IS_ENABLED(CONFIG_IPC_SVC_FALLBACK) && (res == -5 || !ipc_is_connected())) {
+        if (res == -5 || !ipc_is_connected()) {
             outmsg(ANSI_COLOR(1;33;41) MSG_IPC_ERR ANSI_RESET);
         } else if (res == -3) {
             outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方不行了! (收到太多訊息) " ANSI_COLOR(37) "@_@" ANSI_RESET);
@@ -652,7 +652,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     bool is_interactive = (flag == WATERBALL_GENERAL ||
                            (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)));
 
-    if (!IS_ENABLED(CONFIG_IPC_SVC_FALLBACK) && is_interactive &&
+    if (is_interactive &&
         !ipc_is_connected() && ipc_check_reconnect() < 0) {
         vmsg(MSG_IPC_ERR);
         watermode = -1;
@@ -731,12 +731,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
             sent_ipc = (ipc_talk_send(uin->userid, currutmp->userid, getpid(), get_utmp_slot(currutmp), 2, 1) == 0);
         }
         if (!sent_ipc) {
-            if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
-                if (uin->pid > 0)
-                    kill(uin->pid, SIGUSR1);
-            } else {
-                outmsg(ANSI_COLOR(1;33;41) MSG_IPC_ERR ANSI_RESET);
-            }
+            outmsg(ANSI_COLOR(1;33;41) MSG_IPC_ERR ANSI_RESET);
         }
     } else if (my_write_is_rejected(flag, uin, fri_stat)) {
         outmsg(ANSI_COLOR(1;33;41) "糟糕! 對方拒收了! " ANSI_COLOR(37) "~>_<~" ANSI_RESET);

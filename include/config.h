@@ -730,9 +730,6 @@
 #ifndef NEW_ACCOUNT_LOGINDAYS
 #define NEW_ACCOUNT_LOGINDAYS (30)
 #endif
-#ifndef CONFIG_IPC_SVC_FALLBACK
-#define CONFIG_IPC_SVC_FALLBACK 1
-#endif
 
 /* GUEST_URL: if defined, logins as STR_GUEST are redirected to this URL. */
 #ifdef GUEST_URL

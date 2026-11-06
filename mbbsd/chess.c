@@ -863,9 +863,7 @@ void
 ChessPlay(ChessInfo* info)
 {
     ChessGameResult game_result;
-    void          (*old_handler)(int);
     const char*     game_result_str = 0;
-    sigset_t        old_sigset;
 
     if (info == NULL)
 	return;
@@ -883,17 +881,6 @@ ChessPlay(ChessInfo* info)
     if (!info->timelimit) {
 	info->timelimit = _current_time_limit;
 	_current_time_limit = NULL;
-    }
-
-    {
-	sigset_t sigset;
-
-        // Ignore pages (SIGUSR1) during the game.
-        old_handler = Signal(SIGUSR1, SIG_IGN);
-
-	sigemptyset(&sigset);
-	sigaddset(&sigset, SIGUSR1);
-	sigprocmask(SIG_UNBLOCK, &sigset, &old_sigset);
     }
 
     /* playing initialization */
@@ -965,8 +952,6 @@ ChessPlay(ChessInfo* info)
 	ChessGenLog(info, game_result);
 
     // currutmp->sig = -1;
-    sigprocmask(SIG_SETMASK, &old_sigset, NULL);
-    Signal(SIGUSR1, old_handler);
 }
 
 static userinfo_t*

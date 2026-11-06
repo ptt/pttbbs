@@ -65,13 +65,5 @@ int write_message_full(int uslot, pid_t to_pid, pid_t from_pid, int from_uslot,
         return 0;
     }
 
-    if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
-        /* Fallback to legacy kill(uentp->pid, SIGUSR2) if IPC service not available */
-        int r = kill(uentp->pid, SIGUSR2);
-        if (r != 0) {
-            return errno ? -errno : -10;
-        }
-        return 0;
-    }
     return -5;
 }

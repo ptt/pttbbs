@@ -1077,11 +1077,6 @@ start_client(struct ProgramOption *option)
     Signal(SIGXCPU, signal_xcpu_handler);
 #endif
 
-    if (IS_ENABLED(CONFIG_IPC_SVC_FALLBACK)) {
-        signal_restart(SIGUSR1, talk_request);
-        signal_restart(SIGUSR2, write_request);
-    }
-
     // We expect the special user loading - register or recover - should be
     // finished within a timing window, otherwise abort.
     Signal(SIGALRM, abort_bbs);
