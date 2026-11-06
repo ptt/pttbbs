@@ -295,6 +295,7 @@ login_ctx_retry(login_ctx *ctx)
     memset(ctx->userid, 0, sizeof(ctx->userid));
     memset(ctx->passwd, 0, sizeof(ctx->passwd));
     memset(ctx->totp, 0, sizeof(ctx->totp));
+    ctx->is_exempt = 0;
     ctx->icurr    = 0;
     // do not touch hostip, client code, t_*
     ctx->retry ++;
@@ -1871,15 +1872,12 @@ auth_user_challenge(login_ctx *ctx)
     // normalize user id
     strlcpy(uid, user.userid, IDLEN + 1);
 
-    if ((user.userlevel & ACTIVITY_EXEMPT_PERMS) != 0)
-        ctx->is_exempt = 1;
-
     if (ctx->state == LOGIN_STATE_2FA || ctx->totp[0] != '\0')
     {
         int ok = user_verify_2fa_or_backup(uid, ctx->totp);
         memset(ctx->totp, 0, sizeof(ctx->totp));
         if (ok)
-            return AUTH_RESULT_OK;
+            goto authenticated;
         return AUTH_RESULT_FAIL_2FA;
     }
 
@@ -1897,15 +1895,18 @@ auth_user_challenge(login_ctx *ctx)
             user.u_2fa = U_2FA_OFF;
             passwd_update(unum, &user);
             log_user_security(user.userid, "%s 2FA credential corrupted (force disabled).\n", ctx->hostip);
-            return AUTH_RESULT_OK;
+            goto authenticated;
         }
         if (user.u_2fa == U_2FA_NEWIP && strcmp(user.lasthost, ctx->hostip) == 0)
         {
-            return AUTH_RESULT_OK;
+            goto authenticated;
         }
         return AUTH_RESULT_NEED_2FA;
     }
 
+authenticated:
+    // Only the account that has just authenticated decides the exemption.
+    ctx->is_exempt = (user.userlevel & ACTIVITY_EXEMPT_PERMS) != 0;
     return AUTH_RESULT_OK;
 }
 
