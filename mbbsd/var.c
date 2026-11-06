@@ -81,7 +81,7 @@ const char * const str_permboard[] = {
     "匿名板",			/* BRD_ANONYMOUS */
     "預設匿名板",		/* BRD_DEFAULTANONYMOUS */
     "發文無獎勵",		/* BRD_NOCREDIT, was: BRD_BAD */
-    "連署專用看板",		/* BRD_VOTEBOARD */
+    "連署專用看板",		/* BRD_PETITION */
     "已警告要廢除",		/* BRD_WARNEL */
     "熱門看板群組",		/* BRD_TOP */
     "不可推薦",                 /* BRD_NO_COMMENTS */

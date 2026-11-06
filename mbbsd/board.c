@@ -718,12 +718,12 @@ bcfg_get_post_perm(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
 }
 
 static const char *
-bcfg_get_vote_limits(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+bcfg_get_petition_limits(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
                      char *buf, size_t sz)
 {
     const boardheader_t *bp = cx->bp;
-    int llogin = (int)bp->vote_limit_logins * 10;
-    int lbad = bp->vote_limit_badpost ? (255 - (int)bp->vote_limit_badpost) : -1;
+    int llogin = (int)bp->petition_limit_logins * 10;
+    int lbad = bp->petition_limit_badpost ? (255 - (int)bp->petition_limit_badpost) : -1;
     if (llogin == 0 && lbad < 0) {
         strlcpy(buf, "無特別限制", sz);
     } else if (llogin > 0 && lbad >= 0) {
@@ -1060,12 +1060,12 @@ bcfg_show_post_perm(cmd_ctx_t *ctx GCC_UNUSED)
 }
 
 static int
-bcfg_set_vote_limits(cmd_ctx_t *ctx)
+bcfg_set_petition_limits(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     boardheader_t *bp = cx->bp;
     ctx->reload = true;
-    editLimits(&bp->vote_limit_logins, &bp->vote_limit_badpost);
+    editLimits(&bp->petition_limit_logins, &bp->petition_limit_badpost);
     cx->touched = 1;
     assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
     modify_boardheader(bp, currbid);
@@ -1186,7 +1186,7 @@ static const BConfigItem bconfig_items[] = {
     { 0,   "[發文條件] 登入次數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_logins, bcfg_set_post_logins },
     { 0,   "[發文條件] 退文篇數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_badpost, bcfg_set_post_badpost },
     { 0,   "個人發文推文權限", NULL, NULL, 0, 0, bcfg_get_post_perm, bcfg_show_post_perm },
-    { 0,   "預設連署限制 (登入/退文)", NULL, NULL, 0, PERM_BM, bcfg_get_vote_limits, bcfg_set_vote_limits },
+    { 0,   "預設連署限制 (登入/退文)", NULL, NULL, 0, PERM_BM, bcfg_get_petition_limits, bcfg_set_petition_limits },
     { 'w', "[名單] 設定禁言名單(水桶)", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_muted },
     { 'v', "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible },
     { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_canvote },

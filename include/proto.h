@@ -970,9 +970,9 @@ int b_vote(void);
 int b_vote_maintain(void);
 void auto_close_polls(void);
 
-/* voteboard */
-int do_voteboard(int);
-void do_voteboardreply(const fileheader_t *fhdr);
+/* petition */
+int do_petition(int);
+void do_petition_reply(const fileheader_t *fhdr);
 
 /* xyz */
 int x_boardman(void);

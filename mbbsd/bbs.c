@@ -723,7 +723,7 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
         // color = '0', mark = "╳";
     else
 #endif
-    if (ent->filemode & FILE_VOTE)
+    if (ent->filemode & FILE_PETITION)
 	color = '2', mark = "ˇ";
     else switch(title_type) {
         case SUBJECT_REPLY:
@@ -1627,17 +1627,17 @@ do_post(int edflags)
     STATINC(STAT_DOPOST);
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
-    if (bp->brdattr & BRD_VOTEBOARD)
-	return do_voteboard(0);
+    if (bp->brdattr & BRD_PETITION)
+	return do_petition(0);
     else if (!(bp->brdattr & BRD_GROUPBOARD))
 	return do_post_article(edflags);
     return 0;
 }
 
 int
-do_post_vote(void)
+do_post_petition(void)
 {
-    return do_voteboard(1);
+    return do_petition(1);
 }
 
 static void
@@ -1745,8 +1745,8 @@ do_reply(/*const*/ fileheader_t * fhdr)
     }
 
     setbfile(quote_file, bp->brdname, fhdr->filename);
-    if (bp->brdattr & BRD_VOTEBOARD || (fhdr->filemode & FILE_VOTE))
-	do_voteboardreply(fhdr);
+    if (bp->brdattr & BRD_PETITION || (fhdr->filemode & FILE_PETITION))
+	do_petition_reply(fhdr);
     else
 	do_generalboardreply(fhdr);
     *quote_file = 0;
@@ -1889,11 +1889,11 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // board check
     if (is_readonly_board(bp->brdname) ||
-	(bp->brdattr & BRD_VOTEBOARD))
+	(bp->brdattr & BRD_PETITION))
 	return DONOTHING;
 
     // file check
-    if (fhdr->filemode & FILE_VOTE)
+    if (fhdr->filemode & FILE_PETITION)
 	return DONOTHING;
 
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
@@ -2160,7 +2160,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if (bp && (bp->brdattr & BRD_VOTEBOARD) )
+    if (bp && (bp->brdattr & BRD_PETITION) )
 	return DONOTHING;
 
     // if file is SAFE_DELETED, skip it.
@@ -2605,7 +2605,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     if (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD())
 	strcat(buf, "(A)本板發表限制 ");
     strcat(buf, "(B)本板預設");
-    if (fhdr->filemode & FILE_VOTE)
+    if (fhdr->filemode & FILE_PETITION)
 	strcat(buf, " (C)本篇");
     strcat(buf, "連署限制 (Q)取消？[Q]");
     buf[0] = vans(buf);
@@ -2625,8 +2625,8 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     } else if (buf[0] == 'b') {
 
 	editLimits(
-		&bp->vote_limit_logins,
-		&bp->vote_limit_badpost);
+		&bp->petition_limit_logins,
+		&bp->petition_limit_badpost);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
@@ -2634,15 +2634,15 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("修改完成！");
 	return FULLUPDATE;
 
-    } else if ((fhdr->filemode & FILE_VOTE) && buf[0] == 'c') {
+    } else if ((fhdr->filemode & FILE_PETITION) && buf[0] == 'c') {
         if (currmode & MODE_SELECT) {
             vmsg("請退出搜尋模式後再設定。");
             return FULLUPDATE;
         }
 
 	editLimits(
-		&fhdr->multi.vote_limits.logins,
-		&fhdr->multi.vote_limits.badpost);
+		&fhdr->multi.petition_limits.logins,
+		&fhdr->multi.petition_limits.badpost);
         if (modify_dir_lite(direct, ent, fhdr->filename, 0, NULL, NULL, NULL, 0,
                             &fhdr->multi, 0, 0) != 0) {
             vmsg("修改失敗，請重新進入看板再試試。");
@@ -2717,8 +2717,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	bp = getbcache(currbid);
-	if ((bp->brdattr & BRD_VOTEBOARD) ||
-	    (fhdr->filemode & FILE_VOTE) ||
+	if ((bp->brdattr & BRD_PETITION) ||
+	    (fhdr->filemode & FILE_PETITION) ||
 	    fhdr->filename[0] == 'L')		// locked
 	    return DONOTHING;
 
@@ -2881,9 +2881,9 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
-    if ((bp->brdattr & BRD_VOTEBOARD) || (fhdr->filemode & FILE_VOTE))
+    if ((bp->brdattr & BRD_PETITION) || (fhdr->filemode & FILE_PETITION))
     {
-	do_voteboardreply(fhdr);
+	do_petition_reply(fhdr);
 	return FULLUPDATE;
     }
 
@@ -3397,7 +3397,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         (not_owned || !is_file_owner(fhdr, &cuser)))
             return DONOTHING;
 
-    if ((bp->brdattr & BRD_VOTEBOARD) && !HasUserPerm(PERM_BOARDS))
+    if ((bp->brdattr & BRD_PETITION) && !HasUserPerm(PERM_BOARDS))
 	return DONOTHING;
 
     // user and permission check
@@ -3859,9 +3859,9 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 	 * see do_post_article() */
 	prints("│ 匿名管理編號: %u (同一人號碼會一樣)",
 	   (unsigned int)fhdr->multi.anon_uid + (unsigned int)currutmp->pid);
-    } else if (fhdr->filemode & FILE_VOTE) {
-        uint32_t bp = fhdr->multi.vote_limits.badpost,
-                 lgn = fhdr->multi.vote_limits.logins;
+    } else if (fhdr->filemode & FILE_PETITION) {
+        uint32_t bp = fhdr->multi.petition_limits.badpost,
+                 lgn = fhdr->multi.petition_limits.logins;
         prints("│ 投票限制(需先滿足發文限制): ");
         if (bp)
             prints("退文 %d 篇以下 ", 255 - bp);
@@ -4477,7 +4477,7 @@ DEFINE_READ_ITEM_CMD(bbs_cmd_manage_post, manage_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_hold_gamble, hold_gamble)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_board_digest, board_digest)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_new_post, new_post)
-DEFINE_READ_NOITEM_CMD(bbs_cmd_post_vote, do_post_vote)
+DEFINE_READ_NOITEM_CMD(bbs_cmd_post_petition, do_post_petition)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_whereami, whereami)
 DEFINE_READ_ITEM_CMD(bbs_cmd_cross_post, cross_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_comment, comment)
@@ -4534,7 +4534,7 @@ const cmd_t read_comms[] = {
     { Ctrl('Y'), NULL, "查詢目前位置", bbs_cmd_whereami, 0, CMD_PRIO_NONE },
     { Ctrl('W'), NULL, NULL, bbs_cmd_whereami, 0, CMD_PRIO_NONE },
     { 'F', NULL, "轉寄文章至信箱", bbs_cmd_forward_post, PERM_FORWARD, CMD_PRIO_NONE, true },
-    { Ctrl('V'), NULL, "發起活動連署", bbs_cmd_post_vote, 0, CMD_PRIO_NONE },
+    { Ctrl('V'), NULL, "發起活動連署", bbs_cmd_post_petition, 0, CMD_PRIO_NONE },
     { 'V', NULL, "參與看板投票", bbs_cmd_vote, 0, CMD_PRIO_NONE },
     { 'R', NULL, "查看投票結果", bbs_cmd_vote_results, 0, CMD_PRIO_NONE },
     { 'f', NULL, "參與看板樂透投注", bbs_cmd_join_gamble, PERM_LOGINOK, CMD_PRIO_NONE },

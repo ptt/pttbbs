@@ -1,11 +1,11 @@
 #include "bbs.h"
 
-#define VOTEBOARD "NewBoard"
+#define PETITION_BOARD "NewBoard"
 
 // Petition files are split into sections by lines that start with this.
-#define VOTE_DIVIDER "----------"
+#define PETITION_DIVIDER "----------"
 
-char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
+char *CheckPetitionRestrictionBoard(int bid, size_t sz_msg, char *msg)
 {
     boardheader_t *bh = getbcache(bid);
     if (CBRD_IS_BM() || HasUserPerm(PERM_SYSOP))
@@ -13,12 +13,12 @@ char *CheckVoteRestrictionBoard(int bid, size_t sz_msg, char *msg)
 
     return get_restriction_reason(
         cuser.numlogindays, cuser.badpost,
-        bh->vote_limit_logins,
-        bh->vote_limit_badpost,
+        bh->petition_limit_logins,
+        bh->petition_limit_badpost,
         sz_msg, msg);
 }
 
-char *CheckVoteRestrictionFile(
+char *CheckPetitionRestrictionFile(
         const fileheader_t * fhdr, size_t sz_msg, char *msg)
 {
     if (CBRD_IS_BM() || HasUserPerm(PERM_SYSOP))
@@ -26,19 +26,19 @@ char *CheckVoteRestrictionFile(
 
     return get_restriction_reason(
         cuser.numlogindays, cuser.badpost,
-        fhdr->multi.vote_limits.logins,
-        fhdr->multi.vote_limits.badpost,
+        fhdr->multi.petition_limits.logins,
+        fhdr->multi.petition_limits.badpost,
         sz_msg, msg);
 }
 
 static int
-is_vote_divider(const char *line)
+is_petition_divider(const char *line)
 {
-    return strncmp(line, VOTE_DIVIDER, strlen(VOTE_DIVIDER)) == 0;
+    return strncmp(line, PETITION_DIVIDER, strlen(PETITION_DIVIDER)) == 0;
 }
 
 static char *
-find_vote_entry_userid(char *s) {
+find_petition_entry_userid(char *s) {
     // format: [SPACE*]NUM.USERID REASON 來源:IP
     while (*s == ' ')
         s++;
@@ -51,7 +51,7 @@ find_vote_entry_userid(char *s) {
 }
 
 void
-do_voteboardreply(const fileheader_t * fhdr)
+do_petition_reply(const fileheader_t * fhdr)
 {
     char            genbuf[256];
     char            reason[36]="";
@@ -60,7 +60,7 @@ do_voteboardreply(const fileheader_t * fhdr)
     char            opnion[10];
     char           *ptr, *uid;
     FILE           *fo,*fi;
-    fileheader_t    votefile;
+    fileheader_t    petitionfile;
     int             yes=0, no=0, len;
     int             fd;
     unsigned long   endtime=0;
@@ -77,13 +77,13 @@ do_voteboardreply(const fileheader_t * fhdr)
 	return;
     }
 
-    if (CheckVoteRestrictionFile(fhdr, sizeof(genbuf), genbuf))
+    if (CheckPetitionRestrictionFile(fhdr, sizeof(genbuf), genbuf))
     {
 	vmsgf("未達投票資格限制: %s", genbuf);
 	return;
     }
     setbpath(fpath, currboard);
-    stampfile(fpath, &votefile);
+    stampfile(fpath, &petitionfile);
 
     setbpath(oldfpath, currboard);
 
@@ -98,7 +98,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 
         if (yes>=0)
            {
-            if (is_vote_divider(genbuf))
+            if (is_petition_divider(genbuf))
                {yes=-1; continue;}
             else
                 yes++;
@@ -120,7 +120,7 @@ do_voteboardreply(const fileheader_t * fhdr)
 	}
         if(yes>=0) continue;
 
-        uid = find_vote_entry_userid(genbuf);
+        uid = find_petition_entry_userid(genbuf);
         if (!uid)
             continue;
 
@@ -162,7 +162,7 @@ do_voteboardreply(const fileheader_t * fhdr)
        }
 
     while (fgets(genbuf, sizeof(genbuf), fi)) {
-        if (is_vote_divider(genbuf))
+        if (is_petition_divider(genbuf))
 	    break;
 	fputs(genbuf, fo);
     }
@@ -174,11 +174,11 @@ do_voteboardreply(const fileheader_t * fhdr)
     fputs(genbuf, fo);
     len = strlen(cuser.userid);
     for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
-	if (is_vote_divider(genbuf))
+	if (is_petition_divider(genbuf))
 	    break;
 	if (strlen(genbuf)<30)
             continue;
-        uid = find_vote_entry_userid(genbuf);
+        uid = find_petition_entry_userid(genbuf);
         if (!uid || (uid[len] == ' ' && strncasecmp(uid, cuser.userid, len) == 0))
             continue;
 	fprintf(fo, "%3d.%s", ++yes, uid);
@@ -188,18 +188,18 @@ do_voteboardreply(const fileheader_t * fhdr)
     fputs(genbuf, fo);
 
     for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
-	if (is_vote_divider(genbuf))
+	if (is_petition_divider(genbuf))
 	    break;
 	if (strlen(genbuf)<30)
             continue;
-        uid = find_vote_entry_userid(genbuf);
+        uid = find_petition_entry_userid(genbuf);
         if (!uid || (uid[len] == ' ' && strncasecmp(uid, cuser.userid, len) == 0))
             continue;
 	fprintf(fo, "%3d.%s", ++no, uid);
     }
     if (opnion[0] == 'n')
 	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
-    fprintf(fo, VOTE_DIVIDER "總計" VOTE_DIVIDER "\n");
+    fprintf(fo, PETITION_DIVIDER "總計" PETITION_DIVIDER "\n");
     fprintf(fo, "支持人數:%-9d反對人數:%-9d\n", yes, no);
     fprintf(fo, "\n--\n" STR_POST_MARK "發信站: " BBSNAME "(" MYHOSTNAME
                 ") \n◆ From: 連署文章\n");
@@ -213,9 +213,9 @@ do_voteboardreply(const fileheader_t * fhdr)
 }
 
 int
-do_voteboard(int type)
+do_petition(int type)
 {
-    fileheader_t    votefile;
+    fileheader_t    petitionfile;
     char            topic[100];
     char            title[STRLEN];
     char            genbuf[2048];
@@ -227,7 +227,7 @@ do_voteboard(int type)
 	vmsg("對不起，您目前無法在此發表文章！");
 	return FULLUPDATE;
     }
-    if (CheckVoteRestrictionBoard(currbid, sizeof(genbuf), genbuf))
+    if (CheckPetitionRestrictionBoard(currbid, sizeof(genbuf), genbuf))
     {
 	vmsgf("未達投票資格限制: %s", genbuf);
 	return FULLUPDATE;
@@ -390,9 +390,9 @@ do_voteboard(int type)
     for (temp = 12; temp < 17; temp++) {
 	    if (!getdata(temp, 0, "：", topic, 60, DOECHO))
 		break;
-	    // do_voteboardreply treats lines starting with VOTE_DIVIDER as
+	    // do_petition_reply treats lines starting with PETITION_DIVIDER as
 	    // section dividers; indent such lines so they stay plain text.
-	    if (is_vote_divider(topic))
+	    if (is_petition_divider(topic))
 		strcat(genbuf, " ");
 	    strcat(genbuf, topic);
 	    strcat(genbuf, "\n");
@@ -406,11 +406,11 @@ do_voteboard(int type)
     strcat(genbuf, Cdate(&now));
     strcat(genbuf, "\n\n");
     now -= 14 * DAY_SECONDS;
-    strcat(genbuf, VOTE_DIVIDER "支持" VOTE_DIVIDER "\n");
-    strcat(genbuf, VOTE_DIVIDER "反對" VOTE_DIVIDER "\n");
+    strcat(genbuf, PETITION_DIVIDER "支持" PETITION_DIVIDER "\n");
+    strcat(genbuf, PETITION_DIVIDER "反對" PETITION_DIVIDER "\n");
     outs("開始連署嘍");
     setbpath(fpath, currboard);
-    stampfile(fpath, &votefile);
+    stampfile(fpath, &petitionfile);
 
     if (!(fp = fopen(fpath, "w"))) {
 	outs("開檔失敗，請稍候重來一次");
@@ -423,16 +423,16 @@ do_voteboard(int type)
     fprintf(fp, ANSI_COLOR(1;33) "若想加入連署請按 y 回應" ANSI_RESET "\n\n");
     fprintf(fp, "%s\n", genbuf);
     fclose(fp);
-    STRLCPY(votefile.owner, cuser.userid);
-    STRLCPY(votefile.title, title);
-    votefile.filemode |= FILE_VOTE;
+    STRLCPY(petitionfile.owner, cuser.userid);
+    STRLCPY(petitionfile.title, title);
+    petitionfile.filemode |= FILE_PETITION;
     /* use lower 16 bits of 'money' to store limits */
     /* lower 8 bits are posts, higher 8 bits are logins */
-    votefile.multi.vote_limits.logins  = bcache[currbid - 1].vote_limit_logins;
-    votefile.multi.vote_limits.badpost = bcache[currbid - 1].vote_limit_badpost;
+    petitionfile.multi.petition_limits.logins  = bcache[currbid - 1].petition_limit_logins;
+    petitionfile.multi.petition_limits.badpost = bcache[currbid - 1].petition_limit_badpost;
     setbdir(genbuf, currboard);
-    if (append_fileheader(genbuf, &votefile) != -1)
+    if (append_fileheader(genbuf, &petitionfile) != -1)
 	setbtotal(currbid);
-    do_voteboardreply(&votefile);
+    do_petition_reply(&petitionfile);
     return FULLUPDATE;
 }

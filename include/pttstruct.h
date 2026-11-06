@@ -229,9 +229,9 @@ typedef struct boardheader_t { /* 256 bytes */
     char    pad1[3];
     uint32_t brdattr;		    /* board的屬性 */
     char    deprecated_chesscountry;	    /* deprecated: 棋國 */
-    uint8_t _vote_limit_posts;	    /* (已停用) 連署 : 文章篇數下限 */
-    uint8_t vote_limit_logins;	    /* 連署 : 登入次數下限 */
-    uint8_t vote_limit_badpost;	    /* 連署 : 劣文上限 */
+    uint8_t _petition_limit_posts;	    /* (已停用) 連署 : 文章篇數下限 */
+    uint8_t petition_limit_logins;	    /* 連署 : 登入次數下限 */
+    uint8_t petition_limit_badpost;	    /* 連署 : 劣文上限 */
     time4_t bupdate;		    /* note update time */
     uint8_t fastrecommend_pause;    /* 快速連推間隔 */
     uint8_t post_limit_logins;	    /* 發表文章 : 登入次數下限 */
@@ -251,7 +251,7 @@ typedef struct boardheader_t { /* 256 bytes */
     user_t moderators[MAX_BMs];    /* board moderators (BM) */
     char    pad[2];                 /* TODO: migrate to moderators when we have enough bytes. */
     uint8_t _fastrecommend_pause;    /* 快速連推間隔 */
-    uint8_t _vote_limit_badpost;	    /* 連署 : 劣文上限 */
+    uint8_t _petition_limit_badpost;	    /* 連署 : 劣文上限 */
     uint8_t _post_limit_badpost;	    /* 發表文章 : 劣文上限 */
     char    pad3[3];
     time4_t SRexpire;		    /* SR Records expire time */
@@ -269,7 +269,7 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 #define BRD_ANONYMOUS		0x00000040	/* 匿名板 */
 #define BRD_DEFAULTANONYMOUS	0x00000080	/* 預設匿名板 */
 #define BRD_NOCREDIT		0x00000100	/* 發文無獎勵看板 */
-#define BRD_VOTEBOARD		0x00000200	/* 連署機看板 */
+#define BRD_PETITION		0x00000200	/* 連署機看板 */
 #define BRD_WARNEL		0x00000400	/* 已警告要廢除 */
 #define BRD_TOP			0x00000800	/* 熱門看板群組 */
 #define BRD_NO_COMMENTS		0x00001000	/* 不可推薦 */
@@ -327,7 +327,7 @@ typedef struct fileheader_t { /* 128 bytes */
 	    unsigned char logins;
 	    unsigned char regtime;
 	    unsigned char badpost;
-	} vote_limits;
+	} petition_limits;
     }	    multi;
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     uint16_t  filemode;         /* was uint8_t, must be last field @ boards.c */
@@ -345,7 +345,7 @@ typedef struct fileheader_t { /* 128 bytes */
 #define FILE_HIDE       0x0020  /* hide,	in announce */
 #define FILE_BID        0x0020  /* bid,		in non-announce */
 #define FILE_BM         0x0040  /* BM only,	in announce */
-#define FILE_VOTE       0x0040  /* for vote,	in non-announce */
+#define FILE_PETITION   0x0040  /* for petition, in non-announce */
 #define FILE_ANONYMOUS  0x0080  /* anonymous file */
 
 /* TODO multi.money is a mess.
@@ -353,7 +353,7 @@ typedef struct fileheader_t { /* 128 bytes */
  */
 /* modes to invalid multi.money */
 #define INVALIDMONEY_MODES (FILE_ANONYMOUS | FILE_DIGEST | \
-                            FILE_VOTE | FILE_BID)
+                            FILE_PETITION | FILE_BID)
 
 
 #define STRLEN     80             /* Length of most string data */
