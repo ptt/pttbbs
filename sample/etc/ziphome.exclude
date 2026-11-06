@@ -1,4 +1,6 @@
 .DIR.old
 .timecap
 .secure
+.otpauth
+.otpauth.*
 buf.*
