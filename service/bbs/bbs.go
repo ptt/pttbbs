@@ -534,3 +534,65 @@ func (r *UserResolver) LookupUserid(userid string) (int, uint32, bool) {
 	}
 	return usernum, firstlogin, true
 }
+
+// StorageIsBig5 tells if files on disk are in Big5 (UAO); otherwise UTF-8.
+func StorageIsBig5() bool {
+	return C.get_storage_is_big5() != 0
+}
+
+// MBIsBig5 tells if strings in memory (e.g. fileheader_t) are in Big5
+// (UAO); otherwise UTF-8.
+func MBIsBig5() bool {
+	return C.get_mb_is_big5() != 0
+}
+
+// MyHostname returns MYHOSTNAME.
+func MyHostname() string {
+	return C.GoString(C.get_myhostname())
+}
+
+// RelayServer returns RELAY_SERVER_IP, the default SMTP relay.
+func RelayServer() string {
+	return C.GoString(C.get_relay_server())
+}
+
+// BBSName returns BBSNAME, in the memory encoding.
+func BBSName() []byte {
+	return []byte(C.GoString(C.get_bbsname()))
+}
+
+// LoadMailUser finds userid (case insensitive). It returns the uid (0 if
+// there is no such user), the userid as registered, and if the user
+// rejects mails from outside. SHM must be attached.
+func LoadMailUser(userid string) (int, string, bool) {
+	cid := C.CString(userid)
+	defer C.free(unsafe.Pointer(cid))
+	var out [C.IDLEN + 1]C.char
+	var rejects C.int
+	uid := int(C.get_mail_user(cid, &out[0], &rejects))
+	if uid < 1 {
+		return 0, "", false
+	}
+	return uid, C.GoString(&out[0]), rejects != 0
+}
+
+// DeliverHomeMail puts a mail in the mailbox of userid (as registered) and
+// alerts the user if online. owner and title are in the memory encoding,
+// content in the storage encoding. The working directory must be BBSHOME.
+func DeliverHomeMail(userid string, owner, title, content []byte) error {
+	cid := C.CString(userid)
+	defer C.free(unsafe.Pointer(cid))
+	cowner := C.CString(string(owner))
+	defer C.free(unsafe.Pointer(cowner))
+	ctitle := C.CString(string(title))
+	defer C.free(unsafe.Pointer(ctitle))
+	var ccontent *C.char
+	if len(content) > 0 {
+		ccontent = (*C.char)(C.CBytes(content))
+		defer C.free(unsafe.Pointer(ccontent))
+	}
+	if C.deliver_home_mail(cid, cowner, ctitle, ccontent, C.size_t(len(content))) != 0 {
+		return fmt.Errorf("cannot deliver the mail to %s", userid)
+	}
+	return nil
+}

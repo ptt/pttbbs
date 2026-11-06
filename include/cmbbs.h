@@ -363,6 +363,14 @@ int get_board_bid(const char *brdname);
 int get_hbfl_generation(void);
 int bump_hbfl_generation(void);
 void set_hbfl_generation(int gen);
+int get_storage_is_big5(void);
+int get_mb_is_big5(void);
+const char *get_myhostname(void);
+const char *get_relay_server(void);
+const char *get_bbsname(void);
+int get_mail_user(const char *userid, char *out_userid, int *out_rejects);
+int deliver_home_mail(const char *userid, const char *owner, const char *title,
+                      const char *content, size_t len);
 
 /* utmp / cgo */
 typedef struct {
