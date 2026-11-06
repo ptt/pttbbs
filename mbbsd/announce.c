@@ -1544,7 +1544,6 @@ static const cmd_t announce_base_cmds[] = {
     { '/', "搜尋", "搜尋目前目錄下的標題關鍵字", announce_cmd_search, 0, CMD_PRIO_NORM, true },
     { '?', NULL, "反向搜尋目前目錄下的標題關鍵字", announce_cmd_search, 0, CMD_PRIO_NONE, true },
     { 'F', "寄回信箱", "將選取的文章轉寄回電子信箱", announce_cmd_forward, PERM_LOGINOK, CMD_PRIO_HIGH, true },
-    { 'U', NULL, NULL, announce_cmd_forward, PERM_LOGINOK, CMD_PRIO_NONE, true },
     { 'c', "複製項目", "標記或複製目前選取的項目", announce_cmd_copy, 0, CMD_PRIO_HIGH, true },
     { 't', NULL, NULL, announce_cmd_copy, 0, CMD_PRIO_NONE, true },
     { Ctrl('Y'), NULL, "查詢目前所在目錄位置與路徑(我在哪裡)", announce_cmd_whereami, 0, CMD_PRIO_NONE },

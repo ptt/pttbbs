@@ -8,7 +8,7 @@ use strict;
 # bin/railway_wrapper.pl -> lynx -> LANG
 # bin/buildir bin/builddb.pl bin/xchatd
 # mutt -> TMPDIR
-# /usr/bin/uuencode /usr/sbin/sendmail
+# /usr/sbin/sendmail
 ##########################################
 # 若無 getpwuid(2), mutt 會需要 HOME,USER
 

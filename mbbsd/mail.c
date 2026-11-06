@@ -1523,11 +1523,6 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     if (!address[0] && strcasecmp(cuser.email, "x") != 0)
      	STRLCPY(address, cuser.email);
 
-    if( mode == 'U' ){
-	if ('y' != tolower(vmsg("請按 y 執行 uuencode。"
-                                "若您不清楚什麼是 uuencode 請改用 F 轉寄。")))
-            return 1;
-    }
     trim(address);
 
     // if user has address and not the default 'x' (no-email)...
@@ -1674,7 +1669,6 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	assert(is_valid_email(address));
         char hpath[PATHLEN];
         sethomepath(hpath, cuser.userid);
-#ifdef MUTT_PATH
         AUTO_STR(cmd, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
                  "-czf /tmp/home.%s.tgz %s; "
                  MUTT_PATH " -s 'home.%s.tgz' "
@@ -1684,19 +1678,6 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
                  cuser.userid, cuser.userid, address, cuser.userid);
         system(cmd);
         return 0;
-#else
-        AUTO_STR(cmd, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
-                 "-czf - %s | "
-                 "/usr/bin/uuencode %s.tgz > %s",
-                 hpath, cuser.userid, direct);
-        system(cmd);
-        STRLCPY(fname, direct);
-#endif
-    } else if (mode == 'U') {
-	SNPRINTF(fname, "/tmp/bbs.uu%05d", (int)currpid);
-	AUTO_STR(tmp_buf, "/usr/bin/uuencode %s/%s uu.%05d > %s",
-		 direct, fh->filename, (int)currpid, fname);
-	system(tmp_buf);
     } else if (mode == 'F') {
 	SNPRINTF(fname, "/tmp/bbs.f%05d", (int)currpid);
 	AUTO_STR(tmp_buf, "%s/%s", direct, fh->filename);
