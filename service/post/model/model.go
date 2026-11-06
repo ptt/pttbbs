@@ -41,7 +41,8 @@ func (v VoteType) String() string {
 type Post struct {
 	ID            uint64   `json:"id"`
 	ParentID      uint64   `json:"parent_id"`    // 0: Root post, >0: Reply to ParentID (回文)
-	Community     string   `json:"community"`    // Formerly Board
+	CommunityID   int64    `json:"community_id"` // ID in the community registry
+	Community     string   `json:"community"`    // Formerly Board; the current name of CommunityID
 	PostFile      string   `json:"post_file"`    // Legacy filename (e.g. M.1417074209.A.393)
 	Title         string   `json:"title"`        // UTF-8
 	CreatorName   string   `json:"creator_name"` // shown name of the OP (a nickname for anonymous posts)
@@ -62,13 +63,14 @@ type Post struct {
 
 // CrosspostRecord represents a cross-post to another community (share / 轉錄)
 type CrosspostRecord struct {
-	ID              uint64   `json:"id"`
-	SourcePostID    uint64   `json:"source_post_id"`
-	TargetCommunity string   `json:"target_community"`
-	TargetPostFile  string   `json:"target_post_file"`
-	CreatorName     string   `json:"creator_name"`
-	CreatorID       PersonID `json:"creator_id"`
-	CreatedAt       int64    `json:"created_at"`
+	ID                uint64   `json:"id"`
+	SourcePostID      uint64   `json:"source_post_id"`
+	TargetCommunityID int64    `json:"target_community_id"`
+	TargetCommunity   string   `json:"target_community"` // the current name of TargetCommunityID
+	TargetPostFile    string   `json:"target_post_file"`
+	CreatorName       string   `json:"creator_name"`
+	CreatorID         PersonID `json:"creator_id"`
+	CreatedAt         int64    `json:"created_at"`
 }
 
 // NetScore calculates upvotes - downvotes
@@ -182,7 +184,8 @@ type VoteRecord struct {
 type PostRevision struct {
 	PostID      uint64   `json:"post_id"`
 	Revision    uint32   `json:"revision"`
-	Community   string   `json:"community"`
+	CommunityID int64    `json:"community_id"`
+	Community   string   `json:"community"` // the current name of CommunityID
 	PostFile    string   `json:"post_file"`
 	Title       string   `json:"title"`
 	CreatorName string   `json:"creator_name"`
@@ -474,7 +477,7 @@ func HeaderValue(s string) string {
 func EncodeRFC822Post(p *Post) []byte {
 	var b strings.Builder
 	b.WriteString("Encoding: utf-8\n")
-	b.WriteString(fmt.Sprintf("Community: %s\n", HeaderValue(p.Community)))
+	b.WriteString(fmt.Sprintf("CommunityID: %d\n", p.CommunityID))
 	b.WriteString(fmt.Sprintf("ParentID: %d\n", p.ParentID))
 	b.WriteString(fmt.Sprintf("PostFile: %s\n", HeaderValue(p.PostFile)))
 	b.WriteString(fmt.Sprintf("Title: %s\n", HeaderValue(p.Title)))
@@ -592,7 +595,7 @@ func EncodeRFC822PostRevision(r *PostRevision) []byte {
 	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("PostID: %d\n", r.PostID))
 	b.WriteString(fmt.Sprintf("Revision: %d\n", r.Revision))
-	b.WriteString(fmt.Sprintf("Community: %s\n", HeaderValue(r.Community)))
+	b.WriteString(fmt.Sprintf("CommunityID: %d\n", r.CommunityID))
 	b.WriteString(fmt.Sprintf("PostFile: %s\n", HeaderValue(r.PostFile)))
 	b.WriteString(fmt.Sprintf("Title: %s\n", HeaderValue(r.Title)))
 	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(r.CreatorName)))
@@ -634,8 +637,8 @@ func DecodeRFC822PostRevision(val []byte) (*PostRevision, error) {
 			case "Revision":
 				val, _ := strconv.ParseUint(v, 10, 32)
 				r.Revision = uint32(val)
-			case "Community":
-				r.Community = v
+			case "CommunityID":
+				r.CommunityID, _ = strconv.ParseInt(v, 10, 64)
 			case "PostFile":
 				r.PostFile = v
 			case "Title":
@@ -745,7 +748,7 @@ func EncodeRFC822Crosspost(x *CrosspostRecord) []byte {
 	var b strings.Builder
 	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("SourcePostID: %d\n", x.SourcePostID))
-	b.WriteString(fmt.Sprintf("TargetCommunity: %s\n", HeaderValue(x.TargetCommunity)))
+	b.WriteString(fmt.Sprintf("TargetCommunityID: %d\n", x.TargetCommunityID))
 	b.WriteString(fmt.Sprintf("TargetPostFile: %s\n", HeaderValue(x.TargetPostFile)))
 	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(x.CreatorName)))
 	b.WriteString(fmt.Sprintf("CreatorID: %d\n", x.CreatorID))
@@ -767,8 +770,8 @@ func DecodeRFC822Crosspost(val []byte) (*CrosspostRecord, error) {
 			case "SourcePostID":
 				val, _ := strconv.ParseUint(v, 10, 64)
 				rec.SourcePostID = val
-			case "TargetCommunity":
-				rec.TargetCommunity = v
+			case "TargetCommunityID":
+				rec.TargetCommunityID, _ = strconv.ParseInt(v, 10, 64)
 			case "TargetPostFile":
 				rec.TargetPostFile = v
 			case "CreatorName":

@@ -30,7 +30,21 @@ type Storage interface {
 	GetCommentsByCommunityFileFiltered(community, postFile string, startFloor, limit uint32, creatorName string, creatorID model.PersonID) ([]*model.Comment, error)
 	PurgeUserComments(author string, maxAge time.Duration) (int, error)
 	PurgeUserPosts(author string, maxAge time.Duration) (int, error)
-	DeleteCommunity(community string) (int, int, error)
+	// ClearCommunity removes all posts of a community, which stays registered.
+	ClearCommunity(community string) (int, int, error)
+	// RenameCommunity changes the name of a community and returns its ID.
+	RenameCommunity(oldName, newName string) (int64, error)
+	// SoftDeleteCommunity marks a community as deleted (keeping its posts
+	// under its ID) and returns its ID; the name becomes free.
+	SoftDeleteCommunity(name string) (int64, error)
+	// PurgeCommunity removes all posts of the community id and unregisters it.
+	PurgeCommunity(id int64) (int, int, error)
+	// MergeCommunity moves the posts of community from to community to,
+	// except for those whose post file to already has, and returns the
+	// numbers of posts moved and left behind.
+	MergeCommunity(from, to string) (int, int, error)
+	// Communities returns the community registry.
+	Communities() *CommunityRegistry
 	PurgePost(postID uint64) error
 	PurgePostByCommunityFile(community, postFile string) error
 	VotePost(postID uint64, personName string, personID model.PersonID, newVote model.VoteType, createdAt int64, ip string) (int, int, error)

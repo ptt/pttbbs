@@ -18,18 +18,25 @@ type EngineLocation struct {
 
 // ServiceConfig holds the parsed post.svc configuration
 type ServiceConfig struct {
-	ConfigFile     string           `json:"config_file,omitempty"`
-	BBSHome        string           `json:"bbshome"`
-	UnixSocket     string           `json:"unix_socket"`
-	LogPath        string           `json:"log_path"`
-	CacheSizeMB    int              `json:"cache_size_mb"`
-	FlushSeconds   int              `json:"flush_seconds"`
-	MinReplyRunes  int              `json:"min_reply_runes"`
-	FilterEncoding string           `json:"filter_encoding"`
-	MaxOpenFiles   int              `json:"max_open_files"`
-	ImportWorkers  int              `json:"import_workers"`
-	Engines        []EngineLocation `json:"engines"`
-	Pins           map[string]int   `json:"pins"`
+	ConfigFile     string `json:"config_file,omitempty"`
+	BBSHome        string `json:"bbshome"`
+	UnixSocket     string `json:"unix_socket"`
+	LogPath        string `json:"log_path"`
+	CacheSizeMB    int    `json:"cache_size_mb"`
+	FlushSeconds   int    `json:"flush_seconds"`
+	MinReplyRunes  int    `json:"min_reply_runes"`
+	FilterEncoding string `json:"filter_encoding"`
+	MaxOpenFiles   int    `json:"max_open_files"`
+	ImportWorkers  int    `json:"import_workers"`
+	// Engines lists the shards. The community registry (communities.db,
+	// shared by all shards) is kept in the DataDir of the first one.
+	Engines []EngineLocation `json:"engines"`
+	// Pins chooses the shard of communities (by case-insensitive name)
+	// when they are created; other new communities go to shard
+	// (community ID % shards). The registry then keeps the shard of each
+	// community, so changing the pins does not move existing communities,
+	// and renaming one needs no change.
+	Pins map[string]int `json:"pins"`
 }
 
 func (c *ServiceConfig) IsBig5() bool {

@@ -1678,16 +1678,49 @@ func TestDeleteCommunity(t *testing.T) {
 	}
 	_, _ = engine.AddComment(&model.Comment{PostID: pKeep.ID, CreatorName: "c4", Content: "保留推文"})
 
-	// 3. Delete community "trashboard"
-	postsDel, commentsDel, err := engine.DeleteCommunity("trashboard")
+	// 3. Soft delete community "trashboard": its posts stay under its ID
+	trashID, err := engine.SoftDeleteCommunity("trashboard")
+	if err != nil || trashID == 0 {
+		t.Fatalf("SoftDeleteCommunity failed: id=%d, err=%v", trashID, err)
+	}
+	if kept, err := engine.GetPost(p1.ID); err != nil || kept.CommunityID != trashID || kept.Community != "trashboard" {
+		t.Fatalf("expected p1 to be kept under #%d after soft delete, got %+v, err=%v", trashID, kept, err)
+	}
+	if list, _ := engine.ListPosts("trashboard", 10, 0); len(list) != 0 {
+		t.Fatalf("expected no posts listed for the deleted name, got %d", len(list))
+	}
+
+	// A new board with the same name gets a new ID and none of the old posts.
+	pNew, err := engine.CreatePost(&model.Post{
+		Community:   "TrashBoard",
+		PostFile:    "M.111.A.001",
+		Title:       "新板文章",
+		CreatorName: "user4",
+		Content:     "新板內文",
+	})
 	if err != nil {
-		t.Fatalf("DeleteCommunity failed: %v", err)
+		t.Fatal(err)
+	}
+	if pNew.CommunityID == trashID || pNew.ID == p1.ID {
+		t.Fatalf("expected the re-created board to get a new ID, got #%d (post %d)", pNew.CommunityID, pNew.ID)
+	}
+	if list, _ := engine.ListPosts("trashboard", 10, 0); len(list) != 1 || list[0].ID != pNew.ID {
+		t.Fatalf("expected only the new post listed for the re-created board, got %+v", list)
+	}
+
+	// 4. Purge the deleted community by ID
+	postsDel, commentsDel, err := engine.PurgeCommunity(trashID)
+	if err != nil {
+		t.Fatalf("PurgeCommunity failed: %v", err)
 	}
 	if postsDel != 2 || commentsDel != 3 {
 		t.Fatalf("expected 2 posts and 3 comments deleted, got posts=%d, comments=%d", postsDel, commentsDel)
 	}
+	if _, ok := engine.Communities().Get(trashID); ok {
+		t.Fatalf("expected #%d to be unregistered after purge", trashID)
+	}
 
-	// 4. Verify trashboard is gone
+	// 5. Verify the old trashboard posts are gone
 	if _, err := engine.GetPost(p1.ID); err == nil {
 		t.Fatalf("expected p1 to be deleted")
 	}
@@ -1703,7 +1736,7 @@ func TestDeleteCommunity(t *testing.T) {
 		t.Fatalf("expected p2 comments to be deleted, got %d", len(cmts2))
 	}
 
-	// 5. Verify keepboard is intact
+	// 6. Verify keepboard and the new trashboard are intact
 	keptPost, err := engine.GetPost(pKeep.ID)
 	if err != nil || keptPost == nil {
 		t.Fatalf("expected pKeep to remain, got err: %v", err)
@@ -1712,8 +1745,11 @@ func TestDeleteCommunity(t *testing.T) {
 	if len(keptCmts) != 1 {
 		t.Fatalf("expected 1 comment for keepboard, got %d", len(keptCmts))
 	}
+	if p, err := engine.GetPostByCommunityFile("trashboard", "M.111.A.001"); err != nil || p.ID != pNew.ID {
+		t.Fatalf("expected the new trashboard post to remain, got %+v, err=%v", p, err)
+	}
 
-	t.Logf("DeleteCommunity verified successfully!")
+	t.Logf("Soft delete and purge of communities verified successfully!")
 }
 
 func TestPurgePost(t *testing.T) {
@@ -2683,5 +2719,91 @@ func TestRebuildMatchesLiveCounters(t *testing.T) {
 	}
 	if rebuilt.Modified != live.Modified || live.Modified == legacy.Modified {
 		t.Errorf("modified: live=%d rebuilt=%d imported=%d; want rebuilt == live > imported", live.Modified, rebuilt.Modified, legacy.Modified)
+	}
+}
+
+func TestServerCommunityCommands(t *testing.T) {
+	tmpDir := t.TempDir()
+	sockPath := filepath.Join(tmpDir, "post.sock")
+	st, err := storage.OpenEngine(storage.Config{
+		DataDir:     filepath.Join(tmpDir, "data"),
+		CacheDir:    filepath.Join(tmpDir, "cache"),
+		CacheSizeMB: 16,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	srv := daemon.NewServer(daemon.ServerConfig{
+		BBSHome:    filepath.Join(tmpDir, "bbshome"),
+		UnixSocket: sockPath,
+	}, st)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+
+	ipc := func(cmd string) (string, string) {
+		t.Helper()
+		conn, err := net.Dial("unix", sockPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Close()
+		conn.Write([]byte(cmd + "\n"))
+		r := bufio.NewReader(conn)
+		line, _ := r.ReadString('\n')
+		rest, _ := io.ReadAll(r)
+		return strings.TrimSpace(line), string(rest)
+	}
+
+	for _, p := range []struct{ community, file string }{
+		{"OldBoard", "M.1.A.001"}, {"OldBoard", "M.1.A.002"}, {"Other", "M.1.A.002"},
+	} {
+		if _, err := st.CreatePost(&model.Post{Community: p.community, PostFile: p.file, Title: "t", CreatorName: "a", Content: "c"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	oldID, _ := st.Communities().Lookup("OldBoard")
+
+	if resp, _ := ipc("RENAME_COMMUNITY oldboard NewBoard"); resp != fmt.Sprintf("OK %d", oldID) {
+		t.Fatalf("RENAME_COMMUNITY: %s", resp)
+	}
+	if resp, _ := ipc("RENAME_COMMUNITY NoSuchBoard X"); resp != "OK 0" {
+		t.Fatalf("RENAME_COMMUNITY of an unknown board: %s", resp)
+	}
+	if resp, _ := ipc("RENAME_COMMUNITY NewBoard other"); !strings.HasPrefix(resp, "ERR") {
+		t.Fatalf("RENAME_COMMUNITY to a taken name: %s", resp)
+	}
+	if resp, _ := ipc("LIST NewBoard"); !strings.HasPrefix(resp, "OK 2 2") {
+		t.Fatalf("LIST after rename: %s", resp)
+	}
+
+	if resp, _ := ipc("MERGE_COMMUNITY NewBoard Other"); resp != "OK 1 1" {
+		t.Fatalf("MERGE_COMMUNITY: %s", resp)
+	}
+	if resp, _ := ipc("LIST Other"); !strings.HasPrefix(resp, "OK 2 2") {
+		t.Fatalf("LIST after merge: %s", resp)
+	}
+
+	if resp, _ := ipc("DELETE_COMMUNITY newboard"); resp != fmt.Sprintf("OK %d", oldID) {
+		t.Fatalf("DELETE_COMMUNITY: %s", resp)
+	}
+	if resp, _ := ipc("DELETE_COMMUNITY NewBoard"); resp != "OK 0" {
+		t.Fatalf("DELETE_COMMUNITY of a deleted board: %s", resp)
+	}
+	resp, body := ipc("LIST_COMMUNITIES")
+	if resp != "OK 2" || !strings.Contains(body, fmt.Sprintf("%d NewBoard ", oldID)) || strings.HasSuffix(strings.SplitN(body, "\n", 2)[0], " 0") {
+		t.Fatalf("LIST_COMMUNITIES: %s\n%s", resp, body)
+	}
+	if resp, _ := ipc("PURGE_COMMUNITY NewBoard"); !strings.HasPrefix(resp, "ERR") {
+		t.Fatalf("PURGE_COMMUNITY by the name of a deleted board: %s", resp)
+	}
+	if resp, _ := ipc(fmt.Sprintf("PURGE_COMMUNITY #%d", oldID)); resp != fmt.Sprintf("OK %d 1 0", oldID) {
+		t.Fatalf("PURGE_COMMUNITY #id: %s", resp)
+	}
+	if resp, _ := ipc("LIST_COMMUNITIES"); resp != "OK 1" {
+		t.Fatalf("LIST_COMMUNITIES after purge: %s", resp)
 	}
 }

@@ -217,6 +217,9 @@ func main() {
 	for i, eng := range svcConf.Engines {
 		log.Printf("[post.svc]   Engine[%d]: DataDir=%s, CacheDir=%s", i, eng.DataDir, eng.CacheDir)
 	}
+	if len(svcConf.Engines) > 0 {
+		log.Printf("[post.svc]   Communities: %s", filepath.Join(svcConf.Engines[0].DataDir, storage.CommunitiesDBName))
+	}
 
 	st, err := storage.OpenStorage(svcConf)
 	if err != nil {

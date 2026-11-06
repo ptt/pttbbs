@@ -102,6 +102,10 @@ func ExpandVerifyDirs(args []string) ([]string, error) {
 	return dirs, nil
 }
 
+func openReadOnlySQLite(path string) (*sql.DB, error) {
+	return sql.Open("sqlite", "file:"+(&url.URL{Path: path}).EscapedPath()+"?mode=ro&immutable=1")
+}
+
 // VerifyDataDir verifies the engine DBs in dir without modifying them.
 func VerifyDataDir(dir string) *VerifyReport {
 	r := &VerifyReport{Dir: dir, Warnings: map[string]int{}}
@@ -136,7 +140,7 @@ func VerifyDataDir(dir string) *VerifyReport {
 		r.errorf("meta.sqlite3: %v", err)
 		return r
 	}
-	meta, err := sql.Open("sqlite", "file:"+(&url.URL{Path: sqlitePath}).EscapedPath()+"?mode=ro&immutable=1")
+	meta, err := openReadOnlySQLite(sqlitePath)
 	if err != nil {
 		r.errorf("open meta.sqlite3: %v", err)
 		return r
@@ -224,7 +228,8 @@ type postAggregate struct {
 type metaRow struct {
 	id                                          uint64
 	parentID                                    uint64
-	community, postFile, title, creatorName     string
+	communityID                                 int64
+	postFile, title, creatorName                string
 	creatorID                                   int64
 	createdAt, modified                         int64
 	filemode, money                             int
@@ -299,7 +304,7 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 		return a
 	}
 
-	rows, err := meta.Query(`SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified,
+	rows, err := meta.Query(`SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified,
 		filemode, money, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason
 		FROM posts ORDER BY id`)
 	if err != nil {
@@ -313,7 +318,7 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 	nextRow := func() {
 		haveRow = rows.Next()
 		if haveRow {
-			if err := rows.Scan(&row.id, &row.parentID, &row.community, &row.postFile, &row.title, &row.creatorName, &row.creatorID,
+			if err := rows.Scan(&row.id, &row.parentID, &row.communityID, &row.postFile, &row.title, &row.creatorName, &row.creatorID,
 				&row.createdAt, &row.modified, &row.filemode, &row.money, &row.upvotes, &row.downvotes, &row.numComments, &row.crossposts,
 				&row.deleted, &row.removed, &row.deletedAt, &row.modPersonName, &row.modPersonID, &row.reason); err != nil {
 				r.errorf("scan meta.sqlite3: %v", err)
@@ -349,7 +354,7 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 		case haveRow && (!havePost || row.id < pid):
 			// Written to SQLite after the Pebble checkpoint, or a post whose
 			// Pebble write failed; GetPost falls back to the board file.
-			r.warn("post only in meta.sqlite3", row.id, row.community+"/"+row.postFile)
+			r.warn("post only in meta.sqlite3", row.id, fmt.Sprintf("#%d/%s", row.communityID, row.postFile))
 			nextRow()
 		default:
 			r.Posts++
@@ -395,10 +400,10 @@ func comparePost(r *VerifyReport, row *metaRow, val []byte, a postAggregate) {
 	} else if row.modified != modified {
 		diff("modified", row.modified, modified)
 	}
-	if row.community != h["Community"] || row.postFile != h["PostFile"] || row.creatorName != h["CreatorName"] ||
+	if row.communityID != num("CommunityID") || row.postFile != h["PostFile"] || row.creatorName != h["CreatorName"] ||
 		row.parentID != uint64(num("ParentID")) || row.creatorID != int64(model.ParsePersonID(h["CreatorID"])) || row.createdAt != createdAt {
-		diff("identity fields", fmt.Sprintf("%s/%s by %s(%d) at %d parent %d", row.community, row.postFile, row.creatorName, row.creatorID, row.createdAt, row.parentID),
-			fmt.Sprintf("%s/%s by %s(%s) at %d parent %s", h["Community"], h["PostFile"], h["CreatorName"], h["CreatorID"], createdAt, h["ParentID"]))
+		diff("identity fields", fmt.Sprintf("#%d/%s by %s(%d) at %d parent %d", row.communityID, row.postFile, row.creatorName, row.creatorID, row.createdAt, row.parentID),
+			fmt.Sprintf("#%s/%s by %s(%s) at %d parent %s", h["CommunityID"], h["PostFile"], h["CreatorName"], h["CreatorID"], createdAt, h["ParentID"]))
 	}
 	if row.filemode != int(num("Filemode")) || row.money != int(num("Money")) {
 		diff("filemode/money", fmt.Sprint(row.filemode, "/", row.money), fmt.Sprint(num("Filemode"), "/", num("Money")))

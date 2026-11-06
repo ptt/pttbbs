@@ -318,7 +318,7 @@ func TestImportBoard(t *testing.T) {
 	defer engine.Close()
 
 	// 1. Dry-run test: should calculate stats, but not write to DB or disk
-	dryStats, err := MigrateBoard(engine, ImportBoardOptions{
+	dryStats, err := ImportBoard(engine, ImportBoardOptions{
 		BBSHome:      tempDir,
 		Board:        "TestBoard",
 		RenderTarget: renderTarget,
@@ -326,7 +326,7 @@ func TestImportBoard(t *testing.T) {
 		Overwrite:    true,
 	})
 	if err != nil {
-		t.Fatalf("MigrateBoard dry-run failed: %v", err)
+		t.Fatalf("ImportBoard dry-run failed: %v", err)
 	}
 	if dryStats.ValidPosts != 2 || dryStats.PostsImported != 2 || dryStats.CommentsImported != 2 {
 		t.Errorf("Unexpected dry-run stats: %+v", dryStats)
@@ -342,7 +342,7 @@ func TestImportBoard(t *testing.T) {
 	}
 
 	progressCalls := 0
-	stats, err := MigrateBoard(engine, ImportBoardOptions{
+	stats, err := ImportBoard(engine, ImportBoardOptions{
 		BBSHome:      tempDir,
 		Board:        "TestBoard",
 		RenderTarget: renderTarget,
@@ -352,7 +352,7 @@ func TestImportBoard(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("MigrateBoard failed: %v", err)
+		t.Fatalf("ImportBoard failed: %v", err)
 	}
 
 	if stats.ValidPosts != 2 {
@@ -669,7 +669,7 @@ func TestQueryCommentDB(t *testing.T) {
 	}
 	db.Close()
 
-	// Reopen read-only like MigrateBoard does
+	// Reopen read-only like ImportBoard does
 	rdb, err := leveldb.OpenFile(dbDir, nil)
 	if err != nil {
 		t.Fatalf("OpenFile read failed: %v", err)
@@ -756,13 +756,13 @@ func TestImporterVoteDeduplicationAndMeta(t *testing.T) {
 	}
 	defer engine.Close()
 
-	stats, err := MigrateBoard(engine, ImportBoardOptions{
+	stats, err := ImportBoard(engine, ImportBoardOptions{
 		BBSHome:   tempDir,
 		Board:     "VoteBoard",
 		Overwrite: true,
 	})
 	if err != nil {
-		t.Fatalf("MigrateBoard failed: %v", err)
+		t.Fatalf("ImportBoard failed: %v", err)
 	}
 	if stats.PostsImported != 1 || stats.CommentsImported != 8 {
 		t.Errorf("Unexpected stats: %+v", stats)

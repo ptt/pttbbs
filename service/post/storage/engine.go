@@ -35,6 +35,10 @@ type Config struct {
 	ShardID        int
 	NumShards      int
 	MaxOpenFiles   int
+
+	// Communities is the community registry shared by all engines. If nil,
+	// OpenEngine opens one in DataDir and closes it with the engine.
+	Communities *CommunityRegistry
 }
 
 func (c Config) IsBig5() bool {
@@ -50,6 +54,8 @@ type Engine struct {
 	historyDB      *pebble.DB
 	metaDB         *sql.DB
 	metaWriteMu    sync.Mutex
+	reg            *CommunityRegistry
+	ownsReg        bool
 	postSeqCounter uint64
 
 	// In-memory atomic sequence counters per post
@@ -91,6 +97,22 @@ func OpenEngine(cfg Config) (*Engine, error) {
 	if err := os.MkdirAll(cfg.DataDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create data dir: %w", err)
 	}
+
+	reg := cfg.Communities
+	ownsReg := false
+	if reg == nil {
+		var err error
+		if reg, err = OpenCommunityRegistry(cfg.DataDir); err != nil {
+			return nil, err
+		}
+		ownsReg = true
+	}
+	opened := false
+	defer func() {
+		if !opened && ownsReg {
+			reg.Close()
+		}
+	}()
 	if cfg.CacheDir != "boards" && cfg.CacheDir != filepath.Join(cfg.BBSHome, "boards") {
 		if err := os.MkdirAll(cfg.CacheDir, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create cache dir: %w", err)
@@ -204,6 +226,8 @@ func OpenEngine(cfg Config) (*Engine, error) {
 		votesDB:     votesDB,
 		historyDB:   historyDB,
 		metaDB:      metaDB,
+		reg:         reg,
+		ownsReg:     ownsReg,
 		postSeqs:    make(map[uint64]*uint32),
 		dirtyDeltas: make(map[uint64]*postDelta),
 		flushTicker: time.NewTicker(time.Duration(cfg.FlushSeconds) * time.Second),
@@ -217,6 +241,7 @@ func OpenEngine(cfg Config) (*Engine, error) {
 	}
 
 	go e.flusherLoop()
+	opened = true
 	return e, nil
 }
 
@@ -225,7 +250,7 @@ func initSQLiteSchema(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS posts (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		parent_id INTEGER DEFAULT 0,
-		community TEXT NOT NULL,
+		community_id INTEGER NOT NULL,
 		post_file TEXT NOT NULL,
 		title TEXT NOT NULL,
 		creator_name TEXT NOT NULL,
@@ -246,23 +271,23 @@ func initSQLiteSchema(db *sql.DB) error {
 		reason TEXT DEFAULT '',
 		money INTEGER DEFAULT 0
 	);
-	CREATE INDEX IF NOT EXISTS idx_posts_comm_id ON posts(community, id DESC);
-	CREATE INDEX IF NOT EXISTS idx_posts_comm_del ON posts(community, deleted, removed, id DESC);
-	CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_comm_file ON posts(community, post_file);
+	CREATE INDEX IF NOT EXISTS idx_posts_comm_id ON posts(community_id, id DESC);
+	CREATE INDEX IF NOT EXISTS idx_posts_comm_del ON posts(community_id, deleted, removed, id DESC);
+	CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_comm_file ON posts(community_id, post_file);
 	CREATE INDEX IF NOT EXISTS idx_posts_creator ON posts(creator_name);
 	CREATE INDEX IF NOT EXISTS idx_posts_parent_id ON posts(parent_id);
 
 	CREATE TABLE IF NOT EXISTS crossposts (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		source_post_id INTEGER NOT NULL,
-		target_community TEXT NOT NULL,
+		target_community_id INTEGER NOT NULL,
 		target_post_file TEXT NOT NULL,
 		creator_name TEXT NOT NULL,
 		creator_id INTEGER NOT NULL DEFAULT 0,
 		created_at INTEGER NOT NULL
 	);
 	CREATE INDEX IF NOT EXISTS idx_crossposts_source ON crossposts(source_post_id);
-	CREATE INDEX IF NOT EXISTS idx_crossposts_target ON crossposts(target_community, target_post_file);
+	CREATE INDEX IF NOT EXISTS idx_crossposts_target ON crossposts(target_community_id, target_post_file);
 	`
 	if _, err := db.Exec(schema); err != nil {
 		return err
@@ -292,8 +317,51 @@ func (e *Engine) Close() error {
 		if err := e.metaDB.Close(); err != nil && firstErr == nil {
 			firstErr = err
 		}
+		if e.ownsReg {
+			if err := e.reg.Close(); err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
 	})
 	return firstErr
+}
+
+// Communities returns the community registry used by the engine.
+func (e *Engine) Communities() *CommunityRegistry {
+	return e.reg
+}
+
+// fillCommunity sets the name of the community of p from the registry.
+func (e *Engine) fillCommunity(p *model.Post) {
+	p.Community = e.reg.Name(p.CommunityID)
+}
+
+// resolveCommunity sets p.CommunityID from p.Community (registering the
+// community if needed) and p.Community to the registered name.
+func (e *Engine) resolveCommunity(p *model.Post) error {
+	if p.CommunityID == 0 && p.Community != "" {
+		id, err := e.reg.Ensure(p.Community)
+		if err != nil {
+			return err
+		}
+		p.CommunityID = id
+	}
+	if p.CommunityID != 0 {
+		e.fillCommunity(p)
+	}
+	return nil
+}
+
+// separateCache reports whether CacheDir is a directory of its own rather
+// than the BBS boards.
+func (e *Engine) separateCache() bool {
+	return e.cfg.CacheDir != "" && e.cfg.CacheDir != "boards" && e.cfg.CacheDir != filepath.Join(e.cfg.BBSHome, "boards")
+}
+
+// communityCacheDir returns the cache directory of a community, which is
+// named after its ID so renaming the community keeps the cache.
+func (e *Engine) communityCacheDir(communityID int64) string {
+	return filepath.Join(e.cfg.CacheDir, strconv.FormatInt(communityID, 10))
 }
 
 // CreatePost creates a new submission, storing UTF-8 content in Pebble and metadata in SQLite
@@ -306,6 +374,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	}
 	p.Encoding = "utf-8"
 	p.Title = model.HeaderValue(p.Title)
+	if err := e.resolveCommunity(p); err != nil {
+		return nil, err
+	}
 
 	// Auto-demotion: if a reply (ParentID > 0) has too little net new content, convert it to a comment on parent!
 	if p.ParentID > 0 && e.cfg.MinReplyRunes > 0 {
@@ -332,9 +403,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	}
 
 	// Check if post already exists in SQLite
-	if p.ID == 0 && p.Community != "" && p.PostFile != "" {
+	if p.ID == 0 && p.CommunityID != 0 && p.PostFile != "" {
 		var existingID uint64
-		err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community = ? AND post_file = ?`, p.Community, p.PostFile).Scan(&existingID)
+		err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community_id = ? AND post_file = ?`, p.CommunityID, p.PostFile).Scan(&existingID)
 		if err == nil && existingID > 0 {
 			p.ID = existingID
 			key := model.EncodePostKey(p.ID)
@@ -350,9 +421,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 			p.ID = (seq * uint64(e.cfg.NumShards)) + uint64(e.cfg.ShardID)
 			e.metaWriteMu.Lock()
 			_, err := e.metaDB.Exec(`
-				INSERT INTO posts (id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
+				INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, p.ID, p.ParentID, p.Community, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
+			`, p.ID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
 			e.metaWriteMu.Unlock()
 			if err != nil {
 				return nil, fmt.Errorf("insert sqlite post with shard id failed: %w", err)
@@ -360,9 +431,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		} else {
 			e.metaWriteMu.Lock()
 			res, err := e.metaDB.Exec(`
-				INSERT INTO posts (parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
+				INSERT INTO posts (parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, p.ParentID, p.Community, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
+			`, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
 			if err != nil {
 				e.metaWriteMu.Unlock()
 				return nil, fmt.Errorf("insert sqlite post failed: %w", err)
@@ -377,9 +448,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	} else {
 		e.metaWriteMu.Lock()
 		_, err := e.metaDB.Exec(`
-			INSERT INTO posts (id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
+			INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, p.ID, p.ParentID, p.Community, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
+		`, p.ID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
 		e.metaWriteMu.Unlock()
 		if err != nil {
 			return nil, fmt.Errorf("insert sqlite post with explicit id failed: %w", err)
@@ -403,15 +474,16 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
 	var p model.Post
 	err := e.metaDB.QueryRow(`
-		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
 		FROM posts WHERE id = ?
-	`, postID).Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money)
+	`, postID).Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money)
 	if err != nil {
 		return nil, err
 	}
 	if p.Modified == 0 {
 		p.Modified = p.CreatedAt
 	}
+	e.fillCommunity(&p)
 
 	// Read content from Pebble
 	key := model.EncodePostKey(postID)
@@ -444,10 +516,14 @@ func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
 }
 
 func (e *Engine) GetPostByCommunityFile(community, postFile string) (*model.Post, error) {
+	cid, ok := e.reg.Lookup(community)
+	if !ok {
+		return nil, sql.ErrNoRows
+	}
 	var id uint64
 	err := e.metaDB.QueryRow(`
-		SELECT id FROM posts WHERE community = ? AND post_file = ?
-	`, community, postFile).Scan(&id)
+		SELECT id FROM posts WHERE community_id = ? AND post_file = ?
+	`, cid, postFile).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
@@ -455,23 +531,31 @@ func (e *Engine) GetPostByCommunityFile(community, postFile string) (*model.Post
 }
 
 func (e *Engine) CountPosts(community string) (int, error) {
+	cid, ok := e.reg.Lookup(community)
+	if !ok {
+		return 0, nil
+	}
 	var count int
 	err := e.metaDB.QueryRow(`
-		SELECT count(*) FROM posts WHERE community = ? AND deleted = 0 AND removed = 0
-	`, community).Scan(&count)
+		SELECT count(*) FROM posts WHERE community_id = ? AND deleted = 0 AND removed = 0
+	`, cid).Scan(&count)
 	return count, err
 }
 
 // ListPostMeta returns the metadata (without content) of every post,
 // including deleted ones, in community, ordered by ID.
 func (e *Engine) ListPostMeta(community string) ([]*model.Post, error) {
+	cid, ok := e.reg.Lookup(community)
+	if !ok {
+		return nil, nil
+	}
 	// Counts of recent votes and comments may still be pending in memory.
 	e.FlushDirtyDeltas()
 
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
-		FROM posts WHERE community = ? ORDER BY id
-	`, community)
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		FROM posts WHERE community_id = ? ORDER BY id
+	`, cid)
 	if err != nil {
 		return nil, err
 	}
@@ -480,12 +564,13 @@ func (e *Engine) ListPostMeta(community string) ([]*model.Post, error) {
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
 			p.Modified = p.CreatedAt
 		}
+		e.fillCommunity(&p)
 		posts = append(posts, &p)
 	}
 	return posts, rows.Err()
@@ -494,8 +579,12 @@ func (e *Engine) ListPostMeta(community string) ([]*model.Post, error) {
 // SetPostMeta updates the filemode and money of a post, as mbbsd changes
 // them in .DIR.
 func (e *Engine) SetPostMeta(community, postFile string, filemode, money int) error {
+	cid, ok := e.reg.Lookup(community)
+	if !ok {
+		return fmt.Errorf("post not found: %s/%s", community, postFile)
+	}
 	var id uint64
-	if err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community = ? AND post_file = ?`, community, postFile).Scan(&id); err != nil {
+	if err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community_id = ? AND post_file = ?`, cid, postFile).Scan(&id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("post not found: %s/%s", community, postFile)
 		}
@@ -533,10 +622,14 @@ func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, 
 	if offset < 0 {
 		offset = 0
 	}
+	cid, ok := e.reg.Lookup(community)
+	if !ok {
+		return nil, nil
+	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
-		FROM posts WHERE community = ? AND deleted = 0 AND removed = 0 ORDER BY id DESC LIMIT ? OFFSET ?
-	`, community, limit, offset)
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		FROM posts WHERE community_id = ? AND deleted = 0 AND removed = 0 ORDER BY id DESC LIMIT ? OFFSET ?
+	`, cid, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -545,12 +638,13 @@ func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, 
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
 			p.Modified = p.CreatedAt
 		}
+		e.fillCommunity(&p)
 		posts = append(posts, &p)
 	}
 	return posts, nil
@@ -563,10 +657,14 @@ func (e *Engine) ListDeletedPosts(community string, limit, offset int) ([]*model
 	if offset < 0 {
 		offset = 0
 	}
+	cid, ok := e.reg.Lookup(community)
+	if !ok {
+		return nil, nil
+	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
-		FROM posts WHERE community = ? AND (deleted = 1 OR removed = 1) ORDER BY id DESC LIMIT ? OFFSET ?
-	`, community, limit, offset)
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		FROM posts WHERE community_id = ? AND (deleted = 1 OR removed = 1) ORDER BY id DESC LIMIT ? OFFSET ?
+	`, cid, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -575,12 +673,13 @@ func (e *Engine) ListDeletedPosts(community string, limit, offset int) ([]*model
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
 			p.Modified = p.CreatedAt
 		}
+		e.fillCommunity(&p)
 		posts = append(posts, &p)
 	}
 	return posts, nil
@@ -592,7 +691,7 @@ func (e *Engine) GetReplies(parentID uint64, limit, offset int) ([]*model.Post, 
 		limit = 50
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
 		FROM posts WHERE parent_id = ? ORDER BY id ASC LIMIT ? OFFSET ?
 	`, parentID, limit, offset)
 	if err != nil {
@@ -603,12 +702,13 @@ func (e *Engine) GetReplies(parentID uint64, limit, offset int) ([]*model.Post, 
 	var replies []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.Community, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
 			p.Modified = p.CreatedAt
 		}
+		e.fillCommunity(&p)
 		replies = append(replies, &p)
 	}
 	return replies, nil
@@ -641,13 +741,17 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 	if createdAt == 0 {
 		createdAt = time.Now().Unix()
 	}
+	targetID, err := e.reg.Ensure(targetCommunity)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// 1. Insert into SQLite crossposts table
 	e.metaWriteMu.Lock()
 	res, err := e.metaDB.Exec(`
-		INSERT INTO crossposts (source_post_id, target_community, target_post_file, creator_name, creator_id, created_at)
+		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
-	`, srcPost.ID, targetCommunity, targetPostFile, creatorName, creatorID, createdAt)
+	`, srcPost.ID, targetID, targetPostFile, creatorName, creatorID, createdAt)
 	if err != nil {
 		e.metaWriteMu.Unlock()
 		return nil, 0, fmt.Errorf("insert crosspost failed: %w", err)
@@ -670,13 +774,14 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 	srcPost.NumCrossposts = newCount
 
 	rec := &model.CrosspostRecord{
-		ID:              uint64(id),
-		SourcePostID:    srcPost.ID,
-		TargetCommunity: targetCommunity,
-		TargetPostFile:  targetPostFile,
-		CreatorName:     creatorName,
-		CreatorID:       creatorID,
-		CreatedAt:       createdAt,
+		ID:                uint64(id),
+		SourcePostID:      srcPost.ID,
+		TargetCommunityID: targetID,
+		TargetCommunity:   e.reg.Name(targetID),
+		TargetPostFile:    targetPostFile,
+		CreatorName:       creatorName,
+		CreatorID:         creatorID,
+		CreatedAt:         createdAt,
 	}
 
 	// 3. Write to Pebble (Source of truth)
@@ -701,7 +806,7 @@ func (e *Engine) GetCrossposts(community, postFile string) ([]*model.CrosspostRe
 	}
 
 	rows, err := e.metaDB.Query(`
-		SELECT id, source_post_id, target_community, target_post_file, creator_name, creator_id, created_at
+		SELECT id, source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at
 		FROM crossposts WHERE source_post_id = ? ORDER BY id ASC
 	`, post.ID)
 	if err != nil {
@@ -712,9 +817,10 @@ func (e *Engine) GetCrossposts(community, postFile string) ([]*model.CrosspostRe
 	var records []*model.CrosspostRecord
 	for rows.Next() {
 		var r model.CrosspostRecord
-		if err := rows.Scan(&r.ID, &r.SourcePostID, &r.TargetCommunity, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt); err != nil {
+		if err := rows.Scan(&r.ID, &r.SourcePostID, &r.TargetCommunityID, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt); err != nil {
 			return nil, err
 		}
+		r.TargetCommunity = e.reg.Name(r.TargetCommunityID)
 		records = append(records, &r)
 	}
 	return records, nil
@@ -722,17 +828,22 @@ func (e *Engine) GetCrossposts(community, postFile string) ([]*model.CrosspostRe
 
 // GetOriginPost finds the source post if target was crossposted from another board
 func (e *Engine) GetOriginPost(targetCommunity, targetPostFile string) (*model.Post, *model.CrosspostRecord, error) {
+	targetID, ok := e.reg.Lookup(targetCommunity)
+	if !ok {
+		return nil, nil, nil
+	}
 	var r model.CrosspostRecord
 	err := e.metaDB.QueryRow(`
-		SELECT id, source_post_id, target_community, target_post_file, creator_name, creator_id, created_at
-		FROM crossposts WHERE target_community = ? AND target_post_file = ?
-	`, targetCommunity, targetPostFile).Scan(&r.ID, &r.SourcePostID, &r.TargetCommunity, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt)
+		SELECT id, source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at
+		FROM crossposts WHERE target_community_id = ? AND target_post_file = ?
+	`, targetID, targetPostFile).Scan(&r.ID, &r.SourcePostID, &r.TargetCommunityID, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, nil
 		}
 		return nil, nil, err
 	}
+	r.TargetCommunity = e.reg.Name(r.TargetCommunityID)
 
 	srcPost, err := e.GetPost(r.SourcePostID)
 	if err != nil {
@@ -1026,7 +1137,7 @@ func (e *Engine) PurgeUserComments(author string, maxAge time.Duration) (purged 
 func (e *Engine) PurgeUserPosts(author string, maxAge time.Duration) (purged int, err error) {
 	minTimestamp := time.Now().Add(-maxAge).Unix()
 	rows, err := e.metaDB.Query(`
-		SELECT id, community, post_file FROM posts WHERE creator_name = ? AND created_at >= ?
+		SELECT id, community_id, post_file FROM posts WHERE creator_name = ? AND created_at >= ?
 	`, author, minTimestamp)
 	if err != nil {
 		return 0, err
@@ -1034,14 +1145,14 @@ func (e *Engine) PurgeUserPosts(author string, maxAge time.Duration) (purged int
 	defer rows.Close()
 
 	type targetPost struct {
-		ID        uint64
-		Community string
-		PostFile  string
+		ID          uint64
+		CommunityID int64
+		PostFile    string
 	}
 	var targets []targetPost
 	for rows.Next() {
 		var t targetPost
-		if err := rows.Scan(&t.ID, &t.Community, &t.PostFile); err == nil {
+		if err := rows.Scan(&t.ID, &t.CommunityID, &t.PostFile); err == nil {
 			targets = append(targets, t)
 		}
 	}
@@ -1094,8 +1205,9 @@ func (e *Engine) PurgeUserPosts(author string, maxAge time.Duration) (purged int
 		}
 
 		// Remove local cache file
-		cachePath := filepath.Join(e.cfg.CacheDir, t.Community, t.PostFile)
-		os.Remove(cachePath)
+		if e.separateCache() {
+			os.Remove(filepath.Join(e.communityCacheDir(t.CommunityID), t.PostFile))
+		}
 		purged++
 	}
 
@@ -1109,12 +1221,48 @@ func (e *Engine) PurgeUserPosts(author string, maxAge time.Duration) (purged int
 	return purged, nil
 }
 
-// DeleteCommunity completely removes all posts, comments, votes, history, and cache for a community.
-func (e *Engine) DeleteCommunity(community string) (postsDeleted int, commentsDeleted int, err error) {
+// ClearCommunity completely removes all posts, comments, votes, history,
+// and cache of the active community, which keeps its ID and name.
+func (e *Engine) ClearCommunity(community string) (postsDeleted int, commentsDeleted int, err error) {
 	if community == "" {
 		return 0, 0, fmt.Errorf("community name required")
 	}
+	cid, ok := e.reg.Lookup(community)
+	if !ok {
+		return 0, 0, nil
+	}
+	return e.clearCommunity(cid)
+}
 
+// PurgeCommunity completely removes all posts, comments, votes, history, and
+// cache of the community id (which may be soft-deleted), and then removes it
+// from the registry.
+func (e *Engine) PurgeCommunity(id int64) (postsDeleted int, commentsDeleted int, err error) {
+	if _, ok := e.reg.Get(id); !ok {
+		return 0, 0, fmt.Errorf("%w: #%d", ErrCommunityNotFound, id)
+	}
+	postsDeleted, commentsDeleted, err = e.clearCommunity(id)
+	if err != nil {
+		return postsDeleted, commentsDeleted, err
+	}
+	return postsDeleted, commentsDeleted, e.reg.Remove(id)
+}
+
+// RenameCommunity changes the name of a community and returns its ID.
+// Nothing on disk is keyed by the name (the cache is named after the ID, and
+// mbbsd moves the BBS board itself), so only the registry changes.
+func (e *Engine) RenameCommunity(oldName, newName string) (int64, error) {
+	return e.reg.Rename(oldName, newName)
+}
+
+// SoftDeleteCommunity marks a community as deleted and returns its ID. Its
+// posts are kept (and can be purged with PurgeCommunity), and the name can
+// be used by a new community.
+func (e *Engine) SoftDeleteCommunity(name string) (int64, error) {
+	return e.reg.SoftDelete(name)
+}
+
+func (e *Engine) clearCommunity(community int64) (postsDeleted int, commentsDeleted int, err error) {
 	// 1. Flush any pending deltas first so SQLite is up to date
 	e.FlushDirtyDeltas()
 
@@ -1122,9 +1270,9 @@ func (e *Engine) DeleteCommunity(community string) (postsDeleted int, commentsDe
 	defer e.metaWriteMu.Unlock()
 
 	// 2. Query all post IDs in this community
-	rows, err := e.metaDB.Query("SELECT id, post_file FROM posts WHERE community = ?", community)
+	rows, err := e.metaDB.Query("SELECT id, post_file FROM posts WHERE community_id = ?", community)
 	if err != nil {
-		return 0, 0, fmt.Errorf("query posts for community %s failed: %w", community, err)
+		return 0, 0, fmt.Errorf("query posts for community #%d failed: %w", community, err)
 	}
 	defer rows.Close()
 
@@ -1148,10 +1296,10 @@ func (e *Engine) DeleteCommunity(community string) (postsDeleted int, commentsDe
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Exec("DELETE FROM crossposts WHERE target_community = ? OR source_post_id IN (SELECT id FROM posts WHERE community = ?)", community, community); err != nil {
+	if _, err := tx.Exec("DELETE FROM crossposts WHERE target_community_id = ? OR source_post_id IN (SELECT id FROM posts WHERE community_id = ?)", community, community); err != nil {
 		return 0, 0, fmt.Errorf("delete crossposts failed: %w", err)
 	}
-	if _, err := tx.Exec("DELETE FROM posts WHERE community = ?", community); err != nil {
+	if _, err := tx.Exec("DELETE FROM posts WHERE community_id = ?", community); err != nil {
 		return 0, 0, fmt.Errorf("delete posts failed: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -1307,8 +1455,8 @@ func (e *Engine) DeleteCommunity(community string) (postsDeleted int, commentsDe
 	historyBatch.Close()
 
 	// 5. Clean cache directory
-	if e.cfg.CacheDir != "" {
-		_ = os.RemoveAll(filepath.Join(e.cfg.CacheDir, community))
+	if e.separateCache() {
+		_ = os.RemoveAll(e.communityCacheDir(community))
 	}
 
 	return postsDeleted, commentsDeleted, nil
@@ -1348,7 +1496,7 @@ func (e *Engine) purgePostRecord(p *model.Post) error {
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Exec("DELETE FROM crossposts WHERE source_post_id = ? OR (target_community = ? AND target_post_file = ?)", p.ID, p.Community, p.PostFile); err != nil {
+	if _, err := tx.Exec("DELETE FROM crossposts WHERE source_post_id = ? OR (target_community_id = ? AND target_post_file = ?)", p.ID, p.CommunityID, p.PostFile); err != nil {
 		return fmt.Errorf("delete crossposts failed: %w", err)
 	}
 	if _, err := tx.Exec("DELETE FROM posts WHERE id = ?", p.ID); err != nil {
@@ -1686,23 +1834,35 @@ func BoardDir(bbsHome, community string) string {
 	return filepath.Join(bbsHome, "boards", strings.ToUpper(c), community)
 }
 
+// BoardFilePath returns the path of the post in the BBS board, which is
+// named after the current name of the community. It returns "" for posts of
+// a soft-deleted community, whose name may now belong to another board.
 func (e *Engine) BoardFilePath(p *model.Post) string {
 	if p.PostFile == "" || p.PostFile == "-" {
+		return ""
+	}
+	if p.CommunityID != 0 && !e.reg.Active(p.CommunityID) {
 		return ""
 	}
 	dir := BoardDir(e.cfg.BBSHome, p.Community)
 	return filepath.Join(dir, p.PostFile)
 }
 
+// CacheFilePath returns the path of the cache file of the post, which is
+// CacheDir/<community_id>/<post_file> (or the BBS board file if there is no
+// separate cache).
 func (e *Engine) CacheFilePath(p *model.Post) string {
-	if e.cfg.CacheDir != "" && e.cfg.CacheDir != "boards" && e.cfg.CacheDir != filepath.Join(e.cfg.BBSHome, "boards") {
-		return filepath.Join(e.cfg.CacheDir, p.Community, p.PostFile)
+	if e.separateCache() {
+		return filepath.Join(e.communityCacheDir(p.CommunityID), p.PostFile)
 	}
 	return e.BoardFilePath(p)
 }
 
 func (e *Engine) WritePostCache(p *model.Post) error {
 	path := e.CacheFilePath(p)
+	if path == "" {
+		return nil
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
@@ -1917,7 +2077,10 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 	if p.Content == "" && p.PostFile != "" && p.PostFile != "-" {
 		// Fallback: reload content from BBS disk file if content was empty upon initial creation
 		var paths []string
-		if len(p.Community) > 0 {
+		switch {
+		case p.CommunityID != 0 && !e.reg.Active(p.CommunityID):
+			// The name of a deleted community may belong to another board.
+		case len(p.Community) > 0:
 			c := string(p.Community[0])
 			paths = []string{
 				filepath.Join(e.cfg.BBSHome, "boards", c, p.Community, p.PostFile),
@@ -1925,7 +2088,7 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 				filepath.Join(e.cfg.BBSHome, "boards", strings.ToLower(c), p.Community, p.PostFile),
 				filepath.Join(e.cfg.BBSHome, "boards", p.Community, p.PostFile),
 			}
-		} else {
+		default:
 			matches, _ := filepath.Glob(filepath.Join(e.cfg.BBSHome, "boards", "*", "*", p.PostFile))
 			if len(matches) == 0 {
 				matches, _ = filepath.Glob(filepath.Join(e.cfg.BBSHome, "boards", "*", p.PostFile))
@@ -1972,8 +2135,8 @@ func (e *Engine) RenderAndSave(p *model.Post) error {
 	}
 
 	// 2. Also update external cache directory if explicitly configured (and different from boards)
-	if e.cfg.CacheDir != "" && e.cfg.CacheDir != "boards" && e.cfg.CacheDir != filepath.Join(e.cfg.BBSHome, "boards") {
-		cachePath := filepath.Join(e.cfg.CacheDir, p.Community, p.PostFile)
+	if e.separateCache() {
+		cachePath := e.CacheFilePath(p)
 		if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err == nil {
 			tmpCache := fmt.Sprintf("%s.tmp.%d", cachePath, os.Getpid())
 			if err := os.WriteFile(tmpCache, rendered, 0644); err == nil {
@@ -2006,7 +2169,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	}
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO posts (id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money)
+		INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'utf-8', ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -2015,7 +2178,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	defer stmt.Close()
 
 	crosspostStmt, err := tx.Prepare(`
-		INSERT INTO crossposts (source_post_id, target_community, target_post_file, creator_name, creator_id, created_at)
+		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -2035,7 +2198,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		if len(pIter.Key()) > 0 && pIter.Key()[0] == 'x' {
 			xRec, err := model.DecodeRFC822Crosspost(pIter.Value())
 			if err == nil {
-				if _, err := crosspostStmt.Exec(xRec.SourcePostID, xRec.TargetCommunity, xRec.TargetPostFile, xRec.CreatorName, xRec.CreatorID, xRec.CreatedAt); err != nil {
+				if _, err := crosspostStmt.Exec(xRec.SourcePostID, xRec.TargetCommunityID, xRec.TargetPostFile, xRec.CreatorName, xRec.CreatorID, xRec.CreatedAt); err != nil {
 					return 0, 0, err
 				}
 				postCrosspostCounts[xRec.SourcePostID]++
@@ -2057,7 +2220,8 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		}
 		filemode, _ := strconv.Atoi(meta["Filemode"])
 		money, _ := strconv.Atoi(meta["Money"])
-		if _, err := stmt.Exec(postID, parentID, meta["Community"], meta["PostFile"], meta["Title"], meta["CreatorName"], model.ParsePersonID(meta["CreatorID"]), ctime, mtime, filemode,
+		communityID, _ := strconv.ParseInt(meta["CommunityID"], 10, 64)
+		if _, err := stmt.Exec(postID, parentID, communityID, meta["PostFile"], meta["Title"], meta["CreatorName"], model.ParsePersonID(meta["CreatorID"]), ctime, mtime, filemode,
 			boolToInt(del.Deleted), boolToInt(del.Removed), del.DeletedAt, del.ModPersonName, del.ModPersonID, del.Reason, money); err != nil {
 			return 0, 0, err
 		}
@@ -2205,6 +2369,7 @@ func (e *Engine) UpdatePost(postID uint64, newTitle, newContent, editorName stri
 	revRecord := &model.PostRevision{
 		PostID:      p.ID,
 		Revision:    nextRev,
+		CommunityID: p.CommunityID,
 		Community:   p.Community,
 		PostFile:    p.PostFile,
 		Title:       p.Title,
@@ -2292,6 +2457,7 @@ func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editorName string, edi
 	revRecord := &model.PostRevision{
 		PostID:      p.ID,
 		Revision:    nextRev,
+		CommunityID: p.CommunityID,
 		Community:   p.Community,
 		PostFile:    p.PostFile,
 		Title:       p.Title,
@@ -2370,6 +2536,7 @@ func (e *Engine) DeletePost(postID uint64, deleterName string, deleterID model.P
 	revRecord := &model.PostRevision{
 		PostID:      p.ID,
 		Revision:    nextRev,
+		CommunityID: p.CommunityID,
 		Community:   p.Community,
 		PostFile:    p.PostFile,
 		Title:       p.Title,
@@ -2672,7 +2839,11 @@ func (e *Engine) GetPostHistory(postID uint64, rev uint32) (*model.PostRevision,
 		return nil, fmt.Errorf("post %d revision %d not found: %w", postID, rev, err)
 	}
 	defer closer.Close()
-	return model.DecodeRFC822PostRevision(val)
+	r, err := model.DecodeRFC822PostRevision(val)
+	if err == nil {
+		r.Community = e.reg.Name(r.CommunityID)
+	}
+	return r, err
 }
 
 func (e *Engine) ListPostHistory(postID uint64) ([]*model.PostRevision, error) {
@@ -2690,6 +2861,7 @@ func (e *Engine) ListPostHistory(postID uint64) ([]*model.PostRevision, error) {
 	for iter.First(); iter.Valid() && bytes.HasPrefix(iter.Key(), prefix); iter.Next() {
 		r, err := model.DecodeRFC822PostRevision(iter.Value())
 		if err == nil {
+			r.Community = e.reg.Name(r.CommunityID)
 			revs = append(revs, r)
 		}
 	}
@@ -2757,10 +2929,10 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer tx.Rollback()
 
 	stmtPost, err := tx.Prepare(`
-		INSERT INTO posts (id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding,
+		INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding,
 			deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(community, post_file) DO UPDATE SET
+		ON CONFLICT(community_id, post_file) DO UPDATE SET
 			title = excluded.title,
 			creator_name = excluded.creator_name,
 			creator_id = excluded.creator_id,
@@ -2781,7 +2953,7 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer stmtPost.Close()
 
 	stmtCP, err := tx.Prepare(`
-		INSERT INTO crossposts (source_post_id, target_community, target_post_file, creator_name, creator_id, created_at)
+		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -2798,6 +2970,9 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 
 	for _, item := range batch {
 		p := item.Post
+		if err := e.resolveCommunity(p); err != nil {
+			return err
+		}
 		if len(item.Comments) > 0 || !p.DeletedOrRemoved() {
 			// A deleted post imported from .DIR has no comments, only a count.
 			p.NumComments = len(item.Comments)
@@ -2818,7 +2993,7 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 
 		var id uint64
 		err := stmtPost.QueryRow(
-			candidateID, p.ParentID, p.Community, p.PostFile, p.Title, p.CreatorName, p.CreatorID,
+			candidateID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID,
 			p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes,
 			p.NumComments, p.NumCrossposts, p.Encoding,
 			boolToInt(p.Deleted), boolToInt(p.Removed), p.DeletedAt, p.ModPersonName, p.ModPersonID, p.Reason,
@@ -2863,7 +3038,15 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 		// Crossposts
 		for i, cp := range item.Crossposts {
 			cp.SourcePostID = p.ID
-			cpRes, cpErr := stmtCP.Exec(p.ID, cp.TargetCommunity, cp.TargetPostFile, cp.CreatorName, cp.CreatorID, cp.CreatedAt)
+			if cp.TargetCommunityID == 0 && cp.TargetCommunity != "" {
+				targetID, err := e.reg.Ensure(cp.TargetCommunity)
+				if err != nil {
+					return err
+				}
+				cp.TargetCommunityID = targetID
+			}
+			cp.TargetCommunity = e.reg.Name(cp.TargetCommunityID)
+			cpRes, cpErr := stmtCP.Exec(p.ID, cp.TargetCommunityID, cp.TargetPostFile, cp.CreatorName, cp.CreatorID, cp.CreatedAt)
 			if cpErr == nil {
 				cpID, _ := cpRes.LastInsertId()
 				cp.ID = uint64(cpID)
@@ -3175,7 +3358,11 @@ func (e *Engine) RenderCommunity(opts RenderCommunityOptions) (int, error) {
 		return 0, fmt.Errorf("mkdir targetDir failed: %w", err)
 	}
 
-	rows, err := e.metaDB.Query("SELECT id, post_file FROM posts WHERE community = ? AND deleted = 0 AND removed = 0 ORDER BY id ASC", opts.Community)
+	cid, ok := e.reg.Lookup(opts.Community)
+	if !ok {
+		return 0, nil
+	}
+	rows, err := e.metaDB.Query("SELECT id, post_file FROM posts WHERE community_id = ? AND deleted = 0 AND removed = 0 ORDER BY id ASC", cid)
 	if err != nil {
 		return 0, fmt.Errorf("query posts failed: %w", err)
 	}

@@ -17,7 +17,7 @@ import (
 func dumpMetaRows(t *testing.T, db *sql.DB) map[string]string {
 	t.Helper()
 	out := map[string]string{}
-	rows, err := db.Query(`SELECT id, parent_id, community, post_file, title, creator_name, creator_id, created_at, modified, filemode,
+	rows, err := db.Query(`SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode,
 		upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
 		FROM posts`)
 	if err != nil {
@@ -38,18 +38,18 @@ func dumpMetaRows(t *testing.T, db *sql.DB) map[string]string {
 			out[fmt.Sprintf("post %v %s", vals[0], c)] = fmt.Sprint(vals[i])
 		}
 	}
-	xrows, err := db.Query(`SELECT source_post_id, target_community, target_post_file, creator_name, creator_id, created_at FROM crossposts`)
+	xrows, err := db.Query(`SELECT source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at FROM crossposts`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer xrows.Close()
 	for xrows.Next() {
-		var src, cid, ctime int64
-		var tc, tf, cn string
+		var src, tc, cid, ctime int64
+		var tf, cn string
 		if err := xrows.Scan(&src, &tc, &tf, &cn, &cid, &ctime); err != nil {
 			t.Fatal(err)
 		}
-		out[fmt.Sprintf("crosspost %d->%s/%s", src, tc, tf)] = fmt.Sprint(cn, " ", cid, " ", ctime)
+		out[fmt.Sprintf("crosspost %d->#%d/%s", src, tc, tf)] = fmt.Sprint(cn, " ", cid, " ", ctime)
 	}
 	return out
 }

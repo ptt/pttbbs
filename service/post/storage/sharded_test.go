@@ -51,7 +51,13 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 		t.Fatalf("expected %d shards, got %d", numShards, sharded.Shards())
 	}
 
-	// 1. Verify community routing and pinning
+	// 1. Verify community routing and pinning (pins choose the shard of
+	// new communities)
+	for _, name := range []string{"Gossiping", "Marginalman"} {
+		if _, err := sharded.Communities().Ensure(name); err != nil {
+			t.Fatal(err)
+		}
+	}
 	e0 := sharded.GetEngineByCommunity("Gossiping")
 	if e0 != sharded.engines[0] {
 		t.Errorf("Gossiping not pinned to engine 0")

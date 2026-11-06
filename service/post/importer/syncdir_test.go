@@ -3,6 +3,7 @@ package importer
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"math"
 	"os"
 	"path/filepath"
@@ -249,12 +250,12 @@ func TestSyncDir(t *testing.T) {
 		"realuser": {7, 1700000000},
 	}
 	uidOf := func(id string) model.PersonID { return model.MakePersonID(users[id].usernum, users[id].firstlogin) }
-	importStats, err := MigrateBoard(engine, ImportBoardOptions{BBSHome: tempDir, Board: "SyncBoard", IsBig5: true, Users: users})
+	importStats, err := ImportBoard(engine, ImportBoardOptions{BBSHome: tempDir, Board: "SyncBoard", IsBig5: true, Users: users})
 	if err != nil {
-		t.Fatalf("MigrateBoard failed: %v", err)
+		t.Fatalf("ImportBoard failed: %v", err)
 	}
 	if importStats.PostsImported != 4 || importStats.DeletedImported != 1 {
-		t.Fatalf("MigrateBoard: %+v, want 4 posts imported, 1 of them deleted", importStats)
+		t.Fatalf("ImportBoard: %+v, want 4 posts imported, 1 of them deleted", importStats)
 	}
 
 	// Metadata from .DIR is imported.
@@ -544,5 +545,24 @@ func TestSyncDirRebuild(t *testing.T) {
 	}
 	if stats := sync(SyncDirOptions{}); stats.Records != 0 || stats.Updated != 3 {
 		t.Errorf("rebuild of a missing .DIR: %+v", stats)
+	}
+
+	// A board post.svc has no community for is left alone.
+	otherDir := filepath.Join(tempDir, "boards", "U", "Unknown")
+	if err := os.MkdirAll(otherDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	otherDIR := dirFixture{filename: "M.1728000001.A.001", owner: "userA", title: "舊文"}.record()
+	if err := os.WriteFile(filepath.Join(otherDir, ".DIR"), otherDIR, 0644); err != nil {
+		t.Fatal(err)
+	}
+	for _, opts := range []SyncDirOptions{{Rebuild: true}, {Full: true, Prune: true, AddMissing: true}, {}} {
+		opts.BBSHome, opts.Board, opts.IsBig5 = tempDir, "Unknown", true
+		if _, err := SyncDir(engine, opts); !errors.Is(err, ErrUnknownCommunity) {
+			t.Errorf("SyncDir(%+v) of an unknown board: err = %v, want ErrUnknownCommunity", opts, err)
+		}
+	}
+	if got, _ := os.ReadFile(filepath.Join(otherDir, ".DIR")); !bytes.Equal(got, otherDIR) {
+		t.Errorf("SyncDir changed the .DIR of an unknown board")
 	}
 }

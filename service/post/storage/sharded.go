@@ -2,19 +2,24 @@ package storage
 
 import (
 	"fmt"
-	"hash/crc32"
-	"strings"
 	"time"
 
 	"pttbbs/post/config"
 	"pttbbs/post/model"
 )
 
-// ShardedEngine orchestrates multiple physical storage.Engine instances
+// ShardedEngine orchestrates multiple physical storage.Engine instances.
+//
+// All engines share one community registry, kept in the base DataDir (or
+// the DataDir of the first engine if there is none). The registry stores
+// the shard of each community, chosen once when it is created: the shard
+// its name is pinned to, or else (ID % shards). Renaming a community, or
+// changing the pins, never moves it.
 type ShardedEngine struct {
 	baseCfg Config
 	engines []*Engine
-	pins    map[string]int
+	reg     *CommunityRegistry
+	pins    map[string]int // lower-cased community name -> shard, for new communities
 }
 
 // OpenStorage creates either a single Engine or a ShardedEngine based on ServiceConfig
@@ -62,8 +67,18 @@ func OpenShardedEngine(baseCfg Config, locations []config.EngineLocation, pins m
 	numShards := len(locations)
 	engines := make([]*Engine, numShards)
 
+	regDir := baseCfg.DataDir
+	if regDir == "" {
+		regDir = locations[0].DataDir
+	}
+	reg, err := OpenCommunityRegistry(regDir)
+	if err != nil {
+		return nil, err
+	}
+
 	for i, loc := range locations {
 		cfg := baseCfg
+		cfg.Communities = reg
 		cfg.DataDir = loc.DataDir
 		cfg.CacheDir = loc.CacheDir
 		cfg.ShardID = i
@@ -83,6 +98,7 @@ func OpenShardedEngine(baseCfg Config, locations []config.EngineLocation, pins m
 			for j := 0; j < i; j++ {
 				_ = engines[j].Close()
 			}
+			reg.Close()
 			return nil, fmt.Errorf("failed to open shard engine %d (%s): %w", i, loc.DataDir, err)
 		}
 		engines[i] = eng
@@ -91,15 +107,30 @@ func OpenShardedEngine(baseCfg Config, locations []config.EngineLocation, pins m
 	copiedPins := make(map[string]int)
 	for k, v := range pins {
 		if v >= 0 && v < numShards {
-			copiedPins[strings.TrimSpace(k)] = v
+			copiedPins[communityKey(k)] = v
 		}
 	}
 
-	return &ShardedEngine{
+	s := &ShardedEngine{
 		baseCfg: baseCfg,
 		engines: engines,
+		reg:     reg,
 		pins:    copiedPins,
-	}, nil
+	}
+	reg.SetShardAssigner(s.assignShard)
+	return s, nil
+}
+
+// assignShard chooses the shard of a new community: the one its name is
+// pinned to, or else (ID % shards).
+func (s *ShardedEngine) assignShard(name string, id int64) int {
+	if idx, ok := s.pins[communityKey(name)]; ok {
+		return idx
+	}
+	if id < 0 {
+		id = -id
+	}
+	return int(id % int64(len(s.engines)))
 }
 
 // Shards returns the number of active shards
@@ -107,17 +138,41 @@ func (s *ShardedEngine) Shards() int {
 	return len(s.engines)
 }
 
-// GetEngineByCommunity routes a community to its target engine (pinned or consistent hash)
+// Communities returns the community registry shared by all engines.
+func (s *ShardedEngine) Communities() *CommunityRegistry {
+	return s.reg
+}
+
+// GetEngineByCommunityID routes a community ID to the engine of the shard
+// stored for it. Unknown IDs go to the first shard, which finds nothing.
+func (s *ShardedEngine) GetEngineByCommunityID(id int64) *Engine {
+	if shard, ok := s.reg.Shard(id); ok && shard >= 0 && shard < len(s.engines) {
+		return s.engines[shard]
+	}
+	return s.engines[0]
+}
+
+// GetEngineByCommunity routes an existing community to its engine. Unknown
+// (or deleted) names go to the first shard, which then simply finds
+// nothing.
 func (s *ShardedEngine) GetEngineByCommunity(community string) *Engine {
-	norm := strings.TrimSpace(community)
-	if idx, ok := s.pins[norm]; ok && idx >= 0 && idx < len(s.engines) {
-		return s.engines[idx]
+	if id, ok := s.reg.Lookup(community); ok {
+		return s.GetEngineByCommunityID(id)
 	}
-	if len(s.engines) == 1 {
-		return s.engines[0]
+	return s.engines[0]
+}
+
+// engineForWrite routes a community that is about to be written to,
+// registering it (and so choosing its shard) if needed.
+func (s *ShardedEngine) engineForWrite(community string) (*Engine, error) {
+	if community == "" {
+		return s.engines[0], nil
 	}
-	h := crc32.ChecksumIEEE([]byte(strings.ToLower(norm)))
-	return s.engines[int(h)%len(s.engines)]
+	id, err := s.reg.Ensure(community)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetEngineByCommunityID(id), nil
 }
 
 // GetEngineByPostID routes a post ID to its origin engine shard via modulo
@@ -134,7 +189,14 @@ func (s *ShardedEngine) GetEngineByPostID(postID uint64) *Engine {
 // -----------------------------------------------------------------------------
 
 func (s *ShardedEngine) CreatePost(p *model.Post) (*model.Post, error) {
-	return s.GetEngineByCommunity(p.Community).CreatePost(p)
+	if p.CommunityID != 0 {
+		return s.GetEngineByCommunityID(p.CommunityID).CreatePost(p)
+	}
+	eng, err := s.engineForWrite(p.Community)
+	if err != nil {
+		return nil, err
+	}
+	return eng.CreatePost(p)
 }
 
 func (s *ShardedEngine) GetPost(postID uint64) (*model.Post, error) {
@@ -174,7 +236,11 @@ func (s *ShardedEngine) GetThread(rootID uint64) ([]*model.Post, error) {
 }
 
 func (s *ShardedEngine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64) (*model.CrosspostRecord, int, error) {
-	return s.GetEngineByCommunity(targetCommunity).AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName, creatorID, createdAt)
+	eng, err := s.engineForWrite(targetCommunity)
+	if err != nil {
+		return nil, 0, err
+	}
+	return eng.AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName, creatorID, createdAt)
 }
 
 func (s *ShardedEngine) GetCrossposts(community, postFile string) ([]*model.CrosspostRecord, error) {
@@ -237,8 +303,25 @@ func (s *ShardedEngine) PurgeUserPosts(author string, maxAge time.Duration) (int
 	return total, nil
 }
 
-func (s *ShardedEngine) DeleteCommunity(community string) (int, int, error) {
-	return s.GetEngineByCommunity(community).DeleteCommunity(community)
+func (s *ShardedEngine) ClearCommunity(community string) (int, int, error) {
+	return s.GetEngineByCommunity(community).ClearCommunity(community)
+}
+
+// RenameCommunity renames a community, which stays on its shard.
+func (s *ShardedEngine) RenameCommunity(oldName, newName string) (int64, error) {
+	return s.reg.Rename(oldName, newName)
+}
+
+func (s *ShardedEngine) SoftDeleteCommunity(name string) (int64, error) {
+	return s.reg.SoftDelete(name)
+}
+
+func (s *ShardedEngine) PurgeCommunity(id int64) (int, int, error) {
+	return s.GetEngineByCommunityID(id).PurgeCommunity(id)
+}
+
+func (s *ShardedEngine) MergeCommunity(from, to string) (int, int, error) {
+	return mergeCommunity(s.reg, from, to, s.GetEngineByCommunityID, s.engines)
 }
 
 func (s *ShardedEngine) PurgePost(postID uint64) error {
@@ -368,7 +451,15 @@ func (s *ShardedEngine) ImportPostBatch(batch []*ImportedPostData, renderTarget 
 	if len(batch) == 0 {
 		return nil
 	}
-	return s.GetEngineByCommunity(batch[0].Post.Community).ImportPostBatch(batch, renderTarget, legacyFormat...)
+	p := batch[0].Post
+	if p.CommunityID != 0 {
+		return s.GetEngineByCommunityID(p.CommunityID).ImportPostBatch(batch, renderTarget, legacyFormat...)
+	}
+	eng, err := s.engineForWrite(p.Community)
+	if err != nil {
+		return err
+	}
+	return eng.ImportPostBatch(batch, renderTarget, legacyFormat...)
 }
 
 func (s *ShardedEngine) RebuildSQLiteFromPebble() (int, int, error) {
@@ -390,6 +481,9 @@ func (s *ShardedEngine) Close() error {
 		if err := e.Close(); err != nil && firstErr == nil {
 			firstErr = err
 		}
+	}
+	if err := s.reg.Close(); err != nil && firstErr == nil {
+		firstErr = err
 	}
 	return firstErr
 }

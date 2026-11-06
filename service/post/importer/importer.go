@@ -697,8 +697,8 @@ func QueryCommentDB(db *leveldb.DB, board, filename string, seq uint32) (int64, 
 	return ctime, ip, nil
 }
 
-// MigrateBoard performs in-process, high-speed migration of an entire board into storage.Storage
-func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats, error) {
+// ImportBoard performs in-process, high-speed import of an entire legacy board (.DIR and article files) into storage.Storage
+func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats, error) {
 	boardDir, err := LocateBoardDir(opts.BBSHome, opts.Board)
 	if err != nil {
 		return nil, err
@@ -717,7 +717,7 @@ func MigrateBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats
 
 	// If overwrite is requested, clear the existing community first (takes ~0.3s)
 	if opts.Overwrite && !opts.DryRun {
-		_, _, _ = engine.DeleteCommunity(opts.Board)
+		_, _, _ = engine.ClearCommunity(opts.Board)
 	}
 
 	dirFile, err := os.Open(dirPath)

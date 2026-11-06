@@ -3,6 +3,7 @@ package importer
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -55,6 +56,10 @@ var internalDeleteReasons = map[string]bool{
 }
 
 var stampFilenameRegex = regexp.MustCompile(`^[MG]\.(\d+)\.`)
+
+// ErrUnknownCommunity is returned by SyncDir for a board that post.svc has
+// no (active) community for, whose .DIR it must not touch.
+var ErrUnknownCommunity = errors.New("unknown community")
 
 // SyncDirOptions specifies what SyncDir writes.
 type SyncDirOptions struct {
@@ -261,6 +266,11 @@ type dirEntry struct {
 // the old one as .DIR.bak-<time>; this must run while mbbsd is not using
 // the board. With AddMissing, a missing .DIR is rebuilt from post.svc.
 func SyncDir(st storage.Storage, opts SyncDirOptions) (*SyncDirStats, error) {
+	// Without a community, post.svc knows nothing about the board (it was
+	// never imported), and its .DIR is all there is.
+	if _, ok := st.Communities().Lookup(opts.Board); !ok {
+		return nil, fmt.Errorf("%w: %s", ErrUnknownCommunity, opts.Board)
+	}
 	boardDir, err := LocateBoardDir(opts.BBSHome, opts.Board)
 	if err != nil {
 		return nil, err

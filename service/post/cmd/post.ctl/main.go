@@ -604,9 +604,9 @@ func main() {
 			fmt.Println(resp)
 		}
 
-	case "import-community", "import-board", "migrate-community", "migrate-board":
+	case "import-board":
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl import-community <community> [render_target] [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
+			log.Fatalf("Usage: post.ctl import-board <board> [render_target] [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
 		}
 		comm := args[1]
 		renderTarget := "-"
@@ -1230,29 +1230,99 @@ func main() {
 			fmt.Println("    The previous .DIR is kept as .DIR.bak-<time>.")
 		}
 
-	case "delete-community", "purge-community":
+	case "delete-community":
 		if len(args) < 2 {
 			log.Fatalf("Usage: post.ctl delete-community <community>")
 		}
 		comm := args[1]
-		cmd := fmt.Sprintf("DELETE_COMMUNITY %s\n", comm)
-		resp, _, err := sendCmd(cmd, nil)
+		resp, _, err := sendCmd(fmt.Sprintf("DELETE_COMMUNITY %s\n", comm), nil)
 		if err != nil {
 			log.Fatalf("delete-community failed: %v", err)
 		}
-		if !strings.HasPrefix(resp, "OK") {
+		parts := strings.Fields(resp)
+		if len(parts) < 2 || parts[0] != "OK" {
 			log.Fatalf("delete-community failed: %s", resp)
 		}
+		if parts[1] == "0" {
+			fmt.Printf("Community '%s' is unknown to post.svc; nothing deleted.\n", comm)
+		} else {
+			fmt.Printf("Community '%s' (#%s) deleted; its posts are kept until 'post.ctl purge-community #%s'.\n", comm, parts[1], parts[1])
+		}
+
+	case "purge-community":
+		if len(args) < 2 {
+			log.Fatalf("Usage: post.ctl purge-community <community>|#<id>")
+		}
+		ref := args[1]
+		resp, _, err := sendCmd(fmt.Sprintf("PURGE_COMMUNITY %s\n", ref), nil)
+		if err != nil {
+			log.Fatalf("purge-community failed: %v", err)
+		}
 		parts := strings.Fields(resp)
-		postsDel := 0
-		commentsDel := 0
-		if len(parts) >= 2 {
-			postsDel, _ = strconv.Atoi(parts[1])
+		if len(parts) < 4 || parts[0] != "OK" {
+			log.Fatalf("purge-community failed: %s", resp)
 		}
-		if len(parts) >= 3 {
-			commentsDel, _ = strconv.Atoi(parts[2])
+		fmt.Printf("Community '%s' (#%s) purged: %s posts and %s comments removed.\n", ref, parts[1], parts[2], parts[3])
+
+	case "rename-community":
+		if len(args) < 3 {
+			log.Fatalf("Usage: post.ctl rename-community <old> <new>")
 		}
-		fmt.Printf("Community '%s' deleted successfully: %d posts and %d comments removed.\n", comm, postsDel, commentsDel)
+		resp, _, err := sendCmd(fmt.Sprintf("RENAME_COMMUNITY %s %s\n", args[1], args[2]), nil)
+		if err != nil {
+			log.Fatalf("rename-community failed: %v", err)
+		}
+		parts := strings.Fields(resp)
+		if len(parts) < 2 || parts[0] != "OK" {
+			log.Fatalf("rename-community failed: %s", resp)
+		}
+		if parts[1] == "0" {
+			fmt.Printf("Community '%s' is unknown to post.svc; nothing renamed.\n", args[1])
+		} else {
+			fmt.Printf("Community #%s renamed from '%s' to '%s'.\n", parts[1], args[1], args[2])
+		}
+
+	case "merge-community":
+		if len(args) < 3 {
+			log.Fatalf("Usage: post.ctl merge-community <from> <to>")
+		}
+		resp, _, err := sendCmd(fmt.Sprintf("MERGE_COMMUNITY %s %s\n", args[1], args[2]), nil)
+		if err != nil {
+			log.Fatalf("merge-community failed: %v", err)
+		}
+		parts := strings.Fields(resp)
+		if len(parts) < 3 || parts[0] != "OK" {
+			log.Fatalf("merge-community failed: %s", resp)
+		}
+		fmt.Printf("Moved %s posts from '%s' to '%s'.\n", parts[1], args[1], args[2])
+		if parts[2] != "0" {
+			fmt.Printf("%s posts were left in '%s' as '%s' already has their post files.\n", parts[2], args[1], args[2])
+		}
+
+	case "communities", "list-communities":
+		resp, payload, err := sendCmd("LIST_COMMUNITIES\n", nil)
+		if err != nil {
+			log.Fatalf("communities failed: %v", err)
+		}
+		if !strings.HasPrefix(resp, "OK") {
+			log.Fatalf("communities failed: %s", resp)
+		}
+		w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
+		fmt.Fprintf(w, "ID\tNAME\tCREATED\tDELETED\n")
+		for _, line := range strings.Split(strings.TrimRight(string(payload), "\n"), "\n") {
+			cols := strings.Fields(line)
+			if len(cols) < 4 {
+				continue
+			}
+			created, _ := strconv.ParseInt(cols[2], 10, 64)
+			deleted, _ := strconv.ParseInt(cols[3], 10, 64)
+			deletedStr := "-"
+			if deleted != 0 {
+				deletedStr = time.Unix(deleted, 0).Format("2006-01-02 15:04")
+			}
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", cols[0], cols[1], time.Unix(created, 0).Format("2006-01-02 15:04"), deletedStr)
+		}
+		w.Flush()
 
 	case "purge", "purge-post", "purge-post-file":
 		if len(args) < 2 {
@@ -1403,7 +1473,7 @@ Usage:
   post.ctl get <post>
   post.ctl render <post> [output] [--legacy-format]
   post.ctl render-community <community> [output_dir] [--legacy-format]
-  post.ctl import-community <community> [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
+  post.ctl import-board <board> [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
   post.ctl sync-dir <board> [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]
   post.ctl fetch <post> <output_path>
   post.ctl update <post> <title> <content> [editor]
@@ -1411,7 +1481,11 @@ Usage:
   post.ctl delete <post> [deleter] [reason]
   post.ctl undelete <post>
   post.ctl purge <post>
-  post.ctl delete-community <community>
+  post.ctl communities
+  post.ctl rename-community <old> <new>
+  post.ctl merge-community <from> <to>
+  post.ctl delete-community <community>       (soft delete; posts are kept)
+  post.ctl purge-community <community>|#<id>  (removes all posts)
   post.ctl vote <post> <user> [1|-1|0] [person_id] [ip] [ctime]
   post.ctl votes <post>
   post.ctl comments <post> [start [limit]]

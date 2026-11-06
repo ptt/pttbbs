@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -28,7 +29,7 @@ type ServerConfig struct {
 	FilterEncoding string // "big5" (default) or "utf-8"
 	ImportWorkers  int    // Default worker threads for board import (default: 8)
 	// Users resolves the person IDs of the users named in legacy articles and
-	// .DIR (import-community, and posts imported on demand). Optional.
+	// .DIR (IMPORT_BOARD, and posts imported on demand). Optional.
 	Users importer.UserResolver
 }
 
@@ -296,6 +297,27 @@ func (s *Server) writeRenderOutput(conn net.Conn, p *model.Post, outputPath stri
 	}
 
 	conn.Write([]byte(fmt.Sprintf("OK %d\n", len(rendered))))
+}
+
+// resolveCommunityRef resolves an active community name, or #<id> for any
+// registered community (including soft-deleted ones), to its ID.
+func (s *Server) resolveCommunityRef(ref string) (int64, error) {
+	reg := s.storage.Communities()
+	if strings.HasPrefix(ref, "#") {
+		id, err := strconv.ParseInt(ref[1:], 10, 64)
+		if err != nil || id <= 0 {
+			return 0, fmt.Errorf("invalid community id: %s", ref)
+		}
+		if _, ok := reg.Get(id); !ok {
+			return 0, fmt.Errorf("%w: %s", storage.ErrCommunityNotFound, ref)
+		}
+		return id, nil
+	}
+	id, ok := reg.Lookup(ref)
+	if !ok {
+		return 0, fmt.Errorf("%w: %s", storage.ErrCommunityNotFound, ref)
+	}
+	return id, nil
 }
 
 func (s *Server) handleIPC(conn net.Conn) {
@@ -872,7 +894,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 		s.writeRenderOutput(conn, p, outputPath, legacy)
 
-	case "IMPORT_BOARD", "MIGRATE_BOARD":
+	case "IMPORT_BOARD":
 		// IMPORT_BOARD <community> [target_dir] [overwrite:0|1] [limit] [offset] [nomerge:0|1] [commentd_db] [legacy:0|1] [dryrun:0|1] [workers]
 		if len(parts) < 2 {
 			conn.Write([]byte("ERR invalid arguments for IMPORT_BOARD\n"))
@@ -978,7 +1000,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			},
 		}
 
-		stats, err := importer.MigrateBoard(s.storage, opts)
+		stats, err := importer.ImportBoard(s.storage, opts)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1456,19 +1478,83 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
 		}
 
-	case "DELETE_COMMUNITY", "PURGE_COMMUNITY":
+	case "DELETE_COMMUNITY":
 		// DELETE_COMMUNITY <community>
-		if len(parts) < 2 {
+		// Soft delete: the posts are kept under the ID of the community
+		// (until PURGE_COMMUNITY), and the name is free for a new board.
+		// Replies OK <id>, or OK 0 if post.svc does not know the community.
+		if len(parts) < 2 || parts[1] == "" {
 			conn.Write([]byte("ERR invalid arguments for DELETE_COMMUNITY\n"))
 			return
 		}
-		community := parts[1]
-		postsDel, commentsDel, err := s.storage.DeleteCommunity(community)
+		id, err := s.storage.SoftDeleteCommunity(parts[1])
+		if err != nil && !errors.Is(err, storage.ErrCommunityNotFound) {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", id)))
+
+	case "PURGE_COMMUNITY":
+		// PURGE_COMMUNITY <community>|#<id>
+		// Removes all posts, comments, votes and cache of the community
+		// (which may be soft-deleted when given by ID) and unregisters it.
+		// Replies OK <id> <posts> <comments>.
+		if len(parts) < 2 || parts[1] == "" {
+			conn.Write([]byte("ERR invalid arguments for PURGE_COMMUNITY\n"))
+			return
+		}
+		id, err := s.resolveCommunityRef(parts[1])
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
-		conn.Write([]byte(fmt.Sprintf("OK %d %d\n", postsDel, commentsDel)))
+		postsDel, commentsDel, err := s.storage.PurgeCommunity(id)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d\n", id, postsDel, commentsDel)))
+
+	case "RENAME_COMMUNITY":
+		// RENAME_COMMUNITY <old> <new>
+		// Replies OK <id>, or OK 0 if post.svc does not know <old>.
+		if len(parts) < 3 || parts[1] == "" || parts[2] == "" {
+			conn.Write([]byte("ERR invalid arguments for RENAME_COMMUNITY\n"))
+			return
+		}
+		id, err := s.storage.RenameCommunity(parts[1], parts[2])
+		if err != nil && !errors.Is(err, storage.ErrCommunityNotFound) {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", id)))
+
+	case "MERGE_COMMUNITY":
+		// MERGE_COMMUNITY <from> <to>
+		// Moves the posts of <from> to <to>, except those whose post file
+		// <to> already has. Replies OK <moved> <collisions>.
+		if len(parts) < 3 || parts[1] == "" || parts[2] == "" {
+			conn.Write([]byte("ERR invalid arguments for MERGE_COMMUNITY\n"))
+			return
+		}
+		moved, collisions, err := s.storage.MergeCommunity(parts[1], parts[2])
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d\n", moved, collisions)))
+
+	case "LIST_COMMUNITIES":
+		// LIST_COMMUNITIES
+		// Replies OK <count>, then one line per community:
+		// <id> <name> <created_at> <deleted_at>
+		list := s.storage.Communities().List()
+		var buf bytes.Buffer
+		buf.WriteString(fmt.Sprintf("OK %d\n", len(list)))
+		for _, c := range list {
+			buf.WriteString(fmt.Sprintf("%d %s %d %d\n", c.ID, c.Name, c.Published, c.DeletedAt))
+		}
+		conn.Write(buf.Bytes())
 
 	case "PURGE_POST":
 		// PURGE_POST <post_id>
