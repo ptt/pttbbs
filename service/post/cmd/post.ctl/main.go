@@ -1157,7 +1157,7 @@ func main() {
 
 	case "sync-dir":
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl sync-dir <community> [--only-scores | --full] [--prune] [--add-missing] [--dry-run]")
+			log.Fatalf("Usage: post.ctl sync-dir <board> [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]")
 		}
 		comm := args[1]
 		dryRun := false
@@ -1174,6 +1174,8 @@ func main() {
 				modes = append(modes, "prune")
 			case "add-missing":
 				modes = append(modes, "add-missing")
+			case "rebuild":
+				modes = append(modes, "rebuild")
 			default:
 				log.Fatalf("sync-dir: unknown argument: %s", arg)
 			}
@@ -1191,8 +1193,22 @@ func main() {
 			log.Fatalf("sync-dir failed: %v", err)
 		}
 		parts := strings.Fields(resp)
-		if len(parts) < 7 || parts[0] != "OK" {
+		if len(parts) < 8 || parts[0] != "OK" {
 			log.Fatalf("sync-dir failed: %s", resp)
+		}
+		if strings.Contains(modeStr, "rebuild") {
+			if dryRun {
+				fmt.Printf("[+] Dry-run of rebuilding .DIR of '%s' from post.svc (nothing written):\n", comm)
+			} else {
+				fmt.Printf("[+] Rebuilt .DIR of '%s' from post.svc:\n", comm)
+			}
+			fmt.Printf("    Records before:     %s (%s known by post.svc, %s dropped)\n", parts[1], parts[2], parts[4])
+			fmt.Printf("    Records written:    %s (%s new)\n", parts[3], parts[5])
+			fmt.Printf("    Articles rendered:  %s (%s failed)\n", parts[7], parts[6])
+			if !dryRun {
+				fmt.Println("    The previous .DIR is kept as .DIR.bak-<time>.")
+			}
+			break
 		}
 		what := "score and comments"
 		if strings.Contains(modeStr, "full") {
@@ -1388,7 +1404,7 @@ Usage:
   post.ctl render <post> [output] [--legacy-format]
   post.ctl render-community <community> [output_dir] [--legacy-format]
   post.ctl import-community <community> [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
-  post.ctl sync-dir <community> [--only-scores | --full] [--prune] [--add-missing] [--dry-run]
+  post.ctl sync-dir <board> [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]
   post.ctl fetch <post> <output_path>
   post.ctl update <post> <title> <content> [editor]
   post.ctl update-title <post> <title> [editor]

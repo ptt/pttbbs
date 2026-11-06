@@ -625,6 +625,12 @@ func LocateBoardDir(bbsHome, board string) (string, error) {
 			return cand, nil
 		}
 	}
+	// A board whose .DIR is lost (e.g. to rebuild it with sync-dir).
+	for _, cand := range candidates {
+		if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+			return cand, nil
+		}
+	}
 	return "", fmt.Errorf("board directory not found for '%s' under %s/boards", board, bbsHome)
 }
 

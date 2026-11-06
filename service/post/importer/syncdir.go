@@ -73,6 +73,12 @@ type SyncDirOptions struct {
 	// AddMissing adds records for the (not deleted) posts that post.svc has
 	// but .DIR does not, ordered by the time in their file names.
 	AddMissing bool
+	// Rebuild writes .DIR purely from post.svc, as .DIR and the article
+	// files are only caches of it: the old records are dropped, every post
+	// gets a record (deleted ones safe-deleted, unless Prune) ordered by
+	// the time in their file names, and the article files that are
+	// missing in the board directory are rendered.
+	Rebuild bool
 }
 
 // SyncDirStats reports what SyncDir did (or, in a dry run, would do).
@@ -83,6 +89,7 @@ type SyncDirStats struct {
 	Pruned      int // records removed
 	Added       int // records added
 	AddedNoFile int // records added whose article file is not on the board
+	Rendered    int // article files rendered (Rebuild)
 }
 
 // ScoreFromVotes converts post.svc's votes to fileheader_t.score, which is
@@ -252,7 +259,7 @@ type dirEntry struct {
 // whole records, still in place. Prune and AddMissing change the number of
 // records, so .DIR is then rewritten to a new file that replaces it, keeping
 // the old one as .DIR.bak-<time>; this must run while mbbsd is not using
-// the board.
+// the board. With AddMissing, a missing .DIR is rebuilt from post.svc.
 func SyncDir(st storage.Storage, opts SyncDirOptions) (*SyncDirStats, error) {
 	boardDir, err := LocateBoardDir(opts.BBSHome, opts.Board)
 	if err != nil {
@@ -268,16 +275,26 @@ func SyncDir(st storage.Storage, opts SyncDirOptions) (*SyncDirStats, error) {
 	}
 
 	dirPath := filepath.Join(boardDir, ".DIR")
+	var data []byte
+	perm := os.FileMode(0644)
 	fi, err := os.Stat(dirPath)
-	if err != nil {
+	switch {
+	case err == nil:
+		perm = fi.Mode().Perm()
+		if data, err = os.ReadFile(dirPath); err != nil {
+			return nil, fmt.Errorf("read .DIR failed: %w", err)
+		}
+	case os.IsNotExist(err) && (opts.AddMissing || opts.Rebuild):
+		// No .DIR: rebuild it from post.svc alone.
+	default:
 		return nil, fmt.Errorf("stat .DIR failed: %w", err)
-	}
-	data, err := os.ReadFile(dirPath)
-	if err != nil {
-		return nil, fmt.Errorf("read .DIR failed: %w", err)
 	}
 	if len(data)%FileHeaderSize != 0 {
 		return nil, fmt.Errorf(".DIR size %d is not a multiple of %d", len(data), FileHeaderSize)
+	}
+
+	if opts.Rebuild {
+		return rebuildDir(st, opts, boardDir, dirPath, perm, data, posts)
 	}
 
 	stats := &SyncDirStats{}
@@ -342,7 +359,7 @@ func SyncDir(st storage.Storage, opts SyncDirOptions) (*SyncDirStats, error) {
 	if !opts.Prune && !opts.AddMissing {
 		return stats, writeInPlace(dirPath, entries)
 	}
-	return stats, replaceDir(dirPath, fi.Mode().Perm(), entries)
+	return stats, replaceDir(dirPath, perm, entries)
 }
 
 // mergeByTime inserts each of missing (sorted by time) before the first
@@ -402,14 +419,105 @@ func replaceDir(dirPath string, perm os.FileMode, entries []dirEntry) error {
 		return fmt.Errorf("write %s failed: %w", tmpPath, err)
 	}
 
-	bakPath := fmt.Sprintf("%s.bak-%d", dirPath, time.Now().Unix())
-	if err := os.Link(dirPath, bakPath); err != nil {
-		os.Remove(tmpPath)
-		return fmt.Errorf("back up .DIR to %s failed: %w", bakPath, err)
+	if _, err := os.Stat(dirPath); err == nil {
+		bakPath := fmt.Sprintf("%s.bak-%d", dirPath, time.Now().Unix())
+		// Another sync may have backed up .DIR within the same second.
+		for i := 1; ; i++ {
+			if _, err := os.Lstat(bakPath); os.IsNotExist(err) {
+				break
+			}
+			bakPath = fmt.Sprintf("%s.bak-%d.%d", dirPath, time.Now().Unix(), i)
+		}
+		if err := os.Link(dirPath, bakPath); err != nil {
+			os.Remove(tmpPath)
+			return fmt.Errorf("back up .DIR to %s failed: %w", bakPath, err)
+		}
 	}
 	if err := os.Rename(tmpPath, dirPath); err != nil {
 		os.Remove(tmpPath)
 		return fmt.Errorf("replace .DIR failed: %w", err)
+	}
+	return nil
+}
+
+// rebuildDir writes .DIR from posts alone (see SyncDirOptions.Rebuild).
+// data is the old .DIR, only used for the statistics.
+func rebuildDir(st storage.Storage, opts SyncDirOptions, boardDir, dirPath string, perm os.FileMode, data []byte, posts []*model.Post) (*SyncDirStats, error) {
+	stats := &SyncDirStats{}
+	old := make(map[string]bool)
+	for off := 0; off < len(data); off += FileHeaderSize {
+		stats.Records++
+		key, _ := IsSafeDeletedFilename(cString(data[off+fhdrOffFilename : off+fhdrOffFilename+fhdrLenFilename]))
+		old[key] = true
+	}
+	known := make(map[string]bool, len(posts))
+
+	var entries []dirEntry
+	for _, p := range posts {
+		known[p.PostFile] = true
+		if old[p.PostFile] {
+			stats.Matched++
+		}
+		if opts.Prune && p.DeletedOrRemoved() {
+			continue
+		}
+		if !old[p.PostFile] {
+			stats.Added++
+		}
+		rec := make([]byte, FileHeaderSize)
+		fillRecord(rec, p, opts.IsBig5)
+		ts := stampTime(p.PostFile)
+		if ts == 0 {
+			ts = p.CreatedAt
+		}
+		entries = append(entries, dirEntry{rec: rec, ts: ts, changed: true})
+
+		if p.DeletedOrRemoved() {
+			continue
+		}
+		path := filepath.Join(boardDir, p.PostFile)
+		if _, err := os.Stat(path); err == nil {
+			continue
+		}
+		if opts.DryRun {
+			stats.Rendered++
+			continue
+		}
+		if err := renderArticle(st, p, path, opts.IsBig5); err != nil {
+			stats.AddedNoFile++
+			continue
+		}
+		stats.Rendered++
+	}
+	// Posts list in ID order; ties in time keep it.
+	sort.SliceStable(entries, func(i, j int) bool { return entries[i].ts < entries[j].ts })
+	for key := range old {
+		if !known[key] {
+			stats.Pruned++ // records of posts post.svc does not have
+		}
+	}
+	stats.Updated = len(entries)
+
+	if opts.DryRun {
+		return stats, nil
+	}
+	return stats, replaceDir(dirPath, perm, entries)
+}
+
+// renderArticle writes the article file of p (with its comments) as
+// post.svc renders it.
+func renderArticle(st storage.Storage, p *model.Post, path string, isBig5 bool) error {
+	rendered, err := st.RenderFullPostText(p.ID, isBig5)
+	if err != nil {
+		return err
+	}
+	tmp := fmt.Sprintf("%s.tmp.%d", path, os.Getpid())
+	if err := os.WriteFile(tmp, rendered, 0644); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		os.Remove(tmp)
+		return err
 	}
 	return nil
 }

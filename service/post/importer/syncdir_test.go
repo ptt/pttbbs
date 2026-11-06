@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -407,5 +408,141 @@ func TestSyncDir(t *testing.T) {
 	}
 	if stats := sync(SyncDirOptions{Full: true, Prune: true, AddMissing: true}); stats.Updated+stats.Pruned+stats.Added != 0 {
 		t.Errorf("second prune/add-missing: %+v", stats)
+	}
+
+	// A missing .DIR is rebuilt from what post.svc has.
+	if err := os.Remove(dirPath); err != nil {
+		t.Fatal(err)
+	}
+	if stats := sync(SyncDirOptions{Full: true, AddMissing: true}); stats.Added != 2 {
+		t.Errorf("rebuild of a missing .DIR: %+v, want 2 added", stats)
+	}
+	names = nil
+	for _, r := range readDirRecords(t, dirPath) {
+		names = append(names, recFilename(r))
+	}
+	if len(names) != 2 || names[0] != "M.1728000001.A.001" || names[1] != "M.1728000004.A.004" {
+		t.Errorf("rebuilt .DIR: %v", names)
+	}
+}
+
+func TestSyncDirRebuild(t *testing.T) {
+	tempDir := t.TempDir()
+	boardDir := filepath.Join(tempDir, "boards", "R", "RebuildBoard")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	engineDir := filepath.Join(tempDir, "engine")
+	engine, err := storage.OpenEngine(storage.Config{
+		BBSHome:        tempDir,
+		DataDir:        engineDir,
+		CacheDir:       filepath.Join(engineDir, "cache"),
+		FlushSeconds:   1,
+		FilterEncoding: "big5",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+
+	create := func(file, title string) *model.Post {
+		t.Helper()
+		p, err := engine.CreatePost(&model.Post{Community: "RebuildBoard", PostFile: file, Title: title, CreatorName: "userA", Content: "本文 " + file + "\n"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	// Created out of the order of the times in their file names.
+	p3 := create("M.1728000003.A.003", "第三篇")
+	p1 := create("M.1728000001.A.001", "第一篇")
+	p2 := create("M.1728000002.A.002", "第二篇")
+	if _, err := engine.AddComment(&model.Comment{PostID: p1.ID, CreatorName: "userB", Content: "推推", CreatedAt: 1728000100}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.DeletePost(p2.ID, "userA", 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	// The article of post 1 is lost.
+	if err := os.Remove(filepath.Join(boardDir, p1.PostFile)); err != nil {
+		t.Fatal(err)
+	}
+	_ = p3
+
+	// The old .DIR has a post post.svc does not know, a stale record and
+	// a safe-deleted one.
+	dirPath := filepath.Join(boardDir, ".DIR")
+	old := bytes.Join([][]byte{
+		dirFixture{filename: "M.1728000009.A.009", owner: "ghost", title: "不明"}.record(),
+		dirFixture{filename: "M.1728000003.A.003", owner: "userA", title: "舊標題"}.record(),
+		dirFixture{filename: ".d1728000007.A.007", owner: "-", title: "(本文已被刪除)"}.record(),
+	}, nil)
+	if err := os.WriteFile(dirPath, old, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	sync := func(opts SyncDirOptions) *SyncDirStats {
+		t.Helper()
+		opts.BBSHome, opts.Board, opts.IsBig5, opts.Rebuild = tempDir, "RebuildBoard", true, true
+		stats, err := SyncDir(engine, opts)
+		if err != nil {
+			t.Fatalf("SyncDir(%+v) failed: %v", opts, err)
+		}
+		return stats
+	}
+	names := func() []string {
+		var names []string
+		for _, r := range readDirRecords(t, dirPath) {
+			names = append(names, recFilename(r))
+		}
+		return names
+	}
+
+	if stats := sync(SyncDirOptions{DryRun: true}); stats.Records != 3 || stats.Matched != 1 || stats.Pruned != 2 ||
+		stats.Updated != 3 || stats.Added != 2 || stats.Rendered != 1 {
+		t.Errorf("rebuild dry-run: %+v", stats)
+	}
+	if got := readDirRecords(t, dirPath); !bytes.Equal(bytes.Join(got, nil), old) {
+		t.Fatal("dry-run modified .DIR")
+	}
+	if _, err := os.Stat(filepath.Join(boardDir, p1.PostFile)); err == nil {
+		t.Fatal("dry-run rendered an article")
+	}
+
+	if stats := sync(SyncDirOptions{}); stats.Updated != 3 || stats.Rendered != 1 || stats.AddedNoFile != 0 {
+		t.Errorf("rebuild: %+v", stats)
+	}
+	if got := names(); len(got) != 3 || got[0] != "M.1728000001.A.001" || got[1] != ".d1728000002.A.002" || got[2] != "M.1728000003.A.003" {
+		t.Errorf("rebuilt .DIR: %v", got)
+	}
+	recs := readDirRecords(t, dirPath)
+	if title := big5uao.Decode([]byte(cString(recs[2][fhdrOffTitle : fhdrOffTitle+fhdrLenTitle]))); title != "第三篇" {
+		t.Errorf("post 3 title = %q, want the one in post.svc", title)
+	}
+	if c := binary.LittleEndian.Uint16(recs[0][fhdrOffComments:]); c != 1 {
+		t.Errorf("post 1 comments = %d, want 1", c)
+	}
+	article, err := os.ReadFile(filepath.Join(boardDir, p1.PostFile))
+	if err != nil || !strings.Contains(big5uao.Decode(article), "推推") {
+		t.Errorf("rendered article of post 1: %q, %v", big5uao.Decode(article), err)
+	}
+	if baks, _ := filepath.Glob(dirPath + ".bak-*"); len(baks) != 1 {
+		t.Errorf("backups: %v, want 1", baks)
+	}
+
+	// --rebuild --prune drops the deleted posts.
+	if stats := sync(SyncDirOptions{Prune: true}); stats.Updated != 2 || stats.Rendered != 0 {
+		t.Errorf("rebuild with prune: %+v", stats)
+	}
+	if got := names(); len(got) != 2 || got[0] != "M.1728000001.A.001" || got[1] != "M.1728000003.A.003" {
+		t.Errorf("rebuilt .DIR with prune: %v", got)
+	}
+
+	// A missing .DIR is rebuilt too.
+	if err := os.Remove(dirPath); err != nil {
+		t.Fatal(err)
+	}
+	if stats := sync(SyncDirOptions{}); stats.Records != 0 || stats.Updated != 3 {
+		t.Errorf("rebuild of a missing .DIR: %+v", stats)
 	}
 }

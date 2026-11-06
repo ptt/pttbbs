@@ -1005,7 +1005,10 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte("OK\n"))
 
 	case "SYNC_DIR":
-		// SYNC_DIR <community> [dryrun:0|1] [modes: comma separated full,prune,add-missing, or -]
+		// SYNC_DIR <board> [dryrun:0|1] [modes: comma separated full,prune,add-missing,rebuild, or -]
+		// Replies OK <records> <matched> <updated> <pruned> <added> <added_no_file> <rendered>.
+		// rebuild writes .DIR purely from post.svc and renders the missing
+		// article files into the board directory.
 		if len(parts) < 2 {
 			conn.Write([]byte("ERR invalid arguments for SYNC_DIR\n"))
 			return
@@ -1025,6 +1028,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 					opts.Prune = true
 				case "add-missing":
 					opts.AddMissing = true
+				case "rebuild":
+					opts.Rebuild = true
 				case "only-scores", "":
 				default:
 					conn.Write([]byte(fmt.Sprintf("ERR unknown SYNC_DIR mode: %s\n", mode)))
@@ -1037,8 +1042,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
-		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %d %d\n",
-			stats.Records, stats.Matched, stats.Updated, stats.Pruned, stats.Added, stats.AddedNoFile)))
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %d %d %d\n",
+			stats.Records, stats.Matched, stats.Updated, stats.Pruned, stats.Added, stats.AddedNoFile, stats.Rendered)))
 
 	case "RENDER_FILE":
 		// RENDER_FILE <community> <post_file> <output_path> [format]
