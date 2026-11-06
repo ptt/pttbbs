@@ -71,43 +71,44 @@ const char * const str_roleid[] = {
     "",		                /* 0x80000000 */
 };
 
-const char * const str_permboard[] = {
-    "(無作用)",			/* deprecated: BRD_NOZAP */
-    "不列入統計",		/* BRD_NOCOUNT */
-    "(無作用)",			/* deprecated: BRD_NOTRAN */
-    "群組板",			/* BRD_GROUPBOARD */
-    "隱藏板",			/* BRD_HIDE */
-    "限制(不需設定)",		/* BRD_POSTMASK */
-    "匿名板",			/* BRD_ANONYMOUS */
-    "預設匿名板",		/* BRD_DEFAULTANONYMOUS */
-    "發文無獎勵",		/* BRD_NOCREDIT, was: BRD_BAD */
-    "連署專用看板",		/* BRD_PETITION */
-    "已警告要廢除",		/* BRD_WARNEL */
-    "熱門看板群組",		/* BRD_TOP */
-    "不可推薦",                 /* BRD_NO_COMMENTS */
-    "小天使可匿名",		/* BRD_ANGELANONYMOUS */
-    "板主設定列入記錄",		/* BRD_BMCOUNT */
-    "連結看板",                 /* BRD_SYMBOLIC */
-    "不可噓",                   /* BRD_NOBOO */
-    "(無作用)",                 /* deprecated: BRD_LOCALSAVE */
-    "限看板會員發文",           /* BRD_RESTRICTEDPOST */
-    "未註冊可發表",             /* BRD_NOREG_CAN_POST */
-    "冷靜",			/* BRD_COOLDOWN */
+/* Indexed by the bit of the flag (setperms(), NUMPERMS). */
+const char * const str_permboard[NUMPERMS] = {
+    [BRD_INDEX(0x00000001)]           = "(無作用)", /* deprecated: BRD_NOZAP */
+    [BRD_INDEX(BRD_NOCOUNT)]          = "不列入統計",
+    [BRD_INDEX(0x00000004)]           = "(無作用)", /* deprecated: BRD_NOTRAN */
+    [BRD_INDEX(BRD_GROUPBOARD)]       = "群組板",
+    [BRD_INDEX(BRD_HIDE)]             = "隱藏板",
+    [BRD_INDEX(BRD_POSTMASK)]         = "限制(不需設定)",
+    [BRD_INDEX(BRD_ANONYMOUS)]        = "匿名板",
+    [BRD_INDEX(BRD_DEFAULTANONYMOUS)] = "預設匿名板",
+    [BRD_INDEX(BRD_NOCREDIT)]         = "發文無獎勵", /* was: BRD_BAD */
+    [BRD_INDEX(BRD_PETITION)]         = "連署專用看板",
+    [BRD_INDEX(BRD_WARNEL)]           = "已警告要廢除",
+    [BRD_INDEX(BRD_TOP)]              = "熱門看板群組",
+    [BRD_INDEX(BRD_NO_COMMENTS)]      = "禁留言",
+    [BRD_INDEX(BRD_ANGELANONYMOUS)]   = "小天使可匿名",
+    [BRD_INDEX(BRD_BMCOUNT)]          = "板主設定列入記錄",
+    [BRD_INDEX(BRD_SYMBOLIC)]         = "連結看板",
+    [BRD_INDEX(BRD_NO_DOWNVOTE)]      = "不可噓",
+    [BRD_INDEX(0x00020000)]           = "(無作用)", /* deprecated: BRD_LOCALSAVE */
+    [BRD_INDEX(BRD_RESTRICTEDPOST)]   = "限看板會員發文",
+    [BRD_INDEX(BRD_NOREG_CAN_POST)]   = "未註冊可發表",
+    [BRD_INDEX(BRD_COOLDOWN)]         = "冷靜",
 #ifdef USE_AUTOCPLOG
-    "自動留轉錄記錄",		/* BRD_CPLOG */
+    [BRD_INDEX(BRD_CPLOG)]            = "自動留轉錄記錄",
 #else
-    "轉錄記錄(本站無效)",	/* BRD_CPLOG */
+    [BRD_INDEX(BRD_CPLOG)]            = "轉錄記錄(本站無效)",
 #endif
-    "禁止快速推文",		/* BRD_NOFASTRECMD */
-    "推文記錄 IP",		/* BRD_IPLOGRECMD */
-    "十八禁",			/* BRD_OVER18 */
-    "不可回文",			/* BRD_NOREPLY */
-    "對齊式推文",		/* BRD_ALIGNEDCMT */
-    "不可自刪",                 /* BRD_NOSELFDELPOST */
-    "板主可刪特定文字",         /* BRD_BM_MASK_CONTENT */
-    "開放評分",                 /* BRD_SCORE */
-    "禁刪改留言",               /* BRD_NOSELFEDITCMT */
-    "沒想到",
+    [BRD_INDEX(BRD_NO_FAST_COMMENT)]  = "禁止快速推文",
+    [BRD_INDEX(BRD_COMMENT_SHOWIP)]   = "顯示留言 IP",
+    [BRD_INDEX(BRD_OVER18)]           = "十八禁",
+    [BRD_INDEX(BRD_NOREPLY)]          = "不可回文",
+    [BRD_INDEX(BRD_ALIGNEDCMT)]       = "對齊式推文",
+    [BRD_INDEX(BRD_NOSELFDELPOST)]    = "不可自刪",
+    [BRD_INDEX(BRD_BM_MASK_CONTENT)]  = "板主可刪特定文字",
+    [BRD_INDEX(BRD_SCORE)]            = "開放評分",
+    [BRD_INDEX(BRD_COMMENT_READONLY)] = "禁刪改留言",
+    [BRD_INDEX(0x80000000)]           = "沒想到",
 };
 
 /* modes.h */

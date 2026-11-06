@@ -16,8 +16,8 @@ static int view_postinfo(int ent, const fileheader_t * fhdr,
 
 static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
 
-// recommend/comment types
-//  most people use recommendation just for one-line reply.
+// comment types (推/噓/→)
+//  most people use comments just for one-line reply.
 //  so we may change default to (RECTYPE_ARROW)= comment only.
 //  however, the traditional behavior (which does not have
 //  BRC info for 'new comments available') uses RECTYPE_GOOD.
@@ -111,8 +111,8 @@ modify_dir_lite(
 
     if (comment) {
 	comment += fhdr.score;
-	if (comment > MAX_RECOMMENDS) comment = MAX_RECOMMENDS;
-	else if (comment < -MAX_RECOMMENDS) comment = -MAX_RECOMMENDS;
+	if (comment > MAX_DISPLAY_SCORE) comment = MAX_DISPLAY_SCORE;
+	else if (comment < -MAX_DISPLAY_SCORE) comment = -MAX_DISPLAY_SCORE;
 	fhdr.score = comment;
     }
 
@@ -749,13 +749,13 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     if (title_type == SUBJECT_LOCKED)
         STRLCPY(recom, "0m--");
-    else if(ent->score >= MAX_RECOMMENDS)
+    else if(ent->score >= MAX_DISPLAY_SCORE)
 	  strcpy(recom,"1m爆");
     else if(ent->score>9)
 	  sprintf(recom,"3m%2d",ent->score);
     else if(ent->score>0)
 	  sprintf(recom,"2m%2d",ent->score);
-    else if(ent->score <= -MAX_RECOMMENDS)
+    else if(ent->score <= -MAX_DISPLAY_SCORE)
 	  sprintf(recom,"0mXX");
     else if(ent->score<-10)
 	  sprintf(recom,"0mX%d",-ent->score);
@@ -2884,9 +2884,9 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     {
 	/* I'm BM or SYSOP. */
     }
-    else if (bp->brdattr & BRD_NOFASTRECMD)
+    else if (bp->brdattr & BRD_NO_FAST_COMMENT)
     {
-	int d = (int)bp->fastrecommend_pause - (int)time4_diff(now, lastcomment);
+	int d = (int)bp->fastcomment_pause - (int)time4_diff(now, lastcomment);
 	if (d > 0)
 	{
 	    vmsgf("本板禁止快速連續推文，請再等 %d 秒", d);
@@ -2975,7 +2975,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
 	for (i = 0; i < RECTYPE_SIZE; i++)
 	{
-	    if (i == RECTYPE_BAD && (bp->brdattr & BRD_NOBOO))
+	    if (i == RECTYPE_BAD && (bp->brdattr & BRD_NO_DOWNVOTE))
 		continue;
 	    outs(ctype_attr[i]);
 	    prints("%d.", i+1);
@@ -2996,7 +2996,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 		type = RECTYPE_DEFAULT;
 	}
 
-	if( (bp->brdattr & BRD_NOBOO) && (type == RECTYPE_BAD))
+	if( (bp->brdattr & BRD_NO_DOWNVOTE) && (type == RECTYPE_BAD))
 	    type = RECTYPE_ARROW;
 	assert(type >= 0 && type <= RECTYPE_MAX);
 
@@ -3037,7 +3037,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	1 /* space */ -
 	6 /* time */;
 
-    if (bp->brdattr & BRD_IPLOGRECMD)
+    if (bp->brdattr & BRD_COMMENT_SHOWIP)
     {
 	maxlength -= 15 /* IP */;
 	logIP = 1;

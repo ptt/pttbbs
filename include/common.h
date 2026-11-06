@@ -318,7 +318,7 @@ _Static_assert(USHM_SIZE <= (1 << FRIEND_ONLINE_SLOT_BITS),
 #define LOCK_MULTI  2    // lock所有線不能重複玩   
 
 #define MAX_MODES	(127)
-#define MAX_RECOMMENDS  (100)
+#define MAX_DISPLAY_SCORE (100)  /* score / comments shown as 爆 at this */
 
 #define STR_CURSOR      ">"
 #define STR_CURSOR2     "●"

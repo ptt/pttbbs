@@ -233,7 +233,7 @@ typedef struct boardheader_t { /* 256 bytes */
     uint8_t petition_limit_logins;	    /* 連署 : 登入次數下限 */
     uint8_t petition_limit_badpost;	    /* 連署 : 劣文上限 */
     time4_t bupdate;		    /* note update time */
-    uint8_t fastrecommend_pause;    /* 快速連推間隔 */
+    uint8_t fastcomment_pause;      /* 快速連推間隔 */
     uint8_t post_limit_logins;	    /* 發表文章 : 登入次數下限 */
     uint8_t post_limit_badpost;	    /* 發表文章 : 劣文上限 */
     uint8_t npolls;		    /* 正舉辦投票 (poll) 數 */
@@ -250,7 +250,7 @@ typedef struct boardheader_t { /* 256 bytes */
     time4_t endgamble;
     user_t moderators[MAX_BMs];    /* board moderators (BM) */
     char    pad[2];                 /* TODO: migrate to moderators when we have enough bytes. */
-    uint8_t _fastrecommend_pause;    /* 快速連推間隔 */
+    uint8_t _fastcomment_pause;      /* 快速連推間隔 */
     uint8_t _petition_limit_badpost;	    /* 連署 : 劣文上限 */
     uint8_t _post_limit_badpost;	    /* 發表文章 : 劣文上限 */
     char    pad3[3];
@@ -276,21 +276,24 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 #define BRD_ANGELANONYMOUS	0x00002000	/* 小天使可匿名 */
 #define BRD_BMCOUNT		0x00004000	/* 板主設定列入記錄 */
 #define BRD_SYMBOLIC		0x00008000	/* symbolic link to board */
-#define BRD_NOBOO		0x00010000	/* 不可噓 */
+#define BRD_NO_DOWNVOTE		0x00010000	/* 不可噓 */
 //#define BRD_LOCALSAVE		0x00020000	/* 預設 Local Save */
 #define BRD_RESTRICTEDPOST	0x00040000	/* 板友才能發文 */
 #define BRD_NOREG_CAN_POST	0x00080000	/* 未完成註冊者也能 post */
 #define BRD_COOLDOWN		0x00100000	/* 冷靜 */
 #define BRD_CPLOG		0x00200000	/* 自動留轉錄記錄 */
-#define BRD_NOFASTRECMD		0x00400000	/* 禁止快速推文 */
-#define BRD_IPLOGRECMD		0x00800000	/* 推文記錄 IP */
+#define BRD_NO_FAST_COMMENT	0x00400000	/* 禁止快速推文 */
+#define BRD_COMMENT_SHOWIP	0x00800000	/* 推文記錄 IP */
 #define BRD_OVER18		0x01000000	/* 十八禁 */
 #define BRD_NOREPLY		0x02000000	/* 不可回文 */
 #define BRD_ALIGNEDCMT		0x04000000	/* 對齊式的推文 */
 #define BRD_NOSELFDELPOST       0x08000000      /* 不可自刪 */
 #define BRD_BM_MASK_CONTENT	0x10000000	/* 允許板主刪除特定文字 */
 #define BRD_SCORE		0x20000000	/* 開放評分 */
-#define BRD_NOSELFEDITCMT	0x40000000	/* 禁刪改留言 */
+#define BRD_COMMENT_READONLY	0x40000000	/* 禁刪改留言 */
+
+/* The bit index of a BRD_* flag, e.g. for str_permboard. */
+#define BRD_INDEX(flag)		__builtin_ctz(flag)
 
 // Board group linked-list type. Used for array index of firstchild and next.
 #define BRD_GROUP_LL_TYPE_NAME  (0)

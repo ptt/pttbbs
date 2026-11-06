@@ -57,9 +57,9 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
         return -1;
     }
 
-    if (type == RECTYPE_GOOD && fhdr->score < MAX_RECOMMENDS)
+    if (type == RECTYPE_GOOD && fhdr->score < MAX_DISPLAY_SCORE)
         update = 1;
-    else if (type == RECTYPE_BAD && fhdr->score > -MAX_RECOMMENDS)
+    else if (type == RECTYPE_BAD && fhdr->score > -MAX_DISPLAY_SCORE)
         update = -1;
     fhdr->score += update;
 

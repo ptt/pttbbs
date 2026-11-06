@@ -15,6 +15,7 @@
 #define TITLE_REDRAW    11
 #define READ_SKIP       12      
 #define HEADERS_RELOAD  13      
+#define POST_SUCCESS    14
 
 // values returned by pager
 #define RET_DOREPLY	    (999)

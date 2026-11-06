@@ -378,12 +378,12 @@ main(int argc, char **argv)
         int changed = 0;
 
         int is_legacy = (bh._petition_limit_badpost != 0 ||
-                         bh._fastrecommend_pause != 0 ||
+                         bh._fastcomment_pause != 0 ||
                          bh._post_limit_badpost != 0);
 
         if (is_legacy) {
             new_bh.petition_limit_badpost = bh._petition_limit_badpost;
-            new_bh.fastrecommend_pause = bh._fastrecommend_pause;
+            new_bh.fastcomment_pause = bh._fastcomment_pause;
             new_bh.post_limit_badpost = bh._post_limit_badpost;
             changed = 1;
         }
@@ -391,7 +391,7 @@ main(int argc, char **argv)
         /* Clear legacy limit and pad fields */
         new_bh.pad[0] = '\0';
         new_bh.pad[1] = '\0';
-        new_bh._fastrecommend_pause = 0;
+        new_bh._fastcomment_pause = 0;
         new_bh._petition_limit_badpost = 0;
         new_bh._post_limit_badpost = 0;
         new_bh.pad3[0] = '\0';
@@ -514,7 +514,7 @@ main(int argc, char **argv)
                 }
                 if (is_legacy) {
                     printf(" [limits: badpost=%d, pause=%d, post_badpost=%d]",
-                           new_bh.petition_limit_badpost, new_bh.fastrecommend_pause,
+                           new_bh.petition_limit_badpost, new_bh.fastcomment_pause,
                            new_bh.post_limit_badpost);
                 }
                 if (unres_cnt > 0) {
