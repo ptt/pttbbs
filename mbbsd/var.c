@@ -94,11 +94,7 @@ const char * const str_permboard[NUMPERMS] = {
     [BRD_INDEX(BRD_RESTRICTEDPOST)]   = "限看板會員發文",
     [BRD_INDEX(BRD_NOREG_CAN_POST)]   = "未註冊可發表",
     [BRD_INDEX(BRD_COOLDOWN)]         = "冷靜",
-#ifdef USE_AUTOCPLOG
     [BRD_INDEX(BRD_CPLOG)]            = "自動留轉錄記錄",
-#else
-    [BRD_INDEX(BRD_CPLOG)]            = "轉錄記錄(本站無效)",
-#endif
     [BRD_INDEX(BRD_NO_FAST_COMMENT)]  = "禁止快速推文",
     [BRD_INDEX(BRD_COMMENT_SHOWIP)]   = "顯示留言 IP",
     [BRD_INDEX(BRD_OVER18)]           = "十八禁",

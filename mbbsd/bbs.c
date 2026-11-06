@@ -2152,10 +2152,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     int             xbid;
     boardheader_t  *bp;
 
-#ifndef USE_AUTOCPLOG
-    (void)ent;    // used only with USE_AUTOCPLOG
-    (void)direct;
-#endif
 
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
@@ -2197,7 +2193,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
                 " )\n");
     }
 
-#ifdef USE_AUTOCPLOG
     // anti-crosspost spammers
     //
     // some spammers try to cross-post to other boards without
@@ -2212,7 +2207,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("由本板轉錄文章需有發文權限(可按 i 查看限制)");
 	return FULLUPDATE;
     }
-#endif // USE_AUTOCPLOG
 
 #ifdef LOCAL_ALERT_CROSSPOST
     LOCAL_ALERT_CROSSPOST();
@@ -2343,7 +2337,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         // try to record in ALLPOST
         log_crosspost_in_allpost(xboard, &xfile);
 
-#ifdef USE_AUTOCPLOG
 	/* add cp log. bp is currboard now. */
 	if(bp->brdattr & BRD_CPLOG)
 	{
@@ -2380,7 +2373,6 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
             // record
             CommentAddRecord(currboard, direct, fhdr, ent, RECTYPE_ARROW, NULL, buf);
 	} else
-#endif
 	{
 	    /* now point bp to new bord; xbid was checked above */
 	    bp = getbcache(xbid);

@@ -699,9 +699,6 @@
 #if defined(GUESTRECOMMEND) && !defined(CONFIG_GUESTRECOMMEND)
 #define CONFIG_GUESTRECOMMEND 1
 #endif
-#if defined(DEFAULT_AUTOCPLOG) && !defined(CONFIG_DEFAULT_AUTOCPLOG)
-#define CONFIG_DEFAULT_AUTOCPLOG 1
-#endif
 #if defined(FROMD) && !defined(CONFIG_FROMD)
 #define CONFIG_FROMD 1
 #endif

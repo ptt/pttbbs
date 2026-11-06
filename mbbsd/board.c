@@ -944,7 +944,6 @@ bcfg_set_mask_content(cmd_ctx_t *ctx)
     return 0;
 }
 
-#ifdef USE_AUTOCPLOG
 static int
 bcfg_set_cplog(cmd_ctx_t *ctx)
 {
@@ -954,7 +953,6 @@ bcfg_set_cplog(cmd_ctx_t *ctx)
     ctx->reload = true;
     return 0;
 }
-#endif
 
 static int
 bcfg_set_cooldown(cmd_ctx_t *ctx)
@@ -1179,9 +1177,7 @@ static const BConfigItem bconfig_items[] = {
     { 'i', "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_COMMENT_SHOWIP, PERM_BM, NULL, bcfg_set_commentshowip },
     { 'a', "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
     { 'k', "板主刪除部份違規文字", ANSI_COLOR(1) "可" ANSI_RESET, "無法", BRD_BM_MASK_CONTENT, PERM_SYSGROUPOP, NULL, bcfg_set_mask_content },
-#ifdef USE_AUTOCPLOG
     { 'x', "轉錄文章自動記錄", ANSI_COLOR(1) "會 (需發文權限)" ANSI_RESET, "不會", BRD_CPLOG, PERM_BM, NULL, bcfg_set_cplog },
-#endif
     { 'j', "冷靜模式", ANSI_COLOR(1;31) "已設為冷靜模式" ANSI_RESET, "未設定", BRD_COOLDOWN, PERM_POLICEOP, NULL, bcfg_set_cooldown },
     { 0,   "未滿十八歲進入", ANSI_COLOR(1) "禁止" ANSI_RESET, "允許", BRD_OVER18, PERM_BM, NULL, bcfg_set_over18 },
     { 0,   "[發文條件] 登入次數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_logins, bcfg_set_post_logins },
@@ -1283,9 +1279,7 @@ static const cmd_t bconfig_edit_cmds[] = {
     { 'i', NULL, "切換推文是否記錄來源 IP", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
     { 'a', NULL, "切換推文開頭是否自動對齊", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
     { 'k', NULL, "切換板主刪除部份違規文字", bconfig_cmd_hotkey, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
-#ifdef USE_AUTOCPLOG
     { 'x', NULL, "切換轉錄文章是否自動記錄", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
-#endif
     { 'j', NULL, "切換冷靜模式", bconfig_cmd_hotkey, PERM_POLICEOP, CMD_PRIO_NONE, true },
     { 'p', NULL, "編輯進板畫面", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
     { 'n', NULL, "編輯發文注意事項", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },

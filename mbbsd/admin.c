@@ -1557,8 +1557,6 @@ m_newbrd(int whatclass, int recover)
     newboard.brdattr = 0;
     if (!form.post_reward)
         newboard.brdattr |= BRD_NOCREDIT;
-    if (IS_ENABLED(CONFIG_DEFAULT_AUTOCPLOG))
-        newboard.brdattr |= BRD_CPLOG;
 
     setbpath(genbuf, newboard.brdname);
 
