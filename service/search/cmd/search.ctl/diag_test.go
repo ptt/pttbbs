@@ -87,7 +87,7 @@ func TestRunDiagBundleAndText(t *testing.T) {
 							{
 								Board:       "Gossiping",
 								Bid:         569,
-								Predicates:  "rating=10",
+								Predicates:  "score=10",
 								Matches:     177205,
 								ScannedRecs: 789653,
 								CreatedAt:   time.Now().Add(-30 * time.Second),
@@ -165,8 +165,8 @@ func TestRunDiagBundleAndText(t *testing.T) {
 			t.Fatalf("missing %s in tar.gz bundle (got %v)", want, foundFiles)
 		}
 	}
-	if !strings.Contains(foundFiles["summary.txt"], "rating=10") {
-		t.Fatalf("summary.txt missing cached entry rating=10")
+	if !strings.Contains(foundFiles["summary.txt"], "score=10") {
+		t.Fatalf("summary.txt missing cached entry score=10")
 	}
 
 	txtOut := filepath.Join(tmpDir, "diag.txt")

@@ -20,7 +20,7 @@ import (
 type RawFileHeader struct {
 	Filename [28]byte
 	Modified uint32
-	Rating   int16
+	Score    int16
 	Owner    [14]byte
 	Date     [6]byte
 	Title    [65]byte
@@ -33,7 +33,7 @@ type RawFileHeader struct {
 type ArticleHeader struct {
 	Filename string
 	Modified uint32
-	Rating   int16
+	Score    int16
 	Comments uint16
 	Owner    string
 	Date     string
@@ -221,7 +221,7 @@ func parseDirFile(dirPath string) ([]ArticleHeader, error) {
 		articles = append(articles, ArticleHeader{
 			Filename: filename,
 			Modified: raw.Modified,
-			Rating:   raw.Rating,
+			Score:    raw.Score,
 			Comments: raw.Comments,
 			Owner:    owner,
 			Date:     date,
@@ -232,43 +232,43 @@ func parseDirFile(dirPath string) ([]ArticleHeader, error) {
 	return articles, nil
 }
 
-func formatRating(rating int16, isSelected bool) string {
-	if rating == 0 {
+func formatScore(score int16, isSelected bool) string {
+	if score == 0 {
 		return "  "
 	}
 
 	if isSelected {
-		if rating >= 100 {
+		if score >= 100 {
 			return "爆"
 		}
-		if rating > 0 {
-			return fmt.Sprintf("%2d", rating)
+		if score > 0 {
+			return fmt.Sprintf("%2d", score)
 		}
-		if rating <= -100 {
+		if score <= -100 {
 			return "XX"
 		}
-		if rating <= -10 {
-			return fmt.Sprintf("X%1d", -rating/10)
+		if score <= -10 {
+			return fmt.Sprintf("X%1d", -score/10)
 		}
-		return fmt.Sprintf("%2d", rating)
+		return fmt.Sprintf("%2d", score)
 	}
 
-	if rating >= 100 {
+	if score >= 100 {
 		return "\x1b[1;35m爆\x1b[0m"
 	}
-	if rating > 9 {
-		return fmt.Sprintf("\x1b[1;31m%2d\x1b[0m", rating)
+	if score > 9 {
+		return fmt.Sprintf("\x1b[1;31m%2d\x1b[0m", score)
 	}
-	if rating > 0 {
-		return fmt.Sprintf("\x1b[1;33m%2d\x1b[0m", rating)
+	if score > 0 {
+		return fmt.Sprintf("\x1b[1;33m%2d\x1b[0m", score)
 	}
-	if rating <= -100 {
+	if score <= -100 {
 		return "\x1b[1;30mXX\x1b[0m"
 	}
-	if rating <= -10 {
-		return fmt.Sprintf("\x1b[1;30mX%1d\x1b[0m", -rating/10)
+	if score <= -10 {
+		return fmt.Sprintf("\x1b[1;30mX%1d\x1b[0m", -score/10)
 	}
-	return fmt.Sprintf("\x1b[1;30m%2d\x1b[0m", rating)
+	return fmt.Sprintf("\x1b[1;30m%2d\x1b[0m", score)
 }
 
 func runeWidth(r rune) int {
@@ -435,7 +435,7 @@ func (app *AppState) renderDirView(buf *bytes.Buffer) {
 		art := app.articles[idx]
 		isSelected := (idx == app.selectedIndex)
 
-		ratingStr := formatRating(art.Rating, isSelected)
+		scoreStr := formatScore(art.Score, isSelected)
 		ownerStr := art.Owner
 		if stringWidth(ownerStr) > 12 {
 			ownerStr = truncateWidth(ownerStr, 12)
@@ -462,7 +462,7 @@ func (app *AppState) renderDirView(buf *bytes.Buffer) {
 		}
 		titleStr := truncateWidth(art.Title, titleMaxLen)
 
-		lineContent := fmt.Sprintf("%s%s %s %s %s %s", prefix, itemNo, ratingStr, dateStr, ownerStr, titleStr)
+		lineContent := fmt.Sprintf("%s%s %s %s %s %s", prefix, itemNo, scoreStr, dateStr, ownerStr, titleStr)
 
 		if isSelected {
 			buf.WriteString(fmt.Sprintf("\x1b[7m%s\x1b[0m\r\n", padRightWidth(lineContent, app.termWidth)))

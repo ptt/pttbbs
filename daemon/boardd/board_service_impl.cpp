@@ -115,7 +115,7 @@ Post AsPost(size_t index, const fileheader_t &fh) {
   p.set_index(index);
   p.set_filename(fh.filename);
   p.set_raw_date(strings::b2u(fh.date));
-  p.set_num_ratings(fh.rating);
+  p.set_num_ratings(fh.score);
   p.set_filemode(fh.filemode);
   p.set_owner(strings::b2u(fh.owner));
   p.set_title(strings::b2u(fh.title));
@@ -261,9 +261,9 @@ Status SetPredicate(const SearchFilter &filter, fileheader_predicate_t *pred) {
       break;
 
     case SearchFilter::TYPE_RATING:
-      pred->mode = RS_RATING;
-      pred->rating = filter.number_data();
-      SetPredicateKeyword(pred, std::to_string(pred->rating));
+      pred->mode = RS_SCORE;
+      pred->score = filter.number_data();
+      SetPredicateKeyword(pred, std::to_string(pred->score));
       break;
 
     case SearchFilter::TYPE_MONEY:
@@ -283,7 +283,7 @@ Status SetPredicate(const SearchFilter &filter, fileheader_predicate_t *pred) {
     case SearchFilter::TYPE_COMMENTS:
       pred->mode = RS_COMMENTS;
       pred->comments = filter.number_data();
-      pred->rating = pred->comments;
+      pred->score = pred->comments;
       SetPredicateKeyword(pred, std::to_string(pred->comments));
       break;
 

@@ -125,10 +125,10 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 	records := []struct {
 		fn    string
 		owner string
-		title  string
-		mode   int
-		rating int
-		money  int
+		title string
+		mode  int
+		score int
+		money int
 	}{
 		{"M.1700000001.A.001", "alice", "[閒聊] 地震警報", 0, 10, 100},
 		{"M.1700000002.A.002", "bob", "[新聞] 天氣預報", FILE_MARKED, 5, 50},
@@ -138,7 +138,7 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 		{"M.1700000006.A.006", "alice", "[問題] 測試置底", FILE_BOTTOM | FILE_MARKED, 30, 300},
 	}
 	for _, r := range records {
-		if err := AppendTestFileheader(dirPath, r.fn, r.owner, r.title, r.mode, r.rating, r.money); err != nil {
+		if err := AppendTestFileheader(dirPath, r.fn, r.owner, r.title, r.mode, r.score, r.money); err != nil {
 			t.Fatalf("append record: %v", err)
 		}
 	}
@@ -448,7 +448,7 @@ func TestSearchServiceEndToEnd(t *testing.T) {
 		t.Fatalf("expected post hint to prewarm aidCache idx=8, got %d", idx)
 	}
 
-	// Send HINT_COMMENT to update rating to 99
+	// Send HINT_COMMENT to update score to 99
 	hintConn2, err := net.Dial("unix", socketPath)
 	if err != nil {
 		t.Fatalf("dial hintConn2: %v", err)
@@ -743,11 +743,11 @@ func TestFileheaderModeHelpers(t *testing.T) {
 	}
 	fh[FHDR_OFF_OWNER] = 't'
 
-	// Test rating
-	SetFileheaderRating(nil, 50) // should not panic
-	SetFileheaderRating(&fh, 77)
-	if FileheaderRating(&fh) != 77 {
-		t.Errorf("expected rating=77, got %d", FileheaderRating(&fh))
+	// Test score
+	SetFileheaderScore(nil, 50) // should not panic
+	SetFileheaderScore(&fh, 77)
+	if FileheaderScore(&fh) != 77 {
+		t.Errorf("expected score=77, got %d", FileheaderScore(&fh))
 	}
 }
 
@@ -756,8 +756,8 @@ func TestFormatPreds(t *testing.T) {
 		preds [][]byte
 		want  string
 	}{
-		{[][]byte{MakePredBytes(RS_RATING, "10", 10, 0)}, "rating=10"},
-		{[][]byte{MakePredBytes(RS_RATING, "", -5, 0)}, "rating=-5"},
+		{[][]byte{MakePredBytes(RS_SCORE, "10", 10, 0)}, "score=10"},
+		{[][]byte{MakePredBytes(RS_SCORE, "", -5, 0)}, "score=-5"},
 		{[][]byte{MakePredBytes(RS_NEWPOST, "", 0, 0)}, "newpost"},
 		{[][]byte{MakePredBytes(RS_MARK, "", 0, 0)}, "mark"},
 		{[][]byte{MakePredBytes(RS_SOLVED, "", 0, 0)}, "solved"},
@@ -766,9 +766,9 @@ func TestFormatPreds(t *testing.T) {
 		{
 			[][]byte{
 				MakePredBytes(RS_NEWPOST, "", 0, 0),
-				MakePredBytes(RS_RATING, "10", 10, 0),
+				MakePredBytes(RS_SCORE, "10", 10, 0),
 			},
-			"newpost rating=10",
+			"newpost score=10",
 		},
 	}
 	for _, tc := range cases {
@@ -839,7 +839,7 @@ func TestSearchCommentsPredicate(t *testing.T) {
 		t.Errorf("expected index 2, got %v", indices2)
 	}
 
-	// Legacy clients carry the threshold in the rating field only; the
+	// Legacy clients carry the threshold in the score field only; the
 	// sanitizer must keep it (as comments) instead of dropping the predicate.
 	predLegacy := MakePredBytes(RS_COMMENTS, "10", 10, 0)
 	indices3, total3 := queryBinaryClientWithSource(t, socketPath, 1, relDir, [][]byte{predLegacy}, 0, 10, SrcMbbsdSR)
@@ -1356,18 +1356,18 @@ func TestQueryWebSearchTailEarlyExit(t *testing.T) {
 	}
 }
 
-func overwriteFileheaderRatingOnDisk(t *testing.T, dirPath string, recno int, rating int16) {
+func overwriteFileheaderRatingOnDisk(t *testing.T, dirPath string, recno int, score int16) {
 	t.Helper()
 	f, err := os.OpenFile(dirPath, os.O_RDWR, 0644)
 	if err != nil {
 		t.Fatalf("open %s: %v", dirPath, err)
 	}
 	defer f.Close()
-	off := int64(recno-1)*int64(FileheaderSize()) + int64(FHDR_OFF_RATING)
+	off := int64(recno-1)*int64(FileheaderSize()) + int64(FHDR_OFF_SCORE)
 	var buf [2]byte
-	binary.NativeEndian.PutUint16(buf[:], uint16(rating))
+	binary.NativeEndian.PutUint16(buf[:], uint16(score))
 	if _, err := f.WriteAt(buf[:], off); err != nil {
-		t.Fatalf("write rating at rec %d: %v", recno, err)
+		t.Fatalf("write score at rec %d: %v", recno, err)
 	}
 	st, err := f.Stat()
 	if err != nil {
@@ -1379,7 +1379,7 @@ func overwriteFileheaderRatingOnDisk(t *testing.T, dirPath string, recno int, ra
 	}
 }
 
-func sendHintCommentClient(t *testing.T, socketPath string, bid int32, direct string, recno int32, rating int32) {
+func sendHintCommentClient(t *testing.T, socketPath string, bid int32, direct string, recno int32, score int32) {
 	t.Helper()
 	conn, err := net.Dial("unix", socketPath)
 	if err != nil {
@@ -1391,7 +1391,7 @@ func sendHintCommentClient(t *testing.T, socketPath string, bid int32, direct st
 	req.Type = HintTypeComment
 	req.Bid = bid
 	req.Recno = recno
-	req.Data = rating
+	req.Data = score
 	copy(req.Direct[:], direct)
 	if err := binary.Write(conn, binary.LittleEndian, &req); err != nil {
 		t.Fatalf("write hint: %v", err)
@@ -1481,11 +1481,11 @@ func TestSRExpireGraceAndHintCommentRating(t *testing.T) {
 		t.Fatalf("expected idx=2, got %d", idx)
 	}
 
-	// Initial RS_RATING >= 10 scan -> [1, 3]
-	predR10 := MakePredBytes(RS_RATING, "10", 10, 0)
+	// Initial RS_SCORE >= 10 scan -> [1, 3]
+	predR10 := MakePredBytes(RS_SCORE, "10", 10, 0)
 	indices, total := queryBinaryClientWithSource(t, socketPath, 99999, relDir, [][]byte{predR10}, 0, 50, SrcMbbsdSR)
 	if total != 2 || !reflect.DeepEqual(indices, []int32{1, 3}) {
-		t.Fatalf("initial rating=10 mismatch: total=%d indices=%v", total, indices)
+		t.Fatalf("initial score=10 mismatch: total=%d indices=%v", total, indices)
 	}
 	missesAfterInit := svc.misses.Load()
 
@@ -1498,19 +1498,19 @@ func TestSRExpireGraceAndHintCommentRating(t *testing.T) {
 	// Within grace window: must be a CACHE HIT (0 new full scans) AND already reflect [2, 3]!
 	indices2, total2 := queryBinaryClientWithSource(t, socketPath, 99999, relDir, [][]byte{predR10}, 0, 50, SrcMbbsdSR)
 	if total2 != 2 || !reflect.DeepEqual(indices2, []int32{2, 3}) {
-		t.Fatalf("in-place rating update mismatch: total=%d indices=%v, want [2 3]", total2, indices2)
+		t.Fatalf("in-place score update mismatch: total=%d indices=%v, want [2 3]", total2, indices2)
 	}
 	if svc.misses.Load() != missesAfterInit {
 		t.Fatalf("expected 0 misses during srexpire-grace, got %d -> %d", missesAfterInit, svc.misses.Load())
 	}
 
-	// Verify O(1) aidByRec updated cached fhBytes rating for recno 2 (even though AID was cached with bid=0 and hint passed "TestBoard").
+	// Verify O(1) aidByRec updated cached fhBytes score for recno 2 (even though AID was cached with bid=0 and hint passed "TestBoard").
 	_, fh2, err := svc.QueryAID(dirPath, 0, aidu2, 0)
-	if err != nil || FileheaderRating(&fh2) != 12 {
-		t.Fatalf("expected cached AID fh rating=12, got %d (err=%v)", FileheaderRating(&fh2), err)
+	if err != nil || FileheaderScore(&fh2) != 12 {
+		t.Fatalf("expected cached AID fh score=12, got %d (err=%v)", FileheaderScore(&fh2), err)
 	}
 
-	// Now simulate an UNHINTED rating reset on recno 3 (20 -> 0 on disk, e.g. BM reset):
+	// Now simulate an UNHINTED score reset on recno 3 (20 -> 0 on disk, e.g. BM reset):
 	overwriteFileheaderRatingOnDisk(t, dirPath, 3, 0)
 
 	// Wait for srexpire-grace (250ms) to expire -> next query must rescan and return [2]!
@@ -1648,8 +1648,8 @@ func TestScanScratchPoolConcurrencyAndDefaultGrace(t *testing.T) {
 		}
 	}
 
-	predRating10 := MakePredBytes(RS_RATING, "10", 10, 0)
-	predRating20 := MakePredBytes(RS_RATING, "20", 20, 0)
+	predScore10 := MakePredBytes(RS_SCORE, "10", 10, 0)
+	predScore20 := MakePredBytes(RS_SCORE, "20", 20, 0)
 
 	var wg sync.WaitGroup
 	for g := 0; g < 16; g++ {
@@ -1657,17 +1657,17 @@ func TestScanScratchPoolConcurrencyAndDefaultGrace(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for iter := 0; iter < 20; iter++ {
-				res10, total, err := ScanDirRange(dirPath, predRating10, 1, 1)
+				res10, total, err := ScanDirRange(dirPath, predScore10, 1, 1)
 				if err != nil || total != 200 || len(res10) != 120 {
 					t.Errorf("ScanDirRange unexpected: len=%d total=%d err=%v", len(res10), total, err)
 					return
 				}
-				filtered, err := FilterCandidates(dirPath, predRating20, 1, res10)
+				filtered, err := FilterCandidates(dirPath, predScore20, 1, res10)
 				if err != nil || len(filtered) != 40 {
 					t.Errorf("FilterCandidates unexpected: len=%d err=%v", len(filtered), err)
 					return
 				}
-				rev, revTotal, _, err := ScanDirReverse(dirPath, predRating20, 1, 15, 0)
+				rev, revTotal, _, err := ScanDirReverse(dirPath, predScore20, 1, 15, 0)
 				if err != nil || revTotal != 40 || len(rev) < 15 || rev[0] <= rev[1] {
 					t.Errorf("ScanDirReverse unexpected: len=%d revTotal=%d err=%v", len(rev), revTotal, err)
 					return
@@ -1701,30 +1701,30 @@ func TestSanitizePredsCanonicalization(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// 1. Seed cache with standard rating=2 (keyword="2").
+	// 1. Seed cache with standard score=2 (keyword="2").
 	resBase, totalBase := queryBinaryClient(t, socketPath, 569, relDir, [][]byte{
-		MakePredBytes(RS_RATING, "2", 2, 0),
+		MakePredBytes(RS_SCORE, "2", 2, 0),
 	}, 0, 100)
 	if totalBase != 9 || len(resBase) != 9 {
-		t.Fatalf("expected 9 matches for rating=2, got total=%d len=%d", totalBase, len(resBase))
+		t.Fatalf("expected 9 matches for score=2, got total=%d len=%d", totalBase, len(resBase))
 	}
 	missesAfterSeed := svc.misses.Load()
 	if missesAfterSeed != 1 {
-		t.Fatalf("expected 1 miss after seeding rating=2, got %d", missesAfterSeed)
+		t.Fatalf("expected 1 miss after seeding score=2, got %d", missesAfterSeed)
 	}
 
-	// 2. Query "2r5", "+2", "", dirty padding bytes, and duplicate [rating=2, rating=2r5]:
-	// ALL must hit the existing rating=2 cache entry with ZERO new misses!
-	dirtyPred := MakePredBytes(RS_RATING, "2r5", 2, 999)
+	// 2. Query "2r5", "+2", "", dirty padding bytes, and duplicate [score=2, score=2r5]:
+	// ALL must hit the existing score=2 cache entry with ZERO new misses!
+	dirtyPred := MakePredBytes(RS_SCORE, "2r5", 2, 999)
 	for i := 69; i < 72 && i < len(dirtyPred); i++ {
 		dirtyPred[i] = 0xFF // Simulate uninitialized C struct alignment padding
 	}
 	variants := [][][]byte{
-		{MakePredBytes(RS_RATING, "2r5", 2, 0)},
-		{MakePredBytes(RS_RATING, "+2", 2, 0)},
-		{MakePredBytes(RS_RATING, "", 2, 0)},
+		{MakePredBytes(RS_SCORE, "2r5", 2, 0)},
+		{MakePredBytes(RS_SCORE, "+2", 2, 0)},
+		{MakePredBytes(RS_SCORE, "", 2, 0)},
 		{dirtyPred},
-		{MakePredBytes(RS_RATING, "2", 2, 0), MakePredBytes(RS_RATING, "2r5", 2, 0)},
+		{MakePredBytes(RS_SCORE, "2", 2, 0), MakePredBytes(RS_SCORE, "2r5", 2, 0)},
 	}
 	for idx, preds := range variants {
 		res, total := queryBinaryClient(t, socketPath, 569, relDir, preds, 0, 100)
@@ -1736,7 +1736,7 @@ func TestSanitizePredsCanonicalization(t *testing.T) {
 		}
 	}
 
-	// 3. Verify RS_MONEY ("50M" vs "") and RS_MARK (with garbage keyword/rating) also unify.
+	// 3. Verify RS_MONEY ("50M" vs "") and RS_MARK (with garbage keyword/score) also unify.
 	_, totalM1 := queryBinaryClient(t, socketPath, 569, relDir, [][]byte{MakePredBytes(RS_MONEY, "50M", 0, 50)}, 0, 100)
 	missesAfterMoney := svc.misses.Load()
 	_, totalM2 := queryBinaryClient(t, socketPath, 569, relDir, [][]byte{MakePredBytes(RS_MONEY, "", 77, 50)}, 0, 100)
@@ -1751,9 +1751,7 @@ func TestSanitizePredsCanonicalization(t *testing.T) {
 		t.Fatalf("RS_MARK canonicalization failed: misses=%d want=%d", svc.misses.Load(), missesAfterMark)
 	}
 
-	if got := FormatPreds(dirtyPred, 1); got != "rating=2" {
-		t.Fatalf("FormatPreds(dirtyPred) = %q, want %q", got, "rating=2")
+	if got := FormatPreds(dirtyPred, 1); got != "score=2" {
+		t.Fatalf("FormatPreds(dirtyPred) = %q, want %q", got, "score=2")
 	}
 }
-
-

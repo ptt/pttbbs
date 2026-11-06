@@ -289,7 +289,7 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 #define BRD_ALIGNEDCMT		0x04000000	/* 對齊式的推文 */
 #define BRD_NOSELFDELPOST       0x08000000      /* 不可自刪 */
 #define BRD_BM_MASK_CONTENT	0x10000000	/* 允許板主刪除特定文字 */
-#define BRD_RATING		0x20000000	/* 開放評分 */
+#define BRD_SCORE		0x20000000	/* 開放評分 */
 #define BRD_NOSELFEDITCMT	0x40000000	/* 禁刪改留言 */
 
 // Board group linked-list type. Used for array index of firstchild and next.
@@ -311,7 +311,7 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 typedef struct fileheader_t { /* 128 bytes */
     char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1], create time */
     time4_t modified;		     /* last modified time */
-    int16_t rating;                  /* was pad + recommend (important level) */
+    int16_t score;                   /* net votes (upvotes - downvotes); was pad + recommend */
     char    owner[IDLEN + 2];        /* uid[.] */
     char    date[6];                 /* [02/02] or space(5) */
     char    title[TTLEN + 1];

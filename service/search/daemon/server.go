@@ -61,7 +61,7 @@ const (
 const (
 	SrcUnknown   int32 = 0
 	SrcMbbsdHash int32 = 1 // mbbsd '#' AID search (user / mobile app / bot)
-	SrcMbbsdSR   int32 = 2 // mbbsd select_read (title, author, mark, rating search)
+	SrcMbbsdSR   int32 = 2 // mbbsd select_read (title, author, mark, score search)
 	SrcMbbsdLua  int32 = 3 // mbbsd bbslua banner / dynamic template (setaidfile)
 	SrcBoarddWeb int32 = 4 // web / boardd query
 	SrcExternal  int32 = 5 // external tools / scripts
@@ -2192,47 +2192,47 @@ func (s *Service) handleHintPost(conn net.Conn, peerInfo, direct string, bid, re
 	}
 }
 
-func matchRatingThreshold(rating, predRating int32) bool {
-	if predRating > 0 {
-		return rating >= predRating
+func matchScoreThreshold(score, predScore int32) bool {
+	if predScore > 0 {
+		return score >= predScore
 	}
-	return rating <= predRating
+	return score <= predScore
 }
 
-func inspectRatingPredicates(predsRaw []byte, predSize int, rating int32) (hasRating bool, allRating bool, allRatingMatch bool) {
+func inspectScorePredicates(predsRaw []byte, predSize int, score int32) (hasScore bool, allScore bool, allScoreMatch bool) {
 	if predSize <= 0 || len(predsRaw) < predSize {
 		return false, false, false
 	}
 	numPreds := len(predsRaw) / predSize
-	allRating = true
-	allRatingMatch = true
+	allScore = true
+	allScoreMatch = true
 	for i := 0; i < numPreds; i++ {
 		off := i * predSize
-		if off+PRED_OFF_RATING+4 > len(predsRaw) || off+PRED_OFF_MODE+4 > len(predsRaw) {
+		if off+PRED_OFF_SCORE+4 > len(predsRaw) || off+PRED_OFF_MODE+4 > len(predsRaw) {
 			return false, false, false
 		}
 		mode := int(int32(binary.NativeEndian.Uint32(predsRaw[off+PRED_OFF_MODE:])))
-		if mode&RS_RATING != 0 {
-			hasRating = true
-			predRating := int32(binary.NativeEndian.Uint32(predsRaw[off+PRED_OFF_RATING:]))
-			if !matchRatingThreshold(rating, predRating) {
-				allRatingMatch = false
+		if mode&RS_SCORE != 0 {
+			hasScore = true
+			predScore := int32(binary.NativeEndian.Uint32(predsRaw[off+PRED_OFF_SCORE:]))
+			if !matchScoreThreshold(score, predScore) {
+				allScoreMatch = false
 			}
 		} else {
-			allRating = false
+			allScore = false
 		}
 	}
-	return hasRating, allRating, allRatingMatch
+	return hasScore, allScore, allScoreMatch
 }
 
-func (s *Service) handleHintComment(conn net.Conn, peerInfo, direct string, bid, recno int32, rating int32) {
+func (s *Service) handleHintComment(conn net.Conn, peerInfo, direct string, bid, recno int32, score int32) {
 	if direct == "" || recno <= 0 {
 		return
 	}
 
 	s.aidMu.Lock()
 	for _, e := range s.aidByRec[boardRecKey{direct: direct, recno: recno}] {
-		SetFileheaderRating(&e.fhBytes, int(rating))
+		SetFileheaderScore(&e.fhBytes, int(score))
 	}
 	s.aidMu.Unlock()
 
@@ -2243,13 +2243,13 @@ func (s *Service) handleHintComment(conn net.Conn, peerInfo, direct string, bid,
 			if recno > e.scannedRecs {
 				continue
 			}
-			hasRating, allRating, allRatingMatch := inspectRatingPredicates([]byte(e.key.predsHex), predSize, rating)
-			if !hasRating {
+			hasScore, allScore, allScoreMatch := inspectScorePredicates([]byte(e.key.predsHex), predSize, score)
+			if !hasScore {
 				continue
 			}
 			idx := sort.Search(len(e.indices), func(i int) bool { return e.indices[i] >= recno })
 			present := idx < len(e.indices) && e.indices[idx] == recno
-			if !allRatingMatch && present {
+			if !allScoreMatch && present {
 				newIndices := make([]int32, len(e.indices)-1)
 				copy(newIndices, e.indices[:idx])
 				copy(newIndices[idx:], e.indices[idx+1:])
@@ -2258,7 +2258,7 @@ func (s *Service) handleHintComment(conn net.Conn, peerInfo, direct string, bid,
 				if s.totalIndices < 0 {
 					s.totalIndices = 0
 				}
-			} else if allRatingMatch && !present && allRating {
+			} else if allScoreMatch && !present && allScore {
 				newIndices := make([]int32, len(e.indices)+1)
 				copy(newIndices, e.indices[:idx])
 				newIndices[idx] = recno
@@ -2275,8 +2275,8 @@ func (s *Service) handleHintComment(conn net.Conn, peerInfo, direct string, bid,
 		if p := s.resolvePeerInfo(conn, peerInfo); p != "" {
 			peerPrefix = p + " "
 		}
-		log.Printf("[search.svc] [HINT-COMMENT] %sboard=%s bid=%d recno=%d rating=%d",
-			peerPrefix, s.ResolveBoardName(direct, bid), bid, recno, rating)
+		log.Printf("[search.svc] [HINT-COMMENT] %sboard=%s bid=%d recno=%d score=%d",
+			peerPrefix, s.ResolveBoardName(direct, bid), bid, recno, score)
 	}
 }
 
@@ -2872,7 +2872,7 @@ func predsRequireSRExpire(predsRaw []byte, numPreds int) bool {
 		offset := i * predSize
 		if offset+4 <= len(predsRaw) {
 			mode := int(binary.LittleEndian.Uint32(predsRaw[offset : offset+4]))
-			if mode&(RS_RATING|RS_COMMENTS|RS_MARK|RS_SOLVED|RS_MONEY) != 0 {
+			if mode&(RS_SCORE|RS_COMMENTS|RS_MARK|RS_SOLVED|RS_MONEY) != 0 {
 				return true
 			}
 		}

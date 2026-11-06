@@ -105,7 +105,7 @@ const char * const str_permboard[] = {
     "對齊式推文",		/* BRD_ALIGNEDCMT */
     "不可自刪",                 /* BRD_NOSELFDELPOST */
     "板主可刪特定文字",         /* BRD_BM_MASK_CONTENT */
-    "開放評分",                 /* BRD_RATING */
+    "開放評分",                 /* BRD_SCORE */
     "禁刪改留言",               /* BRD_NOSELFEDITCMT */
     "沒想到",
 };

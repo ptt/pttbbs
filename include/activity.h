@@ -22,7 +22,7 @@
 //                                               a post read
 //   nav <userid> <firstlogin> <ip> <client_hex> <type> <bid> [<value>]
 //                                               mbbsd navigation (ACTIVITY_NAV_*);
-//                                               value only for SEARCH_RATING (threshold)
+//                                               value only for SEARCH_SCORE (threshold)
 //   fwd <reqid> <userid> <firstlogin> <ip> <client_hex> <bid> <filename> <kind> <address> <via>
 //                                               a post (bid > 0) or mail (bid 0) sent out as
 //                                               Internet mail: kind is ACTIVITY_FWD_*, address
@@ -76,7 +76,7 @@ enum {
     ACTIVITY_NAV_BOARD_SWITCH  = 1,
     ACTIVITY_NAV_SEARCH_AID    = 2,
     ACTIVITY_NAV_SEARCH_SR     = 3,
-    ACTIVITY_NAV_SEARCH_RATING = 4, // 'Z': search by rating; value is the threshold
+    ACTIVITY_NAV_SEARCH_SCORE = 4, // 'Z': search by score; value is the threshold
 };
 
 // logind: a password was wrong.
@@ -106,7 +106,7 @@ void activity_read_post(const char *userid, time4_t firstlogin,
                         uint32_t client_code, int is_exempt,
                         int bid, const char *filename, int *delay_ms);
 
-// mbbsd: reports navigation (`value`: the threshold for SEARCH_RATING, else 0).
+// mbbsd: reports navigation (`value`: the threshold for SEARCH_SCORE, else 0).
 // Returns 1 if this request is denied (e.g. polling), else 0; sets *delay_ms to
 // how long the caller should pause first (0 without the service), and `msg`
 // (if not NULL, `msgsz` bytes) to why it is denied ("" if not told).

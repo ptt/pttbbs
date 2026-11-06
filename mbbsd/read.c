@@ -240,7 +240,7 @@ sr_needs_reload_rpc(const read_ctx_t *cx, const char *direct, int bid)
     off_t cur_size = direct ? dashs(direct) : (off_t)-1;
     if (cur_size != cx->sr_last_dir_size)
         return true;
-    if (cx->sr_mode_mask & (RS_RATING | RS_MARK | RS_SOLVED | RS_MONEY)) {
+    if (cx->sr_mode_mask & (RS_SCORE | RS_MARK | RS_SOLVED | RS_MONEY)) {
         if (bid <= 0)
             return true;
         boardheader_t *bp = getbcache(bid);
@@ -750,7 +750,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 	    vmsg("反向搜尋(!)只能在已進入搜尋時使用(例: 先用 / 搜尋)");
 	    return READ_REDRAW;
 	}
-    } else if (sr_mode & RS_RATING) {
+    } else if (sr_mode & RS_SCORE) {
 	if (currstat == RMAIL ||
 	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
 		     "增加條件 推文數: " :
@@ -759,7 +759,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 		      "搜尋推文數高於多少的文章: "),
 		     // 因為有負數所以暫時不能用 NUMECHO
 		     keyword, 7, LCECHO) ||
-	    (pred->rating = atoi(keyword)) == 0)
+	    (pred->score = atoi(keyword)) == 0)
 	    return READ_REDRAW;
     } else if (sr_mode & RS_MONEY) {
 	if (currstat == RMAIL ||
@@ -832,12 +832,12 @@ select_read(read_ctx_t *cx, int sr_mode)
         uint32_t cc = get_client_code();
         int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
         int delay_ms = 0, r;
-        int rating = (sr_mode & RS_RATING) != 0;
+        int score = (sr_mode & RS_SCORE) != 0;
         char msg[ACTIVITY_DENY_MSG_MAX];
         r = activity_nav_track(cuser.userid, cuser.firstlogin, fromhost, cc,
-                               is_exempt, rating ? ACTIVITY_NAV_SEARCH_RATING :
+                               is_exempt, score ? ACTIVITY_NAV_SEARCH_SCORE :
                                ACTIVITY_NAV_SEARCH_SR, bid,
-                               rating ? predicate.rating : 0, &delay_ms,
+                               score ? predicate.score : 0, &delay_ms,
                                msg, sizeof(msg));
         if (delay_ms > 0)
             usleep(delay_ms * 1000);
@@ -1280,7 +1280,7 @@ static int
 read_cmd_search_comment(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx, RS_RATING));
+    read_apply_mode(cx, ctx, select_read(cx, RS_SCORE));
     return 0;
 }
 

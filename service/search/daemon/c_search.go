@@ -20,7 +20,7 @@ static int c_shm_ready(void) {
 // Canonicalizes predicates in place to prevent cache-key fragmentation/bypass:
 // 1. Zeroes struct alignment padding and trailing keyword bytes after NUL.
 // 2. Strips unused fields according to match_fileheader_predicate() semantics
-//    (e.g., clearing keyword/money on RS_RATING so "2r5" and "2" hash identically).
+//    (e.g., clearing keyword/money on RS_SCORE so "2r5" and "2" hash identically).
 // 3. Deduplicates identical canonical predicates and returns the compacted count.
 static int c_sanitize_preds(void *buf, int n) {
     if (!buf || n <= 0)
@@ -52,12 +52,12 @@ static int c_sanitize_preds(void *buf, int n) {
         } else if (sr_mode & RS_TITLE) {
             clean.mode = RS_TITLE;
             strlcpy(clean.keyword, p[i].keyword, sizeof(clean.keyword));
-        } else if (sr_mode & RS_RATING) {
-            clean.mode = RS_RATING;
-            clean.rating = p[i].rating;
+        } else if (sr_mode & RS_SCORE) {
+            clean.mode = RS_SCORE;
+            clean.score = p[i].score;
         } else if (sr_mode & RS_COMMENTS) {
             clean.mode = RS_COMMENTS;
-            clean.comments = p[i].comments > 0 ? p[i].comments : p[i].rating;
+            clean.comments = p[i].comments > 0 ? p[i].comments : p[i].score;
         } else if (sr_mode & RS_MONEY) {
             clean.mode = RS_MONEY;
             clean.money = p[i].money;
@@ -97,8 +97,8 @@ static void c_format_preds(const void *buf, int n, char *out, int outlen) {
             snprintf(item, sizeof(item), "%sauthor=%s", sep, p[i].keyword);
         } else if (p[i].mode & RS_TITLE) {
             snprintf(item, sizeof(item), "%stitle=%s", sep, p[i].keyword);
-        } else if (p[i].mode & RS_RATING) {
-            snprintf(item, sizeof(item), "%srating=%d", sep, (int)p[i].rating);
+        } else if (p[i].mode & RS_SCORE) {
+            snprintf(item, sizeof(item), "%sscore=%d", sep, (int)p[i].score);
         } else if (p[i].mode & RS_COMMENTS) {
             snprintf(item, sizeof(item), "%scomments=%d", sep, (int)p[i].comments);
         } else if (p[i].mode & RS_MONEY) {
@@ -119,11 +119,11 @@ static int c_fhdr_size(void) {
 }
 
 enum {
-    FHDR_OFF_RATING    = offsetof(fileheader_t, rating),
+    FHDR_OFF_SCORE    = offsetof(fileheader_t, score),
     FHDR_OFF_OWNER     = offsetof(fileheader_t, owner),
     FHDR_OFF_FILEMODE  = offsetof(fileheader_t, filemode),
     PRED_OFF_MODE      = offsetof(fileheader_predicate_t, mode),
-    PRED_OFF_RATING    = offsetof(fileheader_predicate_t, rating),
+    PRED_OFF_SCORE    = offsetof(fileheader_predicate_t, score),
     FHDR_OFF_COMMENTS  = offsetof(fileheader_t, comments),
 };
 
@@ -162,20 +162,20 @@ static int c_read_filename_at(const char *direct, int recno, char *out, int outl
     return 0;
 }
 
-static void c_fill_predicate(void *buf, int mode, const char *kw, int rating, int money, int comments) {
+static void c_fill_predicate(void *buf, int mode, const char *kw, int score, int money, int comments) {
     fileheader_predicate_t *p = (fileheader_predicate_t *)buf;
     memset(p, 0, sizeof(*p));
     p->mode = mode;
     if (kw)
         strlcpy(p->keyword, kw, sizeof(p->keyword));
-    p->rating = rating;
+    p->score = score;
     p->money = money;
-    p->comments = comments > 0 ? comments : ((mode & RS_COMMENTS) ? rating : 0);
+    p->comments = comments > 0 ? comments : ((mode & RS_COMMENTS) ? score : 0);
 }
 
 static int c_append_fileheader_with_comments(const char *direct, const char *filename,
                                              const char *owner, const char *title,
-                                             int filemode, int rating, int money, int comments)
+                                             int filemode, int score, int money, int comments)
 {
     fileheader_t fh;
     memset(&fh, 0, sizeof(fh));
@@ -186,7 +186,7 @@ static int c_append_fileheader_with_comments(const char *direct, const char *fil
     if (title)
         strlcpy(fh.title, title, sizeof(fh.title));
     fh.filemode = (uint8_t)filemode;
-    fh.rating = (int16_t)rating;
+    fh.score = (int16_t)score;
     fh.multi.money = money;
     fh.comments = (uint16_t)comments;
     return append_fileheader(direct, &fh);
@@ -194,7 +194,7 @@ static int c_append_fileheader_with_comments(const char *direct, const char *fil
 
 static int c_append_fileheader(const char *direct, const char *filename,
                                const char *owner, const char *title,
-                               int filemode, int rating, int money)
+                               int filemode, int score, int money)
 {
     fileheader_t fh;
     memset(&fh, 0, sizeof(fh));
@@ -205,7 +205,7 @@ static int c_append_fileheader(const char *direct, const char *filename,
     if (title)
         strlcpy(fh.title, title, sizeof(fh.title));
     fh.filemode = (uint8_t)filemode;
-    fh.rating = (int16_t)rating;
+    fh.score = (int16_t)score;
     fh.multi.money = money;
     return append_fileheader(direct, &fh);
 }
@@ -912,8 +912,7 @@ const (
 	RS_KEYWORD         = int(C.RS_KEYWORD)
 	RS_NEWPOST         = int(C.RS_NEWPOST)
 	RS_MARK            = int(C.RS_MARK)
-	RS_RATING          = int(C.RS_RATING)
-	RS_RECOMMEND       = RS_RATING
+	RS_SCORE           = int(C.RS_SCORE)
 	RS_COMMENTS        = int(C.RS_COMMENTS)
 	RS_SOLVED          = int(C.RS_SOLVED)
 	RS_MONEY           = int(C.RS_MONEY)
@@ -921,12 +920,12 @@ const (
 	FILE_MARKED        = int(C.FILE_MARKED)
 	FILE_BOTTOM        = int(C.FILE_BOTTOM)
 
-	FHDR_OFF_RATING    = int(C.FHDR_OFF_RATING)
-	FHDR_OFF_OWNER     = int(C.FHDR_OFF_OWNER)
-	FHDR_OFF_FILEMODE  = int(C.FHDR_OFF_FILEMODE)
-	PRED_OFF_MODE      = int(C.PRED_OFF_MODE)
-	PRED_OFF_RATING    = int(C.PRED_OFF_RATING)
-	FHDR_OFF_COMMENTS  = int(C.FHDR_OFF_COMMENTS)
+	FHDR_OFF_SCORE    = int(C.FHDR_OFF_SCORE)
+	FHDR_OFF_OWNER    = int(C.FHDR_OFF_OWNER)
+	FHDR_OFF_FILEMODE = int(C.FHDR_OFF_FILEMODE)
+	PRED_OFF_MODE     = int(C.PRED_OFF_MODE)
+	PRED_OFF_SCORE    = int(C.PRED_OFF_SCORE)
+	FHDR_OFF_COMMENTS = int(C.FHDR_OFF_COMMENTS)
 )
 
 func PredSize() int {
@@ -995,17 +994,17 @@ func ReadFilenameAt(directPath string, rec int32) (string, bool) {
 	return C.GoString(&buf[0]), true
 }
 
-func SetFileheaderRating(fh *[128]byte, rating int) {
+func SetFileheaderScore(fh *[128]byte, score int) {
 	if fh != nil {
-		binary.NativeEndian.PutUint16(fh[FHDR_OFF_RATING:], uint16(int16(rating)))
+		binary.NativeEndian.PutUint16(fh[FHDR_OFF_SCORE:], uint16(int16(score)))
 	}
 }
 
-func FileheaderRating(fh *[128]byte) int16 {
+func FileheaderScore(fh *[128]byte) int16 {
 	if fh == nil {
 		return 0
 	}
-	return int16(binary.NativeEndian.Uint16(fh[FHDR_OFF_RATING:]))
+	return int16(binary.NativeEndian.Uint16(fh[FHDR_OFF_SCORE:]))
 }
 
 func FileheaderFilemode(fh *[128]byte) int {
@@ -1067,23 +1066,23 @@ func LoadDirAIDs(directPath string) ([]uint64, error) {
 	return aids[:n], nil
 }
 
-func MakePredBytes(mode int, keyword string, rating int, money int) []byte {
+func MakePredBytes(mode int, keyword string, score int, money int) []byte {
 	buf := make([]byte, PredSize())
 	cKw := C.CString(keyword)
 	defer C.free(unsafe.Pointer(cKw))
-	C.c_fill_predicate(unsafe.Pointer(&buf[0]), C.int(mode), cKw, C.int(rating), C.int(money), 0)
+	C.c_fill_predicate(unsafe.Pointer(&buf[0]), C.int(mode), cKw, C.int(score), C.int(money), 0)
 	return buf
 }
 
-func MakePredBytesWithComments(mode int, keyword string, rating int, money int, comments int) []byte {
+func MakePredBytesWithComments(mode int, keyword string, score int, money int, comments int) []byte {
 	buf := make([]byte, PredSize())
 	cKw := C.CString(keyword)
 	defer C.free(unsafe.Pointer(cKw))
-	C.c_fill_predicate(unsafe.Pointer(&buf[0]), C.int(mode), cKw, C.int(rating), C.int(money), C.int(comments))
+	C.c_fill_predicate(unsafe.Pointer(&buf[0]), C.int(mode), cKw, C.int(score), C.int(money), C.int(comments))
 	return buf
 }
 
-func AppendTestFileheaderWithComments(directPath, filename, owner, title string, filemode int, rating int, money int, comments int) error {
+func AppendTestFileheaderWithComments(directPath, filename, owner, title string, filemode int, score int, money int, comments int) error {
 	cDir := C.CString(directPath)
 	cFn := C.CString(filename)
 	cOwn := C.CString(owner)
@@ -1094,14 +1093,14 @@ func AppendTestFileheaderWithComments(directPath, filename, owner, title string,
 		C.free(unsafe.Pointer(cOwn))
 		C.free(unsafe.Pointer(cTit))
 	}()
-	rc := C.c_append_fileheader_with_comments(cDir, cFn, cOwn, cTit, C.int(filemode), C.int(rating), C.int(money), C.int(comments))
+	rc := C.c_append_fileheader_with_comments(cDir, cFn, cOwn, cTit, C.int(filemode), C.int(score), C.int(money), C.int(comments))
 	if rc < 0 {
 		return fmt.Errorf("append_fileheader failed on %s", directPath)
 	}
 	return nil
 }
 
-func AppendTestFileheader(directPath, filename, owner, title string, filemode int, rating int, money int) error {
+func AppendTestFileheader(directPath, filename, owner, title string, filemode int, score int, money int) error {
 	cDir := C.CString(directPath)
 	cFn := C.CString(filename)
 	cOwn := C.CString(owner)
@@ -1112,7 +1111,7 @@ func AppendTestFileheader(directPath, filename, owner, title string, filemode in
 		C.free(unsafe.Pointer(cOwn))
 		C.free(unsafe.Pointer(cTit))
 	}()
-	rc := C.c_append_fileheader(cDir, cFn, cOwn, cTit, C.int(filemode), C.int(rating), C.int(money))
+	rc := C.c_append_fileheader(cDir, cFn, cOwn, cTit, C.int(filemode), C.int(score), C.int(money))
 	if rc < 0 {
 		return fmt.Errorf("append_fileheader failed on %s", directPath)
 	}

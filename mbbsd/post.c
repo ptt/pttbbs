@@ -57,11 +57,11 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
         return -1;
     }
 
-    if (type == RECTYPE_GOOD && fhdr->rating < MAX_RECOMMENDS)
+    if (type == RECTYPE_GOOD && fhdr->score < MAX_RECOMMENDS)
         update = 1;
-    else if (type == RECTYPE_BAD && fhdr->rating > -MAX_RECOMMENDS)
+    else if (type == RECTYPE_BAD && fhdr->score > -MAX_RECOMMENDS)
         update = -1;
-    fhdr->rating += update;
+    fhdr->score += update;
 
     /* since we want to do 'modification'... */
     /* Publish live comment to IPC service (clean ASCIIZ) */

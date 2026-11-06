@@ -15,7 +15,7 @@ func createMockDirFile(t *testing.T, dirFile string, articles []ArticleHeader) {
 		var raw RawFileHeader
 		copy(raw.Filename[:], art.Filename)
 		raw.Modified = art.Modified
-		raw.Rating = art.Rating
+		raw.Score = art.Score
 		raw.Comments = art.Comments
 		copy(raw.Owner[:], art.Owner)
 		copy(raw.Date[:], art.Date)
@@ -759,4 +759,3 @@ func TestSearchAuthor(t *testing.T) {
 		t.Errorf("Expected header to contain '搜尋作者: \"hungte\"', got:\n%s", rendered)
 	}
 }
-

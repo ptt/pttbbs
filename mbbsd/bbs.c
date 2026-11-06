@@ -110,10 +110,10 @@ modify_dir_lite(
         memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
 
     if (comment) {
-	comment += fhdr.rating;
+	comment += fhdr.score;
 	if (comment > MAX_RECOMMENDS) comment = MAX_RECOMMENDS;
 	else if (comment < -MAX_RECOMMENDS) comment = -MAX_RECOMMENDS;
-	fhdr.rating = comment;
+	fhdr.score = comment;
     }
 
 
@@ -129,7 +129,7 @@ modify_dir_lite(
 	    syncnow();
 	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
 	}
-	search_svc_hint_comment(direct, currbid, ent, fhdr.rating);
+	search_svc_hint_comment(direct, currbid, ent, fhdr.score);
     }
     return 0;
 }
@@ -749,16 +749,16 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     if (title_type == SUBJECT_LOCKED)
         STRLCPY(recom, "0m--");
-    else if(ent->rating >= MAX_RECOMMENDS)
+    else if(ent->score >= MAX_RECOMMENDS)
 	  strcpy(recom,"1mÃz");
-    else if(ent->rating>9)
-	  sprintf(recom,"3m%2d",ent->rating);
-    else if(ent->rating>0)
-	  sprintf(recom,"2m%2d",ent->rating);
-    else if(ent->rating <= -MAX_RECOMMENDS)
+    else if(ent->score>9)
+	  sprintf(recom,"3m%2d",ent->score);
+    else if(ent->score>0)
+	  sprintf(recom,"2m%2d",ent->score);
+    else if(ent->score <= -MAX_RECOMMENDS)
 	  sprintf(recom,"0mXX");
-    else if(ent->rating<-10)
-	  sprintf(recom,"0mX%d",-ent->rating);
+    else if(ent->score<-10)
+	  sprintf(recom,"0mX%d",-ent->score);
     else STRLCPY(recom, "0m  ");
 
     /* start printing */
@@ -2531,7 +2531,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	case RET_DOREPLYALL:
 	    do_reply(fhdr);
             return FULLUPDATE;
-	case RET_DORATING: // Use comment until the rating/vote system is ready.
+	case RET_SCORE: // Use comment until the rating/vote system is ready.
 	case RET_DOCOMMENT:
             comment(ent, fhdr, direct);
 	    return FULLUPDATE;
@@ -2942,7 +2942,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     if (is_file_owner(fhdr, &cuser))
 #else
     // old format is one way counter, so let's relax.
-    if (fhdr->rating == 0 && is_file_owner(fhdr, &cuser))
+    if (fhdr->score == 0 && is_file_owner(fhdr, &cuser))
 #endif
     {
 	// owner recommend
@@ -3738,7 +3738,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     getdata(b_lines - 1, 0, "½T©w­n±ÀÂËÂk¹s[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
-    fhdr->rating = 0;
+    fhdr->score = 0;
     // TODO fix race condition here.
     substitute_ref_record(direct, fhdr, ent);
     if (currbid > 0 && !(currmode & MODE_DIGEST)) {

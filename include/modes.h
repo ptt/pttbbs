@@ -30,7 +30,7 @@
 #define RET_RECYCLEBIN	    (989)
 #define RET_EDITPOST	    (988)
 #define RET_EDITTITLE	    (987)
-#define RET_DORATING	    (986)
+#define RET_SCORE	    (986)
 #define RET_LIVE	    (985)  /* pmore 'v': caller runs live mode */
 #define RET_MIN_SPECIAL     (900)   // A sentinel indicating special return.
 
@@ -155,7 +155,7 @@
 #define RS_AUTHOR       0x40    /* search author's article */
 #define RS_NEWPOST	0x80	/* search new posts */
 #define RS_KEYWORD_EXCLUDE	0x100	/* exclude keyword */
-#define RS_RATING	0x200	/* search by ratings */
+#define RS_SCORE	0x200	/* search by scores */
 #define RS_MONEY	0x400	/* search by money */
 #define RS_SOLVED	0x800	/* search by 's' mark */
 #define RS_COMMENTS	0x1000	/* search by comments */

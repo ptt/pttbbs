@@ -72,7 +72,7 @@ static int pager_cmd_edit(cmd_ctx_t *ctx) {
 }
 static int pager_cmd_edittitle(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_EDITTITLE; return 0; }
 static int pager_cmd_comment(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOCOMMENT; return 0; }
-static int pager_cmd_rating(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DORATING; return 0; }
+static int pager_cmd_score(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_SCORE; return 0; }
 static int pager_cmd_reply(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOREPLY; return 0; }
 static int pager_cmd_replyall(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOREPLYALL; return 0; }
 static int pager_cmd_selectbrd(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_SELECTBRD; return 0; }
@@ -101,7 +101,7 @@ static const cmd_t pager_reading_cmds[] = {
     { 'y', "回應", "回覆文章至看板或信箱", pager_cmd_replyall, 0, CMD_PRIO_HIGH },
     { 'Y', NULL, NULL, pager_cmd_replyall, 0, CMD_PRIO_NONE },
     { 'X', "推文", "給予文章評論/評分", pager_cmd_comment, 0, CMD_PRIO_HIGH },
-    { '%', NULL, NULL, pager_cmd_rating, 0, CMD_PRIO_NONE },
+    { '%', NULL, NULL, pager_cmd_score, 0, CMD_PRIO_NONE },
     { 's', "切換看板", "搜尋並切換至其他看板", pager_cmd_selectbrd, PERM_BASIC, CMD_PRIO_LOW },
     { 'S', NULL, NULL, pager_cmd_selectbrd, PERM_BASIC, CMD_PRIO_NONE },
     { '#', "代碼搜尋", "以文章代碼(AID)搜尋文章", pager_cmd_selectaid, PERM_BASIC, CMD_PRIO_LOW },

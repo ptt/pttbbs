@@ -190,11 +190,11 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
     } else if (strcmp(tok[0], "pace") == 0 && n >= 3) {
         if (w && w->kind == ACT_WAIT_NAV && !w->done) {
             w->delay_ms = atoi(tok[2]);
-            // "deny <type>"; a bare "deny" (older services) is for ratings.
+            // "deny <type>"; a bare "deny" (older services) is for scores.
             // A late reply may belong to an earlier request: deny only the
             // same type.
             if (n >= 4 && strcmp(tok[3], "deny") == 0) {
-                w->deny = (p ? atoi(p) : ACTIVITY_NAV_SEARCH_RATING) == w->type;
+                w->deny = (p ? atoi(p) : ACTIVITY_NAV_SEARCH_SCORE) == w->type;
                 // "deny <type> <message>"
                 if (w->deny)
                     act_keep_msg(w, p && strchr(p, ' ') ? strchr(p, ' ') + 1 : NULL);
@@ -371,7 +371,7 @@ activity_nav_track(const char *userid, time4_t firstlogin,
         return 0;
     act_dispatch(NULL, NULL, NULL);     // Drop stale replies
     act_norm_ip(hostip, ip, sizeof(ip));
-    if ((nav_type == ACTIVITY_NAV_SEARCH_RATING ?
+    if ((nav_type == ACTIVITY_NAV_SEARCH_SCORE ?
          act_send("nav %s %d %s %x %d %d %d", userid, (int)firstlogin, ip,
                   client_code, nav_type, target_bid, value) :
          act_send("nav %s %d %s %x %d %d", userid, (int)firstlogin, ip,
