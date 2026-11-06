@@ -64,7 +64,6 @@
 
 # jobspool
 10	3-20	*	*	*	bin/waterball.pl
-30	3	*	*	*	bin/tarqueue.pl
 
 # 每日備份
 30	3	*	*	*	bin/dailybackup.pl

@@ -3947,72 +3947,6 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
     return FULLUPDATE;
 }
 
-/* 看板備份 */
-static int
-tar_addqueue(void)
-{
-#if IS_ENABLED(CONFIG_OUTJOBSPOOL) && defined(TARQUEUE_SENDURL)
-    char            email[60], ans[2];
-    FILE           *fp;
-    char            bakboard, bakman;
-
-    if (!(CBRD_IS_BM() || HasUserPerm(PERM_BOARDS)))
-        return DONOTHING;
-
-    AUTO_STR(qfn, BBSHOME "/jobspool/tarqueue.%s", currboard);
-    if (access(qfn, 0) == 0) {
-        vmsg("已經排定行程, 會於每日" TARQUEUE_TIME_STR "依序進行備份");
-	return FULLUPDATE;
-    }
-
-    if (vans(TEMPFORMAT(STRLEN, "確定要對看板 %s 進行備份嗎？[y/N] ", currboard)) != 'y')
-        return FULLUPDATE;
-
-    vs_hdr2("看板備份", currboard);
-
-    if (!getdata_str(4, 0, "請輸入通知信箱: ", email, sizeof(email), DOECHO,
-                     cuser.userid))
-	return FULLUPDATE;
-    if (strstr(email, "@") == NULL)
-    {
-	STRLCAT(email, ".bbs@");
-	STRLCAT(email, MYHOSTNAME);
-    }
-    move(4,0); clrtoeol();
-    outs(email);
-
-    /* check email -.-"" */
-    if (!is_valid_email(email)) {
-	vmsg("您指定的信箱不正確! ");
-	return FULLUPDATE;
-    }
-
-    getdata(6, 0, "要備份看板內容嗎(Y/N)?[Y]", ans, sizeof(ans), LCECHO);
-    bakboard = (ans[0] == 'n') ? 0 : 1;
-    getdata(7, 0, "要備份精華區內容嗎(Y/N)?[N]", ans, sizeof(ans), LCECHO);
-    bakman = (ans[0] == 'y') ? 1 : 0;
-    if (!bakboard && !bakman) {
-	move(8, 0);
-	outs("可是我們只能備份看板或精華區的耶 ^^\"\"\"");
-	pressanykey();
-	return FULLUPDATE;
-    }
-    fp = fopen(qfn, "w");
-    fprintf(fp, "%s\n", cuser.userid);
-    fprintf(fp, "%s\n", email);
-    fprintf(fp, "%d,%d\n", bakboard, bakman);
-    fclose(fp);
-
-    move(10, 0);
-    outs("系統已經將您的備份排入行程, \n");
-    outs("稍後將會在系統負荷較低的時候將資料寄給您~ :) ");
-    pressanykey();
-    return FULLUPDATE;
-#else
-    return DONOTHING;
-#endif
-}
-
 /* ----------------------------------------------------- */
 /* 看板進板畫面、文摘、精華區                              */
 /* ----------------------------------------------------- */
@@ -4486,7 +4420,6 @@ DEFINE_READ_ITEM_CMD(bbs_cmd_good_post, good_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_mark_post, mark_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_read_post, read_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_select_board, do_select)
-DEFINE_READ_NOITEM_CMD(bbs_cmd_tar_queue, tar_addqueue)
 DEFINE_READ_ITEM_CMD(bbs_cmd_mark_read, b_mark_read_unread)
 DEFINE_READ_ITEM_CMD(bbs_cmd_call_in, b_call_in)
 DEFINE_READ_ITEM_CMD(bbs_cmd_reply_post, reply_post)
@@ -4537,7 +4470,6 @@ const cmd_t read_comms[] = {
     { 'T', NULL, "修改文章標題", bbs_cmd_edit_title, 0, CMD_PRIO_NONE, true },
     { Ctrl('E'), NULL, "管理文章", bbs_cmd_manage_post, PERM_BM | PERM_POLICE, CMD_PRIO_NONE, true },
     { Ctrl('A'), NULL, "顯示文章檔名", bbs_cmd_show_filename, PERM_SYSOP, CMD_PRIO_NONE, true },
-    { 'u', NULL, "加入精華區打包佇列", bbs_cmd_tar_queue, PERM_BM | PERM_BOARDS, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
