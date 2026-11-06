@@ -25,7 +25,6 @@ all:
 convert_sgr_66: convert_sgr_66.c sgr66.o common.o
 convert_utf8: convert_utf8.c sgr66.o common.o
 fix_2026h: fix_2026h.c common.o
-dir_bottom_to_bh: dir_bottom_to_bh.c
 board_split_title: board_split_title.c
 board_posttype_to_file: board_posttype_to_file.c
 dir_recommend_to_rating: dir_recommend_to_rating.c

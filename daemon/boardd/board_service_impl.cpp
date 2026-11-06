@@ -142,7 +142,7 @@ Status BoardServiceImpl::List(ServerContext *context, const ListRequest *req,
   // Bottoms.
   if (req->include_bottoms()) {
     // Pinned posts are referenced from boardheader_t.bottom[] and live in
-    // .DIR itself (.DIR.bottom is migrated away).
+    // .DIR itself.
     int32_t recs[MAX_BOTTOM_POSTS];
     int n = resolve_board_bottoms(bid, recs);
     const std::string dir = paths::bfile(bp->brdname, FN_DIR);

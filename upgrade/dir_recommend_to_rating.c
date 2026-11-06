@@ -246,7 +246,6 @@ convert_board(const boardheader_t *bh, int bid, int *total_recs, int *converted_
 {
     char fn_dir[PATHLEN];
     char fn_names[PATHLEN];
-    char fn_bottom[PATHLEN];
 
     if (!bh || !bh->brdname[0])
         return 0;
@@ -266,13 +265,6 @@ convert_board(const boardheader_t *bh, int bid, int *total_recs, int *converted_
     setbfile(fn_names, bh->brdname, ".Names");
     if (dashf(fn_names)) {
         if (convert_one_file(fn_names, bh->brdname, ".Names", total_recs, converted_recs) > 0)
-            files_changed++;
-    }
-
-    /* 3. Legacy bottom posts index (.DIR.bottom, if present) */
-    setbfile(fn_bottom, bh->brdname, FN_DIR ".bottom");
-    if (dashf(fn_bottom)) {
-        if (convert_one_file(fn_bottom, bh->brdname, FN_DIR ".bottom", total_recs, converted_recs) > 0)
             files_changed++;
     }
 

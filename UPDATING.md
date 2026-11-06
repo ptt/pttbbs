@@ -117,8 +117,8 @@ make -C upgrade dir_recommend_to_rating
 ./upgrade/dir_recommend_to_rating --backup ~/.BRD
 ```
 
-轉換程式會自動走訪 `~/.BRD` 內的所有看板目錄，將看板文章索引 `.DIR`、文摘索引 `.Names`
-及舊版底層推文檔 `.DIR.bottom` 內的所有紀錄安全轉換為 `int16_t rating`。程式內建特徵比對與防呆機制，
+轉換程式會自動走訪 `~/.BRD` 內的所有看板目錄，將看板文章索引 `.DIR` 及文摘索引 `.Names`
+內的所有紀錄安全轉換為 `int16_t rating`。程式內建特徵比對與防呆機制，
 已轉換的看板會自動略過以避免重複轉換。完成全站轉檔後再重啟 BBS 服務。
 
 ---
@@ -160,7 +160,8 @@ make -C upgrade dir_recommend_to_rating
 ## bbs, cache: Replace .DIR.bottom with boardheader_t
 
 把置底 `.DIR.bottom` 改成只追蹤 index, 用 AID 的方式記在 boardheader_t 內。
-請關站轉換(或起碼停掉所有舊 mbbsd)。請用 `upgrade/dir_bottom_to_bh` 進行資料轉換。
+請關站轉換(或起碼停掉所有舊 mbbsd)。轉換程式 `upgrade/dir_bottom_to_bh` 已移除，
+尚未轉換的站台請從 git 歷史 (27031078a) 取回使用。
 
 ## service/friend, talk, bbs: Offload friend_online
 
