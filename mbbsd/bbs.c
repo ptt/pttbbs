@@ -2592,7 +2592,7 @@ editLimits(unsigned char *plogins,
 }
 
 int
-do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
+do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
 {
     char buf[STRLEN];
     boardheader_t  *bp = getbcache(currbid);
@@ -2604,10 +2604,7 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
     strcpy(buf, "更改 ");
     if (HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD())
 	strcat(buf, "(A)本板發表限制 ");
-    strcat(buf, "(B)本板預設");
-    if (fhdr->filemode & FILE_PETITION)
-	strcat(buf, " (C)本篇");
-    strcat(buf, "連署限制 (Q)取消？[Q]");
+    strcat(buf, "(B)本板連署限制 (Q)取消？[Q]");
     buf[0] = vans(buf);
 
     if ((HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD()) && buf[0] == 'a') {
@@ -2634,23 +2631,6 @@ do_limitedit(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("修改完成！");
 	return FULLUPDATE;
 
-    } else if ((fhdr->filemode & FILE_PETITION) && buf[0] == 'c') {
-        if (currmode & MODE_SELECT) {
-            vmsg("請退出搜尋模式後再設定。");
-            return FULLUPDATE;
-        }
-
-	editLimits(
-		&fhdr->multi.petition_limits.logins,
-		&fhdr->multi.petition_limits.badpost);
-        if (modify_dir_lite(direct, ent, fhdr->filename, 0, NULL, NULL, NULL, 0,
-                            &fhdr->multi, 0, 0) != 0) {
-            vmsg("修改失敗，請重新進入看板再試試。");
-            return FULLUPDATE;
-        }
-
-	vmsg("修改完成！");
-	return FULLUPDATE;
     }
 
     vmsg("取消修改");
@@ -3860,8 +3840,9 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 	prints("│ 匿名管理編號: %u (同一人號碼會一樣)",
 	   (unsigned int)fhdr->multi.anon_uid + (unsigned int)currutmp->pid);
     } else if (fhdr->filemode & FILE_PETITION) {
-        uint32_t bp = fhdr->multi.petition_limits.badpost,
-                 lgn = fhdr->multi.petition_limits.logins;
+        const boardheader_t *brd = getbcache(currbid);
+        uint32_t bp = brd ? brd->petition_limit_badpost : 0,
+                 lgn = brd ? brd->petition_limit_logins : 0;
         prints("│ 投票限制(需先滿足發文限制): ");
         if (bp)
             prints("退文 %d 篇以下 ", 255 - bp);

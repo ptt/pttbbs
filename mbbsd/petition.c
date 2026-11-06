@@ -18,19 +18,6 @@ char *CheckPetitionRestrictionBoard(int bid, size_t sz_msg, char *msg)
         sz_msg, msg);
 }
 
-char *CheckPetitionRestrictionFile(
-        const fileheader_t * fhdr, size_t sz_msg, char *msg)
-{
-    if (CBRD_IS_BM() || HasUserPerm(PERM_SYSOP))
-        return NULL;
-
-    return get_restriction_reason(
-        cuser.numlogindays, cuser.badpost,
-        fhdr->multi.petition_limits.logins,
-        fhdr->multi.petition_limits.badpost,
-        sz_msg, msg);
-}
-
 static int
 is_petition_divider(const char *line)
 {
@@ -77,7 +64,7 @@ do_petition_reply(const fileheader_t * fhdr)
 	return;
     }
 
-    if (CheckPetitionRestrictionFile(fhdr, sizeof(genbuf), genbuf))
+    if (CheckPetitionRestrictionBoard(currbid, sizeof(genbuf), genbuf))
     {
 	vmsgf("未達投票資格限制: %s", genbuf);
 	return;
@@ -426,10 +413,6 @@ do_petition(int type)
     STRLCPY(petitionfile.owner, cuser.userid);
     STRLCPY(petitionfile.title, title);
     petitionfile.filemode |= FILE_PETITION;
-    /* use lower 16 bits of 'money' to store limits */
-    /* lower 8 bits are posts, higher 8 bits are logins */
-    petitionfile.multi.petition_limits.logins  = bcache[currbid - 1].petition_limit_logins;
-    petitionfile.multi.petition_limits.badpost = bcache[currbid - 1].petition_limit_badpost;
     setbdir(genbuf, currboard);
     if (append_fileheader(genbuf, &petitionfile) != -1)
 	setbtotal(currbid);

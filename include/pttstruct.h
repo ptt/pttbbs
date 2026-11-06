@@ -321,13 +321,8 @@ typedef struct fileheader_t { /* 128 bytes */
 	/* TODO: MOVE money to outside multi!!!!!! */
 	int money;
 	int anon_uid;
-	/* different order to match alignment */
-	struct {
-	    unsigned char posts;
-	    unsigned char logins;
-	    unsigned char regtime;
-	    unsigned char badpost;
-	} petition_limits;
+	/* Petitions (FILE_PETITION) used to keep their limits here; they now
+	 * follow the board's petition_limit_* instead. */
     }	    multi;
     /* XXX dirty, split into flag and money if money of each file is less than 16bit? */
     uint16_t  filemode;         /* was uint8_t, must be last field @ boards.c */
