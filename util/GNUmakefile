@@ -21,7 +21,7 @@ CPROG_WITH_UTIL := \
 	outmail		chkhbf		userlist	\
 	angel		openticket	\
 	buildir		xchatd		\
-	uhash_loader	timecap_buildref showuser	removebm \
+	uhash_loader	timecap_buildref showuser	\
 	redir		permreport	setrole 	update_online \
 	munin		useractive_munin	chkfnlen	\
 	check_moderators	showboard	checkpolls	\

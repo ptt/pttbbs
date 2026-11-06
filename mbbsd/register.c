@@ -903,14 +903,8 @@ new_register(void)
         }
     }
 
-#ifdef USE_REMOVEBM_ON_NEWREG
-    {
-        AUTO_STR(buf, BBSHOME "/bin/removebm '%s' >>"
-                 BBSHOME "/log/removebm.log 2>&1",
-                 newuser.userid);
-        system(buf);
-    }
-#endif
+    // The uid may be from a deleted account that was not cleaned up.
+    remove_user_from_bms(0, newuser.userid);
 
     // Mark register complete after the user has been created.
     if (email_verified) {

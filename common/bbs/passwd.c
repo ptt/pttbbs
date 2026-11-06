@@ -316,6 +316,9 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
 
     passwd_unlock();
 
+    // Its uid will go to a new account, which must not be a moderator.
+    remove_user_from_bms(unum, userid);
+
     // Audit log entry to USIES log
     if (!action_tag || !*action_tag)
         action_tag = "CLEAN(PURGE)";
@@ -333,6 +336,46 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
     }
 
     return ret;
+}
+
+// Remove a user from the moderators (BM) of all boards.
+int
+remove_user_from_bms(int unum, const char *userid)
+{
+    int bid, changed = 0;
+
+    if (!userid || !*userid || !SHM)
+        return 0;
+    if (unum <= 0 && (unum = searchuser(userid, NULL)) <= 0)
+        return 0;
+
+    for (bid = 1; bid <= MAX_BOARD; bid++) {
+        boardheader_t *bh = &SHM->bcache[bid - 1];
+        int m, kept = 0, found = 0;
+
+        if (!bh->brdname[0])
+            continue;
+        for (m = 0; m < MAX_BMs && !found; m++)
+            found = (bh->moderators[m].unum == unum);
+        if (!found)
+            continue;
+
+        for (m = 0; m < MAX_BMs; m++) {
+            if (bh->moderators[m].unum <= 0 || bh->moderators[m].unum == unum)
+                continue;
+            if (kept != m)
+                bh->moderators[kept] = bh->moderators[m];
+            kept++;
+        }
+        for (; kept < MAX_BMs; kept++)
+            memset(&bh->moderators[kept], 0, sizeof(bh->moderators[kept]));
+
+        log_filef("log/removebm.log", "[%s] %s\n", userid, bh->brdname);
+        substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
+        reset_board(bid);
+        changed++;
+    }
+    return changed;
 }
 
 int
