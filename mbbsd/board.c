@@ -1065,7 +1065,8 @@ bcfg_set_petition_limits(cmd_ctx_t *ctx)
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     boardheader_t *bp = cx->bp;
     ctx->reload = true;
-    editLimits(&bp->petition_limit_logins, &bp->petition_limit_badpost);
+    editLimits(&bp->petition_limit_logins, &bp->petition_limit_badpost,
+               PETITION_LIMITS_NOTICE);
     cx->touched = 1;
     assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
     modify_boardheader(bp, currbid);

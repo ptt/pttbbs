@@ -93,7 +93,8 @@ int get_max_pay_by_post_title(const char *title);
 int check_title_change_fee(const fileheader_t *fhdr, const char *new_title);
 int calc_post_cap(int post_count, int base_cap);
 int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
-void editLimits(unsigned char *plogins, unsigned char *pbadpost);
+void editLimits(unsigned char *plogins, unsigned char *pbadpost,
+                const char *notice);
 char *get_board_restriction_reason(int bid, size_t sz_msg, char *msg);
 void log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile);
 int crosspost_target_ok(int bid, const char *bname);
@@ -971,6 +972,7 @@ int b_vote_maintain(void);
 void auto_close_polls(void);
 
 /* petition */
+#define PETITION_LIMITS_NOTICE "※ 目前看板所有進行中投票跟連署會一起改變"
 int do_petition(int);
 void do_petition_reply(const fileheader_t *fhdr);
 

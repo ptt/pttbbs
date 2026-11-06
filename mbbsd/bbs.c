@@ -2552,7 +2552,8 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
 void
 editLimits(unsigned char *plogins,
-           unsigned char *pbadpost)
+           unsigned char *pbadpost,
+           const char *notice)
 {
     char genbuf[STRLEN];
     int  temp, y;
@@ -2565,6 +2566,8 @@ editLimits(unsigned char *plogins,
     // query UI
     y = b_lines - 4;
     move(y++, 0); clrtobot();
+    if (notice)
+        outs(notice);
     sprintf(genbuf, "%u", logins*10);
     do {
 	getdata_buf(y, 0,
@@ -2611,7 +2614,7 @@ do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *dir
 
 	editLimits(
 		&bp->post_limit_logins,
-		&bp->post_limit_badpost);
+		&bp->post_limit_badpost, NULL);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
@@ -2623,7 +2626,8 @@ do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *dir
 
 	editLimits(
 		&bp->petition_limit_logins,
-		&bp->petition_limit_badpost);
+		&bp->petition_limit_badpost,
+		PETITION_LIMITS_NOTICE);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
