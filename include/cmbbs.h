@@ -407,6 +407,13 @@ int user_save_2fa(const char *userid, const user_2fa_t *totp);
 int user_delete_2fa(const char *userid);
 int user_verify_2fa_or_backup(const char *userid, const char *input_code);
 
+/* mail.c */
+#define MAILSVC_IN_PATH     BBSHOME "/run/mail.svc.in.sock"
+#define MAILSVC_OUT_PATH    BBSHOME "/run/mail.svc.out.sock"
+int mail_internet(const char *fpath, const char *title, const char *rcpt,
+                  const char *from);
+int mail_ziphome(const char *userid, const char *rcpt);
+
 /* svc.c */
 #define SVC_CONNECT_TIMEOUT_US  10000  /* 10ms */
 #define SVC_READ_TIMEOUT_MS     50     /* 50ms */

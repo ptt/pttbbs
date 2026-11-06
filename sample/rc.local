@@ -2,5 +2,4 @@
 # WARNING: this script is run by root!!
 
 /usr/bin/su bbsadm -c /home/bbs/bin/shmctl init
-/usr/bin/su bbsadm -c /home/bbs/bin/outmail&
 /home/bbs/bin/bbsctl start

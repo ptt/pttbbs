@@ -251,7 +251,7 @@ int start_services()
 {
     int err = 0;
     const char *services[] = {
-        "utmp", "friend", "search", "stat", "ipc",
+        "utmp", "friend", "search", "stat", "ipc", "mail",
         CONDITIONAL_SVC(ENTROPY, "entropy")
         CONDITIONAL_SVC(ACTIVITY, "activity")
         CONDITIONAL_SVC(CONTENT, "content")

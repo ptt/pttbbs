@@ -10,9 +10,6 @@ start)
 	# (hugetlbfs 掛載點需可被 bbs 寫入), 詳見 pttbbs.conf 的 USE_HUGETLB 說明
 	/usr/bin/su -fm bbs -c '/home/bbs/bin/shmctl init'
 
-	# 寄信至站外
-	/usr/bin/su -fm bbs -c /home/bbs/bin/outmail &
-
 	# 啟動 port 23 (port 23須使用 root 才能進行 bind ) 以其他
 	/home/bbs/bin/bbsctl start
 
@@ -20,7 +17,6 @@ start)
 	echo -n ' mbbsd'
 	;;
 stop)
-	/usr/bin/killall outmail
 	/usr/bin/killall mbbsd
 	/usr/bin/killall shmctl
 	/bin/sleep 2; /usr/bin/killall shmctl

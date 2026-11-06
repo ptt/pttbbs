@@ -287,7 +287,8 @@ static void email_regcode(const char *regcode, const char *email)
      */
     SNPRINTF(buf, " " BBSENAME " - [ %s ]", regcode);
 
-    bsmtp("etc/registermail", buf, email, "non-exist");
+    if (bsmtp("etc/registermail", buf, email, "non-exist") < 0)
+	vmsg("系統錯誤 - 無法寄出認證碼，請稍後再試。");
 }
 
 /* 使用者填寫註冊表格 */

@@ -129,7 +129,6 @@
         gzip
         rm
         perl
-        mutt
         lynx
 
     我們大部份的 perl script會用到 LocalVars.pm , 該檔案內負責定義

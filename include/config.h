@@ -96,14 +96,6 @@
 #define BBSGID (99)
 #endif
 
-#ifndef TAR_PATH
-#define TAR_PATH "tar"
-#endif
-
-#ifndef MUTT_PATH
-#define MUTT_PATH "mutt"
-#endif
-
 #ifndef MAXPATHLEN
 #define MAXPATHLEN (256)
 #endif

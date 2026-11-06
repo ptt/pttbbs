@@ -15,6 +15,23 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## mail.svc: Mail service for bbsmail, outmail and Zip UserHome
+
+新增 `service/mail`（`mail.svc`），把站外信的收、寄與「打包私人資料」集中處理：
+
+> - 更新前先讓 `outmail` 把 `out/.DIR` 裡的信寄完（`bin/outmail -o`），再停掉它；
+>   之後不需要再啟動 `outmail`。
+> - `shmctl init` 會啟動 `bin/mail.svc`；不重跑 `shmctl init` 的話請手動執行。
+> - 不再需要 `mutt`。relay 預設是 `RELAY_SERVER_IP`，可用 `mail.svc -smtp host:port` 指定。
+
+```bash
+make -C service/mail install
+make -C util install          # 新的 bbsmail
+bin/mail.svc                  # 或 bin/shmctl init
+bin/mail.svc -h               # 其他選項（-zip-limit、-max-age ...）
+```
+
+---
 ## poll: Count npolls from the polls' control files
 
 看板的投票數 `npolls`（`boardheader_t`）改為依各投票的 control 檔（`controlN`）

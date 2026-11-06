@@ -18,7 +18,7 @@ CPROG_WITH_UTIL := \
 	topusr		\
 	toplazyBM	writemoney	\
 	reaper		mailangel	\
-	outmail		chkhbf		userlist	\
+	chkhbf		userlist	\
 	angel		openticket	\
 	buildir		xchatd		\
 	uhash_loader	timecap_buildref showuser	\

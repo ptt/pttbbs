@@ -1,270 +1,95 @@
-#define _UTIL_C_
+/*
+ * bbsmail: gives a mail from the MTA to mail.svc, which delivers it to the
+ * mailbox of a BBS user.
+ *
+ * Usage: bbsmail <bbs_uid>
+ *
+ * The receiver may be "userid" or "userid.bbs"; the mail is read from
+ * stdin. The exit code is 0 when the mail is delivered, or not delivered
+ * for good (e.g. no such user, see etc/mailog), so it does not bounce; and
+ * EX_TEMPFAIL when mail.svc can't take it now, so the MTA tries again
+ * later.
+ */
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <sysexits.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #include "bbs.h"
 
-#define	LOG_FILE	(BBSHOME "/etc/mailog")
-
-#ifdef HMM_USE_ANTI_SPAM
-extern char *notitle[], *nofrom[], *nocont[];
-#endif
-
-
-int mailalertuid(int tuid)
+static int
+write_all(int fd, const char *buf, size_t len)
 {
-    userinfo_t *uentp=NULL;
-    if(tuid>0 && (uentp = (userinfo_t *)search_ulist(tuid)) )
-         uentp->alerts|=ALERT_NEW_MAIL;
+    while (len > 0) {
+	ssize_t n = write(fd, buf, len);
+	if (n < 0 && errno == EINTR)
+	    continue;
+	if (n <= 0)
+	    return -1;
+	buf += n;
+	len -= (size_t)n;
+    }
     return 0;
-}      
-
-void
-mailog(const char *msg)
-{
-    time_t now;
-    struct tm *p;
-
-    time(&now);
-    p = localtime(&now);
-    file_appendf(LOG_FILE, "%02d/%02d/%02d %02d:%02d:%02d <bbsmail> %s\n",
-	    p->tm_year % 100, p->tm_mon + 1, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec,
-	    msg);
 }
-
-/* Strip control sequences, and turn other control bytes into spaces. */
-static void
-strip_control_header(char *s)
-{
-    strip_control_sequence(s, s);
-    for (; *s; s++)
-	if ((unsigned char)*s < ' ' || *s == 0x7f)
-	    *s = ' ';
-}
-
-static const char *
-bbsmail_pretty_subject(const char *subject)
-{
-#ifdef WITHOUT_BBSMAIL_PRETTY_SUBJECT
-    return subject;
-#else
-
-    static const char *table[] = {
-	"Undelivered Mail Returned to Sender",
-	"<對方退信通知>",
-        "Returned mail: see transcript for details",
-	"<對方退信通知>",
-	NULL,
-	NULL,
-    };
-
-    const char **pat = table;
-
-    while (*pat)
-    {
-	if (strncmp(*pat, subject, strlen(*pat)) == 0)
-	{
-	    pat++;
-	    assert(*pat);
-	    return *pat;
-	}
-	// each entry has 2 records.
-	pat += 2;
-    }
-
-    // fallback to original title
-    return subject;
-#endif
-}
-
-int mail2bbs(char *userid)
-{
-    int     uid;
-    fileheader_t mymail;
-    char genbuf[512], title[512], sender[512], filename[PATHLEN], *ptr;
-    time_t tmp_time;
-    struct stat st;
-    FILE *fout;
-    userec_t xuser;
-
-    /* a mail may lack Subject: or From: */
-    title[0] = sender[0] = '\0';
-
-    /* check if the userid is in our bbs now */
-    if( (uid = passwd_load_user(userid, &xuser)) < 1 ){
-	SNPRINTF(genbuf, "BBS user <%s> not existed", userid);
-	puts(genbuf);
-	mailog(genbuf);
-	return -1;//EX_NOUSER;
-    }
-
-    if (REJECT_OUTTAMAIL(xuser))
-	return -1; //不接受站外信
-
-    sethomepath(filename, xuser.userid);
-
-    if( stat(filename, &st) == -1 ){
-	if( Mkdir(filename) == -1 ){
-	    printf("mail box create error %s \n", filename);
-	    return -1;
-	}
-    }
-    else if( !(st.st_mode & S_IFDIR) ){
-	printf("mail box error\n");
-	return -1;
-    }
-
-    /* parse header */
-    while( fgets(genbuf, sizeof(genbuf), stdin) ){
-	if( genbuf[0] == '\n' )
-	    break;
-	if( strncmp(genbuf, "Subject: ", 9) == 0 ){
-	    STRLCPY(title, genbuf + 9);
-	    str_decode_M3(title, sizeof(title));
-	    continue;
-	}
-	if( strncmp(genbuf, "Content-Type:", 13) == 0 ){
-	    if( strstr(genbuf, "multipart") && !strstr(genbuf, "report") )
-		return -1;
-	}
-	if( strncmp(genbuf, "From", 4) == 0 ){
-	    // "From: name <addr>"
-	    char *name, *addr;
-	    if( (addr = strchr(genbuf, '<')) && (ptr = strrchr(addr, '>')) ){
-		*ptr = '\0';
-		if (addr[-1] == ' ')
-		    addr[-1] = '\0';
-		*addr++ = '\0';
-		name = (char *) strchr(genbuf, ' ');
-		if( name )
-		    while (*name == ' ')
-			name++;
-		else
-		    name = "unknown";
-		SNPRINTF(sender, "%s (%s)", addr, name);
-	    }
-	    else {
-		if (strtok(genbuf, " \t\n\r")) {
-		    name = strtok(NULL, " \t\n\r");
-		    if (name)
-			STRLCPY(sender, name);
-		}
-	    }
-	    continue;
-	}
-    }
-
-    if( (ptr = strchr(sender, '\n')) )
-	*ptr = '\0';
-
-    if( (ptr = strchr(title, '\n')) )
-	*ptr = '\0';
-
-    strip_control_header(sender);
-    strip_control_header(title);
-
-    if( strchr(sender, '@') == NULL )	/* 由 local host 寄信 */
-	STRLCAT(sender, "@" MYHOSTNAME);
-
-#ifdef HMM_USE_ANTI_SPAM
-    for (n = 0; notitle[n]; n++) {
-	if (mbs_strstr(title, notitle[n])) {
-	    SNPRINTF(genbuf, "Title <%s> not accepted", title);
-	    puts(genbuf);
-	    mailog(genbuf);
-	    return -1;
-	}
-    }
-    for (n = 0; nofrom[n]; n++) {
-	if (mbs_strstr(sender, nofrom[n])) {
-	    snprintf(genbuf, sizeof(genbuf), "From <%s> not accepted", sender);
-	    puts(genbuf);
-	    mailog(genbuf);
-	    return -1;
-	}
-    }
-#endif
-
-/* allocate a file for the new mail, after the checks above so that a
- * rejected mail does not leave an empty file behind */
-    stampfile(filename, &mymail);
-
-    if ((fout = fopen(filename, "w")) == NULL)
-    {
-	printf("Cannot open %s\n", filename);
-	return -1;
-    }
-
-    if (!title[0])
-	SNPRINTF(title, "來自 %.64s", sender);
-    title[TTLEN] = 0;
-    time(&tmp_time);
-    fprintf(fout, "作者: %s\n標題: %s\n時間: %s\n",
-	    sender, title, ctime(&tmp_time));
-
-/* copy the stdin to the specified file */
-    while (fgets(genbuf, sizeof(genbuf), stdin))
-    {
-#ifdef HMM_USE_ANTI_SPAM
-	for (n = 0; nocont[n]; n++)
-	    if (mbs_strstr(genbuf, nocont[n]))
-	    {
-		fclose(fout);
-		unlink(filename);
-		SNPRINTF(genbuf, "Content <%s> not accepted", nocont[n]);
-		puts(genbuf);
-		mailog(genbuf);
-		return -1;
-	    }
-#endif
-	fputs(genbuf, fout);
-    }
-    fclose(fout);
-
-    SNPRINTF(genbuf, "%s => %s", sender, xuser.userid);
-    mailog(genbuf);
-
-    /* append the record to the MAIL control file */
-    STRLCPY(mymail.title, bbsmail_pretty_subject(title));
-
-    if (strtok(sender, " .@")) {
-      STRLCAT(sender, ".");
-      sender[IDLEN] = '.';
-    }
-    sender[IDLEN + 1] = '\0';
-    STRLCPY(mymail.owner, sender);
-
-    sethomedir(filename, xuser.userid);
-    mailalertuid(uid);
-    return append_fileheader(filename, &mymail);
-}
-
 
 int
-main(int argc, char* argv[])
+main(int argc, char *argv[])
 {
-    char receiver[512];
+    struct sockaddr_un addr = { .sun_family = AF_UNIX };
+    char buf[8192];
+    size_t len = 0;
+    ssize_t n;
+    int fd;
 
-/* argv[1] is userid in bbs   */
-
-    if (argc < 2){
+    if (argc < 2) {
 	printf("Usage:\t%s <bbs_uid>\n", argv[0]);
-	exit(-1);
+	return -1;
     }
-    (void) setgid(BBSGID);
-    (void) setuid(BBSUID);
-    attach_SHM();
-    if( passwd_init() )
+    if (strpbrk(argv[1], "\r\n")) {
+	puts("Bad receiver");
 	return 0;
-    if (chdir(BBSHOME) != 0) {
-	perror("chdir");
-	return 1;
     }
 
-    STRLCPY(receiver, argv[1]);
-
-    strtok(receiver,".");
-    if (mail2bbs(receiver)){
-	/* eat mail queue */
-	while (fgets(receiver, sizeof(receiver), stdin))
-	    ;
+    strlcpy(addr.sun_path, MAILSVC_IN_PATH, sizeof(addr.sun_path));
+    if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0 ||
+	connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+	perror(MAILSVC_IN_PATH);
+	return EX_TEMPFAIL;
     }
-    return 0;
+
+    n = snprintf(buf, sizeof(buf), "DELIVER %s\n", argv[1]);
+    if (n < 0 || (size_t)n >= sizeof(buf) || write_all(fd, buf, (size_t)n) < 0)
+	return EX_TEMPFAIL;
+    while ((n = read(STDIN_FILENO, buf, sizeof(buf))) != 0) {
+	if (n < 0) {
+	    if (errno == EINTR)
+		continue;
+	    return EX_TEMPFAIL;
+	}
+	if (write_all(fd, buf, (size_t)n) < 0)
+	    return EX_TEMPFAIL;
+    }
+    shutdown(fd, SHUT_WR);
+
+    /* OK, REJECT <why> or ERR <why> */
+    while (len < sizeof(buf) - 1 &&
+	   (n = read(fd, buf + len, sizeof(buf) - 1 - len)) != 0) {
+	if (n < 0) {
+	    if (errno == EINTR)
+		continue;
+	    break;
+	}
+	len += (size_t)n;
+    }
+    buf[len] = '\0';
+    close(fd);
+    if (len)
+	fputs(buf, stdout);
+
+    if (strncmp(buf, "OK", 2) == 0 || strncmp(buf, "REJECT", 6) == 0)
+	return 0;
+    return EX_TEMPFAIL;
 }

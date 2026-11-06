@@ -860,7 +860,11 @@ setforward(void) {
                     "請輸入下行 %s 開頭的驗證碼到自動轉寄設定:\n"
                     " %s\n", cuser.userid, ip, prefix, auth_code);
             fclose(fp);
-            bsmtp(authtemp, buf, ip, cuser.userid);
+            if (bsmtp(authtemp, buf, ip, cuser.userid) < 0) {
+                unlink(authtemp);
+                vmsg("系統錯誤 - 無法送出確認信。");
+                return FULLUPDATE;
+            }
             unlink(authtemp);
             vs_hdr("確認信件已寄出");
             prints("\n\n"
@@ -1380,13 +1384,8 @@ mail_account_sysop(void)
 
 // The weekly limit of home backups, kept in .zipped_home. Returns 0 when a
 // backup is allowed now; otherwise says when the next one is and returns -1.
-// With mark, it also records the backup: doforward() calls it so right
-// before the backup starts, which keeps the check and the record together
-// (sessions waiting at doforward()'s prompts all passed mail_mbox()'s
-// check) and records it before the long tar, during which the session
-// may be stopped.
 static int
-zipped_home_limit(int mark)
+zipped_home_check(void)
 {
     char tagname[PATHLEN];
     time4_t last_tag;
@@ -1399,24 +1398,33 @@ zipped_home_limit(int mark)
               7 - time4_days_elapsed(now, last_tag));
         return -1;
     }
-    if (mark) {
-        log_filef(tagname, "/tmp/%s.uu\n", cuser.userid);
-        rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
-    }
     return 0;
+}
+
+// Records a backup taken by mail.svc in .zipped_home.
+static void
+zipped_home_mark(const char *rcpt)
+{
+    char tagname[PATHLEN];
+
+    setuserfile(tagname, ".zipped_home");
+    log_filef(tagname, "%s %s\n", Cdatelite(&now), rcpt);
+    rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
 }
 
 int
 mail_mbox(void)
 {
     fileheader_t fhdr;
+    char hpath[PATHLEN];
 
-    if (zipped_home_limit(0) < 0)
+    if (zipped_home_check() < 0)
         return 0;
 
-    AUTO_STR(cmd, "/tmp/%s.uu", cuser.userid);
+    sethomepath(hpath, cuser.userid);
     SNPRINTF(fhdr.title, "%s 私人資料", cuser.userid);
-    doforward(cmd, &fhdr, 'Z');
+    if (doforward(hpath, &fhdr, 'Z') == 0)
+        vmsg("已排入打包，完成後會寄給您；若無法寄出會以站內信通知。");
     return 0;
 }
 
@@ -1649,11 +1657,17 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	int charge = !(hostaddr == NULL && strcasecmp(xid, cuser.userid) == 0);
 	if (charge && !mail_precheck_quota(1))
 	    return 1;
-	// Check the weekly limit again and record the backup, once nothing
-	// more is asked (another session may have passed the checks too) and
-	// before charging for it and starting the long tar.
-	if (mode == 'Z' && zipped_home_limit(1) < 0)
-	    return 1;
+	// Check the weekly limit again (another session may have passed the
+	// checks too), and record the backup once mail.svc takes it.
+	if (mode == 'Z') {
+	    if (zipped_home_check() < 0)
+		return 1;
+	    if (mail_ziphome(cuser.userid, address) < 0) {
+		vmsg("打包服務暫時無法使用，請稍後再試。");
+		return 1;
+	    }
+	    zipped_home_mark(address);
+	}
 	if (charge) {
 	    if (mail_charge_quota(1, "超額轉寄手續費") < 0)
 		return 1;
@@ -1662,22 +1676,9 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	}
     }
 
-    // PATHLEN will be used as command line, so we need it longer.
-    assert(PATHLEN >= 256);
     if (mode == 'Z') {
-	assert(is_validuserid(cuser.userid));
-	assert(is_valid_email(address));
-        char hpath[PATHLEN];
-        sethomepath(hpath, cuser.userid);
-        AUTO_STR(cmd, TAR_PATH " -X " BBSHOME "/etc/ziphome.exclude "
-                 "-czf /tmp/home.%s.tgz %s; "
-                 MUTT_PATH " -s 'home.%s.tgz' "
-                 "-a /tmp/home.%s.tgz -- '%s' </dev/null;"
-                 "rm /tmp/home.%s.tgz",
-                 cuser.userid, hpath,
-                 cuser.userid, cuser.userid, address, cuser.userid);
-        system(cmd);
-        return 0;
+	// mail.svc packs and mails it later
+	return 0;
     } else if (mode == 'F') {
 	SNPRINTF(fname, "/tmp/bbs.f%05d", (int)currpid);
 	AUTO_STR(tmp_buf, "%s/%s", direct, fh->filename);
@@ -2480,10 +2481,6 @@ static const cmd_t mail_comms[] = {
 int
 bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
 {
-    char            buf[80];
-    time4_t         chrono;
-    MailQueue       mqueue = {};
-
     if (!from)
 	from = cuser.userid;
 
@@ -2491,34 +2488,12 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
     if (strcasestr(rcpt, str_mail_address) || !strchr(rcpt, '@')) {
         return -1;
     }
-    chrono = now;
 
-    /* stamp the queue file */
-    STRLCPY(buf, "out/");
-    for (;;) {
-	snprintf(buf + 4, sizeof(buf) - 4, "M.%u.%d.A", (unsigned int)++chrono, getpid());
-	if (!dashf(buf)) {
-	    Copy(fpath, buf);
-	    break;
-	}
-    }
-
-    fpath = buf;
-
-    /* setup mail queue */
-    mqueue.mailtime = chrono;
-    // XXX (unused) mqueue.method = method;
-    STRLCPY(mqueue.filepath, fpath);
-    STRLCPY(mqueue.subject, title);
-    STRLCPY(mqueue.sender, from);
-    // username is deprecated: why use it?
-    // STRLCPY(mqueue.username, username);
-    STRLCPY(mqueue.username, "");
-    STRLCPY(mqueue.rcpt, rcpt);
-
-    if (append_record("out/" FN_DIR, (fileheader_t *) & mqueue, sizeof(mqueue)) < 0)
-	return 0;
-    return chrono;
+    /* mail.svc copies the file before it replies, so the caller may remove
+     * it right after. */
+    if (mail_internet(fpath, title, rcpt, from) < 0)
+	return -1;
+    return (int)now;
 }
 
 /*

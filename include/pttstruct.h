@@ -693,19 +693,6 @@ typedef struct {
     int r, c;
 } rc_t;
 
-typedef struct MailQueue {
-    char    filepath[FNLEN];
-    char    subject[STRLEN];
-    time4_t mailtime;
-    char    sender[IDLEN + 1];
-    char    username[24];
-    char    rcpt[50];
-    int     method;
-    char    *niamod;
-} MailQueue;
-
-enum  {MQ_TEXT, MQ_UUENCODE, MQ_JUSTIFY};
-
 /*
  * signature information
  */
