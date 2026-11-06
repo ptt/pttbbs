@@ -386,7 +386,7 @@ int
 activity_forward(const char *userid, time4_t firstlogin,
                  const char *hostip, uint32_t client_code, int is_exempt,
                  int bid, const char *filename, int kind,
-                 const char *address, const char *via,
+                 const char *address, const char *via, time4_t mtime,
                  char *msg, size_t msgsz)
 {
     if (msg && msgsz)
@@ -404,11 +404,12 @@ activity_forward(const char *userid, time4_t firstlogin,
         g_reqid = 1;
     w.reqid = g_reqid;
     act_norm_ip(hostip, ip, sizeof(ip));
-    if (act_send("fwd %u %s %d %s %x %d %s %d %s %s", w.reqid, userid,
+    if (act_send("fwd %u %s %d %s %x %d %s %d %s %s %d", w.reqid, userid,
                  (int)firstlogin, ip, client_code, bid,
                  act_field_ok(filename) ? filename : "-", kind,
                  act_field_ok(address) ? address : "-",
-                 act_field_ok(via) ? via : "-") == 0)
+                 act_field_ok(via) ? via : "-",
+                 mtime > 0 ? (int)mtime : 0) == 0)
         act_wait_reply(&w, ACTIVITY_FORWARD_WAIT_MS);
     return w.deny;
 }

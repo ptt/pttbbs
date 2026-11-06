@@ -461,7 +461,9 @@ append_record_forward(char *fpath, fileheader_t * record, int size,
                          0, record->filename,
                          strcasecmp(origid, cuser.userid) == 0 ?
                          ACTIVITY_FWD_OWN : ACTIVITY_FWD_OTHER,
-                         address, origid, NULL, 0)) {
+                         address, origid,
+                         dasht(TEMP_DIRPATH(fpath, record->filename)),
+                         NULL, 0)) {
         LOG_IF(LOG_CONF_INTERNETMAIL,
                log_filef("log/internet_mail.log",
                          "[%s] %s -> (%s) %s: denied by activity: %s\n",

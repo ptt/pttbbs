@@ -125,13 +125,14 @@ enum {
 
 // mbbsd: reports sending `filename` on board `bid` (0: a mail) out as Internet
 // mail to `address` (kind ACTIVITY_FWD_*; `via`: the auto-forwarding mailbox,
-// or NULL). Returns 1 if it should be denied, else 0 (always 0 without the
+// or NULL; `mtime`: when the file was last changed, to tell a changed post
+// from a duplicate, or 0 if unknown). Returns 1 if it should be denied, else 0 (always 0 without the
 // service or a reply in time); sets `msg` (if not NULL, `msgsz` bytes) to why
 // it is denied ("" if not told).
 int activity_forward(const char *userid, time4_t firstlogin,
                      const char *hostip, uint32_t client_code, int is_exempt,
                      int bid, const char *filename, int kind,
-                     const char *address, const char *via,
+                     const char *address, const char *via, time4_t mtime,
                      char *msg, size_t msgsz);
 
 #endif // INCLUDE_ACTIVITY_H

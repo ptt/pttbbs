@@ -1475,8 +1475,8 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 // not get around the limits. Returns 0 if the forward is denied, with why in
 // `msg` ("" if not told).
 static int
-report_forward(const fileheader_t *fh, const char *address, char *msg,
-               size_t msgsz)
+report_forward(const char *direct, const fileheader_t *fh,
+               const char *address, char *msg, size_t msgsz)
 {
     char uid[IDLEN + 1] = "", fwd[64] = "", fpath[PATHLEN];
     const char *rcpt = address, *via = NULL;
@@ -1506,7 +1506,10 @@ report_forward(const fileheader_t *fh, const char *address, char *msg,
     return !activity_forward(cuser.userid, cuser.firstlogin, fromhost,
                              get_client_code(),
                              HasUserPerm(ACTIVITY_EXEMPT_PERMS), bid,
-                             fh->filename, kind, rcpt, via, msg, msgsz);
+                             fh->filename, kind, rcpt, via,
+                             dasht(TEMPFORMAT(PATHLEN, "%s/%s", direct,
+                                              fh->filename)),
+                             msg, msgsz);
 }
 
 int
@@ -1628,7 +1631,12 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     // everything again.
     if (mode != 'Z') {
 	char msg[ACTIVITY_DENY_MSG_MAX];
-	if (!report_forward(fh, address, msg, sizeof(msg))) {
+	if (!report_forward(direct, fh, address, msg, sizeof(msg))) {
+	    LOG_IF(LOG_CONF_INTERNETMAIL,
+		   log_filef("log/internet_mail.log",
+			     "[%s] %s -> %s: denied by activity: %s - %s\n",
+			     __FUNCTION__,
+			     cuser.userid, address, direct, fh->title));
 	    // Denied: why and until when (or how long to wait).
 	    if (*msg)
 		activity_alert(msg, " ¥¼±H¥X ");
