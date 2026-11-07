@@ -3397,11 +3397,15 @@ main(int argc, char *argv[], char *envp[])
     // parsing bug cannot run as root.
     reload_data();
 
-    // create tunnel
+    // create tunnel. Each new login goes to whoever connects to it, so only
+    // the owner (mbbsd runs as bbs) may connect: set the mode before listen().
     fprintf(stderr, LOG_PREFIX "creating tunnel: %s...", tunnel_path);
-    if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 1)) < 0)
+    if ( (tfd = tobindex(tunnel_path, 1, _set_bind_opt, 0)) < 0 ||
+         chmod(tunnel_path, 0600) < 0 ||
+         listen(tfd, 1) < 0)
     {
-        fprintf(stderr, LOG_PREFIX "cannot create tunnel. abort.\n");
+        fprintf(stderr, LOG_PREFIX "cannot create tunnel: %s. abort.\n",
+                strerror(errno));
         return 2;
     }
     fprintf(stderr, "ok.\n");
