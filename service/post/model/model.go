@@ -460,14 +460,25 @@ func EncodeCrosspostPrefix(sourcePostID uint64) []byte {
 
 // EncodeRFC822Post packages the post into RFC 822 format:
 // Encoding MUST be the very first header!
+// HeaderValue makes s safe for a single RFC 822 header line: line breaks
+// would end the header early and let the rest of the value forge other headers
+// (or start the body), so each run of CR/LF becomes a single space and trailing
+// ones are dropped.
+func HeaderValue(s string) string {
+	if !strings.ContainsAny(s, "\r\n") {
+		return s
+	}
+	return strings.Join(strings.FieldsFunc(s, func(r rune) bool { return r == '\r' || r == '\n' }), " ")
+}
+
 func EncodeRFC822Post(p *Post) []byte {
 	var b strings.Builder
 	b.WriteString("Encoding: utf-8\n")
-	b.WriteString(fmt.Sprintf("Community: %s\n", p.Community))
+	b.WriteString(fmt.Sprintf("Community: %s\n", HeaderValue(p.Community)))
 	b.WriteString(fmt.Sprintf("ParentID: %d\n", p.ParentID))
-	b.WriteString(fmt.Sprintf("PostFile: %s\n", p.PostFile))
-	b.WriteString(fmt.Sprintf("Title: %s\n", p.Title))
-	b.WriteString(fmt.Sprintf("CreatorName: %s\n", p.CreatorName))
+	b.WriteString(fmt.Sprintf("PostFile: %s\n", HeaderValue(p.PostFile)))
+	b.WriteString(fmt.Sprintf("Title: %s\n", HeaderValue(p.Title)))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(p.CreatorName)))
 	b.WriteString(fmt.Sprintf("CreatorID: %d\n", p.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", p.CreatedAt))
 	m := p.Modified
@@ -507,7 +518,7 @@ func DecodeRFC822Post(val []byte) (meta map[string]string, body string) {
 func EncodeRFC822Comment(c *Comment) []byte {
 	var b strings.Builder
 	b.WriteString("Encoding: utf-8\n")
-	b.WriteString(fmt.Sprintf("CreatorName: %s\n", c.CreatorName))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(c.CreatorName)))
 	b.WriteString(fmt.Sprintf("CreatorID: %d\n", c.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", c.CreatedAt))
 	if c.ModifiedAt > 0 {
@@ -516,7 +527,7 @@ func EncodeRFC822Comment(c *Comment) []byte {
 	if c.LastCommentAt > 0 {
 		b.WriteString(fmt.Sprintf("LastCommentAt: %d\n", c.LastCommentAt))
 	}
-	b.WriteString(fmt.Sprintf("IP: %s\n", c.IP))
+	b.WriteString(fmt.Sprintf("IP: %s\n", HeaderValue(c.IP)))
 	b.WriteString(fmt.Sprintf("LegacyType: %d\n", c.LegacyType))
 	c.Deletion.writeRFC822(&b)
 	b.WriteString("\n")
@@ -581,20 +592,20 @@ func EncodeRFC822PostRevision(r *PostRevision) []byte {
 	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("PostID: %d\n", r.PostID))
 	b.WriteString(fmt.Sprintf("Revision: %d\n", r.Revision))
-	b.WriteString(fmt.Sprintf("Community: %s\n", r.Community))
-	b.WriteString(fmt.Sprintf("PostFile: %s\n", r.PostFile))
-	b.WriteString(fmt.Sprintf("Title: %s\n", r.Title))
-	b.WriteString(fmt.Sprintf("CreatorName: %s\n", r.CreatorName))
+	b.WriteString(fmt.Sprintf("Community: %s\n", HeaderValue(r.Community)))
+	b.WriteString(fmt.Sprintf("PostFile: %s\n", HeaderValue(r.PostFile)))
+	b.WriteString(fmt.Sprintf("Title: %s\n", HeaderValue(r.Title)))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(r.CreatorName)))
 	b.WriteString(fmt.Sprintf("CreatorID: %d\n", r.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", r.CreatedAt))
 	b.WriteString(fmt.Sprintf("EditedAt: %d\n", r.EditedAt))
-	b.WriteString(fmt.Sprintf("EditorName: %s\n", r.EditorName))
+	b.WriteString(fmt.Sprintf("EditorName: %s\n", HeaderValue(r.EditorName)))
 	b.WriteString(fmt.Sprintf("EditorID: %d\n", r.EditorID))
 	if r.Action != "" {
-		b.WriteString(fmt.Sprintf("Action: %s\n", r.Action))
+		b.WriteString(fmt.Sprintf("Action: %s\n", HeaderValue(r.Action)))
 	}
 	if r.Reason != "" {
-		b.WriteString(fmt.Sprintf("Reason: %s\n", r.Reason))
+		b.WriteString(fmt.Sprintf("Reason: %s\n", HeaderValue(r.Reason)))
 	}
 	b.WriteString("\n")
 	b.WriteString(r.Content)
@@ -658,19 +669,19 @@ func EncodeRFC822CommentRevision(r *CommentRevision) []byte {
 	b.WriteString(fmt.Sprintf("PostID: %d\n", r.PostID))
 	b.WriteString(fmt.Sprintf("Sequence: %d\n", r.Sequence))
 	b.WriteString(fmt.Sprintf("Revision: %d\n", r.Revision))
-	b.WriteString(fmt.Sprintf("CreatorName: %s\n", r.CreatorName))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(r.CreatorName)))
 	b.WriteString(fmt.Sprintf("CreatorID: %d\n", r.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", r.CreatedAt))
 	b.WriteString(fmt.Sprintf("EditedAt: %d\n", r.EditedAt))
-	b.WriteString(fmt.Sprintf("EditorName: %s\n", r.EditorName))
+	b.WriteString(fmt.Sprintf("EditorName: %s\n", HeaderValue(r.EditorName)))
 	b.WriteString(fmt.Sprintf("EditorID: %d\n", r.EditorID))
-	b.WriteString(fmt.Sprintf("IP: %s\n", r.IP))
+	b.WriteString(fmt.Sprintf("IP: %s\n", HeaderValue(r.IP)))
 	b.WriteString(fmt.Sprintf("LegacyType: %d\n", r.LegacyType))
 	if r.Action != "" {
-		b.WriteString(fmt.Sprintf("Action: %s\n", r.Action))
+		b.WriteString(fmt.Sprintf("Action: %s\n", HeaderValue(r.Action)))
 	}
 	if r.Reason != "" {
-		b.WriteString(fmt.Sprintf("Reason: %s\n", r.Reason))
+		b.WriteString(fmt.Sprintf("Reason: %s\n", HeaderValue(r.Reason)))
 	}
 	b.WriteString("\n")
 	b.WriteString(r.Content)
@@ -734,9 +745,9 @@ func EncodeRFC822Crosspost(x *CrosspostRecord) []byte {
 	var b strings.Builder
 	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("SourcePostID: %d\n", x.SourcePostID))
-	b.WriteString(fmt.Sprintf("TargetCommunity: %s\n", x.TargetCommunity))
-	b.WriteString(fmt.Sprintf("TargetPostFile: %s\n", x.TargetPostFile))
-	b.WriteString(fmt.Sprintf("CreatorName: %s\n", x.CreatorName))
+	b.WriteString(fmt.Sprintf("TargetCommunity: %s\n", HeaderValue(x.TargetCommunity)))
+	b.WriteString(fmt.Sprintf("TargetPostFile: %s\n", HeaderValue(x.TargetPostFile)))
+	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(x.CreatorName)))
 	b.WriteString(fmt.Sprintf("CreatorID: %d\n", x.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n\n", x.CreatedAt))
 	return []byte(b.String())

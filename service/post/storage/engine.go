@@ -305,6 +305,7 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		p.Modified = p.CreatedAt
 	}
 	p.Encoding = "utf-8"
+	p.Title = model.HeaderValue(p.Title)
 
 	// Auto-demotion: if a reply (ParentID > 0) has too little net new content, convert it to a comment on parent!
 	if p.ParentID > 0 && e.cfg.MinReplyRunes > 0 {
@@ -927,8 +928,16 @@ func (e *Engine) GetCommentsFiltered(postID uint64, startFloor, limit uint32, cr
 
 func (e *Engine) GetCommentCount(postID uint64) (int, error) {
 	var count int
-	err := e.metaDB.QueryRow("SELECT num_comments FROM posts WHERE id = ?", postID).Scan(&count)
-	return count, err
+	if err := e.metaDB.QueryRow("SELECT num_comments FROM posts WHERE id = ?", postID).Scan(&count); err != nil {
+		return 0, err
+	}
+	// Include comments added since the last background flush to SQLite.
+	e.dirtyMu.Lock()
+	if d, ok := e.dirtyDeltas[postID]; ok {
+		count += int(d.CommentsDelta)
+	}
+	e.dirtyMu.Unlock()
+	return count, nil
 }
 
 func (e *Engine) GetCommentCountByCommunityFile(community, postFile string) (int, error) {
@@ -2057,7 +2066,8 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		}
 	}
 
-	// 2. Scan comments.db to recount comments
+	// 2. Scan comments.db to recount comments. Deleted and removed comments
+	// still count: they are rendered as tombstone lines.
 	cIter, err := e.commentsDB.NewIter(nil)
 	if err != nil {
 		return postCount, 0, err
@@ -2065,6 +2075,9 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	defer cIter.Close()
 
 	postCommentCounts := make(map[uint64]int)
+	// UpdateComment bumps the post's modified time only in SQLite, to avoid
+	// rewriting the whole post in Pebble; the edited comment keeps ModifiedAt.
+	postCommentModified := make(map[uint64]int64)
 	for cIter.First(); cIter.Valid(); cIter.Next() {
 		// Skip secondary index keys starting with 'u'
 		if len(cIter.Key()) > 0 && cIter.Key()[0] == 'u' {
@@ -2074,9 +2087,8 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		if err != nil {
 			continue
 		}
-		c, err := model.DecodeRFC822Comment(postID, seq, cIter.Value())
-		if err == nil && c.DeletedOrRemoved() {
-			continue
+		if c, err := model.DecodeRFC822Comment(postID, seq, cIter.Value()); err == nil && c.ModifiedAt > postCommentModified[postID] {
+			postCommentModified[postID] = c.ModifiedAt
 		}
 		postCommentCounts[postID]++
 		commentCount++
@@ -2107,7 +2119,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		}
 	}
 
-	updateStmt, err := tx.Prepare("UPDATE posts SET upvotes = ?, downvotes = ?, num_comments = ?, num_crossposts = ? WHERE id = ?")
+	updateStmt, err := tx.Prepare("UPDATE posts SET upvotes = ?, downvotes = ?, num_comments = ?, num_crossposts = ?, modified = MAX(modified, ?) WHERE id = ?")
 	if err != nil {
 		return postCount, commentCount, err
 	}
@@ -2127,9 +2139,12 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	for id := range postCrosspostCounts {
 		allPostIDs[id] = true
 	}
+	for id := range postCommentModified {
+		allPostIDs[id] = true
+	}
 
 	for postID := range allPostIDs {
-		if _, err := updateStmt.Exec(postUpvotes[postID], postDownvotes[postID], postCommentCounts[postID], postCrosspostCounts[postID], postID); err != nil {
+		if _, err := updateStmt.Exec(postUpvotes[postID], postDownvotes[postID], postCommentCounts[postID], postCrosspostCounts[postID], postCommentModified[postID], postID); err != nil {
 			return 0, 0, err
 		}
 	}
@@ -2149,6 +2164,7 @@ func (e *Engine) UpdatePost(postID uint64, newTitle, newContent, editorName stri
 	if editorName == "" {
 		editorName, editorID = p.CreatorName, p.CreatorID
 	}
+	newTitle = model.HeaderValue(newTitle)
 
 	// Optimistic concurrency check: if expectedModified > 0 and doesn't match current modified timestamp, abort!
 	if expectedModified > 0 && p.Modified > 0 && p.Modified != expectedModified {
@@ -2243,7 +2259,7 @@ func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editorName string, edi
 	if err != nil {
 		return 0, err
 	}
-	newTitle = strings.TrimRight(newTitle, "\r\n")
+	newTitle = model.HeaderValue(newTitle)
 	if newTitle == "" || newTitle == p.Title {
 		return 0, nil
 	}
@@ -2594,13 +2610,9 @@ func (e *Engine) DeleteComment(postID uint64, seq uint32, deleterName string, de
 		return 0, fmt.Errorf("delete comment failed: %w", err)
 	}
 
-	// 4. Update SQLite num_comments count
-	e.FlushDirtyDeltas()
-	e.metaWriteMu.Lock()
-	_, _ = e.metaDB.Exec("UPDATE posts SET num_comments = CASE WHEN num_comments > 0 THEN num_comments - 1 ELSE 0 END WHERE id = ?", postID)
-	e.metaWriteMu.Unlock()
+	// num_comments is unchanged: the comment stays as a tombstone line.
 
-	// 5. Re-render and save
+	// 4. Re-render and save
 	if p, err := e.GetPost(postID); err == nil && p != nil {
 		_ = e.RenderAndSave(p)
 	}
@@ -2637,10 +2649,7 @@ func (e *Engine) UndeleteComment(postID uint64, seq uint32) error {
 		return fmt.Errorf("undelete comment failed: %w", err)
 	}
 
-	e.FlushDirtyDeltas()
-	e.metaWriteMu.Lock()
-	_, _ = e.metaDB.Exec("UPDATE posts SET num_comments = num_comments + 1 WHERE id = ?", postID)
-	e.metaWriteMu.Unlock()
+	// num_comments is unchanged: tombstones were counted all along.
 
 	if p, err := e.GetPost(postID); err == nil && p != nil {
 		_ = e.RenderAndSave(p)
@@ -2794,6 +2803,7 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			p.NumComments = len(item.Comments)
 		}
 		p.NumCrossposts = len(item.Crossposts)
+		p.Title = model.HeaderValue(p.Title)
 		if p.Encoding == "" {
 			p.Encoding = "utf-8"
 		}

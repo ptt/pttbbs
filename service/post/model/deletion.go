@@ -35,7 +35,7 @@ func (d *Deletion) Delete(creatorName string, creatorID PersonID, byName string,
 		d.Deleted = true
 	} else {
 		d.Removed = true
-		d.ModPersonName, d.ModPersonID, d.Reason = byName, byID, reason
+		d.ModPersonName, d.ModPersonID, d.Reason = HeaderValue(byName), byID, HeaderValue(reason)
 	}
 }
 
@@ -55,13 +55,13 @@ func (d *Deletion) writeRFC822(b *strings.Builder) {
 		fmt.Fprintf(b, "DeletedAt: %d\n", d.DeletedAt)
 	}
 	if d.ModPersonName != "" {
-		fmt.Fprintf(b, "ModPersonName: %s\n", d.ModPersonName)
+		fmt.Fprintf(b, "ModPersonName: %s\n", HeaderValue(d.ModPersonName))
 	}
 	if d.ModPersonID != 0 {
 		fmt.Fprintf(b, "ModPersonID: %d\n", d.ModPersonID)
 	}
 	if d.Reason != "" {
-		fmt.Fprintf(b, "Reason: %s\n", d.Reason)
+		fmt.Fprintf(b, "Reason: %s\n", HeaderValue(d.Reason))
 	}
 }
 

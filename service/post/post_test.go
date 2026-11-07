@@ -249,16 +249,19 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RebuildSQLiteFromPebble failed: %v", err)
 	}
-	if postsRebuilt != 3 || commentsRebuilt != 2 {
-		t.Fatalf("Rebuild count mismatch: posts=%d (expected 3), comments=%d (expected 2)", postsRebuilt, commentsRebuilt)
+	// Comments count tombstones too: c1, c2, c3 (purged as spam) and the
+	// demoted reply.
+	if postsRebuilt != 3 || commentsRebuilt != 4 {
+		t.Fatalf("Rebuild count mismatch: posts=%d (expected 3), comments=%d (expected 4)", postsRebuilt, commentsRebuilt)
 	}
 
 	rebuiltPost, err := engine.GetPost(created.ID)
 	if err != nil {
 		t.Fatalf("GetPost failed: %v", err)
 	}
-	// userB (+1) and userC (+1) = 2 upvotes, 0 downvotes, 2 active comments
-	if rebuiltPost.Upvotes != 2 || rebuiltPost.Downvotes != 0 || rebuiltPost.NumComments != 2 {
+	// userB (+1) and userC (+1) = 2 upvotes, 0 downvotes, 4 comments
+	// (including the purged spam comment's tombstone and the demoted reply)
+	if rebuiltPost.Upvotes != 2 || rebuiltPost.Downvotes != 0 || rebuiltPost.NumComments != 4 {
 		t.Fatalf("Rebuilt post score mismatch: up=%d, down=%d, comments=%d", rebuiltPost.Upvotes, rebuiltPost.Downvotes, rebuiltPost.NumComments)
 	}
 	if rebuiltPost.CreatorID != 1112607986 {
@@ -1032,7 +1035,8 @@ func TestServerIPC(t *testing.T) {
 	conn31.Write([]byte("COMMENT_COUNT_FILE gossiping M.1727800000.A.003\n"))
 	r31 := bufio.NewReader(conn31)
 	cmtCountResp, _ := r31.ReadString('\n')
-	if !strings.HasPrefix(cmtCountResp, "OK 1") {
+	// Two comment records: the deleted one (kept as a tombstone) and the multiline one.
+	if strings.TrimSpace(cmtCountResp) != "OK 2" {
 		t.Fatalf("COMMENT_COUNT_FILE failed: %s", cmtCountResp)
 	}
 	t.Logf("COMMENT_COUNT_FILE verified: %s", strings.TrimSpace(cmtCountResp))
@@ -1369,10 +1373,10 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	}
 	t.Logf("Rendered text with deleted comment:\n%s", rStr)
 
-	// Verify SQLite num_comments was decremented to 2
+	// num_comments is unchanged: the deleted comment stays as a tombstone
 	updatedPost, _ := engine.GetPost(post.ID)
-	if updatedPost.NumComments != 2 {
-		t.Fatalf("expected num_comments=2 after comment deletion, got %d", updatedPost.NumComments)
+	if updatedPost.NumComments != 3 {
+		t.Fatalf("expected num_comments=3 (with tombstone) after comment deletion, got %d", updatedPost.NumComments)
 	}
 
 	// 3. Undelete Comment #2
@@ -1449,12 +1453,12 @@ func TestPostAndCommentDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// rebuiltPosts counts non-deleted posts (0 active posts), and rebuiltComments counts active comments (2)
+	// rebuiltPosts counts non-deleted posts (0 active posts), and rebuiltComments counts all comments including tombstones (3)
 	if rebuiltPosts != 0 {
 		t.Fatalf("expected 0 active rebuilt posts, got %d", rebuiltPosts)
 	}
-	if rebuiltComments != 2 {
-		t.Fatalf("expected 2 active comments after rebuild, got %d", rebuiltComments)
+	if rebuiltComments != 3 {
+		t.Fatalf("expected 3 comments (with tombstone) after rebuild, got %d", rebuiltComments)
 	}
 
 	// Verify post can still be queried from SQLite as deleted after rebuild
@@ -2556,5 +2560,72 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 
 	if !strings.HasPrefix(resp3, "OK 7 ") || strings.Contains(resp3, "MERGED") {
 		t.Fatalf("IPC comment 3 expected floor 7 without MERGED, got: %s", resp3)
+	}
+}
+
+// TestRebuildMatchesLiveCounters checks that RebuildSQLiteFromPebble reproduces
+// what the live engine keeps in SQLite for imported legacy posts and edited
+// comments.
+func TestRebuildMatchesLiveCounters(t *testing.T) {
+	tmpDir := t.TempDir()
+	st, err := storage.OpenEngine(storage.Config{
+		DataDir:        filepath.Join(tmpDir, "data"),
+		CacheDir:       filepath.Join(tmpDir, "cache"),
+		CacheSizeMB:    16,
+		FilterEncoding: "utf-8",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	// Legacy pushes: 推 counts one comment and one (per-user) upvote, 噓 one
+	// comment and one downvote, → only a comment.
+	comments, votes, up, down := importer.ConvertParsedComments([]*importer.ParsedComment{
+		{CreatorName: "a", CommentType: "推", LegacyType: model.LegacyTypePush, CTime: 1727800001},
+		{CreatorName: "a", CommentType: "推", LegacyType: model.LegacyTypePush, CTime: 1727800002},
+		{CreatorName: "b", CommentType: "噓", LegacyType: model.LegacyTypeBoo, CTime: 1727800003},
+		{CreatorName: "c", CommentType: "→", LegacyType: 3, CTime: 1727800004},
+		{CreatorName: "d", CommentType: "推", LegacyType: model.LegacyTypePush, CTime: 1727800005},
+	}, nil)
+	if up != 2 || down != 1 || len(comments) != 5 {
+		t.Fatalf("ConvertParsedComments = %d up, %d down, %d comments; want 2, 1, 5", up, down, len(comments))
+	}
+	legacy := &model.Post{
+		Community: "testboard", PostFile: "M.1727800000.A.001", Title: "legacy",
+		CreatorName: "author", CreatedAt: 1727800000, Modified: 1727800000,
+		Upvotes: up, Downvotes: down, Content: "body", Encoding: "utf-8",
+	}
+	if err := st.ImportPostBatch([]*storage.ImportedPostData{{Post: legacy, Comments: comments, Votes: votes}}, ""); err != nil {
+		t.Fatalf("ImportPostBatch: %v", err)
+	}
+
+	// Editing a comment only bumps the post's modified time in SQLite; the
+	// rebuild must recover it from the comment's ModifiedAt.
+	if _, err := st.UpdateComment(legacy.ID, 3, "edited", "b", 0); err != nil {
+		t.Fatalf("UpdateComment: %v", err)
+	}
+	st.FlushDirtyDeltas()
+
+	live, err := st.GetPost(legacy.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := st.RebuildSQLiteFromPebble(); err != nil {
+		t.Fatalf("RebuildSQLiteFromPebble: %v", err)
+	}
+	rebuilt, err := st.GetPost(legacy.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if live.Upvotes != 2 || live.Downvotes != 1 || live.NumComments != 5 {
+		t.Errorf("live counters = %d/%d/%d, want 2/1/5", live.Upvotes, live.Downvotes, live.NumComments)
+	}
+	if rebuilt.Upvotes != live.Upvotes || rebuilt.Downvotes != live.Downvotes || rebuilt.NumComments != live.NumComments {
+		t.Errorf("rebuilt counters = %d/%d/%d, live = %d/%d/%d",
+			rebuilt.Upvotes, rebuilt.Downvotes, rebuilt.NumComments, live.Upvotes, live.Downvotes, live.NumComments)
+	}
+	if rebuilt.Modified != live.Modified || live.Modified == legacy.Modified {
+		t.Errorf("modified: live=%d rebuilt=%d imported=%d; want rebuilt == live > imported", live.Modified, rebuilt.Modified, legacy.Modified)
 	}
 }
