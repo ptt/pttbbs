@@ -317,6 +317,36 @@ func (s *Server) handleIPC(conn net.Conn) {
 	case "PING":
 		conn.Write([]byte("PONG\n"))
 
+	case "BACKUP":
+		// BACKUP [<name> | <absolute_path>]
+		//   <name>: each engine writes to <DataDir>/backup/<name> on its own disk
+		//           (default name: current local time, YYYYMMDD-HHMMSS).
+		//   <absolute_path>: written there (<path>/shard-<N> with multiple engines).
+		// Reply: OK <elapsed_ms> <count>\n followed by <count> lines of written dirs.
+		dest := strings.Join(parts[1:], " ")
+		if dest == "" {
+			dest = time.Now().Format("20060102-150405")
+		}
+		if !filepath.IsAbs(dest) && !storage.IsValidBackupName(dest) {
+			conn.Write([]byte("ERR BACKUP destination must be a name ([A-Za-z0-9._-]) or an absolute path\n"))
+			return
+		}
+		start := time.Now()
+		dirs, err := s.storage.Backup(dest)
+		if err != nil {
+			log.Printf("[post.svc] Backup %s failed: %v", dest, err)
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		elapsed := time.Since(start)
+		log.Printf("[post.svc] Backup %s written in %v: %s", dest, elapsed, strings.Join(dirs, ", "))
+		var resp strings.Builder
+		fmt.Fprintf(&resp, "OK %d %d\n", elapsed.Milliseconds(), len(dirs))
+		for _, dir := range dirs {
+			resp.WriteString(dir + "\n")
+		}
+		conn.Write([]byte(resp.String()))
+
 	case "POST_FILE":
 		// POST_FILE <community> <post_file> <creator_name> <creator_id> <filemode> <money> <ctime> <title_bytes>\n<title>
 		if len(parts) < 9 {

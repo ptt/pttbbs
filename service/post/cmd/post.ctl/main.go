@@ -203,6 +203,42 @@ func main() {
 		}
 		fmt.Printf("Ping response: %s\n", resp)
 
+	case "daily-backup", "inc-backup":
+		os.Exit(dailyBackup(args[1:]))
+
+	case "backup":
+		// post.ctl backup [name | dir]
+		//   name: each engine writes to <DataDir>/backup/<name> on its own disk.
+		//   dir:  anything containing a '/' is a directory, resolved here because
+		//         the daemon has its own working directory.
+		dest := ""
+		if len(args) >= 2 {
+			dest = args[1]
+		}
+		if strings.Contains(dest, "/") {
+			abs, err := filepath.Abs(dest)
+			if err != nil {
+				log.Fatalf("Error: %v", err)
+			}
+			dest = abs
+		}
+		resp, payload, err := sendCmd(strings.TrimRight("BACKUP "+dest, " ")+"\n", nil)
+		if err != nil {
+			log.Fatalf("backup failed: %v", err)
+		}
+		if !strings.HasPrefix(resp, "OK") {
+			log.Fatalf("backup failed: %s", resp)
+		}
+		ms := 0
+		if parts := strings.Fields(resp); len(parts) >= 2 {
+			ms, _ = strconv.Atoi(parts[1])
+		}
+		fmt.Printf("Backup completed in %v:\n", time.Duration(ms)*time.Millisecond)
+		fmt.Print(string(payload))
+		fmt.Println("To restore: stop post.svc and copy each directory's *.pebble and meta.sqlite3")
+		fmt.Println("back into its engine's data dir. Do not run `post.svc -rebuild` unless")
+		fmt.Println("meta.sqlite3 is lost: SQLite keeps some data that Pebble does not.")
+
 	case "add-file":
 		if len(args) < 5 {
 			log.Fatalf("Usage: post.ctl add-file <community> <post_file> <author> <title> [creator_id]")
@@ -1345,6 +1381,8 @@ Post Identifiers:
 Usage:
   post.ctl ping
   post.ctl restart [-timeout D] [--] [svc args...]
+  post.ctl backup [name | dir]   (name: <engine data dir>/backup/<name>; default: timestamp)
+  post.ctl daily-backup [-dest DIR | -cross] [-keep N] [-keep-local N] [-verify] [name]
   post.ctl list <community> [count [start]] [deleted]
   post.ctl get <post>
   post.ctl render <post> [output] [--legacy-format]

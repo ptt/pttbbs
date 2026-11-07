@@ -2563,6 +2563,62 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 	}
 }
 
+func TestServerIPCBackup(t *testing.T) {
+	tmpDir := t.TempDir()
+	sockPath := filepath.Join(tmpDir, "post.sock")
+	st, err := storage.OpenEngine(storage.Config{
+		DataDir:     filepath.Join(tmpDir, "data"),
+		CacheDir:    filepath.Join(tmpDir, "cache"),
+		CacheSizeMB: 16,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	srv := daemon.NewServer(daemon.ServerConfig{
+		BBSHome:    filepath.Join(tmpDir, "bbshome"),
+		UnixSocket: sockPath,
+	}, st)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+
+	request := func(line string) string {
+		conn, err := net.Dial("unix", sockPath)
+		if err != nil {
+			t.Fatalf("Dial unix socket failed: %v", err)
+		}
+		defer conn.Close()
+		conn.Write([]byte(line + "\n"))
+		resp, _ := bufio.NewReader(conn).ReadString('\n')
+		return strings.TrimSpace(resp)
+	}
+
+	if resp := request("BACKUP relative/dir"); !strings.HasPrefix(resp, "ERR") {
+		t.Errorf("BACKUP with a relative path = %q, want ERR", resp)
+	}
+
+	if resp := request("BACKUP"); !strings.HasPrefix(resp, "OK") {
+		t.Fatalf("BACKUP with the default name = %q, want OK", resp)
+	}
+	if named, _ := filepath.Glob(filepath.Join(tmpDir, "data", "backup", "*", "meta.sqlite3")); len(named) != 1 {
+		t.Errorf("default named backup not found under the data dir: %v", named)
+	}
+
+	dest := filepath.Join(tmpDir, "my backups", "today")
+	if resp := request("BACKUP " + dest); !strings.HasPrefix(resp, "OK") {
+		t.Fatalf("BACKUP = %q, want OK", resp)
+	}
+	if _, err := os.Stat(filepath.Join(dest, "meta.sqlite3")); err != nil {
+		t.Errorf("backup is missing meta.sqlite3: %v", err)
+	}
+	if resp := request("BACKUP " + dest); !strings.HasPrefix(resp, "ERR") {
+		t.Errorf("BACKUP to an existing destination = %q, want ERR", resp)
+	}
+}
+
 // TestRebuildMatchesLiveCounters checks that RebuildSQLiteFromPebble reproduces
 // what the live engine keeps in SQLite for imported legacy posts and edited
 // comments.

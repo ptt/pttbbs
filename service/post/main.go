@@ -38,6 +38,7 @@ var (
 	flagMaxOpenFiles   = flag.Int("max-files", 0, "Max open files per Pebble DB (0 for auto)")
 	flagWorkers        = flag.Int("workers", 0, "Default worker threads for board import (0 to use config or default 8)")
 	flagRebuild        = flag.Bool("rebuild", false, "Disaster recovery: rebuild SQLite from Pebble and exit")
+	flagVerify         = flag.Bool("verify", false, "Verify backup dirs given as arguments (read-only) and exit; non-zero exit on errors")
 )
 
 func init() {
@@ -113,6 +114,9 @@ func raiseFDLimit() {
 
 func main() {
 	flag.Parse()
+	if *flagVerify {
+		os.Exit(runVerify(flag.Args()))
+	}
 	raiseFDLimit()
 
 	bbshome := *flagBBSHome
@@ -258,4 +262,27 @@ func main() {
 	log.Printf("[post.svc] Received signal %v, shutting down gracefully...", sig)
 	srv.Stop()
 	log.Printf("[post.svc] Service stopped cleanly.")
+}
+
+// runVerify implements `post.svc -verify <dir>...`. Each dir is an engine data
+// dir (posts.pebble, ..., meta.sqlite3) or a dir with shard-<N> subdirs.
+func runVerify(args []string) int {
+	if len(args) == 0 {
+		fmt.Fprintln(os.Stderr, "Usage: post.svc -verify <backup_dir>...")
+		return 2
+	}
+	dirs, err := storage.ExpandVerifyDirs(args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	rc := 0
+	for _, dir := range dirs {
+		r := storage.VerifyDataDir(dir)
+		r.Print(os.Stdout)
+		if !r.OK() {
+			rc = 1
+		}
+	}
+	return rc
 }
