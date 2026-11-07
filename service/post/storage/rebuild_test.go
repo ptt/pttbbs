@@ -176,6 +176,18 @@ func TestRebuildReproducesLiveSQLite(t *testing.T) {
 		Crossposts: []*model.CrosspostRecord{{TargetCommunity: "old", TargetPostFile: "M.0.A.001", CreatorName: "x", CreatedAt: now}},
 	}}, ""))
 
+	// Communities: a rename only changes the registry, and a merge moves
+	// posts (with their comments and votes) to another community.
+	_, err = e.RenameCommunity("board", "renamed")
+	must(err)
+	from, err := e.CreatePost(&model.Post{Community: "mergefrom", PostFile: "M.2.A.001", Title: "merged", CreatorName: "author", CreatedAt: now, Content: "merged body"})
+	must(err)
+	comment(from, "a", now+1)
+	_, _, err = e.VotePost(from.ID, "a", 0, model.VoteUp, now, "")
+	must(err)
+	_, _, err = e.MergeCommunity("mergefrom", "renamed")
+	must(err)
+
 	e.FlushDirtyDeltas()
 	live := dumpMetaRows(t, e.metaDB)
 	if got := live[fmt.Sprintf("post %d num_comments", p.ID)]; got != "4" {
