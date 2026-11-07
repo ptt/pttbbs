@@ -1401,15 +1401,36 @@ zipped_home_check(void)
     return 0;
 }
 
-// Records a backup taken by mail.svc in .zipped_home.
-static void
+// Records a backup in .zipped_home before it goes to mail.svc, which packs
+// it even if this session is killed once it is sent. Returns the mtime the
+// record had before, for zipped_home_unmark().
+static time4_t
 zipped_home_mark(const char *rcpt)
 {
     char tagname[PATHLEN];
+    time4_t last;
 
     setuserfile(tagname, ".zipped_home");
+    last = dasht(tagname);
     log_filef(tagname, "%s %s\n", Cdatelite(&now), rcpt);
     rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
+    return last;
+}
+
+// Gives the week back when mail.svc did not take the backup: the limit goes
+// by the mtime of .zipped_home, so put back the one it had before the mark
+// (0, which the check takes as no backup, if there was no file).
+static void
+zipped_home_unmark(time4_t last)
+{
+    char tagname[PATHLEN];
+    struct timespec ts[2] = {
+        { 0, UTIME_OMIT },
+        { time4_to_time(last), 0 },
+    };
+
+    setuserfile(tagname, ".zipped_home");
+    utimensat(AT_FDCWD, tagname, ts, 0);
 }
 
 int
@@ -1658,15 +1679,18 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	if (charge && !mail_precheck_quota(1))
 	    return 1;
 	// Check the weekly limit again (another session may have passed the
-	// checks too), and record the backup once mail.svc takes it.
+	// checks too), and record the backup before mail.svc gets it.
 	if (mode == 'Z') {
+	    time4_t last;
+
 	    if (zipped_home_check() < 0)
 		return 1;
+	    last = zipped_home_mark(address);
 	    if (mail_ziphome(cuser.userid, address) < 0) {
+		zipped_home_unmark(last);
 		vmsg("打包服務暫時無法使用，請稍後再試。");
 		return 1;
 	    }
-	    zipped_home_mark(address);
 	}
 	if (charge) {
 	    if (mail_charge_quota(1, "超額轉寄手續費") < 0)
