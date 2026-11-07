@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
@@ -319,7 +320,18 @@ func main() {
 		log.Fatalf("[utmp.svc] Failed to initialize UTMP Service: %v", err)
 	}
 
+	stopped := make(chan struct{})
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		log.Printf("[utmp.svc] Received signal %v, shutting down...", sig)
+		service.Stop()
+		close(stopped)
+	}()
+
 	if err := service.Start(); err != nil {
 		log.Fatalf("[utmp.svc] Service stopped with error: %v", err)
 	}
+	<-stopped // Start returns once Stop closed the listener; let Stop finish.
 }

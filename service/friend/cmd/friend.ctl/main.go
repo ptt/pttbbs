@@ -10,6 +10,7 @@ import (
 
 	"pttbbs/bbs"
 	"pttbbs/friend/daemon"
+	"pttbbs/svcctl"
 )
 
 func sendRequest(socketPath string, req daemon.Request) (*daemon.Response, error) {
@@ -28,6 +29,17 @@ func sendRequest(socketPath string, req daemon.Request) (*daemon.Response, error
 		return nil, err
 	}
 	return &resp, nil
+}
+
+func ping(socket string) error {
+	var resp daemon.Response
+	if err := svcctl.JSONRequest(socket, daemon.Request{Action: "status"}, &resp); err != nil {
+		return err
+	}
+	if !resp.Success {
+		return fmt.Errorf("status: %s", resp.Message)
+	}
+	return nil
 }
 
 func main() {
@@ -53,10 +65,14 @@ func main() {
 		fmt.Println("  friend_sync <userid> <uid> <pid> <sid>")
 		fmt.Println("  logout <userid> <pid>")
 		fmt.Println("  reload <userid>")
+		fmt.Println("  " + svcctl.Usage)
 		os.Exit(1)
 	}
 
 	action := args[0]
+	if action == "restart" {
+		os.Exit(svcctl.Main(svcctl.Options{Name: "friend.svc", Socket: *socketPath, Ping: ping}, args[1:]))
+	}
 	var req daemon.Request
 	req.Action = action
 

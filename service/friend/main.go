@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
@@ -190,9 +191,18 @@ func main() {
 		service.SetEnableUIDTag(*enableUIDTag)
 	}
 
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		log.Printf("[friend.svc] Received signal %v, shutting down...", sig)
+		service.Stop()
+	}()
+
 	if err := service.Start(); err != nil {
 		log.Fatalf("[friend.svc] Service stopped with error: %v", err)
 	}
+	log.Printf("[friend.svc] Friend Service terminated.")
 }
 
 func forkDaemon() error {

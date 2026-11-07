@@ -11,6 +11,7 @@ import (
 
 	"pttbbs/bbs"
 	"pttbbs/stat/model"
+	"pttbbs/svcctl"
 )
 
 func sendRequest(socketPath string, req model.Request) (*model.Response, error) {
@@ -46,6 +47,18 @@ func printUsage() {
 	fmt.Println("  reset <userid>             Reset user's today stats to 0")
 	fmt.Println("  save                           Trigger immediate flush to disk")
 	fmt.Println("  prune                          Prune expired entries for previous dates")
+	fmt.Println("  " + svcctl.Usage)
+}
+
+func ping(socket string) error {
+	var resp model.Response
+	if err := svcctl.JSONRequest(socket, model.Request{Action: "status"}, &resp); err != nil {
+		return err
+	}
+	if !resp.Success {
+		return fmt.Errorf("status: %s", resp.Error)
+	}
+	return nil
 }
 
 func main() {
@@ -64,6 +77,10 @@ func main() {
 	}
 
 	action := args[0]
+	if action == "restart" {
+		os.Exit(svcctl.Main(svcctl.Options{Name: "stat.svc", Socket: *socketPath, Ping: ping}, args[1:]))
+	}
+
 	var req model.Request
 	req.Action = action
 

@@ -14,6 +14,7 @@ import (
 
 	"pttbbs/bbs"
 	"pttbbs/search/daemon"
+	"pttbbs/svcctl"
 )
 
 func sendControlRequest(socketPath string, req daemon.ControlRequest, timeout time.Duration) (*daemon.ControlResponse, error) {
@@ -545,6 +546,17 @@ func handlePprof(socketPath string, args []string) {
 	fmt.Printf("Saved %s profile to %s (analyze with: go tool pprof %s)\n", profileType, outFile, outFile)
 }
 
+func ping(socket string) error {
+	var resp daemon.ControlResponse
+	if err := svcctl.JSONRequest(socket, daemon.ControlRequest{Action: "status"}, &resp); err != nil {
+		return err
+	}
+	if resp.Status != "ok" {
+		return fmt.Errorf("status: %s %s", resp.Status, resp.Message)
+	}
+	return nil
+}
+
 func printUsage() {
 	fmt.Println("Usage: search.ctl [-socket path] <action> [args...]")
 	fmt.Println("Actions:")
@@ -558,6 +570,7 @@ func printUsage() {
 	fmt.Println("  pprof <type> [seconds] [-out file]   Collect diagnostic profile (cpu, heap, goroutine, block, mutex)")
 	fmt.Println("  diag [seconds] [-out file.tar.gz]    Collect all stats, live QPS delta, top/entries/sources & pprof bundle")
 	fmt.Println("  flush [bid]                          Flush all cached search indices (or for a specific board ID)")
+	fmt.Println("  " + svcctl.Usage)
 }
 
 func main() {
@@ -580,6 +593,9 @@ func main() {
 	subArgs := args[1:]
 
 	switch action {
+	case "restart":
+		os.Exit(svcctl.Main(svcctl.Options{Name: "search.svc", Socket: *socketPath, Ping: ping}, subArgs))
+
 	case "status", "stats":
 		req := daemon.ControlRequest{Action: action}
 		resp, err := sendControlRequest(*socketPath, req, 5*time.Second)

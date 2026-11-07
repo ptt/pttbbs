@@ -17,6 +17,7 @@ import (
 
 	"pttbbs/bbs"
 	"pttbbs/big5uao"
+	"pttbbs/svcctl"
 )
 
 var (
@@ -45,6 +46,18 @@ func getSocketPath() string {
 		return filepath.Join(bbshome, "run", "post.svc.sock")
 	}
 	return "/tmp/post.sock"
+}
+
+// ping expects PONG from the daemon.
+func ping(socket string) error {
+	resp, err := svcctl.LineRequest(socket, "PING")
+	if err != nil {
+		return err
+	}
+	if resp != "PONG" {
+		return fmt.Errorf("unexpected reply %q", resp)
+	}
+	return nil
 }
 
 func connectDaemon() (net.Conn, error) {
@@ -180,6 +193,9 @@ func main() {
 
 	cmd := args[0]
 	switch cmd {
+	case "restart":
+		os.Exit(svcctl.Main(svcctl.Options{Name: "post.svc", Socket: getSocketPath(), Ping: ping}, args[1:]))
+
 	case "ping":
 		resp, _, err := sendCmd("PING\n", nil)
 		if err != nil {
@@ -1328,6 +1344,7 @@ Post Identifiers:
 
 Usage:
   post.ctl ping
+  post.ctl restart [-timeout D] [--] [svc args...]
   post.ctl list <community> [count [start]] [deleted]
   post.ctl get <post>
   post.ctl render <post> [output] [--legacy-format]

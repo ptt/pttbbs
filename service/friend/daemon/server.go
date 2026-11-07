@@ -202,6 +202,11 @@ type Service struct {
 
 	reconcileInterval time.Duration
 	enableUIDTag      bool
+
+	// listener is the socket Start serves; Stop closes it (removing the file)
+	listener net.Listener
+	stopCh   chan struct{}
+	stopOnce sync.Once
 }
 
 func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
@@ -256,6 +261,7 @@ func NewService(bbsHome string, optSocketPath ...string) (*Service, error) {
 		testUserToUID:       make(map[string]int),
 		nextTestUID:         1,
 		sem:                 make(chan struct{}, 5000),
+		stopCh:              make(chan struct{}),
 	}
 	return svc, nil
 }
@@ -329,6 +335,9 @@ func (s *Service) Start() error {
 		return fmt.Errorf("failed to listen on socket %s: %w", s.socketPath, err)
 	}
 	defer listener.Close()
+	s.mu.Lock()
+	s.listener = listener
+	s.mu.Unlock()
 
 	log.Printf("[friend.svc] Friend Service started listening on UNIX socket: %s", s.socketPath)
 
@@ -344,6 +353,11 @@ func (s *Service) Start() error {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			select {
+			case <-s.stopCh:
+				return nil
+			default:
+			}
 			log.Printf("[friend.svc] Accept error: %v", err)
 			time.Sleep(50 * time.Millisecond) // e.g. EMFILE: don't spin
 			continue
@@ -360,6 +374,17 @@ func (s *Service) Start() error {
 			_ = json.NewEncoder(conn).Encode(Response{Success: false, Message: "service overloaded"})
 			conn.Close()
 		}
+	}
+}
+
+// Stop makes Start return: it closes the listener, which removes the socket.
+func (s *Service) Stop() {
+	s.stopOnce.Do(func() { close(s.stopCh) })
+	s.mu.RLock()
+	l := s.listener
+	s.mu.RUnlock()
+	if l != nil {
+		_ = l.Close()
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 
 	"pttbbs/bbs"
 	"pttbbs/ipc/daemon"
+	"pttbbs/svcctl"
 )
 
 func main() {
@@ -33,6 +34,8 @@ func main() {
 
 	cmd := args[0]
 	switch cmd {
+	case "restart":
+		os.Exit(svcctl.Main(svcctl.Options{Name: "ipc.svc", Socket: *sockPath, Ping: ping}, args[1:]))
 	case "ping":
 		doPing(*sockPath)
 	case "wmsg":
@@ -113,7 +116,8 @@ func printUsage() {
 	fmt.Printf("  live-pub <topic> <comment>  Publish a live comment to a topic\n")
 	fmt.Printf("  live-sub <topic>            Subscribe and stream live comments for a topic\n")
 	fmt.Printf("  conns                       Query active connections count\n")
-	fmt.Printf("  status                      Query service status and active connections\n\n")
+	fmt.Printf("  status                      Query service status and active connections\n")
+	fmt.Printf("  %s\n\n", svcctl.Usage)
 	fmt.Printf("Options:\n")
 	fmt.Printf("  -socket <path>              UNIX socket path (default: $BBSHOME/run/ipc.svc.sock)\n")
 }
@@ -154,6 +158,32 @@ func doPing(sockPath string) {
 	} else {
 		fmt.Printf("Received unexpected response type: 0x%04x\n", respHdr.Type)
 	}
+}
+
+// ping sends an IPC ping and expects a pong.
+func ping(sockPath string) error {
+	conn, err := svcctl.Dial(sockPath, svcctl.PingTimeout)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	hdr := &daemon.Header{
+		Magic:   daemon.IPCMagic,
+		Version: daemon.IPCVersion,
+		Type:    daemon.IPCTypePing,
+		Seq:     1,
+	}
+	if _, err := conn.Write(hdr.Encode()); err != nil {
+		return err
+	}
+	respHdr, err := daemon.ReadHeader(conn)
+	if err != nil {
+		return err
+	}
+	if respHdr.Type != daemon.IPCTypePong {
+		return fmt.Errorf("unexpected response type 0x%04x", respHdr.Type)
+	}
+	return nil
 }
 
 func doWmsg(sockPath string, toUser, msg string) {

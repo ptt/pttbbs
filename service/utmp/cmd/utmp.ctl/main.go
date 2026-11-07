@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"pttbbs/bbs"
+	"pttbbs/svcctl"
 	"pttbbs/utmp/daemon"
 )
 
@@ -106,6 +107,19 @@ func printUsage() {
 	fmt.Println("  fix                   Clear dead userlist entries and fix broken table links")
 	fmt.Println("  kick <userid|pid>     Kick a specific online user session")
 	fmt.Println("  watch                 Check and fix stuck busystate")
+	fmt.Println("  " + svcctl.Usage)
+}
+
+// ping asks the daemon itself (no direct SHM fallback) for its status.
+func ping(socket string) error {
+	var resp daemon.Response
+	if err := svcctl.JSONRequest(socket, daemon.Request{Action: "status"}, &resp); err != nil {
+		return err
+	}
+	if !resp.Success {
+		return fmt.Errorf("status: %s", resp.Error)
+	}
+	return nil
 }
 
 func main() {
@@ -127,6 +141,10 @@ func main() {
 	}
 
 	action := args[0]
+	if action == "restart" {
+		os.Exit(svcctl.Main(svcctl.Options{Name: "utmp.svc", Socket: *socketPath, Ping: ping}, args[1:]))
+	}
+
 	var req daemon.Request
 	req.Action = action
 
