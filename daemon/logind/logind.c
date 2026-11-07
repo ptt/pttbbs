@@ -193,6 +193,7 @@ enum {
     LOGIN_HANDLE_BS,
     LOGIN_HANDLE_PROMPT_PASSWD,
     LOGIN_HANDLE_START_AUTH,
+    LOGIN_HANDLE_CANCEL_2FA,
 
     AUTH_RESULT_ACTIVITY_WAIT      = -8,
     AUTH_RESULT_FAIL_2FA      = -7,
@@ -419,6 +420,10 @@ login_ctx_handle(login_ctx *ctx, int c)
 
             if (c == KEY_ENTER)
             {
+                // No code: back to the userid prompt. Checking it would
+                // check an empty password instead.
+                if (!l)
+                    return LOGIN_HANDLE_CANCEL_2FA;
                 ctx->state = LOGIN_STATE_AUTH;
                 return LOGIN_HANDLE_START_AUTH;
             }
@@ -2627,6 +2632,18 @@ login_conn_handle_terminal(login_conn_ctx *conn, int fd, unsigned char *buf, int
             case LOGIN_HANDLE_OUTC:
                 ch = c;
                 _buff_write(conn, &ch, 1);
+                break;
+
+            case LOGIN_HANDLE_CANCEL_2FA:
+                // Start over like after a failed login. Log it as a 2FA not
+                // passed, not as a wrong password: the password was right.
+                draw_input_end(conn);
+                logattempt2(conn->ctx.userid, '2', time(0), conn->ctx.hostip);
+                if (auth_fail(fd, conn, draw_empty_userid_warn) == AUTH_RESULT_STOP)
+                {
+                    login_conn_remove(conn, fd, AUTHFAIL_SLEEP_SEC);
+                    return -1;
+                }
                 break;
 
             case LOGIN_HANDLE_PROMPT_PASSWD:
