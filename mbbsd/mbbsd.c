@@ -488,18 +488,19 @@ load_current_user(const char *uid)
 	// Should have exited.
 	assert(false);
 	exit(1);
-    } else
+    }
 #endif
 
     // --------------------------------------------------- GUEST ACCOUNT
 
 #ifdef STR_GUEST
-    // guest is no longer supported. logind may still pass it as a free
-    // (password-less) userid, so never load it as a regular account.
+    // guest is no longer supported. logind only redirects it to GUEST_URL,
+    // but a legacy guest account may still pass password auth or come in via
+    // tunnel, so never load it as a regular account.
     if (strcasecmp(uid, STR_GUEST) == 0) {
 	puts("\r\n本站已不提供 " STR_GUEST " 參觀。\r\n");
 	exit(0);
-    } else
+    }
 #endif
 
     // ---------------------------------------------------- USER ACCOUNT

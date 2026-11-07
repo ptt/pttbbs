@@ -847,7 +847,7 @@ DEBUG_IO(int fd, const char *msg) {
 # define INSCREEN ANSI_RESET "\r\n【" BBSNAME "】◎(" MYHOSTNAME ", " MYIP ") \r\n"
 #endif
 
-#ifdef   STR_GUEST
+#if IS_ENABLED(CONFIG_GUEST_URL)
 # define MSG_GUEST "，或以 " STR_GUEST " 參觀"
 #else
 # define MSG_GUEST ""
@@ -1407,10 +1407,9 @@ draw_overload(login_conn_ctx *conn, int type)
 }
 
 static void
-draw_reject_free_userid(login_conn_ctx *conn, const char *freeid GCC_UNUSED)
+draw_reject_free_userid(login_conn_ctx *conn, const char *freeid)
 {
     _mt_move_yx(conn, PASSWD_CHECK_YX); _mt_clrtoeol(conn);
-#ifdef STR_GUEST
     if (IS_ENABLED(CONFIG_GUEST_URL) &&
         strcasecmp(freeid, STR_GUEST) == 0)
     {
@@ -1418,7 +1417,6 @@ draw_reject_free_userid(login_conn_ctx *conn, const char *freeid GCC_UNUSED)
         _text_write(conn, REDIRECT_GUEST_MSG, sizeof(REDIRECT_GUEST_MSG)-1);
         return;
     }
-#endif
     _mt_move_yx(conn, REJECT_FREE_UID_YX); _mt_clrtoeol(conn);
     _text_write(conn, REJECT_FREE_UID_MSG, sizeof(REJECT_FREE_UID_MSG)-1);
 
@@ -1790,10 +1788,9 @@ is_tunnel_available() {
 static const char *
 auth_is_free_userid(const char *userid)
 {
-#ifdef STR_GUEST
-    if (strcasecmp(userid, STR_GUEST) == 0)
+    if (IS_ENABLED(CONFIG_GUEST_URL) &&
+        strcasecmp(userid, STR_GUEST) == 0)
         return STR_GUEST;
-#endif
 
 #ifdef STR_REGNEW
     if (strcasecmp(userid, STR_REGNEW) == 0)
@@ -1810,16 +1807,10 @@ auth_is_free_userid(const char *userid)
 static int
 auth_check_free_userid_allowance(const char *userid)
 {
-#ifdef STR_GUEST
-    if (strcasecmp(userid, STR_GUEST) == 0)
-    {
-        // guest logins are closed; draw_reject_free_userid shows the URL.
-        if (IS_ENABLED(CONFIG_GUEST_URL))
-            return 0;
-        // let mbbsd decide.
-        return 1;
-    }
-#endif
+    // guest logins are closed; draw_reject_free_userid shows the URL.
+    if (IS_ENABLED(CONFIG_GUEST_URL) &&
+        strcasecmp(userid, STR_GUEST) == 0)
+        return 0;
 
 #ifdef LOGIND_DONT_CHECK_FREE_USERID
     // XXX experimental to disable free id checking
