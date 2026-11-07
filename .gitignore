@@ -16,4 +16,7 @@ util/pyutil/big5_tbl.py
 diff/
 *.svc
 *.ctl
+# ...but only the built binaries: keep the cmd/<name>.svc|ctl/ source dirs.
+!*.svc/
+!*.ctl/
 service-private/
