@@ -335,6 +335,7 @@ func (s *Service) Start() error {
 		return fmt.Errorf("failed to listen on socket %s: %w", s.socketPath, err)
 	}
 	defer listener.Close()
+	_ = os.Chmod(s.socketPath, 0660)
 	s.mu.Lock()
 	s.listener = listener
 	s.mu.Unlock()

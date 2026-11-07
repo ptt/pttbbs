@@ -94,7 +94,7 @@ func (s *Service) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on socket %s: %w", s.socketPath, err)
 	}
-	_ = os.Chmod(s.socketPath, 0666)
+	_ = os.Chmod(s.socketPath, 0660)
 	s.listener = l
 
 	log.Printf("[utmp.svc] Started listening on UNIX socket: %s", s.socketPath)

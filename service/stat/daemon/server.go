@@ -66,7 +66,7 @@ func (s *Server) Start() error {
 	}
 	defer listener.Close()
 
-	if err := os.Chmod(s.socketPath, 0666); err != nil {
+	if err := os.Chmod(s.socketPath, 0660); err != nil {
 		log.Printf("[stat.svc] Warning: failed to chmod socket: %v", err)
 	}
 

@@ -92,7 +92,7 @@ func (s *Server) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen unix socket on %s: %w", s.cfg.UnixSocket, err)
 	}
-	_ = os.Chmod(s.cfg.UnixSocket, 0666)
+	_ = os.Chmod(s.cfg.UnixSocket, 0660)
 	s.listeners = append(s.listeners, lnUnix)
 	s.wg.Add(1)
 	go func() {

@@ -208,7 +208,7 @@ func (s *Service) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", s.socketPath, err)
 	}
-	_ = os.Chmod(s.socketPath, 0666) // accessible by mbbsd
+	_ = os.Chmod(s.socketPath, 0660) // accessible by mbbsd
 	s.listener = l
 
 	log.Printf("[ipc.svc] Listening on UNIX domain socket: %s", s.socketPath)

@@ -64,7 +64,7 @@ func (s *XChatBridge) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", s.socketPath, err)
 	}
-	_ = os.Chmod(s.socketPath, 0666)
+	_ = os.Chmod(s.socketPath, 0660)
 	s.listener = l
 
 	log.Printf("[xchat] Bridge listening on %s (backend: %s)", s.socketPath, s.backendAddr)
