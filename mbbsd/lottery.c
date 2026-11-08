@@ -32,14 +32,20 @@ load_ticket_record(const char *direct, bignum_t ticket[])
     return total;
 }
 
-/* Parses ticket.items' first line, its price. Returns the price, or 0 if
- * it is missing or outside what hold_gamble() allows: a broken file, with
- * no lottery to buy into or draw. */
+/* Parses ticket.items' first line, "price [generation]". Returns the
+ * price, or 0 if it is missing or outside what hold_gamble() allows: a
+ * broken file, with no lottery to buy into or draw. *gen, if given, gets
+ * the generation, 0 for a lottery from before it was recorded. */
 static int
-parse_ticket_header(const char *line)
+parse_ticket_header(const char *line, unsigned *gen)
 {
-    int price = atoi(line);
+    int price = 0;
+    unsigned g = 0;
 
+    if (sscanf(line, "%d %u", &price, &g) < 1)
+	price = 0;
+    if (gen)
+	*gen = g;
     return (price >= LOTTERY_MIN_PRICE && price <= LOTTERY_MAX_PRICE) ? price : 0;
 }
 
@@ -48,7 +54,7 @@ parse_ticket_header(const char *line)
  * ticket.items was read but is broken, or -1 if it could not be opened. */
 static int
 show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
-                 const char *direct, int *price,
+                 const char *direct, int *price, unsigned *pgen,
                  const boardheader_t * bh)
 {
     int i, count, wide = 0, end = 0;
@@ -75,9 +81,11 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 	more(genbuf, NA);
 	return 0;
     }
+    if (pgen)
+	*pgen = 0;
     *price = 0;
     if (fgets(genbuf, sizeof(genbuf), fp))
-	*price = parse_ticket_header(genbuf);
+	*price = parse_ticket_header(genbuf, pgen);
     if (!*price) {
 	// Malformed or absent price line: treat as no open lottery rather than
 	// charging a bogus price (and later dividing by zero at money/price),
@@ -147,6 +155,22 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     return count;
 }
 
+static unsigned
+current_ticket_generation(const char *direct)
+{
+    FILE *fp;
+    char genbuf[256];
+    unsigned gen = 0;
+
+    SNPRINTF(genbuf, "%s/" FN_TICKET_ITEMS, direct);
+    if ((fp = fopen(genbuf, "r"))) {
+	if (fgets(genbuf, sizeof(genbuf), fp))
+	    parse_ticket_header(genbuf, &gen);
+	fclose(fp);
+    }
+    return gen;
+}
+
 // Serialize a buyer recording a bet against a BM installing or clearing a
 // lottery. The lock is the board directory -- a stable inode, unlike the
 // ticket.* files that hold_gamble() renames and unlinks (an flock on a file
@@ -196,26 +220,36 @@ close_ticket(const char *brdname)
 }
 
 static int
-append_ticket_record(const char *direct, int ch, int n, int count)
+append_ticket_record(const char *direct, int ch, int n, int count,
+                     unsigned paid_gen)
 {
     FILE *fp;
     bignum_t ticket[8] = {0};
     int i, lkfd, ret = -1;
     char genbuf[256];
 
-    // Hold the per-board lottery lock across the whole record: the check
-    // that the lottery is still open, the first-bet file creation, and
-    // both the ticket.user append and the ticket.data update. Closing a
-    // lottery (close_ticket()) and installing a new one (hold_gamble())
-    // take the same lock, so a bet is either recorded before the close,
-    // and drawn with the rest, or refused and refunded by the caller. A
-    // draw needs a closed lottery, so it doesn't take the lock.
+    // Hold the per-board lottery lock across the whole record: the checks
+    // that the lottery is still open and is the one the buyer paid into,
+    // the first-bet file creation, and both the ticket.user append and the
+    // ticket.data update. Closing a lottery (close_ticket()) and installing
+    // a new one (hold_gamble()) take the same lock, so a bet is either
+    // recorded before the close, and drawn with the rest, or refused and
+    // refunded by the caller. A draw needs a closed lottery, so it doesn't
+    // take the lock.
     lkfd = lock_ticket(direct);
     if (lkfd < 0)
 	return -1;  // can't serialize against a close or re-hold; refund
 
     SNPRINTF(genbuf, "%s/" FN_TICKET, direct);
     if (!dashf(genbuf))
+	goto out;
+
+    // Reject the purchase if this is no longer the lottery the buyer paid
+    // into: hold_gamble() stamps each lottery with a fresh generation id in
+    // ticket.items, so a changed id (even one that reused the same price)
+    // means the ticket would be settled by a different lottery than it was
+    // bought in -- the caller refunds instead of recording it.
+    if (current_ticket_generation(direct) != paid_gen)
 	goto out;
 
     SNPRINTF(genbuf, "%s/" FN_TICKET_RECORD, direct);
@@ -292,6 +326,7 @@ ticket(int bid)
     char            path[128], fn_ticket[PATHLEN];
     char            betname[MAX_ITEM][MAX_ITEM_LEN];
     boardheader_t  *bh = NULL;
+    unsigned        paid_gen = 0;
 
     // No scripting.
     vkey_purge();
@@ -308,7 +343,7 @@ ticket(int bid)
 
     lockreturn0(TICKET, LOCK_MULTI);
     while (1) {
-	count = show_ticket_data(betname, path, &price, bh);
+	count = show_ticket_data(betname, path, &price, &paid_gen, bh);
 	if (count <= 0) {
 	    pressanykey();
 	    break;
@@ -321,11 +356,10 @@ ticket(int bid)
                cuser.money, count);
 	ch = vkey();
 	/*--
-	  Tim011127
-	  為了控制CS問題 但是這邊還不能完全解決這問題,
-	  若user通過檢查下去, 剛好板主開獎, 還是會造成user的這次紀錄
-	  很有可能跑到下次樂透的紀錄去, 也很有可能被板主新開樂透時洗掉
-	  不過這邊至少可以做到的是, 頂多只會有一筆資料是錯的
+	  Tim011127: a buy racing a close or a new lottery used to land in
+	  the wrong lottery's records. append_ticket_record() now records
+	  under the lottery lock, only into the open lottery the price was
+	  read from, and refuses otherwise (ticket() refunds).
 	--*/
 	if (ch == 'q' || ch == 'Q')
 	    break;
@@ -351,7 +385,8 @@ ticket(int bid)
 	    block_abort_signals(&old_set);
 	    int paid = pay_if_enough(price * n, "%s彩券[種類%d,張數%d]",
 				     bh->brdname, ch + 1, n) >= 0;
-	    int recorded = paid && append_ticket_record(path, ch, n, count) >= 0;
+	    int recorded = paid && append_ticket_record(path, ch, n, count,
+						       paid_gen) >= 0;
 	    if (paid && !recorded)
 		pay(-price * n, "投注失敗退費");
 	    restore_abort_signals(&old_set);
@@ -389,7 +424,7 @@ openticket(int bid)
     bignum_t        count;
 
     setbpath(path, bh->brdname);
-    count = -show_ticket_data(betname, path, &price, bh);
+    count = -show_ticket_data(betname, path, &price, NULL, bh);
 
     if (count == 0) {
 	setbfile(buf, bh->brdname, FN_TICKET_ITEMS);
@@ -821,7 +856,10 @@ hold_gamble(void)
 	vmsg("系統錯誤，無法舉辦樂透");
 	return FULLUPDATE;
     }
-    fprintf(fp, "%d\n", form.price);
+    unsigned gen = arc4random();
+    if (!gen)
+	gen = 1;
+    fprintf(fp, "%d %u\n", form.price, gen);
     for (i = 0; i < MAX_ITEM; i++) {
 	if (form.items[i][0])
 	    fprintf(fp, "%s\n", form.items[i]);
@@ -847,7 +885,9 @@ hold_gamble(void)
     // lottery is open: buyers record only into an open lottery, checked
     // under the lottery lock, so nothing can be recorded into the files
     // cleared here. (The lock itself matters here only against binaries
-    // from before it, during a rolling restart.)
+    // from before it, during a rolling restart.) The new ticket.items
+    // carries a new generation id, so a purchase still bound to the old
+    // lottery is refused once this one opens.
     char tkpath[PATHLEN];
     int lkfd;
     setbpath(tkpath, currboard);
