@@ -3,29 +3,31 @@
 static int run()
 {
     int     i, i60, i300, i600, total;
-    time_t  now, t60, t300, t600;
-    time4_t maxidle_time;
+    time_t  now, t60, t300, t600, maxidle_time;
 
     i60 = i300 = i600 = total = 0;
     now = time(NULL); t60 = now - 60; t300 = now - 300; t600 = now - 600;
-    maxidle_time = (time4_t)now;
+    maxidle_time = now;
 
     attach_SHM();
     for (i = 0; i < USHM_SIZE; ++i) {
 	if (SHM->uinfo[i].pid) {
+	    time_t lastact = time4_to_time(SHM->uinfo[i].lastact);
+
 	    ++total;
-	    if (SHM->uinfo[i].lastact >= t60) {
+	    if (lastact >= t60) {
 		++i60; ++i300; ++i600;
-	    } else if (SHM->uinfo[i].lastact >= t300) {
+	    } else if (lastact >= t300) {
 		++i300; ++i600;
-	    } else if (SHM->uinfo[i].lastact >= t600) {
+	    } else if (lastact >= t600) {
 		++i600;
-	    } else if (time4_lt(SHM->uinfo[i].lastact, maxidle_time)) {
-		maxidle_time = SHM->uinfo[i].lastact;
+	    } else if (lastact < maxidle_time) {
+		maxidle_time = lastact;
 	    }
 	}
     }
-    int maxidle = (int)time4_diff((time4_t)now, maxidle_time);
+    int64_t maxidle64 = now - maxidle_time;
+    int maxidle = maxidle64 > INT_MAX ? INT_MAX : (int)maxidle64;
 
     printf("multigraph bbs_maxidle\n");
     printf("maxidle.value %d\n", maxidle);

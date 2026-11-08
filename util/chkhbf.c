@@ -67,7 +67,7 @@ void informBM(const char *userid, boardheader_t *bptr, int nEXP)
 	    " %s 的板主您好: \n"
 	    "    下列貴板板友即將過期或已經過期:\n"
 	    "------------------------------------------------------------\n",
-	    CTIMEx(buf, now), bptr->brdname);
+	    CTIMEx(buf, time4_to_time(now)), bptr->brdname);
     for( i = 0 ; i < nEXP ; ++i )
 	if( explist[i].expire == -1 )
 	    fprintf(fp, "%-15s  已經過期\n", explist[i].userid);
@@ -118,7 +118,7 @@ void chkhbf(boardheader_t *bptr)
 	}
 	else if( (time4_days_elapsed(now, xuser.lastlogin) > 90) &&
 		 !(xuser.userlevel & PERM_XEMPT) ){
-	    add_exp_entry(chkuser, xuser.lastlogin,
+	    add_exp_entry(chkuser, time4_to_time(xuser.lastlogin),
 			  time4_to_time(xuser.lastlogin) + DAY_SECONDS * 120, &nEXP);
 	}
     }

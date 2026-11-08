@@ -20,7 +20,7 @@ int check_free(void *data GCC_UNUSED, int n GCC_UNUSED, userec_t *u)
 }
 
 int check(void *data GCC_UNUSED, int n, userec_t *u) {
-    time4_t d;
+    int64_t d;
     char buf[256];
 
     if (u->userid[0] == 0 && u->userid[1])
@@ -111,7 +111,7 @@ int check_last_login(void *data GCC_UNUSED, int n, userec_t *u) {
 
     STRLCPY(buf, Cdate(&u->firstlogin));
 
-    if (time4_gt(u->lastlogin, now + 86400)) // should not be newer than now plus one day.
+    if (time4_diff(u->lastlogin, now) > 86400) // should not be newer than now plus one day.
     {
         // invalid record
         printf("使用者 %-*s (登入%3d 次, %s%s, %s [%04X])\n 最後登入日期異常 [%04X]: %s",

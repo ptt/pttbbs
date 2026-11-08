@@ -13,8 +13,8 @@ void fastcheck()
     userinfo_t u;
     time4_t base;
 
-    now -= (time4_to_time(now) % 60); // begin of current minute, in case cron delays
-    base = now - DAY_SECONDS;
+    now = time4_add(now, -(time4_to_time(now) % 60)); // begin of current minute, in case cron delays
+    base = time4_add(now, -DAY_SECONDS);
     memset(seen_uid, 0, sizeof(seen_uid));
 
     for (i = 0; i < USHM_SIZE; i++) {

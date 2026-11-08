@@ -104,7 +104,7 @@ struct ChatUser
     int userno;			  /* userno 是 PASSWD 來的 unum, 幾乎是唯一的 */
     int uflag;
     int isize;                    /* current size of ibuf */
-    time4_t tconnect;             /* when the connection was accepted */
+    time_t tconnect;              /* when the connection was accepted */
     int dead;                     /* kicked: main() logs it out (not in use) */
     uint32_t numlogindays;	  /* login counter */
     uint32_t numposts;		  /* post number */
@@ -2936,7 +2936,7 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     register fd_set *rptr, *xptr;
     fd_set rset, xset;
     struct timeval tv;
-    time4_t uptime, tmaintain, tlogin, trefused = 0;
+    time_t uptime, tmaintain, tlogin, trefused = 0;
     int nrefused = 0;
 
 #ifdef SELFTESTER

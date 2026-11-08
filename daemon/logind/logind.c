@@ -1691,7 +1691,7 @@ regular_check()
         return;
 
     int was_overload = g_overload;
-    last_check_time = now;
+    last_check_time = time4_to_time(now);
     last_shutdown = shutdown_now;
     g_overload = 0;
     g_banned   = shutdown_now ? 1 : 0;

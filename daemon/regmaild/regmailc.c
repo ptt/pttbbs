@@ -48,10 +48,10 @@ static int verifydb_main(const char *prog, int argc, char **argv)
     else if (strcmp(operation, "set") == 0 && argc == 6)
     {
 	const char *userid = argv[1];
-	const int64_t generation = atoi(argv[2]);
+	const int64_t generation = strtoll(argv[2], NULL, 10);
 	const int32_t vmethod = atoi(argv[3]);
 	const char *vkey = argv[4];
-	const int64_t timestamp = atoi(argv[5]);
+	const int64_t timestamp = strtoll(argv[5], NULL, 10);
 	ok = verifydb_client_set(userid, generation, vmethod, vkey, timestamp);
     }
     else

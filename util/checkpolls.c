@@ -116,7 +116,8 @@ read_control(const char *path, poll_t *v)
     FILE *fp;
     char line[256];
     short n = 0, tickets = 0;
-    int t = 0, ok = 0;
+    long long t = 0;
+    int ok = 0;
 
     v->mtime = dasht4(path);
     if (!(fp = fopen(path, "r")))
@@ -125,17 +126,18 @@ read_control(const char *path, poll_t *v)
     if (!fgets(line, sizeof(line), fp) ||
         sscanf(line, "%hd,%hd", &n, &tickets) < 1)
         n = 0;
-    if (fgets(line, sizeof(line), fp) && sscanf(line, "%d", &t) == 1)
+    if (fgets(line, sizeof(line), fp) && sscanf(line, "%lld", &t) == 1)
         ok = 1;
     fclose(fp);
 
     v->items = n;
-    v->closetime = t;
+    // mbbsd writes it with %d; accept both that and the unsigned form
+    v->closetime = time_to_time4(t);
     if (!ok)
         return VS_NO_TIME;
     if (v->items <= 0)
         return VS_NO_ITEMS;
-    if (v->closetime < now_time)
+    if (time4_lt(v->closetime, now_time))
         return VS_PAST;
     return VS_OPEN;
 }
@@ -361,7 +363,7 @@ check_board(int bid, const boardheader_t *bh, int verbose, totals_t *tot)
         v->locked = dashf(path);
         age = v->state >= VS_NO_TIME ? v->mtime : v->closetime;
         v->archive = archive_dir && bh->npolls == 0 && v->state != VS_OPEN &&
-                     age < now_time - ARCHIVE_AGE;
+                     time4_diff(now_time, age) > ARCHIVE_AGE;
         if (v->state != VS_OPEN || v->locked || i >= MAX_POLL_NR)
             care = 1;
         if (i < MAX_POLL_NR)

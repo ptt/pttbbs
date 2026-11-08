@@ -23,7 +23,7 @@ int process(FILE *fin, FILE *fout, const char *index_path,
     char file_path[PATHLEN];
     fileheader_t fh;
     int num_remove = 0;
-    int now = time(0);
+    time4_t now = time4(NULL);
 
     *pkeep = 0;
     while (fread(&fh, sizeof(fh), 1, fin) == 1) {
@@ -54,7 +54,7 @@ int process(FILE *fin, FILE *fout, const char *index_path,
 	    if (!fout)
 		return 1;
 
-            printf("%s: %d[%s] %s\n", file_path, fh.modified,
+            printf("%s: %lld[%s] %s\n", file_path, (long long)time4_to_time(fh.modified),
                    Cdate_mdHMS(&fh.modified), fh.title);
 	    unlink(file_path);
 	    num_remove++;

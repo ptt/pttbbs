@@ -152,16 +152,16 @@ int angel_list_comp_advanced(const void *pva, const void *pvb) {
            assign_a = pa->last_assigned, assign_b = pb->last_assigned;
 
     if (now - assign_a >= ANGELBEATS_ASSIGN_PROBATION_PERIOD ||
-        time4_ge(pa->last_activity, assign_a))
+        pa->last_activity >= assign_a)
         assign_a -= assign_a % ANGELBEATS_REASSIGN_PERIOD;
     if (now - assign_b >= ANGELBEATS_ASSIGN_PROBATION_PERIOD ||
-        time4_ge(pb->last_activity, assign_b))
+        pb->last_activity >= assign_b)
         assign_b -= assign_b % ANGELBEATS_REASSIGN_PERIOD;
 
     if (assign_a != assign_b)
         return assign_a > assign_b ? 1 : -1;
     if (pa->last_activity != pb->last_activity)
-        return time4_cmp(pa->last_activity, pb->last_activity);
+        return pa->last_activity > pb->last_activity ? 1 : -1;
     return pa->masters - pb->masters;
 }
 
@@ -318,14 +318,13 @@ suggest_online_angel(int master_uid) {
         if (master_uid)
             kanade->missed_assign++;
 #ifdef TRACE_ANGEL_SELECTION
-        log("\n %d.%*s(missed=%d,masters=%d,act=%d,assigned=%d%s) ",
+        log("\n %d.%*s(missed=%d,masters=%d,act=%lld,assigned=%lld%s) ",
             ++found, IDLEN,
             kanade->userid, kanade->missed_assign, kanade->masters,
-            (int)time4_diff(clk, kanade->last_activity),
-            (int)time4_diff(clk, kanade->last_assigned),
-            ((int)time4_diff(clk, kanade->last_assigned) <
-             ANGELBEATS_ASSIGN_PROBATION_PERIOD &&
-             time4_lt(kanade->last_activity, kanade->last_assigned)) ?
+            (long long)(clk - kanade->last_activity),
+            (long long)(clk - kanade->last_assigned),
+            (clk - kanade->last_assigned < ANGELBEATS_ASSIGN_PROBATION_PERIOD &&
+             kanade->last_activity < kanade->last_assigned) ?
             "[probation]" : "");
 #endif
 
@@ -381,7 +380,7 @@ dec_angel_master(int uid) {
 int
 touch_angel_activity(int uid) {
     AngelInfo *kanade = angel_list_find_by_uid(uid);
-    int now = (int)time(0);
+    time_t now = time(0);
 
     now -= now % ANGELBEATS_ACTIVITY_MERGE_PERIOD;
     if (!kanade || kanade->last_activity == now)
@@ -437,7 +436,7 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
         return 0;
 
     // Update now (before skipping user) in case the master never called angel.
-    if (time4_gt(u->timesetangel, kanade->last_assigned)) {
+    if (time4_to_time(u->timesetangel) > kanade->last_assigned) {
         kanade->last_assigned = time4_to_time(u->timesetangel);
         kanade->last_assigned_master = unum;
     }
@@ -445,7 +444,7 @@ init_angel_list_callback(void *ctx GCC_UNUSED, int uidx, userec_t *u) {
     // skip inactive users. however, this makes the counter
     // incorrect when those kind of use goes online.
     // anyway that should not be a big change...
-    if (time4_gt(time4(0), u->timeplayangel + ANGELBEATS_INACTIVE_TIME))
+    if (time4_diff(time4(0), u->timeplayangel) > ANGELBEATS_INACTIVE_TIME)
         return 0;
 
     kanade->masters++;
@@ -482,11 +481,11 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
         if (from_cmd) {
             log(" - %03zu. %-14s: ", i+1, kanade->userid);
             log("{samples=%d, pause1=%d, pause2=%d} "
-                "(masters=%d, logins=%d, activity=%d, assigned=%d/%s)",
+                "(masters=%d, logins=%d, activity=%lld, assigned=%lld/%s)",
                 kanade->perf.samples, kanade->perf.pause1,
                 kanade->perf.pause2, kanade->masters, logins,
-                (int)kanade->last_activity,
-                (int)kanade->last_assigned,
+                (long long)kanade->last_activity,
+                (long long)kanade->last_assigned,
                 kanade->last_assigned_master > 0 ?
                 getuserid(kanade->last_assigned_master) :
                 "(unknown)");
@@ -525,7 +524,7 @@ create_angel_report(int myuid, angel_beats_report *prpt) {
     // report my information
     if (myuid > 0 && (kanade = angel_list_find_by_uid(myuid))) {
         prpt->my_active_masters = kanade->masters;
-        prpt->last_assigned = kanade->last_assigned;
+        prpt->last_assigned = time_to_time4(kanade->last_assigned);
         prpt->last_assigned_master = kanade->last_assigned_master;
         prpt->missed_assign = kanade->missed_assign;
     }
@@ -563,7 +562,8 @@ void print_dash(FILE *fp, int len, const char *prefix) {
 
 void load_state_data() {
     int version = -1, i = 0;
-    int activity, assigned, assigned_master;
+    int assigned_master;
+    long long activity, assigned;
     char uid[256];
     PerfData d;
     AngelInfo *kanade;
@@ -578,19 +578,24 @@ void load_state_data() {
         return;
     }
     fscanf(fp, "%d %d\n", &g_perf.start, &g_perf.samples);
-    while (fscanf(fp, "%s %d %d %d %d %d %d\n",
+    // Timestamps are written as %lld, but older versions wrote them as %d
+    // (negative after 2038); read them as 64-bit so both forms are
+    // accepted, then zero-extend through time4_t.
+    while (fscanf(fp, "%s %lld %lld %d %d %d %d\n",
                   uid, &activity, &assigned, &assigned_master,
                   &d.samples, &d.pause1, &d.pause2) == 7) {
         i++;
         kanade = angel_list_find_by_userid(uid);
         if (!kanade)
             continue;
+        activity = time4_to_time(time_to_time4(activity));
+        assigned = time4_to_time(time_to_time4(assigned));
         kanade->last_activity = activity;
         // Update last_assigned* if the master has changed angel.
         if (!kanade->last_assigned_master) {
             kanade->last_assigned = assigned;
             kanade->last_assigned_master = assigned_master;
-        } else if (time4_gt(assigned, kanade->last_assigned) &&
+        } else if (assigned > kanade->last_assigned &&
                    kanade->last_assigned_master != assigned_master) {
             const char *uid1 = getuserid(kanade->last_assigned_master),
                        *uid2 = getuserid(assigned_master);
@@ -619,9 +624,10 @@ void save_state_data() {
     fprintf(fp, "%d\n%d %d\n", ANGEL_STATE_VERSION, g_perf.start,
             g_perf.samples);
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
-        fprintf(fp, "%s %d %d %d %d %d %d\n",
+        fprintf(fp, "%s %lld %lld %d %d %d %d\n",
                 kanade->userid, 
-                (int)kanade->last_activity, (int)kanade->last_assigned,
+                (long long)kanade->last_activity,
+                (long long)kanade->last_assigned,
                 kanade->last_assigned_master,
                 kanade->perf.samples, kanade->perf.pause1, kanade->perf.pause2);
     }
@@ -669,7 +675,7 @@ static struct event ev_listen, ev_sighup;
 
 static void
 sighup_cb(int signal GCC_UNUSED, short event GCC_UNUSED, void *arg GCC_UNUSED) {
-    time4_t clk = time(0);
+    time4_t clk = time4(0);
     log("%s %s: reload (HUP)\n", Cdatelite(&clk), __func__);
     init_angel_list();
 }
