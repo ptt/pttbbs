@@ -3,6 +3,7 @@ package daemon
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"pttbbs/big5uao"
 )
@@ -56,4 +57,37 @@ func TestJoinSplitBig5(t *testing.T) {
 	if got := big5uao.Decode(joinSplitBig5(big5uao.Encode("\x1b[m純中文"))); got != "\x1b[m純中文" {
 		t.Errorf("unchanged text = %q", got)
 	}
+}
+
+// A lone ESC before a non-ASCII character took the first byte of it, and
+// the broken UTF-8 crashed htmlText.
+func TestLoneEscape(t *testing.T) {
+	s := "1490\n\x1b可以開5個Profile\n"
+	if got := plainText(s); got != "1490\n可以開5個Profile\n" {
+		t.Errorf("plainText = %q", got)
+	}
+	if got := htmlText(s); !strings.Contains(got, "1490\n可以開5個Profile\n") {
+		t.Errorf("htmlText = %q", got)
+	}
+	// Broken UTF-8 in the input
+	if got := htmlText("a\xe5b\x8f▋"); !strings.Contains(got, "a?b?"+wideSpan+"▋</span>") {
+		t.Errorf("htmlText broken = %q", got)
+	}
+}
+
+func FuzzANSI(f *testing.F) {
+	for _, s := range []string{"\x1b[1;31m紅\x1b[m", "\x1b可", "\x1b*s", "\x1b[", "\xe5\x1b\x8f▋—"} {
+		f.Add([]byte(s))
+	}
+	c := codec{storageBig5: true, mbBig5: true}
+	f.Fuzz(func(t *testing.T, b []byte) {
+		for _, s := range []string{string(b), c.fromStorageArticle(b)} {
+			if p := plainText(s); !utf8.ValidString(p) {
+				t.Fatalf("plainText(%q) = %q, not UTF-8", s, p)
+			}
+			if h := htmlText(s); !utf8.ValidString(h) {
+				t.Fatalf("htmlText(%q) is not UTF-8", s)
+			}
+		}
+	})
 }

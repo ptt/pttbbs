@@ -61,7 +61,7 @@ func (z *zipper) start(stop <-chan struct{}) {
 				case <-stop:
 					return
 				case job := <-z.jobs:
-					z.run(job)
+					guard("packing the home of "+job.user, func() { z.run(job) })
 					z.mu.Lock()
 					delete(z.pending, strings.ToLower(job.user))
 					z.mu.Unlock()

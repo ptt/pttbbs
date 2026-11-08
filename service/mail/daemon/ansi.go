@@ -8,6 +8,7 @@ import (
 	"html"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/text/width"
 )
@@ -99,9 +100,9 @@ func (a ansiState) style() string {
 
 // scanANSI splits s into text and SGR parameters. Other escape sequences
 // (cursor moves, PTT's "ESC *x" ...) are dropped, and so are control
-// characters but tabs and line breaks.
+// characters but tabs and line breaks. The text is always valid UTF-8.
 func scanANSI(s string, text func(string), sgr func(string)) {
-	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ToValidUTF8(strings.ReplaceAll(s, "\r\n", "\n"), "?")
 	start := 0
 	flush := func(end int) {
 		if end > start {
@@ -123,9 +124,11 @@ func scanANSI(s string, text func(string), sgr func(string)) {
 					sgr(s[i+1 : j])
 				}
 				i = j + 1
-			} else if i < len(s) {
-				i++ // ESC x, including PTT's ESC * x
-				if s[i-1] == '*' && i < len(s) {
+			} else if i < len(s) && isPrintASCII(s[i]) {
+				// ESC x, including PTT's ESC * x; a lone ESC before
+				// a non-ASCII character must not take a part of it.
+				i++
+				if s[i-1] == '*' && i < len(s) && isPrintASCII(s[i]) {
 					i++
 				}
 			}
@@ -140,6 +143,8 @@ func scanANSI(s string, text func(string), sgr func(string)) {
 	}
 	flush(len(s))
 }
+
+func isPrintASCII(c byte) bool { return c >= ' ' && c < 0x7f }
 
 // plainText makes a BBS article readable in a mail: no ANSI sequences or
 // other control characters but tabs and line breaks.
@@ -205,15 +210,18 @@ func isNarrowWide(r rune) bool {
 // in two columns kept so.
 func writeColumns(sb *strings.Builder, t string) {
 	start := 0
-	for i, r := range t {
+	for i := 0; i < len(t); {
+		r, size := utf8.DecodeRuneInString(t[i:])
 		if !isNarrowWide(r) {
+			i += size
 			continue
 		}
 		sb.WriteString(html.EscapeString(t[start:i]))
 		sb.WriteString(wideSpan)
-		sb.WriteRune(r)
+		sb.WriteString(html.EscapeString(t[i : i+size]))
 		sb.WriteString("</span>")
-		start = i + len(string(r))
+		i += size
+		start = i
 	}
 	sb.WriteString(html.EscapeString(t[start:]))
 }

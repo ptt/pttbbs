@@ -161,19 +161,35 @@ func newBoundary() string {
 	return "mailsvc-" + hex.EncodeToString(b[:])
 }
 
+// The renderers of articles (replaced in tests).
+var (
+	renderPlain = plainText
+	renderHTML  = htmlText
+)
+
 // composeText writes a BBS article as a mail in UTF-8, like most mail
 // programs: plain text without the ANSI sequences, and HTML with the
 // colors.
 func (o *outbox) composeText(w io.Writer, from, rcpt, subject, body string) error {
-	boundary := newBoundary()
+	return o.composeRendered(w, from, rcpt, subject, renderPlain(body), renderHTML(body))
+}
+
+// composeRendered writes a mail with text and HTML, or only text if html
+// is empty.
+func (o *outbox) composeRendered(w io.Writer, from, rcpt, subject, text, html string) error {
 	o.writeHeaders(w, from, rcpt, subject)
+	if html == "" {
+		io.WriteString(w, textType+"\r\n")
+		return writeBase64(w, strings.NewReader(text))
+	}
+	boundary := newBoundary()
 	fmt.Fprintf(w, "Content-Type: multipart/alternative; boundary=\"%s\"\r\n\r\n", boundary)
 	fmt.Fprintf(w, "--%s\r\n%s\r\n", boundary, textType)
-	if err := writeBase64(w, strings.NewReader(plainText(body))); err != nil {
+	if err := writeBase64(w, strings.NewReader(text)); err != nil {
 		return err
 	}
 	fmt.Fprintf(w, "--%s\r\n%s\r\n", boundary, htmlType)
-	if err := writeBase64(w, strings.NewReader(htmlText(body))); err != nil {
+	if err := writeBase64(w, strings.NewReader(html)); err != nil {
 		return err
 	}
 	fmt.Fprintf(w, "--%s--\r\n", boundary)
@@ -218,9 +234,29 @@ func (o *outbox) send(from, rcpt string, subject, content []byte) error {
 			return o.composePlain(w, from, addr, title, content)
 		})
 	}
-	body := o.s.codec.fromStorageArticle(content)
+	// Render before spooling, so a failure doesn't leave a partial mail;
+	// and degrade instead of failing: without HTML if it can't be made,
+	// or as the old outmail did if not even the text can be made.
+	what := fmt.Sprintf("the mail from %s to %s", from, addr)
+	body, ok := safely("decoding "+what, func() string {
+		return o.s.codec.fromStorageArticle(content)
+	})
+	var text string
+	if ok {
+		text, ok = safely("rendering the text of "+what, func() string {
+			return renderPlain(body)
+		})
+	}
+	if !ok {
+		return o.enqueue(o.sender(from), addr, title, func(w io.Writer) error {
+			return o.composePlain(w, from, addr, title, content)
+		})
+	}
+	html, _ := safely("rendering the HTML of "+what, func() string {
+		return renderHTML(body)
+	})
 	return o.enqueue(o.sender(from), addr, title, func(w io.Writer) error {
-		return o.composeText(w, from, addr, title, body)
+		return o.composeRendered(w, from, addr, title, text, html)
 	})
 }
 
@@ -234,6 +270,14 @@ func writeFileSync(path string, write func(io.Writer) error) error {
 	if err != nil {
 		return err
 	}
+	done := false
+	defer func() {
+		// also when write panics
+		if !done {
+			f.Close()
+			os.Remove(tmp)
+		}
+	}()
 	bw := bufio.NewWriter(f)
 	err = write(bw)
 	if err == nil {
@@ -245,6 +289,7 @@ func writeFileSync(path string, write func(io.Writer) error) error {
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
+	done = true
 	if err == nil {
 		err = os.Rename(tmp, path)
 	}
@@ -295,7 +340,7 @@ func (o *outbox) remove(env *envelope) {
 func (o *outbox) run(stop <-chan struct{}) {
 	t := time.NewTicker(sendInterval)
 	defer t.Stop()
-	o.flush()
+	guard("sending mails", func() { o.flush() })
 	for {
 		select {
 		case <-stop:
@@ -303,7 +348,7 @@ func (o *outbox) run(stop <-chan struct{}) {
 		case <-t.C:
 		case <-o.kick:
 		}
-		o.flush()
+		guard("sending mails", func() { o.flush() })
 	}
 }
 

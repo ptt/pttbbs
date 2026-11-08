@@ -174,3 +174,19 @@ func TestCharsets(t *testing.T) {
 		t.Errorf("truncate cut a UTF-8 character: %q", got)
 	}
 }
+
+// Mails come from anyone on the Internet: parsing must not panic.
+func FuzzParseMail(f *testing.F) {
+	for _, s := range []string{
+		"From: a@b.c\nSubject: =?UTF-8?B?5L2g5aW9?=\n\nbody\n",
+		"From x Fri\nContent-Type: multipart/mixed; boundary=B\n\n--B\nContent-Type: text/html\n\n<p>a</p>\n--B--\n",
+		"Content-Type: message/rfc822\n\nFrom: <a@b>\n\nhi\n",
+		"Content-Transfer-Encoding: base64\n\n5L2g\n",
+	} {
+		f.Add([]byte(s))
+	}
+	f.Fuzz(func(t *testing.T, b []byte) {
+		m := parseMail(b)
+		ownerOf(m.Sender)
+	})
+}

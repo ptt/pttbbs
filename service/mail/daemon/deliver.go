@@ -48,6 +48,9 @@ func ownerOf(sender string) string {
 	return s
 }
 
+// decodeMail decodes incoming mails (replaced in tests).
+var decodeMail = parseMail
+
 // receiverID gives the BBS user id in "userid" or "userid.bbs".
 func receiverID(receiver string) string {
 	receiver = strings.TrimLeft(receiver, ".")
@@ -76,7 +79,18 @@ func (s *Server) deliver(receiver string, raw []byte) (string, string) {
 		return statusReject, "rejects outside mails"
 	}
 
-	m := parseMail(raw)
+	// A mail that can't be decoded is still delivered, as it is.
+	m, ok := safely("decoding a mail to "+registered, func() parsedMail {
+		return decodeMail(raw)
+	})
+	if !ok {
+		m, ok = safely("decoding a mail to "+registered+" (legacy)", func() parsedMail {
+			return parseLegacy(raw)
+		})
+	}
+	if !ok {
+		m = parsedMail{Body: normalizeBody(utf8OrBig5(raw))}
+	}
 	sender := m.Sender
 	if !strings.Contains(sender, "@") { // 由 local host 寄信
 		sender += "@" + s.cfg.Hostname

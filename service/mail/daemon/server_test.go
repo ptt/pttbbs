@@ -64,7 +64,7 @@ func (f *fakeBBS) last(t *testing.T) delivered {
 	return f.mails[len(f.mails)-1]
 }
 
-func newTestServer(t *testing.T, relay string) (*Server, *fakeBBS) {
+func newTestServer(t testing.TB, relay string) (*Server, *fakeBBS) {
 	t.Helper()
 	home := t.TempDir()
 	os.MkdirAll(filepath.Join(home, "etc"), 0755)
@@ -479,4 +479,94 @@ func TestComposeText(t *testing.T) {
 			t.Errorf("line too long: %d", len(l))
 		}
 	}
+}
+
+// panicBBS panics, like a bug on a bad mail.
+type panicBBS struct{ fakeBBS }
+
+func (*panicBBS) LoadMailUser(string) (int, string, bool) { panic("bug") }
+
+func TestRequestPanic(t *testing.T) {
+	s, _ := newTestServer(t, "")
+	s.bbs = &panicBBS{}
+	startSockets(t, s)
+	if got := request(t, s.cfg.InSocket, "DELIVER tester\n\nhi\n"); got != "ERR internal error\n" {
+		t.Errorf("DELIVER = %q", got)
+	}
+	// still serving
+	if got := request(t, s.cfg.OutSocket, "HELLO\n\n"); !strings.HasPrefix(got, "ERR ") {
+		t.Errorf("after a panic: %q", got)
+	}
+}
+
+// A mail that can't be encoded or decoded is still sent or delivered.
+func TestDegrade(t *testing.T) {
+	relay := newFakeRelay(t)
+	s, bbs := newTestServer(t, relay.addr())
+	boom := func(string) string { panic("render bug") }
+	content := big5uao.Encode("\x1b[31m內文\x1b[m\n")
+
+	defer func(p, h func(string) string) { renderPlain, renderHTML = p, h }(renderPlain, renderHTML)
+
+	// Without HTML
+	renderHTML = boom
+	if err := s.out.send("Tester", "a@example.com", []byte("x"), content); err != nil {
+		t.Fatal(err)
+	}
+	// As the old outmail, without even the text
+	renderPlain = boom
+	if err := s.out.send("Tester", "b@example.com", []byte("x"), content); err != nil {
+		t.Fatal(err)
+	}
+	if n := s.out.flush(); n != 2 {
+		t.Fatalf("sent %d", n)
+	}
+	for _, m := range relay.msgs {
+		msg, err := mail.ReadMessage(strings.NewReader(m.data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		ct := msg.Header.Get("Content-Type")
+		switch m.rcpt {
+		case "a@example.com":
+			if body, _ := io.ReadAll(base64.NewDecoder(base64.StdEncoding, msg.Body)); !strings.HasPrefix(ct, "text/plain") || string(body) != "內文\n" {
+				t.Errorf("without HTML: %q %q", ct, body)
+			}
+		case "b@example.com":
+			if body, _ := io.ReadAll(msg.Body); !strings.Contains(ct, "big5") || !strings.Contains(string(body), string(content[:5])) {
+				t.Errorf("as outmail: %q %q", ct, body)
+			}
+		}
+	}
+	if leftovers, _ := filepath.Glob(filepath.Join(s.cfg.SpoolDir, "*")); len(leftovers) != 0 {
+		t.Errorf("left %v", leftovers)
+	}
+
+	// Delivered as it is
+	defer func(d func([]byte) parsedMail) { decodeMail = d }(decodeMail)
+	decodeMail = func([]byte) parsedMail { panic("decode bug") }
+	if st, msg := s.deliver("tester", []byte("Subject: hi\n\nbody\n")); st != statusOK {
+		t.Fatalf("deliver = %s %s", st, msg)
+	}
+	if m := bbs.last(t); m.title != "hi" || !strings.HasSuffix(m.content, "\n\nbody\n") {
+		t.Errorf("delivered %+v", m)
+	}
+}
+
+// Mails in and out must be delivered or spooled, whatever they have.
+func FuzzDeliverAndSend(f *testing.F) {
+	f.Add([]byte("Subject: hi\n\nbody\n"), []byte("title"))
+	f.Add([]byte("\x1b可\x1b[1;31m紅\xa5"), []byte("\xa5\x1b"))
+	s, _ := newTestServer(f, "")
+	f.Fuzz(func(t *testing.T, raw, subject []byte) {
+		if st, msg := s.deliver("tester", raw); st != statusOK {
+			t.Fatalf("deliver = %s %s", st, msg)
+		}
+		if err := s.out.send("Tester", "a@example.com", subject, raw); err != nil {
+			t.Fatalf("send: %v", err)
+		}
+		for _, env := range s.out.pending() {
+			s.out.remove(env)
+		}
+	})
 }

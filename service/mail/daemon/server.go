@@ -50,6 +50,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -222,6 +223,12 @@ func (s *Server) serve(l net.Listener, handle func(net.Conn)) error {
 			go func() {
 				defer func() { <-sem }()
 				defer conn.Close()
+				defer func() {
+					if r := recover(); r != nil {
+						logPanic("a request", r)
+						fmt.Fprintf(conn, "ERR internal error\n")
+					}
+				}()
 				handle(conn)
 			}()
 		default:
@@ -229,6 +236,33 @@ func (s *Server) serve(l net.Listener, handle func(net.Conn)) error {
 			conn.Close()
 		}
 	}
+}
+
+// logPanic logs a panic in what, so one bad mail or request does not stop
+// the whole service.
+func logPanic(what string, r any) {
+	log.Printf("[mail.svc] PANIC in %s: %v\n%s", what, r, debug.Stack())
+}
+
+// safely gives f(), or ok = false (and logs it) if f panics.
+func safely[T any](what string, f func() T) (v T, ok bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			logPanic(what, r)
+			ok = false
+		}
+	}()
+	return f(), true
+}
+
+// guard runs f, and logs it if it panics.
+func guard(what string, f func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			logPanic(what, r)
+		}
+	}()
+	f()
 }
 
 func reply(conn net.Conn, format string, args ...any) {

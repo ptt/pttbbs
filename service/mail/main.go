@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -136,6 +137,11 @@ func main() {
 		if err := os.MkdirAll(filepath.Dir(*logPath), 0755); err == nil {
 			if f, err := os.OpenFile(*logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); err == nil {
 				log.SetOutput(f)
+				// The daemon has no stderr: put crash reports (fatal
+				// errors, panics not recovered) in the log too.
+				if err := debug.SetCrashOutput(f, debug.CrashOptions{}); err != nil {
+					log.Printf("[mail.svc] Warning: SetCrashOutput: %v", err)
+				}
 			}
 		}
 	}
