@@ -23,6 +23,19 @@ This file is encoded in UTF-8.
 >   之後不需要再啟動 `outmail`。
 > - `shmctl init` 會啟動 `bin/mail.svc`；不重跑 `shmctl init` 的話請手動執行。
 > - 不再需要 `mutt`。relay 預設是 `RELAY_SERVER_IP`，可用 `mail.svc -smtp host:port` 指定。
+> - 設定檔是 `etc/mail.svc.conf`（範例在 `sample/etc/mail.svc.conf`），
+>   `key = value` 對應 `mail.svc` 的命令列參數，可用 `-conf` 指定別的檔案。
+> - 寄出的信是 UTF-8 的 multipart/alternative（純文字 + HTML）。不能收這種信的收件者
+>   （例如其他 BBS 站的 `xxx.bbs@ptt.cc`，或解析信件內容的 bot）可以在
+>   `mail.svc.conf` 用 `plain = pattern` 列出，可重複多行或用逗號分隔：
+>   `user@host`（單一地址）、`@host`（該網域）、`.host`（其子網域）、
+>   `user@`（任何網域的 user）或 `.suffix@`（任何網域、帳號以 .suffix 結尾，如 `.bbs@`）。
+>   這些收件者會收到跟舊 `outmail` 一樣的信：單一 text/plain，內文是原始檔案內容
+>   （保留 ANSI 色碼，BBS 編碼，8bit）。`plain` 改了會自動重讀，其他設定要重啟。
+>   ```bash
+>   cp sample/etc/mail.svc.conf ~bbs/etc/
+>   echo 'plain = .bbs@, bot@ptt.cc' >> ~bbs/etc/mail.svc.conf
+>   ```
 
 ```bash
 make -C service/mail install

@@ -75,7 +75,6 @@ func newTestServer(t *testing.T, relay string) (*Server, *fakeBBS) {
 		OutSocket:   filepath.Join(home, "out.sock"),
 		Relay:       relay,
 		Hostname:    "bbs.example.org",
-		BBSName:     "批踢踢",
 		StorageBig5: true,
 		MBBig5:      true,
 		ZipLimit:    1 << 20,
@@ -343,7 +342,7 @@ func TestRetry(t *testing.T) {
 	s, _ := newTestServer(t, relay.addr())
 
 	relay.rcptCode = 451
-	if err := s.out.send("Tester", "a@example.com", "x", "y"); err != nil {
+	if err := s.out.send("Tester", "a@example.com", []byte("x"), []byte("y")); err != nil {
 		t.Fatal(err)
 	}
 	if n := s.out.flush(); n != 0 {
@@ -369,7 +368,7 @@ func TestRetry(t *testing.T) {
 
 	// Relay down: kept for later
 	s.cfg.Relay = "127.0.0.1:1"
-	s.out.send("Tester", "a@example.com", "x", "y")
+	s.out.send("Tester", "a@example.com", []byte("x"), []byte("y"))
 	s.out.flush()
 	if n := len(spooled(t, s)); n != 1 {
 		t.Errorf("%d mails in the spool when the relay is down", n)
@@ -471,7 +470,7 @@ func TestComposeText(t *testing.T) {
 	if from := m.Header.Get("From"); from != `"Tester" <Tester.bbs@bbs.example.org>` {
 		t.Errorf("From = %q", from)
 	}
-	if d, _ := new(mime.WordDecoder).DecodeHeader(m.Header.Get("X-Disclaimer")); d != "[批踢踢]對本信內容恕不負責" {
+	if d := m.Header.Get("X-Disclaimer"); d != "bbs.example.org is not responsible for the content of this mail." {
 		t.Errorf("X-Disclaimer = %q", d)
 	}
 	raw, _ := io.ReadAll(m.Body)

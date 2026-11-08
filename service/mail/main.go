@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"pttbbs/bbs"
-	"pttbbs/big5uao"
 	"pttbbs/mail/daemon"
 )
 
@@ -49,6 +48,47 @@ func forkDaemon() error {
 	return cmd.Start()
 }
 
+// confArg finds -conf (or -c) in args.
+func confArg(args []string, def string) string {
+	for i, arg := range args {
+		name, val, hasVal := strings.Cut(strings.TrimLeft(arg, "-"), "=")
+		if !strings.HasPrefix(arg, "-") || (name != "conf" && name != "c") {
+			continue
+		}
+		if hasVal {
+			return val
+		}
+		if i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return def
+}
+
+// withConfig puts the settings in the config file (other than "plain",
+// which the daemon reads by itself) before args, so args override them.
+func withConfig(args []string, def string) []string {
+	path := confArg(args, def)
+	conf, err := daemon.ParseConfig(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "[mail.svc] Warning: config %s: %v\n", path, err)
+		}
+		return args
+	}
+	var res []string
+	for _, e := range conf {
+		switch {
+		case e.Key == "plain" || e.Key == "conf" || e.Key == "c":
+		case e.Value == "":
+			res = append(res, "-"+e.Key)
+		default:
+			res = append(res, "-"+e.Key+"="+e.Value)
+		}
+	}
+	return append(res, args...)
+}
+
 func main() {
 	bbsHome := bbs.BBSHome()
 	runDir := filepath.Join(bbsHome, "run")
@@ -60,12 +100,17 @@ func main() {
 	zipLimitMB := flag.Int64("zip-limit", 25, "Largest home backup to mail, in MB")
 	zipWorkers := flag.Int("zip-workers", 1, "Homes packed at the same time")
 	maxAge := flag.Duration("max-age", 24*time.Hour, "Give up a mail not sent after this long")
+	confFile := flag.String("conf", filepath.Join(bbsHome, daemon.ConfigPath),
+		"Config file: \"key = value\" for these flags, and \"plain = pattern\" for receivers of plain mails")
+	flag.StringVar(confFile, "c", *confFile, "Alias for -conf")
 	logPath := flag.String("log", filepath.Join(bbsHome, "log", "mail.svc.log"), "Path to log file")
 	debugMode := flag.Bool("D", false, "Debug mode (log to stdout, do not daemonize)")
 	flag.BoolVar(debugMode, "debug", false, "Alias for -D")
 	daemonize := flag.Bool("d", true, "Daemonize mode (fork and exit 0 after setup ok)")
 	verbose := flag.Bool("v", false, "Verbose")
-	flag.Parse()
+	if err := flag.CommandLine.Parse(withConfig(os.Args[1:], *confFile)); err != nil {
+		os.Exit(2)
+	}
 
 	if *debugMode {
 		*daemonize = false
@@ -104,11 +149,6 @@ func main() {
 		log.Fatalf("[mail.svc] %v", err)
 	}
 
-	bbsName := bbs.BBSName()
-	name := string(bbsName)
-	if bbs.MBIsBig5() {
-		name = big5uao.Decode(bbsName)
-	}
 	srv, err := daemon.NewServer(daemon.Config{
 		BBSHome:     bbsHome,
 		InSocket:    *inSocket,
@@ -116,12 +156,12 @@ func main() {
 		SpoolDir:    *spoolDir,
 		Relay:       *relay,
 		Hostname:    bbs.MyHostname(),
-		BBSName:     name,
 		StorageBig5: bbs.StorageIsBig5(),
 		MBBig5:      bbs.MBIsBig5(),
 		ZipLimit:    *zipLimitMB << 20,
 		ZipWorkers:  *zipWorkers,
 		MaxAge:      *maxAge,
+		ConfFile:    *confFile,
 		Verbose:     *verbose,
 	}, bbsLib{})
 	if err != nil {

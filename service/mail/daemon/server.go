@@ -34,6 +34,10 @@
 // A mail is copied into the spool before OK, and sent (and sent again if
 // needed) later. A home is packed later; if it can't be mailed, the user
 // is told in a BBS mail.
+//
+// A mail is sent as UTF-8 text and HTML (multipart/alternative), or, to
+// the receivers listed as "plain" in etc/mail.svc.conf, as the old outmail sent it
+// (see plain.go).
 package daemon
 
 import (
@@ -83,13 +87,13 @@ type Config struct {
 	SpoolDir    string
 	Relay       string // SMTP relay, host:port
 	Hostname    string // MYHOSTNAME
-	BBSName     string // BBSNAME, in UTF-8
 	StorageBig5 bool
 	MBBig5      bool
 
 	ZipLimit   int64         // largest home backup to mail
 	ZipWorkers int           // homes packed at the same time
 	MaxAge     time.Duration // give up a mail not sent after this long
+	ConfFile   string        // mail.svc.conf, for the plain receivers (see plain.go)
 	Verbose    bool
 }
 
@@ -99,12 +103,16 @@ type Server struct {
 	codec codec
 	out   *outbox
 	zip   *zipper
+	plain *plainList
 	stop  chan struct{}
 }
 
 func NewServer(cfg Config, bbs BBS) (*Server, error) {
 	if cfg.SpoolDir == "" {
 		cfg.SpoolDir = filepath.Join(cfg.BBSHome, "out", "mail.svc")
+	}
+	if cfg.ConfFile == "" {
+		cfg.ConfFile = filepath.Join(cfg.BBSHome, ConfigPath)
 	}
 	if cfg.MaxAge <= 0 {
 		cfg.MaxAge = 24 * time.Hour
@@ -122,6 +130,7 @@ func NewServer(cfg Config, bbs BBS) (*Server, error) {
 		cfg:   cfg,
 		bbs:   bbs,
 		codec: codec{storageBig5: cfg.StorageBig5, mbBig5: cfg.MBBig5},
+		plain: newPlainList(cfg.ConfFile),
 		stop:  make(chan struct{}),
 	}
 	s.out = newOutbox(s)
@@ -287,7 +296,7 @@ func (s *Server) handleOut(conn net.Conn) {
 			return
 		}
 		if err := s.out.send(h.Get("From"), h.Get("Rcpt"),
-			s.codec.fromMB([]byte(h.Get("Subject"))), s.codec.fromStorageArticle(content)); err != nil {
+			[]byte(h.Get("Subject")), content); err != nil {
 			reply(conn, "ERR %v", err)
 			return
 		}

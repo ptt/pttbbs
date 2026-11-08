@@ -91,10 +91,13 @@ func (o *outbox) writeHeaders(w io.Writer, from, rcpt, subject string) {
 		hex.EncodeToString(id[:]), host)
 	fmt.Fprintf(w, "MIME-Version: 1.0\r\n")
 	fmt.Fprintf(w, "X-Mailer: mail.svc of pttbbs\r\n")
-	if o.s.cfg.BBSName != "" {
-		fmt.Fprintf(w, "X-Disclaimer: %s\r\n", mime.BEncoding.Encode("UTF-8",
-			"["+o.s.cfg.BBSName+"]對本信內容恕不負責"))
-	}
+	fmt.Fprintf(w, "X-Disclaimer: %s\r\n", o.disclaimer())
+}
+
+// disclaimer is the X-Disclaimer header, in ASCII (MYHOSTNAME), so it
+// needs no encoding.
+func (o *outbox) disclaimer() string {
+	return sanitizeHeader(o.s.cfg.Hostname) + " is not responsible for the content of this mail."
 }
 
 // lineWriter breaks base64 into lines of 76 characters.
@@ -197,8 +200,11 @@ func (o *outbox) composeAttachment(w io.Writer, from, rcpt, subject, body,
 	return nil
 }
 
-// send spools a mail from the BBS user from to rcpt.
-func (o *outbox) send(from, rcpt, subject, body string) error {
+// send spools a mail from the BBS user from to rcpt. subject is in the
+// memory encoding and content in the storage encoding. Receivers in the
+// plain list get it as the old outmail sent it; others get UTF-8 text and
+// HTML.
+func (o *outbox) send(from, rcpt string, subject, content []byte) error {
 	if !validUserID.MatchString(from) {
 		return fmt.Errorf("bad sender")
 	}
@@ -206,9 +212,15 @@ func (o *outbox) send(from, rcpt, subject, body string) error {
 	if err != nil {
 		return err
 	}
-	subject = sanitizeHeader(subject)
-	return o.enqueue(o.sender(from), addr, subject, func(w io.Writer) error {
-		return o.composeText(w, from, addr, subject, body)
+	title := sanitizeHeader(o.s.codec.fromMB(subject))
+	if o.s.plain.match(addr) {
+		return o.enqueue(o.sender(from), addr, title, func(w io.Writer) error {
+			return o.composePlain(w, from, addr, title, content)
+		})
+	}
+	body := o.s.codec.fromStorageArticle(content)
+	return o.enqueue(o.sender(from), addr, title, func(w io.Writer) error {
+		return o.composeText(w, from, addr, title, body)
 	})
 }
 
