@@ -1962,7 +1962,12 @@ static void
 chat_goodbye(ChatUser *cu, char *msg)
 {
     exit_room(cu, EXIT_LOGOUT, msg);
-    /* Thor: 要不要加 logout_user(cu) ? */
+    /* /bye ends the session: mark it dead so the connection is closed
+     * instead of lingering authenticated-but-roomless (never reaped by the
+     * !userno login-timeout sweep). deadusers++ balances logout_user's
+     * unconditional deadusers--, matching the kick path. */
+    cu->dead = 1;
+    deadusers++;
 }
 
 
