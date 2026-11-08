@@ -1,9 +1,23 @@
 #define _UTIL_C_
 #include "bbs.h"
 
-/* Update user online info. */
+/* Update user online info: count today in numlogindays for the users who
+ * have been online since an earlier day (and so did not log in today). */
 
 static int verbose = 0;
+
+/* The beginning (0:00am) of the day of firstlogin, the base of the days of
+ * a user, as in pwcuLoginSave() of mbbsd/passwd.c. */
+static time4_t
+day_base(time4_t firstlogin)
+{
+    struct tm tm;
+
+    if (!localtime4_r(&firstlogin, &tm))
+        return firstlogin;
+    tm.tm_sec = tm.tm_min = tm.tm_hour = 0;
+    return time_to_time4(mktime(&tm));
+}
 
 void fastcheck()
 {
@@ -13,8 +27,6 @@ void fastcheck()
     userinfo_t u;
     time4_t base;
 
-    now = time4_add(now, -(time4_to_time(now) % 60)); // begin of current minute, in case cron delays
-    base = time4_add(now, -DAY_SECONDS);
     memset(seen_uid, 0, sizeof(seen_uid));
 
     for (i = 0; i < USHM_SIZE; i++) {
@@ -44,7 +56,11 @@ void fastcheck()
         if (verbose > 1)
             fprintf(stderr, "checking: %s (%s)\n", urec.userid, Cdatelite(&urec.lastlogin));
 
-        if (time4_gt(urec.lastlogin, base))
+        // Count a day once, like logins do (pwcuLoginSave): only if the
+        // last login (or update) was on an earlier day. So it doesn't matter
+        // when or how many times a day this runs.
+        base = day_base(urec.firstlogin);
+        if (time4_days_elapsed(now, base) <= time4_days_elapsed(urec.lastlogin, base))
             continue;
 
         if (verbose)
