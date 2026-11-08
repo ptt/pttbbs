@@ -147,17 +147,76 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     return count;
 }
 
+// Serialize a buyer recording a bet against a BM installing or clearing a
+// lottery. The lock is the board directory -- a stable inode, unlike the
+// ticket.* files that hold_gamble() renames and unlinks (an flock on a file
+// that is unlinked and re-created gives no mutual exclusion). Returns an fd
+// for unlock_ticket(), or -1 if the lock could not be taken.
+static int
+lock_ticket(const char *direct)
+{
+    int fd = open(direct, O_RDONLY);
+    if (fd < 0)
+	return -1;
+    int r;
+    while ((r = flock(fd, LOCK_EX)) < 0 && errno == EINTR)
+	;
+    if (r < 0) {
+	close(fd);
+	return -1;
+    }
+    return fd;
+}
+
+static void
+unlock_ticket(int fd)
+{
+    if (fd >= 0)
+	close(fd);  // releasing the fd releases the flock
+}
+
+/* Closes brdname's open lottery (ticket -> ticket.end) under the lottery
+ * lock, so no buyer records into it afterwards: a draw then sees every
+ * bet. Returns 0 when it is closed (or already was), -1 if the lock
+ * can't be taken or the rename fails. */
+static int
+close_ticket(const char *brdname)
+{
+    char dir[PATHLEN], fn_ticket[PATHLEN], fn_ticket_end[PATHLEN];
+
+    setbpath(dir, brdname);
+    setbfile(fn_ticket, brdname, FN_TICKET);
+    setbfile(fn_ticket_end, brdname, FN_TICKET_END);
+    int lkfd = lock_ticket(dir);
+    if (lkfd < 0)
+	return -1;
+    int r = (rename(fn_ticket, fn_ticket_end) == 0 || errno == ENOENT) ? 0 : -1;
+    unlock_ticket(lkfd);
+    return r;
+}
+
 static int
 append_ticket_record(const char *direct, int ch, int n, int count)
 {
     FILE *fp;
     bignum_t ticket[8] = {0};
-    int i;
+    int i, lkfd, ret = -1;
     char genbuf[256];
+
+    // Hold the per-board lottery lock across the whole record: the check
+    // that the lottery is still open, the first-bet file creation, and
+    // both the ticket.user append and the ticket.data update. Closing a
+    // lottery (close_ticket()) and installing a new one (hold_gamble())
+    // take the same lock, so a bet is either recorded before the close,
+    // and drawn with the rest, or refused and refunded by the caller. A
+    // draw needs a closed lottery, so it doesn't take the lock.
+    lkfd = lock_ticket(direct);
+    if (lkfd < 0)
+	return -1;  // can't serialize against a close or re-hold; refund
 
     SNPRINTF(genbuf, "%s/" FN_TICKET, direct);
     if (!dashf(genbuf))
-	return -1;
+	goto out;
 
     SNPRINTF(genbuf, "%s/" FN_TICKET_RECORD, direct);
 
@@ -170,17 +229,17 @@ append_ticket_record(const char *direct, int ch, int n, int count)
     }
 
     if (!(fp = fopen(genbuf, "r+")))
-	return -1;
-
+	goto out;
+    // ticket.data's own flock too, which is all binaries from before the
+    // board lock take: during a rolling restart they still buy.
     flock(fileno(fp), LOCK_EX);
 
     // ticket.user only once ticket.data is open: a buyer listed there is
     // paid at the draw, so a refunded one must not be.
     SNPRINTF(genbuf, "%s/" FN_TICKET_USER, direct);
     if (file_appendf(genbuf, "%s %d %d\n", cuser.userid, ch, n) < 0) {
-	flock(fileno(fp), LOCK_UN);
 	fclose(fp);
-	return -1;
+	goto out;
     }
 
     for (i = 0; i < MAX_ITEM; i++)
@@ -194,9 +253,11 @@ append_ticket_record(const char *direct, int ch, int n, int count)
 	fprintf(fp, "%lld ", ticket[i]);
     fflush(fp);
 
-    flock(fileno(fp), LOCK_UN);
-    fclose(fp);
-    return 0;
+    fclose(fp);  // and its flock
+    ret = 0;
+out:
+    unlock_ticket(lkfd);
+    return ret;
 }
 
 /* Asks how many tickets to buy at price each: the number, or 0 if none, or
@@ -471,15 +532,14 @@ int
 stop_gamble(void)
 {
     boardheader_t  *bp = getbcache(currbid);
-    char            fn_ticket[128], fn_ticket_end[128];
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     if (!bp->endgamble || time4_gt(bp->endgamble, now))
 	return 0;
 
-    setbfile(fn_ticket, currboard, FN_TICKET);
-    setbfile(fn_ticket_end, currboard, FN_TICKET_END);
-
-    rename(fn_ticket, fn_ticket_end);
+    // Past its end, so no buy either way; if the close failed, endgamble
+    // stays for the next try.
+    if (close_ticket(currboard) < 0)
+	return 1;
     if (bp->endgamble) {
 	bp->endgamble = 0;
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -698,7 +758,10 @@ hold_gamble(void)
 		"是否要 [截止投注]?(N/y)：", yn, 3, LCECHO);
 	if (yn[0] != 'y')
 	    return FULLUPDATE;
-	rename(fn_ticket, fn_ticket_end);
+	if (close_ticket(currboard) < 0) {
+	    vmsg("系統忙碌中，請稍後再試。");
+	    return FULLUPDATE;
+	}
 	modlog_t log;
 	modlog(currboard, NULL, modlog_init(&log, "樂透截止投注"));
 	if (bp->endgamble) {
@@ -780,15 +843,25 @@ hold_gamble(void)
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     }
 
-    setbfile(genbuf, currboard, FN_TICKET_RECORD);
-    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
-    setbfile(genbuf, currboard, FN_TICKET_USER);
-    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
-
+    // Install the new lottery and clear the old records only while no
+    // lottery is open: buyers record only into an open lottery, checked
+    // under the lottery lock, so nothing can be recorded into the files
+    // cleared here. (The lock itself matters here only against binaries
+    // from before it, during a rolling restart.)
+    char tkpath[PATHLEN];
+    int lkfd;
+    setbpath(tkpath, currboard);
+    lkfd = lock_ticket(tkpath);
     setbfile(genbuf, currboard, FN_TICKET_ITEMS);
     setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
-    if(!dashf(fn_ticket))
+    if (!dashf(fn_ticket)) {
 	Rename(tmp, genbuf);
+	setbfile(genbuf, currboard, FN_TICKET_RECORD);
+	unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
+	setbfile(genbuf, currboard, FN_TICKET_USER);
+	unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
+    }
+    unlock_ticket(lkfd);
 
     SNPRINTF(genbuf, TN_ANNOUNCE " %s 板 開始舉辦樂透!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
