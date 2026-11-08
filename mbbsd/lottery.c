@@ -159,33 +159,43 @@ append_ticket_record(const char *direct, int ch, int n, int count)
     if (!dashf(genbuf))
 	return -1;
 
-    SNPRINTF(genbuf, "%s/" FN_TICKET_USER, direct);
-    file_appendf(genbuf, "%s %d %d\n", cuser.userid, ch, n);
-
     SNPRINTF(genbuf, "%s/" FN_TICKET_RECORD, direct);
 
     if (!dashf(genbuf)) {
-	creat(genbuf, S_IRUSR | S_IWUSR);
+	// Not creat(), which truncates: during a rolling restart an old
+	// binary may have just created and written it.
+	int cfd = open(genbuf, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+	if (cfd >= 0)
+	    close(cfd);
     }
 
-    if ((fp = fopen(genbuf, "r+"))) {
+    if (!(fp = fopen(genbuf, "r+")))
+	return -1;
 
-	flock(fileno(fp), LOCK_EX);
+    flock(fileno(fp), LOCK_EX);
 
-	for (i = 0; i < MAX_ITEM; i++)
-	    if (fscanf(fp, "%lld ", &ticket[i]) != 1)
-		break;
-	ticket[ch] += n;
-
-	ftruncate(fileno(fp), 0);
-	rewind(fp);
-	for (i = 0; i < count; i++)
-	    fprintf(fp, "%lld ", ticket[i]);
-	fflush(fp);
-
+    // ticket.user only once ticket.data is open: a buyer listed there is
+    // paid at the draw, so a refunded one must not be.
+    SNPRINTF(genbuf, "%s/" FN_TICKET_USER, direct);
+    if (file_appendf(genbuf, "%s %d %d\n", cuser.userid, ch, n) < 0) {
 	flock(fileno(fp), LOCK_UN);
 	fclose(fp);
+	return -1;
     }
+
+    for (i = 0; i < MAX_ITEM; i++)
+	if (fscanf(fp, "%lld ", &ticket[i]) != 1)
+	    break;
+    ticket[ch] += n;
+
+    ftruncate(fileno(fp), 0);
+    rewind(fp);
+    for (i = 0; i < count; i++)
+	fprintf(fp, "%lld ", ticket[i]);
+    fflush(fp);
+
+    flock(fileno(fp), LOCK_UN);
+    fclose(fp);
     return 0;
 }
 
