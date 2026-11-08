@@ -130,7 +130,7 @@ enum {
 static int64_t c_get_board_srexpire(int bid) {
     if (SHM == NULL || bid < 1 || bid > MAX_BOARD)
         return 0;
-    return (int64_t)SHM->bcache[bid - 1].SRexpire;
+    return (int64_t)time4_to_time(SHM->bcache[bid - 1].SRexpire);
 }
 
 static const char *c_get_board_name(int bid) {
@@ -538,9 +538,9 @@ static int c_compute_dir_backtrack(const char *direct, int *out_total_recs, int6
     time4_t max_seen = 0;
     for (int i = 0; i < valid_cnt; i++) {
         time4_t t = ts_buf[i];
-        if (t <= 0)
+        if (time4_is_invalid(t))
             continue;
-        if (cand_cnt == 0 || t > max_seen) {
+        if (cand_cnt == 0 || time4_gt(t, max_seen)) {
             cand_idx[cand_cnt++] = i;
             max_seen = t;
         }
@@ -551,13 +551,13 @@ static int c_compute_dir_backtrack(const char *direct, int *out_total_recs, int6
 
     for (int j = valid_cnt - 1; j >= 0; j--) {
         time4_t tj = ts_buf[j];
-        if (tj <= 0)
+        if (time4_is_invalid(tj))
             continue;
-        if (cand_cnt > 0 && tj < ts_buf[cand_idx[cand_cnt - 1]]) {
+        if (cand_cnt > 0 && time4_lt(tj, ts_buf[cand_idx[cand_cnt - 1]])) {
             int low = 0, high = cand_cnt - 1, best = cand_cnt - 1;
             while (low <= high) {
                 int mid = low + (high - low) / 2;
-                if (ts_buf[cand_idx[mid]] > tj) {
+                if (time4_gt(ts_buf[cand_idx[mid]], tj)) {
                     best = mid;
                     high = mid - 1;
                 } else {
@@ -568,7 +568,7 @@ static int c_compute_dir_backtrack(const char *direct, int *out_total_recs, int6
             int dist = j - i;
             if (dist > max_backtrack)
                 max_backtrack = dist;
-            int64_t tdiff = (int64_t)(ts_buf[cand_idx[cand_cnt - 1]] - tj);
+            int64_t tdiff = time4_diff(ts_buf[cand_idx[cand_cnt - 1]], tj);
             if (tdiff > max_time_diff)
                 max_time_diff = tdiff;
         }
@@ -681,9 +681,9 @@ static int c_search_aidu_and_compute_backtrack(
             time4_t max_seen = 0;
             for (int i = 0; i < valid_cnt; i++) {
                 time4_t t = ts_buf[i];
-                if (t <= 0)
+                if (time4_is_invalid(t))
                     continue;
-                if (cand_cnt == 0 || t > max_seen) {
+                if (cand_cnt == 0 || time4_gt(t, max_seen)) {
                     cand_idx[cand_cnt++] = i;
                     max_seen = t;
                 }
@@ -691,13 +691,13 @@ static int c_search_aidu_and_compute_backtrack(
 
             for (int j = valid_cnt - 1; j >= 0; j--) {
                 time4_t tj = ts_buf[j];
-                if (tj <= 0)
+                if (time4_is_invalid(tj))
                     continue;
-                if (cand_cnt > 0 && tj < ts_buf[cand_idx[cand_cnt - 1]]) {
+                if (cand_cnt > 0 && time4_lt(tj, ts_buf[cand_idx[cand_cnt - 1]])) {
                     int low = 0, high = cand_cnt - 1, best = cand_cnt - 1;
                     while (low <= high) {
                         int mid = low + (high - low) / 2;
-                        if (ts_buf[cand_idx[mid]] > tj) {
+                        if (time4_gt(ts_buf[cand_idx[mid]], tj)) {
                             best = mid;
                             high = mid - 1;
                         } else {
@@ -708,7 +708,7 @@ static int c_search_aidu_and_compute_backtrack(
                     int dist = j - i;
                     if (dist > max_btrack)
                         max_btrack = dist;
-                    int64_t tdiff = (int64_t)(ts_buf[cand_idx[cand_cnt - 1]] - tj);
+                    int64_t tdiff = time4_diff(ts_buf[cand_idx[cand_cnt - 1]], tj);
                     if (tdiff > max_tdiff)
                         max_tdiff = tdiff;
                 }

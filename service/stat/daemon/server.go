@@ -138,6 +138,7 @@ func (s *Server) ProcessRequest(req model.Request) model.Response {
 		stats := s.store.Get(req.UserID)
 		if req.Key != "" {
 			var val int32
+			var lastSong int64
 			switch req.Key {
 			case "post":
 				val = stats.PostCount
@@ -146,13 +147,17 @@ func (s *Server) ProcessRequest(req model.Request) model.Response {
 			case "song":
 				val = stats.SongCount
 			case "lastsong":
+				// Value is int32 (wraps after 2038, read as uint32);
+				// the full 64-bit timestamp is in LastSongTime.
 				val = int32(stats.LastSongTime)
+				lastSong = stats.LastSongTime
 			default:
 				return model.Response{Success: false, Error: "unknown stat key: " + req.Key}
 			}
 			return model.Response{
-				Success: true,
-				Value:   val,
+				Success:      true,
+				Value:        val,
+				LastSongTime: lastSong,
 			}
 		}
 		return model.Response{

@@ -120,7 +120,7 @@ Post AsPost(size_t index, const fileheader_t &fh) {
   p.set_owner(strings::b2u(fh.owner));
   p.set_title(strings::b2u(fh.title));
   constexpr int64_t one_sec = 1000000000LL;
-  p.set_modified_nsec(fh.modified * one_sec);
+  p.set_modified_nsec(static_cast<int64_t>(time4_to_time(fh.modified)) * one_sec);
   return p;
 }
 

@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <signal.h>
 #include <stddef.h>
 #include <string.h>
@@ -344,7 +345,7 @@ get_utmp_status(time_t *out_uptime, int *out_number, int *out_busystate, int *ou
         if (out_needupdate) *out_needupdate = 0;
         return;
     }
-    if (out_uptime) *out_uptime = SHM->UTMPuptime;
+    if (out_uptime) *out_uptime = time4_to_time(SHM->UTMPuptime);
     if (out_number) *out_number = SHM->UTMPnumber;
     if (out_busystate) *out_busystate = (int)SHM->UTMPbusystate;
     if (out_needupdate) *out_needupdate = (int)SHM->UTMPneedupdate;
@@ -460,8 +461,13 @@ get_utmp_candidates(cgo_utmp_candidate_t *out_candidates, int max_candidates, in
         c->pid = (int)u->pid;
         c->uid = u->uid;
         strlcpy(c->userid, u->userid, sizeof(c->userid));
-        c->lastact = u->lastact;
-        c->idle_sec = (int)time4_diff(now, u->lastact);
+        c->lastact = time4_to_time(u->lastact);
+        {
+            int64_t idle = time4_diff(time_to_time4(now), u->lastact);
+            if (idle > INT_MAX) idle = INT_MAX;
+            else if (idle < INT_MIN) idle = INT_MIN;
+            c->idle_sec = (int)idle;
+        }
         c->friendtotal = u->friendtotal;
         c->mode = u->mode;
         c->brc_id = u->brc_id;
