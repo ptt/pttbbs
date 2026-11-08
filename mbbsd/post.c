@@ -80,7 +80,7 @@ CommentAddRecord(const char *board GCC_UNUSED, const char *direct, fileheader_t 
         }
     }
 
-    fhdr->modified = dasht(path);
+    fhdr->modified = dasht4(path);
 
     if (fhdr->modified != 0) {
         if (modify_dir_lite(direct, ent, fhdr->filename,

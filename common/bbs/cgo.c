@@ -335,7 +335,7 @@ utmp_update(void)
 }
 
 void
-get_utmp_status(long *out_uptime, int *out_number, int *out_busystate, int *out_needupdate)
+get_utmp_status(time_t *out_uptime, int *out_number, int *out_busystate, int *out_needupdate)
 {
     if (!SHM) {
         if (out_uptime) *out_uptime = 0;
@@ -344,7 +344,7 @@ get_utmp_status(long *out_uptime, int *out_number, int *out_busystate, int *out_
         if (out_needupdate) *out_needupdate = 0;
         return;
     }
-    if (out_uptime) *out_uptime = (long)SHM->UTMPuptime;
+    if (out_uptime) *out_uptime = SHM->UTMPuptime;
     if (out_number) *out_number = SHM->UTMPnumber;
     if (out_busystate) *out_busystate = (int)SHM->UTMPbusystate;
     if (out_needupdate) *out_needupdate = (int)SHM->UTMPneedupdate;
@@ -460,7 +460,7 @@ get_utmp_candidates(cgo_utmp_candidate_t *out_candidates, int max_candidates, in
         c->pid = (int)u->pid;
         c->uid = u->uid;
         strlcpy(c->userid, u->userid, sizeof(c->userid));
-        c->lastact = (long)u->lastact;
+        c->lastact = u->lastact;
         c->idle_sec = (int)time4_diff(now, u->lastact);
         c->friendtotal = u->friendtotal;
         c->mode = u->mode;

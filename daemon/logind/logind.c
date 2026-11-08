@@ -1177,7 +1177,7 @@ reload_data()
 
     fprintf(stderr, LOG_PREFIX "start reloading data.\n");
     g_reload_data = 0;
-    g_welcome_mtime = dasht(FN_WELCOME);
+    g_welcome_mtime = dasht4(FN_WELCOME);
     load_text_screen_file(FN_WELCOME, &welcome_screen);
     load_text_screen_file(FN_GOODBYE, &goodbye_screen);
     load_text_screen_file(FN_BANIP,   &banip_screen);
@@ -1185,9 +1185,9 @@ reload_data()
     g_banned = dashf(FN_BAN) || is_system_shutdown();
 
     // Loading banip table is slow - only reload if the file is really modified.
-    if (dasht(FN_CONF_BANIP) != g_banip_mtime) {
+    if (dasht4(FN_CONF_BANIP) != g_banip_mtime) {
         fprintf(stderr, LOG_PREFIX "reload banip table: %s.\n", FN_CONF_BANIP);
-        g_banip_mtime = dasht(FN_CONF_BANIP);
+        g_banip_mtime = dasht4(FN_CONF_BANIP);
         g_banip = free_banip_list(g_banip);
         g_banip = load_banip_list(FN_CONF_BANIP, stderr);
     }
@@ -1747,7 +1747,7 @@ regular_check()
         const char *fn = files[i];
         if (g_verbose > VERBOSE_INFO)
             fprintf(stderr, LOG_PREFIX "check %s.\n", fn);
-        if (dasht(fn) != tss[i]) {
+        if (dasht4(fn) != tss[i]) {
             g_reload_data = 1;
             if (g_verbose > VERBOSE_INFO)
                 fprintf(stderr, LOG_PREFIX

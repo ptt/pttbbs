@@ -427,7 +427,7 @@ b_result(boardheader_t * fh)
 	// the slot before.
 	if (!fgets(temp, sizeof(temp), cfp) ||
 	    fscanf(cfp, "%d\n", &closetime) != 1)
-	    closetime = dasht(buf) + DAY_SECONDS;
+	    closetime = time_to_time4(dasht(buf) + DAY_SECONDS);
 	fclose(cfp);
 	if (time4_lt(closetime, now))
 	    b_result_one(&vbuf, fh, &total);

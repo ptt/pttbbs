@@ -46,7 +46,7 @@ dashs(const char *fname)
  * 傳回 fname 的 mtime
  * @param fname
  */
-time4_t
+time_t
 dasht(const char *fname)
 {
     struct stat     st;
@@ -61,7 +61,7 @@ dasht(const char *fname)
  * 傳回 fname 的 ctime
  * @param fname
  */
-time4_t
+time_t
 dashc(const char *fname)
 {
     struct stat     st;

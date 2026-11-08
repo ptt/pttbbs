@@ -409,12 +409,12 @@ cached_banip_list(const char *basefile, const char *cachefile) {
     BanIpList *blist = NULL;
     IPv4List *list = NULL;
     FILE *fp;
-    time4_t m_base = dasht(basefile);
+    time4_t m_base = dasht4(basefile);
 
     if (time4_is_invalid(m_base))
         return NULL;
 
-    time4_t m_cache = dasht(cachefile);
+    time4_t m_cache = dasht4(cachefile);
     size_t sz = dashs(cachefile);
 
     if (m_cache >= m_base && sz >= sizeof(size_t) * 2) {

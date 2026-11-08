@@ -54,6 +54,12 @@ static inline time_t time4_to_time(time4_t t) {
     return (time_t)(uint32_t)t;
 }
 
+/* time_t to time4_t, e.g. for fileheader_t: the low 32 bits, read back as
+ * unsigned by time4_to_time() (until 2106) */
+static inline time4_t time_to_time4(time_t t) {
+    return (time4_t)(uint32_t)t;
+}
+
 /* time4_t Y2038-safe unsigned comparison helpers */
 static inline int time4_cmp(time4_t a, time4_t b) {
     uint32_t ua = (uint32_t)a, ub = (uint32_t)b;
@@ -119,8 +125,12 @@ int daemonize(const char * pidfile, const char * logfile);
 
 /* file.c */
 off_t   dashs(const char *fname);
-time4_t dasht(const char *fname);
-time4_t dashc(const char *fname);
+time_t  dasht(const char *fname);
+time_t  dashc(const char *fname);
+/* dasht() for time4_t: fileheader_t, now and the time4 helpers */
+static inline time4_t dasht4(const char *fname) {
+    return time_to_time4(dasht(fname));
+}
 int dashl(const char *fname);
 int dashf(const char *fname);
 int dashd(const char *fname);

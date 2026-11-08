@@ -118,7 +118,7 @@ read_control(const char *path, poll_t *v)
     short n = 0, tickets = 0;
     int t = 0, ok = 0;
 
-    v->mtime = dasht(path);
+    v->mtime = dasht4(path);
     if (!(fp = fopen(path, "r")))
         return VS_CANNOT_OPEN;
     // b_result_one() takes the items from the first field alone

@@ -1500,7 +1500,7 @@ do_post_article(int edflags)
     else
     {
 	/* general article */
-	postfile.modified = dasht(fpath);
+	postfile.modified = dasht4(fpath);
 	postfile.multi.money = money;
     }
 
@@ -1526,7 +1526,7 @@ do_post_article(int edflags)
     }
 #endif
 
-    if (PostAddRecord(currboard, &postfile, dashc(genbuf)) == -1)
+    if (PostAddRecord(currboard, &postfile, time_to_time4(dashc(genbuf))) == -1)
     {
         unlink(genbuf);
     }
@@ -2025,7 +2025,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         }
     } else {
         // without smart merge, simply alert by size and mtime.
-        if (dashs(genbuf) != oldsz || time4_gt(dasht(genbuf), dashc(fpath)))
+        if (dashs(genbuf) != oldsz || dasht(genbuf) > dashc(fpath))
             is_race_condition = 1;
     }
     if (is_race_condition) {
@@ -2064,7 +2064,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         }
     }
 
-    oldmt = dasht(genbuf);
+    oldmt = dasht4(genbuf);
     rev = timecapsule_add_revision(genbuf);
 
     if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
@@ -2092,7 +2092,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         Rename(fpath, genbuf);
     }
 
-    fhdr->modified = dasht(genbuf);
+    fhdr->modified = dasht4(genbuf);
     if (fee > 0)
         fhdr->multi.money = 0;
     if (strcmp(save_title, fhdr->title) != 0) {

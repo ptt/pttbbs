@@ -385,7 +385,7 @@ func (c *SHMClient) GetUtmpStatus() UtmpStatus {
 	if c == nil {
 		return UtmpStatus{}
 	}
-	var cUptime C.long
+	var cUptime C.time_t
 	var cNumber, cBusystate, cNeedupdate C.int
 	C.get_utmp_status(&cUptime, &cNumber, &cBusystate, &cNeedupdate)
 	return UtmpStatus{

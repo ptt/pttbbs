@@ -1943,7 +1943,7 @@ pveh_renderer(int i, PSB_CTX *ctx) {
 
     if (cx->timestamps[i] == 0) {
         pveh_solve_rev_filename(rev, i, fname, sizeof(fname), cx);
-        ftime = dasht(fname);
+        ftime = dasht4(fname);
         // dasht returns 0 (same as 'never read' here) so we have to give ftime
         // a special value so it won't re-read next time.
         if (!ftime)

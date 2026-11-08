@@ -714,7 +714,7 @@ setforward(void) {
     if (dashs(buf) > 0) {
         // load forward auth
         fp = fopen(buf, "rt");
-        auth_time = dasht(buf);
+        auth_time = dasht4(buf);
         if (fp) {
             fgets(ip, sizeof(ip), fp);
             fgets(auth_code, sizeof(auth_code), fp);
@@ -1391,7 +1391,7 @@ zipped_home_check(void)
     time4_t last_tag;
 
     setuserfile(tagname, ".zipped_home");
-    last_tag = dasht(tagname);
+    last_tag = dasht4(tagname);
     if (time4_is_valid(last_tag) && time4_days_elapsed(now, last_tag) < 7 &&
         !HasUserPerm(PERM_SYSOP)) {
         vmsgf("每週僅可備份一次，離下次還有 %d 天。",
@@ -1411,7 +1411,7 @@ zipped_home_mark(const char *rcpt)
     time4_t last;
 
     setuserfile(tagname, ".zipped_home");
-    last = dasht(tagname);
+    last = dasht4(tagname);
     log_filef(tagname, "%s %s\n", Cdatelite(&now), rcpt);
     rotate_text_logfile(tagname, SZ_RECENTLOGIN, 0.2);
     return last;
@@ -1536,7 +1536,7 @@ report_forward(const char *direct, const fileheader_t *fh,
                              get_client_code(),
                              HasUserPerm(ACTIVITY_EXEMPT_PERMS), bid,
                              fh->filename, kind, rcpt, via,
-                             dasht(TEMPFORMAT(PATHLEN, "%s/%s", direct,
+                             dasht4(TEMPFORMAT(PATHLEN, "%s/%s", direct,
                                               fh->filename)),
                              msg, msgsz);
 }

@@ -378,7 +378,7 @@ typedef struct {
     int pid;
     int uid;
     char userid[IDLEN + 1];
-    long lastact;
+    time_t lastact;
     int idle_sec;
     int friendtotal;
     int mode;
@@ -388,7 +388,7 @@ typedef struct {
 } cgo_utmp_candidate_t;
 
 void utmp_update(void);
-void get_utmp_status(long *out_uptime, int *out_number, int *out_busystate, int *out_needupdate);
+void get_utmp_status(time_t *out_uptime, int *out_number, int *out_busystate, int *out_needupdate);
 void reset_utmp_busystate(void);
 int get_utmp_busystate(void);
 void set_utmp_busystate(int val);

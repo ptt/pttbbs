@@ -134,7 +134,7 @@ angel_load_my_fullnick(char *buf, int szbuf)
 
     *buf = 0;
     setuserfile(fn, FN_ANGELMSG);
-    modtime = dasht(fn);
+    modtime = dasht4(fn);
     if (modtime != touched) {
         touched = modtime;
         *mynick = 0;
@@ -174,7 +174,7 @@ angel_reload_nick()
     if (!reload && _myangel[0] && _myangel[0] != '-')
     {
 	sethomefile(fn, _myangel, FN_ANGELMSG);
-	ts = dasht(fn);
+	ts = dasht4(fn);
 	if (time4_is_valid(ts) && time4_gt(ts, _myangel_touched))
 	    reload = 1;
     }
@@ -198,7 +198,7 @@ angel_reload_nick()
     if (!fn[0])
     {
 	sethomefile(fn, _myangel, FN_ANGELMSG);
-	ts = dasht(fn);
+	ts = dasht4(fn);
 	_myangel_touched = ts;
     }
 
@@ -327,11 +327,13 @@ do_changeangel(int force) {
         char bad_master_file[PATHLEN];
         setuserfile(bad_master_file, ".bad_master");
         is_bad_master = dashf(bad_master_file);
+        time_t mtime = dasht(bad_master_file);
         if (is_bad_master &&
-            time4_lt(dasht(bad_master_file), now - ANGEL_INACTIVE_DAYS * DAY_SECONDS)) {
+            time4_to_time(now) - mtime >
+                (time_t)ANGEL_INACTIVE_DAYS * DAY_SECONDS) {
             log_filef("log/bad_master.log",
-                      "%s removed from bad master list (%d)\n",
-                      cuser.userid, dasht(bad_master_file));
+                      "%s removed from bad master list (%lld)\n",
+                      cuser.userid, (long long)mtime);
             remove(bad_master_file);
         }
     }
@@ -588,7 +590,7 @@ angel_display_message(const char *template_fn,
                       int date_row, int date_col) {
     char buf[ANSILINELEN];
     FILE *fp = fopen(message_fn, "rt");
-    time4_t ts = dasht(message_fn);
+    time4_t ts = dasht4(message_fn);
 
     show_file(template_fn, vgety(), b_lines - vgety(), SHOWFILE_ALLOW_ALL);
     while (skip_lines-- > 0)

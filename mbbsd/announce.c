@@ -1610,7 +1610,7 @@ announce_renderer(int idx, PSB_CTX *psbctx)
     SNPRINTF(buf, "%s/%s", pm->path, item->filename);
     if (copyqueue_querysize() > 0 && copyqueue_fileinqueue(buf))
         flTagged = 1;
-    time4_t dtime = dasht(buf);
+    time4_t dtime = dasht4(buf);
     a_timestamp(buf, &dtime);
 
     char num[32];
