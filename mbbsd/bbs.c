@@ -2482,12 +2482,9 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
     {
         // Report the read; the activity service may ask to slow down.
-        int delay_ms = 0;
         activity_read_post(cuser.userid, cuser.firstlogin, get_client_code(),
                            HasUserPerm(ACTIVITY_EXEMPT_PERMS), currbid,
-                           fhdr->filename, &delay_ms);
-        if (delay_ms > 0)
-            usleep(delay_ms * 1000);
+                           fhdr->filename, activity_slow_alert);
     }
 
     // Real read.

@@ -143,7 +143,45 @@ struct act_wait {
     int deny;               // NAV, FWD: deny this request / do not send
     char *msg;              // NAV, FWD: why denied (may be NULL)
     size_t msgsz;
+    time_t slow_until;      // READ, NAV: the account is slowed down until
+    char slow_msg[ACTIVITY_DENY_MSG_MAX];   // ... and why
 };
+
+// Keeps "<until> [<message>]" of a slow notice in w.
+static void
+act_keep_slow(struct act_wait *w, const char *s)
+{
+    const char *msg;
+
+    if (!s)
+        return;
+    w->slow_until = (time_t)strtoll(s, NULL, 10);
+    msg = strchr(s, ' ');
+    strlcpy(w->slow_msg, msg ? msg + 1 : "", sizeof(w->slow_msg));
+}
+
+// Applies the reply to a read or nav: tells the user (on_delay, may be NULL) if
+// the account is slowed down, once per slowdown, then pauses as asked.
+static void
+act_pause(const struct act_wait *w, activity_delay_fn on_delay)
+{
+    // End of the slowdown already told: the only state kept across requests.
+    // A slowdown extended while it lasts is the same slowdown.
+    static time_t told;
+    time_t now = time(NULL);
+
+    if (w->slow_until > now) {
+        if (!told || now >= told) {
+            if (w->slow_msg[0] && on_delay)
+                on_delay(w->slow_msg);
+            told = w->slow_until;
+        } else if (w->slow_until > told) {
+            told = w->slow_until;
+        }
+    }
+    if (w->delay_ms > 0)
+        usleep(w->delay_ms * 1000);
+}
 
 // Keeps a denial message (the rest of a reply) in w.
 static void
@@ -182,9 +220,12 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
             w->done = 1;
         }
     } else if (strcmp(tok[0], "reads") == 0 && n >= 3) {
-        // "reads <userid> <count> <delay_ms>": the count is not used.
+        // "reads <userid> <count> <delay_ms> [slow <until> <message>]": the
+        // count is not used.
         if (w && w->kind == ACT_WAIT_READ && !w->done) {
             w->delay_ms = n >= 4 ? atoi(tok[3]) : 0;
+            if (p && strncmp(p, "slow ", 5) == 0)
+                act_keep_slow(w, p + 5);
             w->done = 1;
         }
     } else if (strcmp(tok[0], "pace") == 0 && n >= 3) {
@@ -198,6 +239,9 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
                 // "deny <type> <message>"
                 if (w->deny)
                     act_keep_msg(w, p && strchr(p, ' ') ? strchr(p, ' ') + 1 : NULL);
+            } else if (n >= 4 && strcmp(tok[3], "slow") == 0) {
+                // "slow <until> <message>"
+                act_keep_slow(w, p);
             }
             w->done = 1;
         }
@@ -328,14 +372,13 @@ activity_login_query(const char *userid, const char *hostip, int is_exempt)
 void
 activity_read_post(const char *userid, time4_t firstlogin,
                    uint32_t client_code, int is_exempt,
-                   int bid, const char *filename, int *delay_ms)
+                   int bid, const char *filename, activity_delay_fn on_delay)
 {
-    struct act_wait w = { .kind = ACT_WAIT_READ };
-
-    if (delay_ms)
-        *delay_ms = 0;
     if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
         return;
+
+    struct act_wait w = { .kind = ACT_WAIT_READ };
+
     if (is_exempt || !act_field_ok(userid) || !act_field_ok(filename))
         return;
 
@@ -345,28 +388,25 @@ activity_read_post(const char *userid, time4_t firstlogin,
     if (act_send("read %s %d %x %d %s", userid, (int)firstlogin, client_code,
                  bid, filename) == 0)
         act_wait_reply(&w, ACTIVITY_READ_WAIT_MS);
-    if (delay_ms)
-        *delay_ms = w.delay_ms;
+    act_pause(&w, on_delay);
 }
 
 int
 activity_nav_track(const char *userid, time4_t firstlogin,
                    const char *hostip, uint32_t client_code,
                    int is_exempt, int nav_type, int target_bid,
-                   int value, int *delay_ms, char *msg, size_t msgsz)
+                   int value, char *msg, size_t msgsz,
+                   activity_delay_fn on_delay)
 {
-    struct act_wait w = { .kind = ACT_WAIT_NAV, .type = nav_type,
-                          .msg = msg, .msgsz = msgsz };
-
-    if (delay_ms)
-        *delay_ms = 0;
-    if (msg && msgsz)
-        *msg = '\0';
     if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
         return 0;
 
+    struct act_wait w = { .kind = ACT_WAIT_NAV, .type = nav_type,
+                          .msg = msg, .msgsz = msgsz };
     char ip[64];
 
+    if (msg && msgsz)
+        *msg = '\0';
     if (is_exempt || !act_field_ok(userid))
         return 0;
     act_dispatch(NULL, NULL, NULL);     // Drop stale replies
@@ -377,8 +417,7 @@ activity_nav_track(const char *userid, time4_t firstlogin,
          act_send("nav %s %d %s %x %d %d", userid, (int)firstlogin, ip,
                   client_code, nav_type, target_bid)) == 0)
         act_wait_reply(&w, ACTIVITY_READ_WAIT_MS);
-    if (delay_ms)
-        *delay_ms = w.delay_ms;
+    act_pause(&w, on_delay);
     return w.deny;
 }
 

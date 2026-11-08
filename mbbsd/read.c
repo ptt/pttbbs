@@ -573,13 +573,11 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	{
 	    uint32_t cc = get_client_code();
 	    int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
-	    int delay_ms = 0, r;
+	    int r;
 	    char msg[ACTIVITY_DENY_MSG_MAX];
 	    r = activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
 	                           cc, is_exempt, ACTIVITY_NAV_SEARCH_AID, currbid,
-	                           0, &delay_ms, msg, sizeof(msg));
-	    if (delay_ms > 0)
-	        usleep(delay_ms * 1000);
+	                           0, msg, sizeof(msg), activity_slow_alert);
 	    if (r > 0) {
 		// Denied (e.g. a scraper): say why and until when.
 		if (!*msg)
@@ -831,16 +829,14 @@ select_read(read_ctx_t *cx, int sr_mode)
     {
         uint32_t cc = get_client_code();
         int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
-        int delay_ms = 0, r;
+        int r;
         int score = (sr_mode & RS_SCORE) != 0;
         char msg[ACTIVITY_DENY_MSG_MAX];
         r = activity_nav_track(cuser.userid, cuser.firstlogin, fromhost, cc,
                                is_exempt, score ? ACTIVITY_NAV_SEARCH_SCORE :
                                ACTIVITY_NAV_SEARCH_SR, bid,
-                               score ? predicate.score : 0, &delay_ms,
-                               msg, sizeof(msg));
-        if (delay_ms > 0)
-            usleep(delay_ms * 1000);
+                               score ? predicate.score : 0,
+                               msg, sizeof(msg), activity_slow_alert);
         if (r > 0) {
             // Denied (polling, scrapers): say why and until when.
             if (*msg)

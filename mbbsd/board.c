@@ -117,12 +117,9 @@ int enter_board(const char *boardname)
     {
         uint32_t cc = get_client_code();
         int is_exempt = HasUserPerm(ACTIVITY_EXEMPT_PERMS);
-        int delay_ms = 0;
         activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
                            cc, is_exempt, ACTIVITY_NAV_BOARD_SWITCH, currbid,
-                           0, &delay_ms, NULL, 0);
-        if (delay_ms > 0)
-            usleep(delay_ms * 1000);
+                           0, NULL, 0, activity_slow_alert);
     }
 
     return 0;

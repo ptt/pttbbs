@@ -84,6 +84,13 @@ activity_alert(const char *msg, const char *status)
     alert_screen(" 使用限制 ", status, reason, NULL, FN_ACTIVITY_ALERT);
 }
 
+// The account is slowed down by navigation rules (on_delay of activity hooks).
+void
+activity_slow_alert(const char *msg)
+{
+    activity_alert(msg, " 限速中 ");
+}
+
 // The content alert: why, what was found, and site notes.
 static void
 content_alert(const content_verdict_t *v, const char *text)

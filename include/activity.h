@@ -45,6 +45,13 @@
 //                                               request; the message (Big5, to
 //                                               the end, may be absent) says why
 //                                               and until when
+//   ... slow <until> <message>                  at the end of reads and pace
+//                                               (not with deny) while the account
+//                                               is slowed down by navigation
+//                                               rules: until when (Unix time) and
+//                                               why (Big5, to the end); passed
+//                                               to the on_delay callback once
+//                                               per slowdown
 //
 // Denial messages are shown with activity_alert() (and FN_ACTIVITY_ALERT, the
 // site notes, e.g. where to report mistakes), at most ACTIVITY_DENY_MSG_MAX.
@@ -100,20 +107,28 @@ void activity_client_dispatch(activity_verdict_cb cb, void *arg);
 // logind: a verdict did not arrive in time.
 void activity_client_timeout(void);
 
-// mbbsd: reports reading post `filename` on board `bid`, and sets *delay_ms to
-// how long the caller should pause (0 without the service).
+// mbbsd: tells the user that the account is slowed down by navigation rules
+// (`msg`, Big5: why and until when). Called before pausing, once per slowdown
+// (a slowdown extended while it lasts is the same one).
+typedef void (*activity_delay_fn)(const char *msg);
+
+// mbbsd: reports reading post `filename` on board `bid`, and pauses as the
+// service asks (not at all without it). If the account is slowed down,
+// `on_delay` (may be NULL) is called first.
 void activity_read_post(const char *userid, time4_t firstlogin,
                         uint32_t client_code, int is_exempt,
-                        int bid, const char *filename, int *delay_ms);
+                        int bid, const char *filename,
+                        activity_delay_fn on_delay);
 
-// mbbsd: reports navigation (`value`: the threshold for SEARCH_SCORE, else 0).
-// Returns 1 if this request is denied (e.g. polling), else 0; sets *delay_ms to
-// how long the caller should pause first (0 without the service), and `msg`
-// (if not NULL, `msgsz` bytes) to why it is denied ("" if not told).
+// mbbsd: reports navigation (`value`: the threshold for SEARCH_SCORE, else 0),
+// and pauses as activity_read_post() does. Returns 1 if this request is denied
+// (e.g. polling), else 0, and sets `msg` (if not NULL, `msgsz` bytes) to why
+// it is denied ("" if not told).
 int activity_nav_track(const char *userid, time4_t firstlogin,
                        const char *hostip, uint32_t client_code,
                        int is_exempt, int nav_type, int target_bid,
-                       int value, int *delay_ms, char *msg, size_t msgsz);
+                       int value, char *msg, size_t msgsz,
+                       activity_delay_fn on_delay);
 
 // Kinds of "fwd", from the most to the least responsible sender.
 enum {

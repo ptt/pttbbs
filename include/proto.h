@@ -791,6 +791,9 @@ void alert_screen(const char *title, const char *status, const char *reason,
                   const char *shown, const char *notes);
 // The alert of a denial by activity.svc (`msg`: what, why and until when).
 void activity_alert(const char *msg, const char *status);
+// Tells the user the account is slowed down (on_delay of activity_read_post()
+// and activity_nav_track()).
+void activity_slow_alert(const char *msg);
 
 /* stuff */
 #define isprint2(ch) (((ch) & 0x80) || isprint((unsigned char)(ch)))
