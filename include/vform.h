@@ -98,6 +98,7 @@ typedef struct vform_field {
 typedef struct vform_def {
     const char              *title;         // Form header title
     const char              *subtitle;      // Optional subtitle / guidance
+    const char              *caption;       // Optional short name for the footer (default: title)
     vform_mode_t            mode;          // Wizard, In-place, or Auto
     const vform_field_t     *fields;        // Array of field definitions
     int                     num_fields;     // Number of fields in array

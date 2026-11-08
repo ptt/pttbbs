@@ -1711,6 +1711,7 @@ vform_run_inplace(const vform_def_t *def, void *data, void *priv)
     if (!def || !data || def->num_fields <= 0)
         return 0;
 
+    const char *caption = (def->caption && *def->caption) ? def->caption : def->title;
     VREFSCR scr = vscr_save();
     vform_inplace_ctx_t cx;
     memset(&cx, 0, sizeof(cx));
@@ -1847,7 +1848,7 @@ vform_run_inplace(const vform_def_t *def, void *data, void *priv)
             move(b_lines - 1, 0);
             clrtoeol();
         }
-        vs_cmd_bar(VS_FOOTER, def->title, layers);
+        vs_cmd_bar(VS_FOOTER, caption, layers);
 
         if (cx.in_edit_flow && (vform_is_input_field(cur_f) || cur_f->type == VFORM_BOOL)) {
             cmd_ctx_t cctx = {
@@ -1859,7 +1860,7 @@ vform_run_inplace(const vform_def_t *def, void *data, void *priv)
                 .total = def->num_fields,
                 .on_select = vform_on_select,
                 .active_layers = layers,
-                .caption = def->title,
+                .caption = caption,
             };
             vform_cmd_enter(&cctx);
             if (cx.done) break;
@@ -1878,10 +1879,10 @@ vform_run_inplace(const vform_def_t *def, void *data, void *priv)
             .total = def->num_fields,
             .on_select = vform_on_select,
             .active_layers = layers,
-            .caption = def->title,
+            .caption = caption,
         };
 
-        cmd_dispatch_layers(layers, &cctx, def->title);
+        cmd_dispatch_layers(layers, &cctx, caption);
         if (cx.done || cctx.quit) break;
     }
 
