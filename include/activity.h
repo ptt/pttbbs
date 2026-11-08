@@ -29,6 +29,9 @@
 //                                               the Internet address (or the local userid for
 //                                               ACTIVITY_FWD_LOCAL), via the local mailbox
 //                                               that auto-forwards (or "-"); expects a verdict
+//   <firstlogin> is an opaque user token (userec_t.firstlogin as a signed
+//   int32): the service only compares it to tell a recycled account, never
+//   uses it as a time.
 //
 // Service -> client:
 //   verdict <reqid> ok                          reply to login or fwd
@@ -115,7 +118,7 @@ typedef void (*activity_delay_fn)(const char *msg);
 // mbbsd: reports reading post `filename` on board `bid`, and pauses as the
 // service asks (not at all without it). If the account is slowed down,
 // `on_delay` (may be NULL) is called first.
-void activity_read_post(const char *userid, time4_t firstlogin,
+void activity_read_post(const char *userid, int32_t user_token,
                         uint32_t client_code, int is_exempt,
                         int bid, const char *filename,
                         activity_delay_fn on_delay);
@@ -124,7 +127,7 @@ void activity_read_post(const char *userid, time4_t firstlogin,
 // and pauses as activity_read_post() does. Returns 1 if this request is denied
 // (e.g. polling), else 0, and sets `msg` (if not NULL, `msgsz` bytes) to why
 // it is denied ("" if not told).
-int activity_nav_track(const char *userid, time4_t firstlogin,
+int activity_nav_track(const char *userid, int32_t user_token,
                        const char *hostip, uint32_t client_code,
                        int is_exempt, int nav_type, int target_bid,
                        int value, char *msg, size_t msgsz,
@@ -144,10 +147,10 @@ enum {
 // from a duplicate, or 0 if unknown). Returns 1 if it should be denied, else 0 (always 0 without the
 // service or a reply in time); sets `msg` (if not NULL, `msgsz` bytes) to why
 // it is denied ("" if not told).
-int activity_forward(const char *userid, time4_t firstlogin,
+int activity_forward(const char *userid, int32_t user_token,
                      const char *hostip, uint32_t client_code, int is_exempt,
                      int bid, const char *filename, int kind,
-                     const char *address, const char *via, time4_t mtime,
+                     const char *address, const char *via, time_t mtime,
                      char *msg, size_t msgsz);
 
 #endif // INCLUDE_ACTIVITY_H

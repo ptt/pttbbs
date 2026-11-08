@@ -370,7 +370,7 @@ activity_login_query(const char *userid, const char *hostip, int is_exempt)
 }
 
 void
-activity_read_post(const char *userid, time4_t firstlogin,
+activity_read_post(const char *userid, int32_t user_token,
                    uint32_t client_code, int is_exempt,
                    int bid, const char *filename, activity_delay_fn on_delay)
 {
@@ -385,14 +385,14 @@ activity_read_post(const char *userid, time4_t firstlogin,
     act_dispatch(NULL, NULL, NULL);     // Drop stale replies
     // The service answers in microseconds; a short wait gets the verdict for
     // this read.
-    if (act_send("read %s %d %x %d %s", userid, (int)firstlogin, client_code,
+    if (act_send("read %s %d %x %d %s", userid, user_token, client_code,
                  bid, filename) == 0)
         act_wait_reply(&w, ACTIVITY_READ_WAIT_MS);
     act_pause(&w, on_delay);
 }
 
 int
-activity_nav_track(const char *userid, time4_t firstlogin,
+activity_nav_track(const char *userid, int32_t user_token,
                    const char *hostip, uint32_t client_code,
                    int is_exempt, int nav_type, int target_bid,
                    int value, char *msg, size_t msgsz,
@@ -412,9 +412,9 @@ activity_nav_track(const char *userid, time4_t firstlogin,
     act_dispatch(NULL, NULL, NULL);     // Drop stale replies
     act_norm_ip(hostip, ip, sizeof(ip));
     if ((nav_type == ACTIVITY_NAV_SEARCH_SCORE ?
-         act_send("nav %s %d %s %x %d %d %d", userid, (int)firstlogin, ip,
+         act_send("nav %s %d %s %x %d %d %d", userid, user_token, ip,
                   client_code, nav_type, target_bid, value) :
-         act_send("nav %s %d %s %x %d %d", userid, (int)firstlogin, ip,
+         act_send("nav %s %d %s %x %d %d", userid, user_token, ip,
                   client_code, nav_type, target_bid)) == 0)
         act_wait_reply(&w, ACTIVITY_READ_WAIT_MS);
     act_pause(&w, on_delay);
@@ -422,10 +422,10 @@ activity_nav_track(const char *userid, time4_t firstlogin,
 }
 
 int
-activity_forward(const char *userid, time4_t firstlogin,
+activity_forward(const char *userid, int32_t user_token,
                  const char *hostip, uint32_t client_code, int is_exempt,
                  int bid, const char *filename, int kind,
-                 const char *address, const char *via, time4_t mtime,
+                 const char *address, const char *via, time_t mtime,
                  char *msg, size_t msgsz)
 {
     if (msg && msgsz)
@@ -443,12 +443,12 @@ activity_forward(const char *userid, time4_t firstlogin,
         g_reqid = 1;
     w.reqid = g_reqid;
     act_norm_ip(hostip, ip, sizeof(ip));
-    if (act_send("fwd %u %s %d %s %x %d %s %d %s %s %d", w.reqid, userid,
-                 (int)firstlogin, ip, client_code, bid,
+    if (act_send("fwd %u %s %d %s %x %d %s %d %s %s %lld", w.reqid, userid,
+                 user_token, ip, client_code, bid,
                  act_field_ok(filename) ? filename : "-", kind,
                  act_field_ok(address) ? address : "-",
                  act_field_ok(via) ? via : "-",
-                 mtime > 0 ? (int)mtime : 0) == 0)
+                 mtime > 0 ? (long long)mtime : 0LL) == 0)
         act_wait_reply(&w, ACTIVITY_FORWARD_WAIT_MS);
     return w.deny;
 }

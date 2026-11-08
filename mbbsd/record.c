@@ -462,7 +462,7 @@ append_record_forward(char *fpath, fileheader_t * record, int size,
                          strcasecmp(origid, cuser.userid) == 0 ?
                          ACTIVITY_FWD_OWN : ACTIVITY_FWD_OTHER,
                          address, origid,
-                         dasht4(TEMP_DIRPATH(fpath, record->filename)),
+                         dasht(TEMP_DIRPATH(fpath, record->filename)),
                          NULL, 0)) {
         LOG_IF(LOG_CONF_INTERNETMAIL,
                log_filef("log/internet_mail.log",

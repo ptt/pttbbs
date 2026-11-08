@@ -1536,8 +1536,8 @@ report_forward(const char *direct, const fileheader_t *fh,
                              get_client_code(),
                              HasUserPerm(ACTIVITY_EXEMPT_PERMS), bid,
                              fh->filename, kind, rcpt, via,
-                             dasht4(TEMPFORMAT(PATHLEN, "%s/%s", direct,
-                                              fh->filename)),
+                             dasht(TEMPFORMAT(PATHLEN, "%s/%s",
+                                              direct, fh->filename)),
                              msg, msgsz);
 }
 
