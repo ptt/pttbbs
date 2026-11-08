@@ -220,16 +220,17 @@ uq_json_get(const char *json, const char *key, char *out, size_t size)
     snprintf(out, size, "%.*s", (int)(e - p), p);
 }
 
-// Sends the request; returns 0 if queued (with the id), or -1 (with why).
+// Sends the request; returns 0 if ok (with the id of a query), or -1 (with
+// why).
 static int
 uq_request(const char *req, char *id, size_t idsz, char *err, size_t errsz)
 {
-    char resp[1024];
+    char resp[1024], code[16];
     int fd, n, len = (int)strlen(req);
 
     id[0] = err[0] = '\0';
     if ((fd = svc_connect(GET_SVC_SOCKET(uquery))) < 0) {
-        strlcpy(err, "查詢服務 (uquery) 沒有回應, 請通知站長", errsz);
+        strlcpy(err, "查詢服務 (uquery) 沒有回應, 請通知系統站長", errsz);
         return -1;
     }
     if (svc_write(fd, req, len) != len) {
@@ -240,7 +241,7 @@ uq_request(const char *req, char *id, size_t idsz, char *err, size_t errsz)
     n = svc_read(fd, resp, sizeof(resp) - 1, UQUERY_SVC_TIMEOUT_MS);
     close(fd);
     if (n <= 0) {
-        strlcpy(err, "查詢服務 (uquery) 沒有回應, 請通知站長", errsz);
+        strlcpy(err, "查詢服務 (uquery) 沒有回應, 請通知系統站長", errsz);
         return -1;
     }
     resp[n] = '\0';
@@ -248,7 +249,13 @@ uq_request(const char *req, char *id, size_t idsz, char *err, size_t errsz)
         uq_json_get(resp, "id", id, idsz);
         return 0;
     }
-    uq_json_get(resp, "error", err, errsz);
+    uq_json_get(resp, "code", code, sizeof(code));
+    if (strcmp(code, "denied") == 0)
+        strlcpy(err, "您沒有使用權限 (不在 uquery 的允許名單)", errsz);
+    else if (strcmp(code, "busy") == 0)
+        strlcpy(err, "等待中的查詢太多, 請稍後再試", errsz);
+    else
+        uq_json_get(resp, "error", err, errsz);
     if (!err[0])
         strlcpy(err, "查詢失敗", errsz);
     return -1;
@@ -262,6 +269,15 @@ u_query_records(void)
 
     if (!IS_ENABLED(CONFIG_UQUERY_SVC) || !HasUserPerm(UQUERY_PERMS))
         return 0;
+
+    // Ask first, so who may not query (or a stopped service) is told
+    // before filling the form.
+    snprintf(req, sizeof(req),
+             "{\"action\":\"check\",\"requester\":\"%s\"}\n", cuser.userid);
+    if (uq_request(req, id, sizeof(id), err, sizeof(err)) < 0) {
+        vmsgf("無法查詢: %s", err);
+        return 0;
+    }
 
     memset(&form, 0, sizeof(form));
     form.type = UQ_TYPE_LOGIN;
