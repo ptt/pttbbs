@@ -18,9 +18,10 @@
 //
 //	SEND\n
 //	Rcpt: <address>\n
-//	From: <BBS user id>\n
+//	From: <BBS user id, or a local address like bot@MYHOSTNAME>\n
 //	Subject: <title, in the memory encoding>\n
 //	Length: <bytes>\n
+//	[Format: text\n]
 //	\n
 //	<content, in the storage encoding>
 //
@@ -35,9 +36,10 @@
 // needed) later. A home is packed later; if it can't be mailed, the user
 // is told in a BBS mail.
 //
-// A mail is sent as UTF-8 text and HTML (multipart/alternative), or, to
-// the receivers listed as "plain" in etc/mail.svc.conf, as the old outmail sent it
-// (see plain.go).
+// A mail is sent as UTF-8 text and HTML (multipart/alternative), as UTF-8
+// text only with "Format: text" (for reports, like those of uquery.svc), or,
+// to the receivers listed as "plain" in etc/mail.svc.conf, as the old outmail
+// sent it (see plain.go).
 package daemon
 
 import (
@@ -324,13 +326,22 @@ func (s *Server) handleOut(conn net.Conn) {
 			reply(conn, "ERR bad length")
 			return
 		}
+		var textOnly bool
+		switch strings.ToLower(strings.TrimSpace(h.Get("Format"))) {
+		case "":
+		case "text":
+			textOnly = true
+		default:
+			reply(conn, "ERR bad format")
+			return
+		}
 		content := make([]byte, n)
 		if _, err := io.ReadFull(tr.R, content); err != nil {
 			reply(conn, "ERR short content")
 			return
 		}
-		if err := s.out.send(h.Get("From"), h.Get("Rcpt"),
-			[]byte(h.Get("Subject")), content); err != nil {
+		if err := s.out.sendFormat(h.Get("From"), h.Get("Rcpt"),
+			[]byte(h.Get("Subject")), content, textOnly); err != nil {
 			reply(conn, "ERR %v", err)
 			return
 		}

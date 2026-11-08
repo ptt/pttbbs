@@ -73,9 +73,30 @@ func checkRcpt(rcpt string) (string, error) {
 	return a.Address, nil
 }
 
-// sender is the address of a BBS user.
+// checkFrom checks the sender from mbbsd: a BBS user id, or an address
+// of the site itself (e.g. "bot@" MYHOSTNAME) for mails from the system.
+func (o *outbox) checkFrom(from string) error {
+	local, domain, isAddr := strings.Cut(from, "@")
+	if !validUserID.MatchString(local) ||
+		(isAddr && !strings.EqualFold(domain, o.s.cfg.Hostname)) {
+		return fmt.Errorf("bad sender")
+	}
+	return nil
+}
+
+// sender is the address of a BBS user, or from itself if it is already an
+// address (of the site; see checkFrom).
 func (o *outbox) sender(from string) string {
+	if strings.Contains(from, "@") {
+		return from
+	}
 	return from + ".bbs@" + o.s.cfg.Hostname
+}
+
+// senderName is the name shown for the sender.
+func senderName(from string) string {
+	name, _, _ := strings.Cut(from, "@")
+	return name
 }
 
 // writeHeaders writes the common headers of mails sent out.
@@ -83,7 +104,7 @@ func (o *outbox) writeHeaders(w io.Writer, from, rcpt, subject string) {
 	host := o.s.cfg.Hostname
 	var id [8]byte
 	rand.Read(id[:])
-	fmt.Fprintf(w, "From: %s\r\n", (&mail.Address{Name: from, Address: o.sender(from)}).String())
+	fmt.Fprintf(w, "From: %s\r\n", (&mail.Address{Name: senderName(from), Address: o.sender(from)}).String())
 	fmt.Fprintf(w, "To: %s\r\n", rcpt)
 	fmt.Fprintf(w, "Subject: %s\r\n", mime.BEncoding.Encode("UTF-8", subject))
 	fmt.Fprintf(w, "Date: %s\r\n", time.Now().Format(time.RFC1123Z))
@@ -221,8 +242,14 @@ func (o *outbox) composeAttachment(w io.Writer, from, rcpt, subject, body,
 // plain list get it as the old outmail sent it; others get UTF-8 text and
 // HTML.
 func (o *outbox) send(from, rcpt string, subject, content []byte) error {
-	if !validUserID.MatchString(from) {
-		return fmt.Errorf("bad sender")
+	return o.sendFormat(from, rcpt, subject, content, false)
+}
+
+// sendFormat is send, or with textOnly, sends the mail as UTF-8 plain text
+// only (without the HTML part), e.g. for reports read by scripts.
+func (o *outbox) sendFormat(from, rcpt string, subject, content []byte, textOnly bool) error {
+	if err := o.checkFrom(from); err != nil {
+		return err
 	}
 	addr, err := checkRcpt(rcpt)
 	if err != nil {
@@ -252,9 +279,12 @@ func (o *outbox) send(from, rcpt string, subject, content []byte) error {
 			return o.composePlain(w, from, addr, title, content)
 		})
 	}
-	html, _ := safely("rendering the HTML of "+what, func() string {
-		return renderHTML(body)
-	})
+	var html string
+	if !textOnly {
+		html, _ = safely("rendering the HTML of "+what, func() string {
+			return renderHTML(body)
+		})
+	}
 	return o.enqueue(o.sender(from), addr, title, func(w io.Writer) error {
 		return o.composeRendered(w, from, addr, title, text, html)
 	})

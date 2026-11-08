@@ -337,6 +337,52 @@ func TestSockets(t *testing.T) {
 	}
 }
 
+func TestSendTextOnly(t *testing.T) {
+	relay := newFakeRelay(t)
+	s, _ := newTestServer(t, relay.addr())
+	startSockets(t, s)
+
+	content := big5uao.Encode("\x1b[1;31m查詢\x1b[m 結果\n1.2.3.4\tTester\n")
+	req := fmt.Sprintf("SEND\nRcpt: archive@example.com\nFrom: bot@bbs.example.org\nSubject: report\nLength: %d\nFormat: text\n\n%s",
+		len(content), content)
+	if got := request(t, s.cfg.OutSocket, req); got != "OK\n" {
+		t.Fatalf("SEND = %q", got)
+	}
+	for _, bad := range []string{
+		"SEND\nRcpt: a@b.c\nFrom: Tester\nSubject: x\nLength: 0\nFormat: pdf\n\n",
+		"SEND\nRcpt: a@b.c\nFrom: bot@example.com\nSubject: x\nLength: 0\n\n",
+		"SEND\nRcpt: a@b.c\nFrom: ../x@bbs.example.org\nSubject: x\nLength: 0\n\n",
+	} {
+		if got := request(t, s.cfg.OutSocket, bad); !strings.HasPrefix(got, "ERR ") {
+			t.Errorf("%q = %q", bad, got)
+		}
+	}
+	if n := s.out.flush(); n != 1 {
+		t.Fatalf("flush sent %d", n)
+	}
+	if got := relay.msgs[0]; got.from != "bot@bbs.example.org" || got.rcpt != "archive@example.com" {
+		t.Errorf("envelope %s -> %s", got.from, got.rcpt)
+	}
+	m, err := mail.ReadMessage(strings.NewReader(relay.msgs[0].data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if from := m.Header.Get("From"); from != `"bot" <bot@bbs.example.org>` {
+		t.Errorf("From = %q", from)
+	}
+	mt, params, _ := mime.ParseMediaType(m.Header.Get("Content-Type"))
+	if mt != "text/plain" || params["charset"] != "UTF-8" {
+		t.Fatalf("Content-Type = %q", m.Header.Get("Content-Type"))
+	}
+	b, err := io.ReadAll(base64.NewDecoder(base64.StdEncoding, m.Body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != "查詢 結果\n1.2.3.4\tTester\n" {
+		t.Errorf("text = %q", b)
+	}
+}
+
 func TestRetry(t *testing.T) {
 	relay := newFakeRelay(t)
 	s, _ := newTestServer(t, relay.addr())
