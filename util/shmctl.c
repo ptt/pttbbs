@@ -255,6 +255,7 @@ int start_services()
         CONDITIONAL_SVC(ENTROPY, "entropy")
         CONDITIONAL_SVC(ACTIVITY, "activity")
         CONDITIONAL_SVC(CONTENT, "content")
+        CONDITIONAL_SVC(CONTENT, "uquery")
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {

@@ -718,6 +718,9 @@
 #ifndef CONFIG_CONTENT_SVC
 #define CONFIG_CONTENT_SVC 0
 #endif
+#ifndef CONFIG_UQUERY_SVC
+#define CONFIG_UQUERY_SVC 0
+#endif
 /* is_new_account(): accounts logged in on fewer days than this */
 #ifndef NEW_ACCOUNT_LOGINDAYS
 #define NEW_ACCOUNT_LOGINDAYS (30)

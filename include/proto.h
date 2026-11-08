@@ -935,6 +935,9 @@ int timecapsule_get_archive_blobs(const char *filename, int idx, int nblobs,
 int  ordersong(void);
 int  topsong(void);
 
+/* uquery */
+int u_query_records(void);
+
 /* user */
 int kill_user(int num, const char *userid);
 bool is_new_account(const userec_t *u);

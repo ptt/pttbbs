@@ -952,6 +952,9 @@ static const menuitem_t m_admin_user[] = {
                                         "DOld User data 查閱備份使用者資料"},
     {u_admin_disable_2fa, PERM_SYSOP|PERM_ACCOUNTS,
                                         "2FA Disable    強制關閉 2FA"},
+    IF_ENABLED(CONFIG_UQUERY_SVC,
+    {u_query_records, PERM_SYSOP|PERM_ACCOUNTS|PERM_POLICE_MAN,
+                                        "Query Log      查詢登入/註冊記錄"},)
     {NULL, 0, NULL}
 };
 
