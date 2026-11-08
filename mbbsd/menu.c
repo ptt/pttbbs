@@ -400,7 +400,7 @@ adbanner(int menu_index)
 	// syncnow();
 
 	const int slideshow_duration = 3600 / MAX_ADBANNER,
-		  slideshow_index    = now  / slideshow_duration;
+		  slideshow_index    = (int)(time4_to_time(now) / slideshow_duration);
 
 	// index range: 0 =>[system] => N_SYSADBANNER    => [user esong] =>
 	//              last_usong   => [advertisements] => last_film

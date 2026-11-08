@@ -153,8 +153,8 @@ int friend_svc_is_hidden_board_friend(int bid, int uid) {
     if (hbfl_cached_uid != uid ||
         hbfl_cached_gen < 0 ||
         hbfl_cached_gen != shm_gen ||
-        (cur_time - hbfl_cached_time) >= HBFLexpire) {
-        if (hbfl_fail_time > 0 && (cur_time - hbfl_fail_time) < 5) {
+        time4_diff(cur_time, hbfl_cached_time) >= HBFLexpire) {
+        if (time4_is_valid(hbfl_fail_time) && time4_diff(cur_time, hbfl_fail_time) < 5) {
             return -1;
         }
         if (friend_svc_hbfl_query_user(uid) < 0) {

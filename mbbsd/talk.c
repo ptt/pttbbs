@@ -270,7 +270,7 @@ my_query(const char *uident)
     int             tuid, fri_stat = 0;
     int		    is_self = 0;
     userinfo_t     *uentp;
-    static time_t last_query;
+    static time4_t last_query;
 
     BEGINSTAT(STAT_QUERY);
     if ((tuid = getuser(uident, &muser))) {
@@ -362,7 +362,7 @@ my_query(const char *uident)
 	}
 	else
 	   pressanykey();
-	int diff = (int)time4_diff(now, last_query);
+	int64_t diff = time4_diff(now, last_query);
 	if (diff < 1)
 	    sleep(2);
 	else if (diff < 2)
@@ -885,7 +885,7 @@ pickup(userlist_ctx_t *cx)
         *myfriend = *friendme = 1;
 
     if (!cx->snapshot_slots || cx->snapshot_way != pickup_way ||
-        time4_ge(now, cx->snapshot_time + USERLIST_SNAPSHOT_EXPIRE_SECS))
+        time4_diff(now, cx->snapshot_time) >= USERLIST_SNAPSHOT_EXPIRE_SECS)
         userlist_refresh_snapshot(cx);
 
     which = *page * nPickups;
@@ -1102,7 +1102,7 @@ userlist_search_online_user(userlist_ctx_t *cx)
         return 0;
 
     if (!cx->snapshot_slots || cx->snapshot_way != *cx->pickup_way ||
-        time4_ge(now, cx->snapshot_time + USERLIST_SNAPSHOT_EXPIRE_SECS))
+        time4_diff(now, cx->snapshot_time) >= USERLIST_SNAPSHOT_EXPIRE_SECS)
         userlist_refresh_snapshot(cx);
 
     int total_idx = -1;
@@ -1337,7 +1337,7 @@ userlist_cmd_pgdn(cmd_ctx_t *ctx) {
         ctx->reload = true;
     } else {
         ctx->curr = ctx->base + cx->offset;
-        if (time4_ge(now, cx->lastupdate + 2))
+        if (time4_diff(now, cx->lastupdate) >= 2)
             ctx->reload = true;
     }
     return 0;
@@ -1811,7 +1811,7 @@ userlist_on_key(PSB_CTX *ctx)
     int ret = cmd_dispatch_layers(ctx->layers, &ctx->cmd, ctx->cmd.caption);
     if (ret == PSB_NA) {
         userlist_ctx_t *cx = (userlist_ctx_t *)ctx->cmd.priv;
-        if (time4_ge(now, cx->lastupdate + 2))
+        if (time4_diff(now, cx->lastupdate) >= 2)
             ctx->cmd.reload = true;
         return 0;
     }

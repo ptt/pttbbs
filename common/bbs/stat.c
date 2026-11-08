@@ -58,7 +58,7 @@ stat_op(const char *action, stat_key_t key, int count, const char *userid)
     time4_t now = time4(NULL);
     int is_curr = (cuser.userid[0] && strcasecmp(userid, cuser.userid) == 0);
 
-    if (is_curr && stat_cache_val[key] >= 0 && (now - stat_cache_time[key]) < STAT_CACHE_TTL_SECS &&
+    if (is_curr && stat_cache_val[key] >= 0 && time4_diff(now, stat_cache_time[key]) < STAT_CACHE_TTL_SECS &&
         strcmp(action, "get") == 0)
         return stat_cache_val[key];
 

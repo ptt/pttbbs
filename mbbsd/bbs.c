@@ -127,7 +127,7 @@ modify_dir_lite(
 	boardheader_t *bp = getbcache(currbid);
 	if (bp) {
 	    syncnow();
-	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+	    bp->SRexpire = time4_next(bp->SRexpire, now);
 	}
 	search_svc_hint_comment(direct, currbid, ent, fhdr.score);
     }
@@ -151,7 +151,7 @@ check_locked(fileheader_t *fhdr)
     if (!(fhdr->filemode & FILE_MARKED))
 	return;
     syncnow();
-    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+    bp->SRexpire = time4_next(bp->SRexpire, now);
 
 #ifdef ALERT_M_PLUS_L
     {
@@ -2522,13 +2522,14 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
     {
 	time4_t posttime = get_fhdr_stamp_ts(fhdr->filename);
-	if (time4_gt(posttime, now - 12*3600))
+	int64_t age = time4_diff(now, posttime);
+	if (age < 12*3600)
 	    STATINC(STAT_READPOST_12HR);
-	else if (time4_gt(posttime, now - 1*DAY_SECONDS))
+	else if (age < 1*DAY_SECONDS)
 	    STATINC(STAT_READPOST_1DAY);
-	else if (time4_gt(posttime, now - 3*DAY_SECONDS))
+	else if (age < 3*DAY_SECONDS)
 	    STATINC(STAT_READPOST_3DAY);
-	else if (time4_gt(posttime, now - 7*DAY_SECONDS))
+	else if (age < 7*DAY_SECONDS)
 	    STATINC(STAT_READPOST_7DAY);
 	else
 	    STATINC(STAT_READPOST_OLD);
@@ -2901,7 +2902,9 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
     else if (bp->brdattr & BRD_NO_FAST_COMMENT)
     {
-	int d = (int)bp->fastcomment_pause - (int)time4_diff(now, lastcomment);
+	int64_t el = time4_diff(now, lastcomment);
+	int d = (time4_is_valid(lastcomment) && el < bp->fastcomment_pause) ?
+	    (int)(bp->fastcomment_pause - el) : 0;
 	if (d > 0)
 	{
 	    vmsgf("本板禁止快速連續推文，請再等 %d 秒", d);
@@ -2932,7 +2935,9 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	}
 
 	if (size > 100*1024) {
-	    int d = 10 - (int)time4_diff(now, lastcomment);
+	    int64_t el = time4_diff(now, lastcomment);
+	    int d = (time4_is_valid(lastcomment) && el < 10) ?
+		(int)(10 - el) : 0;
 	    if (d > 0) {
 		vmsgf("本文已過長, 禁止快速連續推文, 請再等 %d 秒", d);
 		return FULLUPDATE;
@@ -3336,7 +3341,7 @@ del_range_post(int ent, fileheader_t * fhdr, char *direct)
         if (currbid > 0) {
             boardheader_t *bp = getbcache(currbid);
             syncnow();
-            bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+            bp->SRexpire = time4_next(bp->SRexpire, now);
         }
     }
     return ret;
@@ -3589,7 +3594,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    }
             if (currbid > 0) {
                 syncnow();
-                bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+                bp->SRexpire = time4_next(bp->SRexpire, now);
             }
             pressanykey();
 	    return DIRCHANGED;
@@ -3688,7 +3693,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     /* fhdr->filename was renamed (M<->L); match against the original name. */
     substitute_fileheader(direct, &orig, fhdr, ent);
     syncnow();
-    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+    bp->SRexpire = time4_next(bp->SRexpire, now);
     return FULLUPDATE;
 }
 
@@ -3723,7 +3728,7 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
     } else {
         boardheader_t *bp = getbcache(currbid);
         if (bp)
-            bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+            bp->SRexpire = time4_next(bp->SRexpire, now);
     }
 
     check_locked(fhdr);
@@ -3760,7 +3765,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 	boardheader_t *bp = getbcache(currbid);
 	if (bp) {
 	    syncnow();
-	    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+	    bp->SRexpire = time4_next(bp->SRexpire, now);
 	}
     }
     AUTO_DIRPATH(fn, direct, fhdr->filename);
@@ -4127,7 +4132,7 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
     substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     setbottomtotal(currbid);
     syncnow();
-    bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+    bp->SRexpire = time4_next(bp->SRexpire, now);
     return DIRCHANGED;
 }
 
@@ -4215,7 +4220,7 @@ b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
         case 'w':
             // XXX dirty hack: file name timestamp in [2]
             curr = get_fhdr_stamp_ts(fhdr->filename);
-            if (curr > 1 && time4_le(curr, now)) {
+            if (time4_gt(curr, 1) && time4_le(curr, now)) {
                 brc_toggle_read(currbid, curr);
             } else {
                 vmsg("請改用其它文章設定當參考點");

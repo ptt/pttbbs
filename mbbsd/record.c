@@ -44,7 +44,7 @@ force_open(const char *fname)
     int             fd;
     time4_t          expire;
 
-    expire = now - 3600;	/* lock 存在超過一個小時就是有問題! */
+    expire = time4_add(now, -3600);	/* lock 存在超過一個小時就是有問題! */
 
     if (time4_gt(dasht4(fname), expire))
 	return -1;

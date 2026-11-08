@@ -505,7 +505,7 @@ ccw_talkchat_close_log(CCW_CTX *ctx, int force_decide, int is_chat)
         // force user to input correct answer...
         move(b_lines-2, 0); clrtobot();
         prints(ANSI_COLOR(0;1;3%d) "請正確輸入 c 或 m 的指令。" ANSI_RESET,
-                (int)((now % 7)+1));
+                (int)(((uint32_t)now % 7)+1));
         if (c == 0) outs("為避免誤按所以只按 ENTER 是不行的。");
     }
     unlink(fpath);

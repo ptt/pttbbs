@@ -182,7 +182,7 @@ log_usies(const char *mode, const char *mesg)
         file_appendf(FN_USIES,
                  "%s %s %-12s Stay:%d\n",
                  Cdate(&now), mode, cuser.userid ,
-                 (int)(now - login_start_time) / 60);
+                 (int)(time4_diff(now, login_start_time) / 60));
     else
         file_appendf(FN_USIES,
                  "%s %s %-12s %s\n",
@@ -343,7 +343,7 @@ signal_xcpu_handler(int sig)
     bool give_more_time = true;
 
     if (last_time_exceeded == 0)
-	last_time_exceeded = login_start_time;
+	last_time_exceeded = time4_to_time(login_start_time);
     assert(last_time_exceeded);
     // 不用 (time(0) - login_start_time) 來平均, 避免用好幾天之後突然狂吃 cpu 的狀況.
     if (time(0) - last_time_exceeded < DAY_SECONDS)
@@ -924,7 +924,8 @@ user_login(void)
     } else {
 	if (SHM->GV2.e.nWelcomes) {
 	    more(TEMPFORMAT(80, "etc/Welcome_login.%d",
-			    (int)login_start_time % SHM->GV2.e.nWelcomes), NA);
+			    (int)((uint32_t)login_start_time %
+				  (uint32_t)SHM->GV2.e.nWelcomes)), NA);
 	}
     }
 

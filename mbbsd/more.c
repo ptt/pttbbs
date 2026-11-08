@@ -221,7 +221,7 @@ common_pager_exit_handler(int r, const char *fpath, const more_hooks_t *hooks)
 		break;
 	    file_appendf("log/security",
 		    "%u %s %d %s admin edit file=%s\n",
-		    (int)now, Cdate(&now), getpid(), cuser.userid, fpath);
+		    (unsigned)now, Cdate(&now), getpid(), cuser.userid, fpath);
 	    veditfile(fpath);
 	    break;
 #endif
@@ -831,7 +831,7 @@ static void
 live_draw_status(const live_view_t *v, bool can_comment)
 {
     /* Negative: counting down to the start of the event (see inc_timer). */
-    int elapsed = (int)(now - v->start);
+    int elapsed = (int)time4_diff(now, v->start);
     const char *sign = "";
     if (elapsed < 0) {
         sign = "-";
@@ -853,19 +853,19 @@ live_draw_status(const live_view_t *v, bool can_comment)
 static void
 inc_timer(live_view_t *v, int delta)
 {
-    int64_t elapsed = (int64_t)now - (int64_t)v->start - delta;
+    int64_t elapsed = time4_diff(now, v->start) - delta;
     if (elapsed < -LIVE_TIMER_MAX_SEC || elapsed > LIVE_TIMER_MAX_SEC)
         return;
-    v->start += delta;
+    v->start = time4_add(v->start, delta);
     /* Adjusting by hand is not the countdown reaching zero. */
-    v->countdown = now < v->start;
+    v->countdown = time4_lt(now, v->start);
 }
 
 /* Rings (if the bell is on) when the countdown reaches zero. */
 static void
 live_check_countdown(live_view_t *v)
 {
-    bool countdown = now < v->start;
+    bool countdown = time4_lt(now, v->start);
     if (v->countdown && !countdown && s_live_bell)
         bell();
     v->countdown = countdown;

@@ -426,8 +426,10 @@ b_result(boardheader_t * fh)
 	// empty until the items are in. closetime must not carry over from
 	// the slot before.
 	if (!fgets(temp, sizeof(temp), cfp) ||
-	    fscanf(cfp, "%d\n", &closetime) != 1)
-	    closetime = time_to_time4(dasht(buf) + DAY_SECONDS);
+	    fscanf(cfp, "%d\n", &closetime) != 1) {
+	    if (time4_add_sec(dasht4(buf), DAY_SECONDS, &closetime) < 0)
+		closetime = (time4_t)UINT32_MAX;
+	}
 	fclose(cfp);
 	if (time4_lt(closetime, now))
 	    b_result_one(&vbuf, fh, &total);
@@ -461,7 +463,8 @@ b_closepolls(void)
 	fgets(timebuf, sizeof(timebuf), cfp);
 	sscanf(timebuf, "%lu", &last);
 	fclose(cfp);
-	if (last + 3600 >= (unsigned long)now)
+	// written with %d: keep the low 32 bits as time4_t
+	if (time4_diff(now, time_to_time4(last)) <= 3600)
 	    return 0;
     }
     if ((cfp = fopen(fn_polling, "w")) == NULL)

@@ -361,7 +361,7 @@ ChessAnswerRequest(ChessInfo* info, const char* req_name)
 ChessGameResult
 ChessPlayFuncMy(ChessInfo* info)
 {
-    volatile int last_time = now;
+    volatile time4_t last_time = now;
     volatile int endturn = 0;
     ChessGameResult game_result = CHESS_RESULT_CONTINUE;
     int ch;
@@ -378,7 +378,7 @@ ChessPlayFuncMy(ChessInfo* info)
 	oflush();
 
 	ch = vkey();
-	if (ChessTimeCountDown(info, 0, now - last_time)) {
+	if (ChessTimeCountDown(info, 0, (int)time4_diff(now, last_time))) {
 	    /* ran out of time */
 	    game_result = CHESS_RESULT_LOST;
 	    endturn = 1;
@@ -549,7 +549,7 @@ ChessPlayFuncMy(ChessInfo* info)
 		}
 	}
     }
-    ChessTimeCountDown(info, 0, now - last_time);
+    ChessTimeCountDown(info, 0, (int)time4_diff(now, last_time));
     ChessStepMade(info, 0);
     ChessDrawLine(info, CHESS_DRAWING_TIME_ROW);
     ChessDrawLine(info, CHESS_DRAWING_STEP_ROW);
@@ -559,7 +559,7 @@ ChessPlayFuncMy(ChessInfo* info)
 static ChessGameResult
 ChessPlayFuncHis(ChessInfo* info)
 {
-    volatile int last_time = now;
+    volatile time4_t last_time = now;
     volatile int endturn = 0;
     ChessGameResult game_result = CHESS_RESULT_CONTINUE;
 
@@ -567,7 +567,7 @@ ChessPlayFuncHis(ChessInfo* info)
 	ChessStepType result;
 	int ch;
 
-	if (ChessTimeCountDown(info, 1, now - last_time)) {
+	if (ChessTimeCountDown(info, 1, (int)time4_diff(now, last_time))) {
 	    info->lefttime[1] = 0;
 
 	    /* to make him break out vkey() */
@@ -679,7 +679,7 @@ ChessPlayFuncHis(ChessInfo* info)
 		}
 	}
     }
-    ChessTimeCountDown(info, 1, now - last_time);
+    ChessTimeCountDown(info, 1, (int)time4_diff(now, last_time));
     ChessDrawLine(info, CHESS_DRAWING_TIME_ROW);
     ChessDrawLine(info, CHESS_DRAWING_STEP_ROW);
     return game_result;

@@ -105,7 +105,7 @@ search_dir_by_stamp_fd_bounded(int fd, int total, int hint_idx, char prefix_ch,
             time4_t ts = get_fhdr_stamp_ts(fh.filename);
             if (ts == target_ts)
                 break;
-            else if (ts < target_ts)
+            else if (time4_lt(ts, target_ts))
                 low = mid + 1;
             else
                 high = mid - 1;
@@ -355,7 +355,7 @@ fn2aidu(const char *fn)
     if (!fn || (fn[0] != 'M' && fn[0] != 'G') || fn[1] != '.')
         return 0;
     time4_t ts = get_fhdr_stamp_ts(fn);
-    if (ts <= 0)
+    if (time4_is_invalid(ts))
         return 0;
     const char *dot_a = strstr(fn + 2, ".A");
     if (!dot_a || (dot_a[2] != '\0' && dot_a[2] != '.'))

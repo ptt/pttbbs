@@ -457,7 +457,7 @@ int pwcuLoginSave	()
     // pwcuLoginSave is called AFTER login_start_time
     // was decided.
     int regdays = 0, prev_regdays = 0;
-    int reftime = login_start_time;
+    time4_t reftime = login_start_time;
     time4_t   baseref = 0;
     struct tm baseref_tm = {0};
 

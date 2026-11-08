@@ -2414,13 +2414,13 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
     }
     cmode = (fname[0] != '0' && fname[0] != '1') ? 1 : fname[0] - '0';
 
-    SNPRINTF(fname, BBSHOME "/jobspool/water.src.%s-%d",
-	     cuser.userid, (int)now);
+    SNPRINTF(fname, BBSHOME "/jobspool/water.src.%s-%lld",
+	     cuser.userid, (long long)time4_to_time(now));
     setuserfile(genbuf, fhdr->filename);
     Copy(genbuf, fname);
     /* dirty code ;x */
-    SNPRINTF(fname, BBSHOME "/jobspool/water.des.%s-%d",
-	     cuser.userid, (int)now);
+    SNPRINTF(fname, BBSHOME "/jobspool/water.des.%s-%lld",
+	     cuser.userid, (long long)time4_to_time(now));
     fp = fopen(fname, "wt");
     assert(fp);
     fprintf(fp, "%s\n%s\n%d\n", cuser.userid, address, cmode);
@@ -2517,7 +2517,9 @@ bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from)
      * it right after. */
     if (mail_internet(fpath, title, rcpt, from) < 0)
 	return -1;
-    return (int)now;
+    // > 0 on success: callers check both '< 0' and '> 0'. Not a timestamp,
+    // which would turn negative as an int after 2038.
+    return 1;
 }
 
 /*

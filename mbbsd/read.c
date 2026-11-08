@@ -96,7 +96,7 @@ TagPruner(int bid)
         setbtotal(bid);
         if (bp) {
             syncnow();
-            bp->SRexpire = (bp->SRexpire >= now) ? bp->SRexpire + 1 : now;
+            bp->SRexpire = time4_next(bp->SRexpire, now);
         }
         search_svc_invalidate(currdirect, bid);
     } else if(currstat == RMAIL)
@@ -470,7 +470,7 @@ reload_fh: GCC_UNUSED;
     if( rk < 0 ) return pos;
     if( rk == 0 /* EOF */ ) {
         /* 如果是置底文章, 則要將 ftime 設定成最大 (代表比最後一篇還要新)  */
-        ftime = 2147483647;
+        ftime = (time4_t)UINT32_MAX;
     } else {
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
         if (fh.filename[0] == '.' || fh.owner[0] == '-') {

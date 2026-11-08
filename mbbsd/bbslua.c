@@ -652,16 +652,15 @@ bl_attrset(lua_State *L)
 BLAPI_PROTO
 bl_time(lua_State *L)
 {
-    syncnow();
-    lua_pushinteger(L, now);
+    lua_pushinteger(L, (lua_Integer)time(NULL));
     return 1;
 }
 
 BLAPI_PROTO
 bl_ctime(lua_State *L)
 {
-    syncnow();
-    lua_pushstring(L, ctime4(&now));
+    time_t t = time(NULL);
+    lua_pushstring(L, ctime(&t));
     return 1;
 }
 
@@ -675,10 +674,9 @@ bl_clock(lua_State *L)
     // XXX this is a fast hack because we don't want to do 64bit calculation.
     SYSTEMTIME st;
     GetSystemTime(&st);
-    syncnow();
-    // XXX the may be some latency between our GetSystemTime and syncnow.
+    // XXX the may be some latency between our GetSystemTime and time().
     // So build again the "second" part.
-    d = (int)((now / 60) * 60);
+    d = (double)((time(NULL) / 60) * 60);
     d += st.wSecond;
     d += (st.wMilliseconds / 1000.0f);
 

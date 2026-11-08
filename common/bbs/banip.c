@@ -417,7 +417,7 @@ cached_banip_list(const char *basefile, const char *cachefile) {
     time4_t m_cache = dasht4(cachefile);
     size_t sz = dashs(cachefile);
 
-    if (m_cache >= m_base && sz >= sizeof(size_t) * 2) {
+    if (time4_is_valid(m_cache) && time4_ge(m_cache, m_base) && sz >= sizeof(size_t) * 2) {
         fp = fopen(cachefile, "rb");
         if (fp) {
             size_t rsz = 0, rszmsg = 0;

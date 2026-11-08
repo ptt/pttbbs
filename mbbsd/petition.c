@@ -99,7 +99,8 @@ do_petition_reply(const fileheader_t * fhdr)
 	    // asserted on (abort) or sscanf'd through a NULL pointer.
 	    if (!ptr) continue;
 	    sscanf(ptr + 1, "%lu", &endtime);
-	    if (endtime < (unsigned long)now) {
+	    // written with %d: keep the low 32 bits as time4_t
+	    if (time4_lt(time_to_time4(endtime), now)) {
 		vmsg("連署時間已過");
 		fclose(fi);
 		return;
@@ -154,9 +155,8 @@ do_petition_reply(const fileheader_t * fhdr)
 	fputs(genbuf, fo);
     }
     if (!endtime) {
-	now += 14 * DAY_SECONDS;
-	fprintf(fo, "連署結束時間: (%d)%s\n\n", now, Cdate(&now));
-	now -= 14 * DAY_SECONDS;
+	time4_t end4 = time4_add(now, 14 * DAY_SECONDS);
+	fprintf(fo, "連署結束時間: (%d)%s\n\n", end4, Cdate(&end4));
     }
     fputs(genbuf, fo);
     len = strlen(cuser.userid);
@@ -387,12 +387,11 @@ do_petition(int type)
     if (temp == 11)
 	    return FULLUPDATE;
     strcat(genbuf, "連署結束時間: ");
-    now += 14 * DAY_SECONDS;
-    SNPRINTF(topic, "(%d)", now);
+    time4_t end4 = time4_add(now, 14 * DAY_SECONDS);
+    SNPRINTF(topic, "(%d)", end4);
     strcat(genbuf, topic);
-    strcat(genbuf, Cdate(&now));
+    strcat(genbuf, Cdate(&end4));
     strcat(genbuf, "\n\n");
-    now -= 14 * DAY_SECONDS;
     strcat(genbuf, PETITION_DIVIDER "支持" PETITION_DIVIDER "\n");
     strcat(genbuf, PETITION_DIVIDER "反對" PETITION_DIVIDER "\n");
     outs("開始連署嘍");

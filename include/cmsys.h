@@ -75,6 +75,17 @@ static inline int64_t time4_diff(time4_t a, time4_t b) {
     return (int64_t)(uint32_t)a - (int64_t)(uint32_t)b;
 }
 
+/* t + delta seconds (delta may be negative), wrapping around 32 bits like
+ * time4_t on disk; use time4_add_sec() to catch the overflow instead. */
+static inline time4_t time4_add(time4_t t, int64_t delta) {
+    return (time4_t)(uint32_t)((int64_t)(uint32_t)t + delta);
+}
+
+/* A stamp later than last: last + 1 if last is not before now, else now */
+static inline time4_t time4_next(time4_t last, time4_t now_time) {
+    return time4_ge(last, now_time) ? time4_add(last, 1) : now_time;
+}
+
 // Remaining checks for ceil, usually used by checking if things expired.
 static inline int time4_days_remaining(time4_t expire, time4_t now_time) {
     if (!time4_gt(expire, now_time))

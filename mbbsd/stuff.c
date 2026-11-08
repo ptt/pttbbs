@@ -62,7 +62,8 @@ gettime(int line, time4_t dt, const char* head)
 	// signed:   limited on (2037, ...)
 	// unsigned: limited on (..., 1970)
 	// let's restrict inside the boundary.
-    } while ((endtime.tm_year = atoi(yn) - 1900) < 70 || endtime.tm_year > 135);
+	// time4_t is treated as unsigned: valid until 2106.
+    } while ((endtime.tm_year = atoi(yn) - 1900) < 70 || endtime.tm_year > 206);
     STRLCAT(prompt, yn);
     STRLCAT(prompt, " ды:");
     SNPRINTF(yn, "%d", ptime.tm_mon + 1);
@@ -89,11 +90,11 @@ gettime(int line, time4_t dt, const char* head)
     } while ((endtime.tm_min = atoi(yn)) < 0 || endtime.tm_min > 59);
     t = mktime(&endtime);
     /* saturation check */
-    if(t < 0)
+    if(t <= 0)
       t = 1;
-    if(t > INT_MAX)
-      t = INT_MAX;
-    return t;
+    if(t > (time_t)UINT32_MAX)
+      t = UINT32_MAX;
+    return time_to_time4(t);
 }
 
 // synchronize 'now'
@@ -108,12 +109,10 @@ wait_penalty(int sec)
     static time4_t lastWait = 0;
 
     syncnow();
-    int diff = (int)time4_diff(now, lastWait);
+    int64_t diff = time4_diff(now, lastWait);
     if (diff < sec)
     {
-        sec = diff;
-        if (sec < 0 || sec >= 5)
-            sec = 5;
+        sec = (diff < 0 || diff >= 5) ? 5 : (int)diff;
         sleep(sec);
         vkey_purge();
     }

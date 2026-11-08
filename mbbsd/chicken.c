@@ -259,8 +259,9 @@ static void
 show_chicken_data(chicken_t * thechicken)
 {
     int age = time4_days_elapsed(now, thechicken->cbirth);
-    if (age < 0) {
-	thechicken->birthday = thechicken->cbirth = now - 10 * DAY_SECONDS;
+    if (time4_gt(thechicken->cbirth, now)) {
+	thechicken->birthday = thechicken->cbirth =
+	    time4_add(now, -10 * DAY_SECONDS);
 	age = 10;
     }
 
@@ -530,7 +531,7 @@ static void debug_timediff(chicken_t *c GCC_UNUSED) {
     getdata(2, 0, "要模擬幾小時未進入的狀態？", buf, sizeof(buf), NUMECHO);
     syncnow();
     if (*buf)
-        c->lastvisit = now - atoi(buf) * 60 * 60;
+        c->lastvisit = time4_add(now, -(int64_t)atoi(buf) * 3600);
 #endif
 }
 
