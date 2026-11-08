@@ -5,6 +5,8 @@
 #define MAX_ITEM_INPUT_LEN  9   //最大 每一項目(手動輸入時)名字長度
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 最大 主題長度
 #define NARROW_ITEM_WIDTH   8   // old (narrow) item width
+#define LOTTERY_MIN_PRICE   10      // the price range hold_gamble() allows
+#define LOTTERY_MAX_PRICE   10000
 
 #ifndef GAMBLE_ACTION_DELAY_US
 #define GAMBLE_ACTION_DELAY_US  (0) // 每個動作之前的 delay
@@ -30,6 +32,20 @@ load_ticket_record(const char *direct, bignum_t ticket[])
     return total;
 }
 
+/* Parses ticket.items' first line, its price. Returns the price, or 0 if
+ * it is missing or outside what hold_gamble() allows: a broken file, with
+ * no lottery to buy into or draw. */
+static int
+parse_ticket_header(const char *line)
+{
+    int price = atoi(line);
+
+    return (price >= LOTTERY_MIN_PRICE && price <= LOTTERY_MAX_PRICE) ? price : 0;
+}
+
+/* Shows a lottery: returns its item count, negated once betting is closed,
+ * or 0 if there is none to buy into or draw. *price gets its price, 0 if
+ * ticket.items was read but is broken, or -1 if it could not be opened. */
 static int
 show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
                  const char *direct, int *price,
@@ -51,6 +67,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
     } else
 	showtitle(BBSMNAME "彩券", BBSNAME);
     move(2, 0);
+    *price = -1;
     SNPRINTF(genbuf, "%s/" FN_TICKET_ITEMS, direct);
     if (!(fp = fopen(genbuf, "r"))) {
 	outs("\n目前並沒有舉辦樂透\n");
@@ -58,8 +75,17 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 	more(genbuf, NA);
 	return 0;
     }
-    fgets(genbuf, MAX_ITEM_LEN, fp);
-    *price = atoi(genbuf);
+    *price = 0;
+    if (fgets(genbuf, sizeof(genbuf), fp))
+	*price = parse_ticket_header(genbuf);
+    if (!*price) {
+	// Malformed or absent price line: treat as no open lottery rather than
+	// charging a bogus price (and later dividing by zero at money/price),
+	// and say so.
+	outs("\n樂透的設定有誤，目前無法投注或開獎，請洽板主或站長。\n");
+	fclose(fp);
+	return 0;
+    }
     for (count = 0; count < MAX_ITEM; count++) {
 	if (!fgets(betname[count], MAX_ITEM_LEN, fp))
 	    break;
@@ -295,6 +321,34 @@ openticket(int bid)
     count = -show_ticket_data(betname, path, &price, bh);
 
     if (count == 0) {
+	setbfile(buf, bh->brdname, FN_TICKET_ITEMS);
+	if (price < 0 && dashf(buf)) {
+	    // There but not opened: not known to be broken, so keep it.
+	    vmsg("系統忙碌中，請稍後再試。");
+	    return 0;
+	}
+	// A ticket.items show_ticket_data() read but found broken (its message
+	// is on the screen) can be neither drawn nor refunded: ask before
+	// ending the lottery, rather than end it unasked or leave the board
+	// stuck. Set aside as ticket.items.bad, with ticket.user.bad (who bet
+	// what, which the next lottery would clear) for a sysop, and logged.
+	if (price >= 0) {
+	    if (vans("要結束這期無法開獎的樂透嗎？已投注的" MONEYNAME
+		     "無法退還 [y/N] ") != 'y')
+		return 0;
+	    char bad[PATHLEN];
+	    setbfile(bad, bh->brdname, FN_TICKET_ITEMS ".bad");
+	    if (rename(buf, bad) < 0) {
+		vmsg("系統忙碌中，請稍後再試。");
+		return 0;
+	    }
+	    setbfile(buf, bh->brdname, FN_TICKET_USER);
+	    setbfile(bad, bh->brdname, FN_TICKET_USER ".bad");
+	    rename(buf, bad);
+	    modlog_t log;
+	    modlog(bh->brdname, NULL, modlog_init(&log, "結束無法開獎的樂透"));
+	}
+	// No lottery (any more): drop a leftover ticket.end.
 	setbfile(buf, bh->brdname, FN_TICKET_END);
 	unlink(buf);
         //Ptt:	有bug
@@ -580,7 +634,8 @@ static const vform_field_t lottery_fields[] = {
     { .label = "彩券價格", .hint = "一張彩券的價格 (10~10000)",
       .type = VFORM_INT, .offset = offsetof(lottery_form_t, price),
       .size = MEMBER_SIZE(lottery_form_t, price),
-      .min_val = 10, .max_val = 10000, .format_fn = lottery_format_price },
+      .min_val = LOTTERY_MIN_PRICE, .max_val = LOTTERY_MAX_PRICE,
+      .format_fn = lottery_format_price },
     { .label = "幾天後截止", .hint = "幾天後自動截止投注 (0 且不設時刻為不自動截止)",
       .type = VFORM_INT, .offset = offsetof(lottery_form_t, days),
       .size = MEMBER_SIZE(lottery_form_t, days),
