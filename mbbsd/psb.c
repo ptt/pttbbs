@@ -762,36 +762,28 @@ dispatch_key:
                 break;
             }
             case KEY_UP:
-            case 'k':
-            case 'p':
             case Ctrl('P'):
                 if (curr > 0)
                     curr--;
                 break;
             case KEY_DOWN:
-            case 'j':
-            case 'n':
             case Ctrl('N'):
                 if (curr + 1 < count)
                     curr++;
                 break;
             case KEY_PGUP:
             case Ctrl('B'):
-            case 'P':
                 curr = (curr >= rows) ? curr - rows : 0;
                 break;
             case KEY_PGDN:
             case Ctrl('F'):
-            case 'N':
             case ' ':
                 curr = (curr + rows < count) ? curr + rows : count - 1;
                 break;
             case KEY_HOME:
-            case '0':
                 curr = 0;
                 break;
             case KEY_END:
-            case '$':
                 curr = count - 1;
                 break;
             case KEY_ENTER:
@@ -799,13 +791,23 @@ dispatch_key:
                 return items[curr].keys[0];
             case 'h':
             case 'H':
+                // More input already queued means pasted text (e.g. an URL
+                // starting with "http"), not a deliberate H for the angel.
+                if (vkey_is_typeahead()) {
+                    vkey_purge();
+                    return 0;
+                }
                 return 'h';
+            case I_OTHERDATA:
+            case I_TIMEOUT:
+                // Not a key press.
+                break;
             case 'q':
             case 'Q':
             case KEY_LEFT:
-                return 0;
             default:
-                break;
+                // Like the old help screens, any other key leaves.
+                return 0;
         }
     }
 }
