@@ -16,10 +16,14 @@
 #define LIVE_STATUS_REFRESH_MS  1000
 #define LIVE_TIMER_MAX_SEC      (8 * 60 * 60)   // timer range: +/- 8 hours
 
-// After a user opened the same article this many times in a row (likely
-// re-entering to refresh new comments), offer live mode on the next open.
+// After a user opened the same article this many times in a row within
+// LIVE_AUTO_PROMPT_SECS (likely re-entering to refresh new comments), offer
+// live mode on the next open.
 #ifndef LIVE_AUTO_PROMPT_REPEAT
 #define LIVE_AUTO_PROMPT_REPEAT 10
+#endif
+#ifndef LIVE_AUTO_PROMPT_SECS
+#define LIVE_AUTO_PROMPT_SECS   18
 #endif
 
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
@@ -49,6 +53,7 @@ static struct {
     uint32_t bid;
     aidu_t   aid;
     int      count;
+    time4_t  since;     // the first open counted
 } s_live_repeat;
 
 /* pmore hands the last page over to live mode; the mini pager does not. */
@@ -480,9 +485,10 @@ live_run(const live_ctx_t *live, const char *fpath,
 
 /*
  * Counts consecutive opens of the same article. Once it was opened
- * LIVE_AUTO_PROMPT_REPEAT times in a row, asks (on this open) whether to go
- * straight into live mode. The count restarts whenever the user was asked,
- * or left the article by anything but a plain quit (live_reset_repeat).
+ * LIVE_AUTO_PROMPT_REPEAT times in a row within LIVE_AUTO_PROMPT_SECS, asks
+ * (on this open) whether to go straight into live mode. The count restarts
+ * whenever the user was asked, the time is up, or the user left the article
+ * by anything but a plain quit (live_reset_repeat).
  * Returns true if the user wants live mode.
  */
 bool
@@ -491,11 +497,15 @@ live_check_repeat(uint32_t bid, aidu_t aid)
     if (!live_supported() || bid == 0 || aidu_raw(aid) == 0)
         return false;
 
+    syncnow();
     if (s_live_repeat.bid != bid ||
-        aidu_raw(s_live_repeat.aid) != aidu_raw(aid)) {
+        aidu_raw(s_live_repeat.aid) != aidu_raw(aid) ||
+        s_live_repeat.count == 0 ||
+        time4_diff(now, s_live_repeat.since) > LIVE_AUTO_PROMPT_SECS) {
         s_live_repeat.bid = bid;
         s_live_repeat.aid = aid;
         s_live_repeat.count = 0;
+        s_live_repeat.since = now;
     }
     if (s_live_repeat.count < LIVE_AUTO_PROMPT_REPEAT) {
         s_live_repeat.count++;
