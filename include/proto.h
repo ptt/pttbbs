@@ -215,6 +215,7 @@ void FormatCommentString(char *buf, size_t szbuf, int type,
                          const char *msg, const char *tail);
 
 /* psb (page and service browser) */
+/* Returns non-zero if the user left for the recycle bin ('~'). */
 int psb_view_edit_history(const char *base, const char *subject,
                           int maxrev, int current_as_base);
 int psb_recycle_bin(const char *base, const char *title);

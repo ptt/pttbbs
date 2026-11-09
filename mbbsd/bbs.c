@@ -3949,9 +3949,8 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
         return FULLUPDATE;
     }
 
-    if (RET_RECYCLEBIN ==
-        psb_view_edit_history(fpath, fhdr->title, maxrev, current_as_base))
-            psb_recycle_bin(direct, currboard);
+    if (psb_view_edit_history(fpath, fhdr->title, maxrev, current_as_base))
+        psb_recycle_bin(direct, currboard);
     return FULLUPDATE;
 }
 

@@ -27,7 +27,6 @@
 #define RET_SELECTBRD	    (992)
 #define RET_DOREPLYALL	    (991)
 #define RET_SELECTAID	    (990)
-#define RET_RECYCLEBIN	    (989)
 #define RET_EDITPOST	    (988)
 #define RET_EDITTITLE	    (987)
 #define RET_SCORE	    (986)

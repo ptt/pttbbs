@@ -2085,16 +2085,14 @@ psb_view_edit_history(const char *base, const char *subject,
     pvehctx.timestamps = (time4_t*) malloc (sizeof(time4_t) * ctx.cmd.total);
     if (!pvehctx.timestamps) {
         vmsgf("內部錯誤，請至" BN_BUGREPORT "看板報告，謝謝");
-        return FULLUPDATE;
+        return 0;
     }
     // load on demand!
     memset(pvehctx.timestamps, 0, sizeof(time4_t) * ctx.cmd.total);
 
     psb_main(&ctx);
     free(pvehctx.timestamps);
-    return (pvehctx.leave_for_recycle_bin ?
-            RET_RECYCLEBIN :
-            FULLUPDATE);
+    return pvehctx.leave_for_recycle_bin;
 }
 
 ///////////////////////////////////////////////////////////////////////////
