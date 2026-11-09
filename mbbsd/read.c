@@ -1505,7 +1505,7 @@ static int
 read_cmd_search_prev(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, search_read(cx, cx->bid, READ_PREV), 10);
+    read_move_cursor(cx, ctx, search_read(cx, cx->bid, CURSOR_PREV), 10);
     return 0;
 }
 
@@ -1513,7 +1513,7 @@ static int
 read_cmd_search_next(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_move_cursor(cx, ctx, search_read(cx, cx->bid, READ_NEXT), 10);
+    read_move_cursor(cx, ctx, search_read(cx, cx->bid, CURSOR_NEXT), 10);
     return 0;
 }
 
