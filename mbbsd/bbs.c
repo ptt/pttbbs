@@ -2439,6 +2439,42 @@ read_post_comment(void *ctx)
     return comment(rp->ent, rp->fhdr, rp->direct);
 }
 
+/* Key bindings of the post reader; read_post() does the work after leaving. */
+static int rp_leave(cmd_ctx_t *ctx, int r) { more_leave(ctx, r); return 0; }
+static int rp_cmd_reply(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOREPLY); }
+static int rp_cmd_replyall(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOREPLYALL); }
+static int rp_cmd_comment(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOCOMMENT); }
+static int rp_cmd_score(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_SCORE); }
+static int rp_cmd_selectbrd(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_SELECTBRD); }
+static int rp_cmd_selectaid(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_SELECTAID); }
+static int rp_cmd_query(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOQUERYINFO); }
+static int rp_cmd_edittitle(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_EDITTITLE); }
+static int rp_cmd_edit(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_EDITPOST); }
+
+static const cmd_t read_post_cmds[] = {
+    { 'y', "回應", "回覆文章至看板或信箱", rp_cmd_replyall, 0, CMD_PRIO_HIGH },
+    { 'Y', NULL, NULL, rp_cmd_replyall, 0, CMD_PRIO_NONE },
+    { 'X', "推文", "給予文章評論/評分", rp_cmd_comment, 0, CMD_PRIO_HIGH },
+    { '%', NULL, NULL, rp_cmd_score, 0, CMD_PRIO_NONE },
+    { 's', "切換看板", "搜尋並切換至其他看板", rp_cmd_selectbrd, PERM_BASIC, CMD_PRIO_LOW },
+    { 'S', NULL, NULL, rp_cmd_selectbrd, PERM_BASIC, CMD_PRIO_NONE },
+    { '#', "代碼搜尋", "以文章代碼(AID)搜尋文章", rp_cmd_selectaid, PERM_BASIC, CMD_PRIO_LOW },
+    { 'r', "回信回文", "回覆給作者或回文", rp_cmd_reply, 0, CMD_PRIO_NORM },
+    { 'R', NULL, NULL, rp_cmd_reply, 0, CMD_PRIO_NONE },
+    { 'Q', "查詢資訊", "查詢文章代碼(AID)與檔案資訊", rp_cmd_query, 0, CMD_PRIO_LOW },
+    { 'E', "修改文章", "編輯目前文章內容", rp_cmd_edit, 0, CMD_PRIO_LOW },
+    { 'T', "修改標題", "修改目前文章標題", rp_cmd_edittitle, 0, CMD_PRIO_LOW },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_layer_t read_post_layers[] = {
+    { read_post_cmds, NULL },
+    { more_thread_nav_cmds, NULL },
+    { more_list_nav_cmds, NULL },
+    { more_reader_cmds, NULL },
+    { NULL, NULL }
+};
+
 static int
 read_post(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -2503,7 +2539,9 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     // Real read.
     {
         read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
-        const more_hooks_t hooks = { .comment = read_post_comment, .ctx = &rp,
+        const more_hooks_t hooks = { .layers = read_post_layers,
+                                     .title = "文章閱讀",
+                                     .comment = read_post_comment, .ctx = &rp,
                                      .select_board = select_board_to_read };
         more_result = more_ex(genbuf, YEA, &hooks);
     }

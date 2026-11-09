@@ -1867,9 +1867,35 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 
 int b_call_in(int ent, const fileheader_t * fhdr, const char *direct);
 
+/* Key bindings of the mail reader; mail_read() does the work after leaving. */
+static int
+mail_read_cmd_reply(cmd_ctx_t *ctx)
+{
+    more_leave(ctx, RET_DOREPLY);
+    return 0;
+}
+
+static const cmd_t mail_read_cmds[] = {
+    { 'y', "回信", "回覆信件至信箱", mail_read_cmd_reply, 0, CMD_PRIO_HIGH },
+    { 'Y', NULL, NULL, mail_read_cmd_reply, 0, CMD_PRIO_NONE },
+    { 'r', NULL, NULL, mail_read_cmd_reply, 0, CMD_PRIO_NONE },
+    { 'R', NULL, NULL, mail_read_cmd_reply, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_layer_t mail_read_layers[] = {
+    { mail_read_cmds, NULL },
+    { more_thread_nav_cmds, NULL },
+    { more_list_nav_cmds, NULL },
+    { more_reader_cmds, NULL },
+    { NULL, NULL }
+};
+
 static int
 mail_read(int ent, fileheader_t * fhdr, const char *direct)
 {
+    static const more_hooks_t hooks = { .layers = mail_read_layers,
+                                        .title = "信件閱讀" };
     char buf[PATHLEN];
     int done;
 
@@ -1885,7 +1911,7 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 	fhdr->filemode |= FILE_READ;
 	substitute_ref_record(direct, fhdr, ent);
     }
-    done = more(buf, YEA);
+    done = more_ex(buf, YEA, &hooks);
     // quick control
     switch (done) {
 	case -1:

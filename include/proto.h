@@ -559,8 +559,10 @@ void m_sob_brd(char *bname,char *fromdir);
 
 /* pager (more) */
 int more(const char *fpath, int promptend);
-/* Optional caller services for more_ex(), e.g. used by live mode. */
+/* Readers (posts, mails, the announce) use more_ex() with these. */
 typedef struct more_hooks {
+    const cmd_layer_t *layers;
+    const char *title;          // of the help screen
     int  (*comment)(void *ctx); // add a comment; returns FULLUPDATE/DIRCHANGED
     void *ctx;
     // 's': switch boards; set only in a post read from a board's list, not
@@ -570,6 +572,13 @@ typedef struct more_hooks {
 } more_hooks_t;
 int more_ex(const char *fpath, int promptend, const more_hooks_t *hooks);
 int more_inmemory(void *content, int size, int promptend);
+/* For the key bindings of more_ex(). */
+void more_leave(cmd_ctx_t *ctx, int retval);
+int more_at_top(cmd_ctx_t *ctx);        // the first page is shown
+int more_at_end(cmd_ctx_t *ctx);        // the last page is shown
+extern const cmd_t more_list_nav_cmds[];    // f/b, past the ends: READ_NEXT/PREV
+extern const cmd_t more_thread_nav_cmds[];  // ][=aAt: RELATE_*, AUTHOR_*
+extern const cmd_t more_reader_cmds[];      // z (chess), L (BBSLua)
 /* piaip's new pager, pmore.c */
 int pmore (const char *fpath, int promptend);
 void pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx));
@@ -578,6 +587,8 @@ extern const cmd_t pmore_movie_cmds[];
 
 struct pmore_callbacks {
     int (*process_key)(int key, void *ctx);
+    // Before reading each key: whether the first / last page is shown.
+    void (*position)(bool at_top, bool at_end, void *ctx);
     int (*footer)(int ratio, void *ctx);
     int (*help)(int y, void *ctx);
     int (*vkey)(void *ctx);

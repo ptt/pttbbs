@@ -1237,8 +1237,17 @@ announce_cmd_select(cmd_ctx_t *ctx)
 #endif
     SNPRINTF(fname, "%s/%s", cx->path, fhdr->filename);
     if (dashf(fname)) {
+        // Reading through the list, and the readers of the files kept here
+        // (chess, BBSLua); a_menu goes on with the list after leaving.
+        static const cmd_layer_t layers[] = {
+            { more_list_nav_cmds, NULL },
+            { more_reader_cmds, NULL },
+            { NULL, NULL }
+        };
+        static const more_hooks_t hooks = { .layers = layers,
+                                            .title = "ºëµØ°Ï¾\Åª" };
         int more_result;
-        while ((more_result = more(fname, YEA))) {
+        while ((more_result = more_ex(fname, YEA, &hooks))) {
             if (cx->trans_buffer &&
                 (currstat == EDITEXP || currstat == OSONG)) {
                 char ans[4];

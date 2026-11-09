@@ -103,8 +103,6 @@
 #define PMORE_HAVE_VKEY                 // input system is vkey compatible
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
 // #define PMORE_USE_INTERNAL_HELP      // display pmore internal help
-//#define PMORE_AUTONEXT_ON_PAGEFLIP    // change file when page up/down reaches end
-//#define PMORE_AUTONEXT_ON_RIGHTKEY    // change file to next for right key
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
 #define PMORE_ACCURATE_WRAPEND          // try more harder to find file end in wrap mode
 #define PMORE_AUTOEXIT_FIRSTPAGE        // when prompt=NA, show only page 1
@@ -251,10 +249,6 @@
  #define t_lines    (b_lines + 1)
  #define t_columns  (b_cols + 1)
  // key mapping
- #define RELATE_PREV '['
- #define RELATE_NEXT ']'
- #define READ_NEXT   'j'
- #define READ_PREV   'k'
  #if !defined(FULLUPDATE) && defined(XO_HEAD)
  # define FULLUPDATE XO_HEAD
  #endif
@@ -265,8 +259,6 @@
  #undef PMORE_HAVE_VKEY
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS
  #undef PMORE_AUTOEXIT_FIRSTPAGE
- #define PMORE_AUTONEXT_ON_PAGEFLIP
- #define PMORE_AUTONEXT_ON_RIGHTKEY
  #ifndef  SHOW_USER_IN_TEXT
  # undef  PMORE_EXPAND_ESC_STAR
  #endif // !SHOW_USER_IN_TEXT
@@ -2697,19 +2689,8 @@ pmore_cmd_quit(cmd_ctx_t *ctx)
 }
 
 MFPROTO int
-pmore_cmd_pgdn(cmd_ctx_t *ctx)
+pmore_cmd_pgdn(cmd_ctx_t *ctx GCC_UNUSED)
 {
-#ifdef PMORE_AUTONEXT_ON_PAGEFLIP
-    if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
-        ctx->quit = true;
-        if (retval) *retval = READ_NEXT;
-        return 0;
-    }
-#else
-    (void)ctx;
-#endif
     PMORE_UINAV_FORWARDPAGE();
     return 0;
 }
@@ -2717,13 +2698,8 @@ pmore_cmd_pgdn(cmd_ctx_t *ctx)
 MFPROTO int
 pmore_cmd_space(cmd_ctx_t *ctx)
 {
-    if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
-        ctx->quit = true;
-        if (retval) *retval = READ_NEXT;
-        return 0;
-    }
+    if (mf_viewedAll())
+        return pmore_cmd_quit(ctx);
     PMORE_UINAV_FORWARDPAGE();
     return 0;
 }
@@ -2731,18 +2707,8 @@ pmore_cmd_space(cmd_ctx_t *ctx)
 MFPROTO int
 pmore_cmd_right(cmd_ctx_t *ctx)
 {
-    if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
-        ctx->quit = true;
-        if (retval)
-#ifdef PMORE_AUTONEXT_ON_RIGHTKEY
-            *retval = READ_NEXT;
-#else
-            *retval = FULLUPDATE;
-#endif
-        return 0;
-    }
+    if (mf_viewedAll())
+        return pmore_cmd_quit(ctx);
     PMORE_UINAV_FORWARDPAGE();
     return 0;
 }
@@ -2750,45 +2716,15 @@ pmore_cmd_right(cmd_ctx_t *ctx)
 MFPROTO int
 pmore_cmd_thread_next(cmd_ctx_t *ctx)
 {
-    if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
-        ctx->quit = true;
-        if (retval) *retval = RELATE_NEXT;
-        return 0;
-    }
+    if (mf_viewedAll())
+        return pmore_cmd_quit(ctx);
     PMORE_UINAV_FORWARDPAGE();
     return 0;
 }
 
 MFPROTO int
-pmore_cmd_pgup(cmd_ctx_t *ctx)
+pmore_cmd_pgup(cmd_ctx_t *ctx GCC_UNUSED)
 {
-#ifdef PMORE_AUTONEXT_ON_PAGEFLIP
-    if (mf_viewedNone()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
-        ctx->quit = true;
-        if (retval) *retval = READ_PREV;
-        return 0;
-    }
-#else
-    (void)ctx;
-#endif
-    mf_backward(MFNAV_PAGE);
-    return 0;
-}
-
-MFPROTO int
-pmore_cmd_bksp(cmd_ctx_t *ctx)
-{
-    if (mf_viewedNone()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
-        ctx->quit = true;
-        if (retval) *retval = READ_PREV;
-        return 0;
-    }
     mf_backward(MFNAV_PAGE);
     return 0;
 }
@@ -2803,13 +2739,8 @@ pmore_cmd_line_down(cmd_ctx_t *ctx GCC_UNUSED)
 MFPROTO int
 pmore_cmd_down(cmd_ctx_t *ctx)
 {
-    if (mf_viewedAll()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
-        ctx->quit = true;
-        if (retval) *retval = READ_NEXT;
-        return 0;
-    }
+    if (mf_viewedAll())
+        return pmore_cmd_quit(ctx);
     PMORE_UINAV_FORWARDLINE();
     return 0;
 }
@@ -2817,20 +2748,6 @@ pmore_cmd_down(cmd_ctx_t *ctx)
 MFPROTO int
 pmore_cmd_line_up(cmd_ctx_t *ctx GCC_UNUSED)
 {
-    mf_backward(1);
-    return 0;
-}
-
-MFPROTO int
-pmore_cmd_up(cmd_ctx_t *ctx)
-{
-    if (mf_viewedNone()) {
-        pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    int *retval = p ? &p->retval : NULL;
-        ctx->quit = true;
-        if (retval) *retval = READ_PREV;
-        return 0;
-    }
     mf_backward(1);
     return 0;
 }
@@ -3040,17 +2957,17 @@ pmore_cmd_help(cmd_ctx_t *ctx)
 const cmd_t pmore_cmds[] = {
     { KEY_PGDN, "下頁", "向下翻一頁", pmore_cmd_pgdn, 0, CMD_PRIO_NAV },
     { Ctrl('F'), NULL, NULL, pmore_cmd_pgdn, 0, CMD_PRIO_NONE },
-    { ' ', NULL, "向下翻一頁 (到底讀下一篇)", pmore_cmd_space, 0, CMD_PRIO_NAV },
-    { KEY_RIGHT, NULL, "向下翻一頁 (到底離開)", pmore_cmd_right, 0, CMD_PRIO_NAV },
-    { 't', NULL, "向下翻一頁 (到底讀同主題下一篇)", pmore_cmd_thread_next, 0, CMD_PRIO_NAV },
+    { ' ', NULL, "向下翻一頁 (到底離開)", pmore_cmd_space, 0, CMD_PRIO_NAV },
+    { KEY_RIGHT, NULL, NULL, pmore_cmd_right, 0, CMD_PRIO_NONE },
+    { 't', NULL, NULL, pmore_cmd_thread_next, 0, CMD_PRIO_NONE },
     { KEY_PGUP, "上頁", "向上翻一頁", pmore_cmd_pgup, 0, CMD_PRIO_NAV },
     { Ctrl('B'), NULL, NULL, pmore_cmd_pgup, 0, CMD_PRIO_NONE },
-    { Ctrl('H'), NULL, "向上翻一頁 (到頂讀上一篇)", pmore_cmd_bksp, 0, CMD_PRIO_NAV },
-    { KEY_DOWN, "下移", "向下捲動一行 (到底讀下一篇)", pmore_cmd_down, 0, CMD_PRIO_NAV },
+    { Ctrl('H'), NULL, NULL, pmore_cmd_pgup, 0, CMD_PRIO_NONE },
+    { KEY_DOWN, "下移", "向下捲動一行 (到底離開)", pmore_cmd_down, 0, CMD_PRIO_NAV },
     { KEY_ENTER, NULL, NULL, pmore_cmd_down, 0, CMD_PRIO_NONE },
     { 'j', NULL, "向下捲動一行", pmore_cmd_line_down, 0, CMD_PRIO_NAV },
-    { KEY_UP, "上移", "向上捲動一行 (到頂讀上一篇)", pmore_cmd_up, 0, CMD_PRIO_NAV },
-    { 'k', NULL, "向上捲動一行", pmore_cmd_line_up, 0, CMD_PRIO_NAV },
+    { KEY_UP, "上移", "向上捲動一行", pmore_cmd_line_up, 0, CMD_PRIO_NAV },
+    { 'k', NULL, NULL, pmore_cmd_line_up, 0, CMD_PRIO_NONE },
     { KEY_HOME, "開頭", "移至檔案開頭", pmore_cmd_home, 0, CMD_PRIO_NAV },
     { '0', NULL, NULL, pmore_cmd_home, 0, CMD_PRIO_NONE },
     { 'g', NULL, NULL, pmore_cmd_home, 0, CMD_PRIO_NONE },
@@ -3299,6 +3216,10 @@ _pmore2(
                 continue;
         }
 #endif
+
+        /* For the caller's key handler (e.g. reading on past the end). */
+        if (cb->position)
+            cb->position(mf_viewedNone(), mf_viewedAll(), ctx);
 
         /* PRINT FOOTER */
         mf_display_footer(cb->footer, ctx);
