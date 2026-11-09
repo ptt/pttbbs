@@ -133,18 +133,35 @@ func dailyBackup(args []string) int {
 		shards[i] = s
 	}
 
-	// The shards live on different disks, so handle them in parallel.
-	var wg sync.WaitGroup
-	for _, s := range shards {
-		wg.Add(1)
-		go func(s *shardBackup) {
-			defer wg.Done()
-			t := time.Now()
-			s.err = s.run(name, *keep, *keepLocal, *verify)
-			s.elapsed = time.Since(t)
-		}(s)
+	// The shards live on different disks, so handle them in parallel: first
+	// the copies, then (once the copy holding communities.db exists) the
+	// verification and pruning.
+	parallel := func(f func(s *shardBackup) error) {
+		var wg sync.WaitGroup
+		for _, s := range shards {
+			if s.err != nil {
+				continue
+			}
+			wg.Add(1)
+			go func(s *shardBackup) {
+				defer wg.Done()
+				t := time.Now()
+				s.err = f(s)
+				s.elapsed += time.Since(t)
+			}(s)
+		}
+		wg.Wait()
 	}
-	wg.Wait()
+	parallel(func(s *shardBackup) error { return s.copy(name) })
+	var communities string
+	if *verify {
+		var dirs []string
+		for _, s := range shards {
+			dirs = append(dirs, s.result())
+		}
+		communities = storage.FindCommunitiesDB(dirs)
+	}
+	parallel(func(s *shardBackup) error { return s.finish(*keep, *keepLocal, *verify, communities) })
 
 	rc := 0
 	for _, s := range shards {
@@ -174,23 +191,37 @@ func dailyBackup(args []string) int {
 	return rc
 }
 
-func (s *shardBackup) run(name string, keep, keepLocal int, verify bool) error {
-	verifyDir := s.checkpoint
-	if s.copyRoot != "" {
-		if err := os.MkdirAll(s.copyRoot, 0755); err != nil {
-			return err
-		}
-		removeStaleTmpDirs(s.copyRoot)
-		prev := latestBackupDir(s.copyRoot)
-		s.copyDir = filepath.Join(s.copyRoot, name)
-		var err error
-		if s.linked, s.copied, err = copyIncremental(s.checkpoint, s.copyDir, prev); err != nil {
-			return fmt.Errorf("copy: %w", err)
-		}
-		verifyDir = s.copyDir
+// result is the backup of the shard that is kept: the copy, or the checkpoint.
+func (s *shardBackup) result() string {
+	if s.copyDir != "" {
+		return s.copyDir
 	}
+	return s.checkpoint
+}
+
+// copy copies the checkpoint (if -dest or -cross).
+func (s *shardBackup) copy(name string) error {
+	if s.copyRoot == "" {
+		return nil
+	}
+	if err := os.MkdirAll(s.copyRoot, 0755); err != nil {
+		return err
+	}
+	removeStaleTmpDirs(s.copyRoot)
+	prev := latestBackupDir(s.copyRoot)
+	dst := filepath.Join(s.copyRoot, name)
+	var err error
+	if s.linked, s.copied, err = copyIncremental(s.checkpoint, dst, prev); err != nil {
+		return fmt.Errorf("copy: %w", err)
+	}
+	s.copyDir = dst
+	return nil
+}
+
+// finish verifies the result (if asked) and prunes old backups.
+func (s *shardBackup) finish(keep, keepLocal int, verify bool, communities string) error {
 	if verify {
-		s.report = storage.VerifyDataDir(verifyDir)
+		s.report = storage.VerifyDataDir(s.result(), communities)
 		if !s.report.OK() {
 			// Keep everything for inspection; do not prune good old backups.
 			return nil

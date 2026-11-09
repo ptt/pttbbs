@@ -236,8 +236,9 @@ func main() {
 		fmt.Printf("Backup completed in %v:\n", time.Duration(ms)*time.Millisecond)
 		fmt.Print(string(payload))
 		fmt.Println("To restore: stop post.svc and copy each directory's *.pebble and meta.sqlite3")
-		fmt.Println("back into its engine's data dir. Do not run `post.svc -rebuild` unless")
-		fmt.Println("meta.sqlite3 is lost: SQLite keeps some data that Pebble does not.")
+		fmt.Println("(and communities.db, in the first one) back into its engine's data dir.")
+		fmt.Println("Do not run `post.svc -rebuild` unless meta.sqlite3 is lost: SQLite keeps")
+		fmt.Println("some data that Pebble does not. communities.db cannot be rebuilt at all.")
 
 	case "add-file":
 		if len(args) < 5 {

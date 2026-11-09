@@ -35,7 +35,8 @@ var (
 // A soft-deleted community keeps its ID and name (so its posts can still
 // be found and purged) but its name is free to be used by a new community.
 type CommunityRegistry struct {
-	db *sql.DB
+	db  *sql.DB
+	dir string // where communities.db is
 
 	mu     sync.RWMutex
 	byID   map[int64]*model.Community
@@ -109,6 +110,7 @@ func OpenCommunityRegistry(dataDir string) (*CommunityRegistry, error) {
 
 	r := &CommunityRegistry{
 		db:     db,
+		dir:    dataDir,
 		byID:   make(map[int64]*model.Community),
 		byName: make(map[string]int64),
 	}
@@ -170,6 +172,20 @@ func (r *CommunityRegistry) load() error {
 // Close closes the registry database.
 func (r *CommunityRegistry) Close() error {
 	return r.db.Close()
+}
+
+// Dir returns the directory that holds communities.db.
+func (r *CommunityRegistry) Dir() string {
+	return r.dir
+}
+
+// Backup writes a consistent copy of communities.db to path (VACUUM INTO,
+// safe while the service runs). Holding r.mu keeps registry writes out.
+func (r *CommunityRegistry) Backup(path string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, err := r.db.Exec(`VACUUM INTO ?`, path)
+	return err
 }
 
 func copyCommunity(c *model.Community) model.Community {

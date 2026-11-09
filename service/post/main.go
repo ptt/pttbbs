@@ -279,9 +279,17 @@ func runVerify(args []string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return 2
 	}
+	communities := storage.FindCommunitiesDB(dirs)
 	rc := 0
 	for _, dir := range dirs {
-		r := storage.VerifyDataDir(dir)
+		r := storage.VerifyDataDir(dir, communities)
+		r.Print(os.Stdout)
+		if !r.OK() {
+			rc = 1
+		}
+	}
+	if len(dirs) > 1 && rc == 0 {
+		r := storage.VerifyShards(dirs, communities)
 		r.Print(os.Stdout)
 		if !r.OK() {
 			rc = 1

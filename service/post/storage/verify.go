@@ -102,13 +102,73 @@ func ExpandVerifyDirs(args []string) ([]string, error) {
 	return dirs, nil
 }
 
+// FindCommunitiesDB returns the communities.db among dirs (it is in the
+// backup of one engine only), or "".
+func FindCommunitiesDB(dirs []string) string {
+	for _, d := range dirs {
+		if p := filepath.Join(d, CommunitiesDBName); fileExists(p) {
+			return p
+		}
+	}
+	return ""
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func openReadOnlySQLite(path string) (*sql.DB, error) {
 	return sql.Open("sqlite", "file:"+(&url.URL{Path: path}).EscapedPath()+"?mode=ro&immutable=1")
 }
 
+// loadCommunityIDs verifies communities.db and returns its community IDs.
+func loadCommunityIDs(r *VerifyReport, path string) map[int64]bool {
+	db, err := openReadOnlySQLite(path)
+	if err != nil {
+		r.errorf("open %s: %v", path, err)
+		return nil
+	}
+	defer db.Close()
+	var check string
+	if err := db.QueryRow("PRAGMA quick_check").Scan(&check); err != nil || check != "ok" {
+		r.errorf("%s quick_check: %v %s", path, err, check)
+		return nil
+	}
+	rows, err := db.Query("SELECT id FROM community")
+	if err != nil {
+		r.errorf("read %s: %v", path, err)
+		return nil
+	}
+	defer rows.Close()
+	ids := map[int64]bool{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			r.errorf("read %s: %v", path, err)
+			return nil
+		}
+		ids[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		r.errorf("read %s: %v", path, err)
+		return nil
+	}
+	return ids
+}
+
 // VerifyDataDir verifies the engine DBs in dir without modifying them.
-func VerifyDataDir(dir string) *VerifyReport {
+// communitiesDB is the communities.db of the same backup (see
+// FindCommunitiesDB); every post must belong to a community it knows. With
+// "", that check is skipped with a warning.
+func VerifyDataDir(dir, communitiesDB string) *VerifyReport {
 	r := &VerifyReport{Dir: dir, Warnings: map[string]int{}}
+	var communities map[int64]bool
+	if communitiesDB == "" {
+		r.warn("no communities.db to check community IDs against", 0, dir)
+	} else if communities = loadCommunityIDs(r, communitiesDB); communities == nil {
+		return r
+	}
 
 	dbs := map[string]*pebble.DB{}
 	for _, name := range []string{"posts.pebble", "comments.pebble", "votes.pebble", "history.pebble"} {
@@ -153,6 +213,147 @@ func VerifyDataDir(dir string) *VerifyReport {
 	}
 
 	compareMetaWithPebble(r, meta, dbs["posts.pebble"], dbs["comments.pebble"], dbs["votes.pebble"])
+	if communities != nil {
+		checkCommunityRefs(r, meta, communities)
+	}
+	return r
+}
+
+// loadCommunityShards returns the shard of every community in communities.db.
+func loadCommunityShards(path string) (map[int64]int, error) {
+	db, err := openReadOnlySQLite(path)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	rows, err := db.Query("SELECT id, shard FROM community")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	shards := map[int64]int{}
+	for rows.Next() {
+		var id int64
+		var shard int
+		if err := rows.Scan(&id, &shard); err != nil {
+			return nil, err
+		}
+		shards[id] = shard
+	}
+	return shards, rows.Err()
+}
+
+// shardCursor walks the posts of one engine data dir in post ID order.
+type shardCursor struct {
+	rows *sql.Rows
+	id   uint64
+	cid  int64
+	ok   bool
+}
+
+func (c *shardCursor) next(r *VerifyReport, dir string) {
+	c.ok = c.rows.Next()
+	if c.ok {
+		if err := c.rows.Scan(&c.id, &c.cid); err != nil {
+			r.errorf("%s: scan meta.sqlite3: %v", dir, err)
+			c.ok = false
+		}
+	}
+}
+
+// VerifyShards checks the engine data dirs of one sharded backup (or of
+// stopped engines) against each other, in O(communities) memory:
+//   - a post ID is used by one post in one engine only (post IDs are
+//     global, so the service can find a post by its ID alone),
+//   - all posts of a community are in the same engine, and
+//   - with communitiesDB, each engine holds the communities of one shard,
+//     and no two engines the same shard.
+//
+// Each dir must pass VerifyDataDir first.
+func VerifyShards(dirs []string, communitiesDB string) *VerifyReport {
+	r := &VerifyReport{Dir: "shards", Warnings: map[string]int{}}
+	var registry map[int64]int
+	if communitiesDB != "" {
+		var err error
+		if registry, err = loadCommunityShards(communitiesDB); err != nil {
+			r.errorf("read %s: %v", communitiesDB, err)
+			return r
+		}
+	}
+
+	cursors := make([]*shardCursor, len(dirs))
+	for i, dir := range dirs {
+		db, err := openReadOnlySQLite(filepath.Join(dir, "meta.sqlite3"))
+		if err != nil {
+			r.errorf("%s: open meta.sqlite3: %v", dir, err)
+			return r
+		}
+		defer db.Close()
+		rows, err := db.Query("SELECT id, community_id FROM posts ORDER BY id")
+		if err != nil {
+			r.errorf("%s: query meta.sqlite3: %v", dir, err)
+			return r
+		}
+		defer rows.Close()
+		cursors[i] = &shardCursor{rows: rows}
+		cursors[i].next(r, dir)
+	}
+
+	communityDir := map[int64]int{} // community ID -> index of its dir
+	dirShard := map[int]int{}       // index of a dir -> its shard in the registry
+	duplicates := 0
+	for {
+		// Pick the smallest post ID among the dirs (there are only a few).
+		lo := -1
+		for i, c := range cursors {
+			if c.ok && (lo < 0 || c.id < cursors[lo].id) {
+				lo = i
+			}
+		}
+		if lo < 0 {
+			break
+		}
+		id := cursors[lo].id
+		for i, c := range cursors {
+			if !c.ok || c.id != id {
+				continue
+			}
+			if i != lo {
+				if duplicates < maxVerifyExamples {
+					r.errorf("post %d is in both %s and %s", id, dirs[lo], dirs[i])
+				}
+				duplicates++
+			}
+			r.Posts++
+			if d, seen := communityDir[c.cid]; !seen {
+				communityDir[c.cid] = i
+			} else if d != i && len(r.Errors) < maxVerifyExamples {
+				r.errorf("community #%d has posts in both %s and %s (e.g. post %d)", c.cid, dirs[d], dirs[i], id)
+			}
+			if shard, known := registry[c.cid]; known {
+				if s, seen := dirShard[i]; !seen {
+					dirShard[i] = shard
+				} else if s != shard && len(r.Errors) < maxVerifyExamples {
+					r.errorf("%s holds communities of shards %d and %d (e.g. community #%d)", dirs[i], s, shard, c.cid)
+				}
+			}
+			c.next(r, dirs[i])
+		}
+	}
+	if duplicates > maxVerifyExamples {
+		r.errorf("... %d post IDs used more than once in total", duplicates)
+	}
+	byShard := map[int]int{}
+	for i := range dirs {
+		s, ok := dirShard[i]
+		if !ok {
+			continue
+		}
+		if other, taken := byShard[s]; taken {
+			r.errorf("%s and %s both hold communities of shard %d", dirs[other], dirs[i], s)
+		}
+		byShard[s] = i
+	}
 	return r
 }
 
@@ -376,6 +577,40 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 	}
 	if metaCrossposts != pebbleCrossposts {
 		r.warn("crossposts table size differs", 0, fmt.Sprintf("meta.sqlite3=%d pebble=%d", metaCrossposts, pebbleCrossposts))
+	}
+}
+
+// checkCommunityRefs reports posts and crossposts whose community is not in
+// the registry. The registry is copied after the posts, so this means a
+// restored service could not name, route or list them.
+func checkCommunityRefs(r *VerifyReport, meta *sql.DB, communities map[int64]bool) {
+	for _, q := range []struct{ what, query string }{
+		{"post", "SELECT id, community_id FROM posts"},
+		{"crosspost of post", "SELECT source_post_id, target_community_id FROM crossposts"},
+	} {
+		rows, err := meta.Query(q.query)
+		if err != nil {
+			r.errorf("query meta.sqlite3: %v", err)
+			return
+		}
+		missing := 0
+		for rows.Next() {
+			var id, cid int64
+			if err := rows.Scan(&id, &cid); err != nil {
+				r.errorf("scan meta.sqlite3: %v", err)
+				break
+			}
+			if !communities[cid] {
+				if missing < maxVerifyExamples {
+					r.errorf("%s %d refers to community #%d, which is not in communities.db", q.what, id, cid)
+				}
+				missing++
+			}
+		}
+		rows.Close()
+		if missing > maxVerifyExamples {
+			r.errorf("... %d references to unknown communities in total", missing)
+		}
 	}
 }
 

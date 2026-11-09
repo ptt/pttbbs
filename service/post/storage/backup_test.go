@@ -88,6 +88,9 @@ func TestEngineBackup(t *testing.T) {
 	if hist, _ := r.ListPostHistory(p.ID); len(hist) == 0 {
 		t.Errorf("backup lost post history")
 	}
+	if got.Community != "testboard" {
+		t.Errorf("backup community = %q, want testboard (from communities.db)", got.Community)
+	}
 
 	// The backup must also survive the documented restore step.
 	if posts, comments, err := r.RebuildSQLiteFromPebble(); err != nil || posts != 1 || comments != 1 {
@@ -147,6 +150,34 @@ func TestShardedEngineBackup(t *testing.T) {
 		if want := filepath.Join(absDir, fmt.Sprintf("shard-%d", i)); absDirs[i] != want {
 			t.Errorf("absolute backup shard %d = %s, want %s", i, absDirs[i], want)
 		}
+	}
+
+	// communities.db is shared and lives with shard 0 only.
+	for i, set := range [][]string{dirs, absDirs} {
+		for j, d := range set {
+			_, err := os.Stat(filepath.Join(d, CommunitiesDBName))
+			if (err == nil) != (j == 0) {
+				t.Errorf("backup set %d shard %d: has communities.db = %v, want %v", i, j, err == nil, j == 0)
+			}
+		}
+		communities := FindCommunitiesDB(set)
+		for _, d := range set {
+			if r := VerifyDataDir(d, communities); !r.OK() {
+				var out strings.Builder
+				r.Print(&out)
+				t.Errorf("verify %s:\n%s", d, out.String())
+			}
+		}
+		if r := VerifyShards(set, communities); !r.OK() || r.Posts != 8 {
+			var out strings.Builder
+			r.Print(&out)
+			t.Errorf("verify shards of set %d (%d posts):\n%s", i, r.Posts, out.String())
+		}
+	}
+	// The same engine twice: every post ID is used twice, and both copies
+	// hold the communities of the same shard.
+	if r := VerifyShards([]string{dirs[0], dirs[0]}, FindCommunitiesDB(dirs)); r.OK() {
+		t.Errorf("VerifyShards passed with every post in two engines")
 	}
 
 	total := 0
@@ -220,7 +251,7 @@ func TestVerifyDataDir(t *testing.T) {
 		t.Fatalf("Backup: %v", err)
 	}
 	before := dirSnapshot(t, backupDir)
-	r := VerifyDataDir(backupDir)
+	r := VerifyDataDir(backupDir, FindCommunitiesDB([]string{backupDir}))
 	var out strings.Builder
 	r.Print(&out)
 	t.Log(out.String())
@@ -234,6 +265,32 @@ func TestVerifyDataDir(t *testing.T) {
 		t.Errorf("VerifyDataDir modified the backup:\nbefore %v\nafter  %v", before, after)
 	}
 
+	// Without communities.db the community check is skipped with a warning.
+	if r := VerifyDataDir(backupDir, ""); !r.OK() || r.Warnings["no communities.db to check community IDs against"] != 1 {
+		t.Errorf("verify without communities.db: ok %v, warnings %v", r.OK(), r.Warnings)
+	}
+
+	// A community missing from the registry is an error: a restored service
+	// could not name or route its posts.
+	regPath := filepath.Join(backupDir, CommunitiesDBName)
+	regCopy := filepath.Join(tmpDir, "communities-copy.db")
+	if b, err := os.ReadFile(regPath); err != nil {
+		t.Fatal(err)
+	} else if err := os.WriteFile(regCopy, b, 0644); err != nil {
+		t.Fatal(err)
+	}
+	reg, err := sql.Open("sqlite", regCopy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reg.Exec("DELETE FROM community"); err != nil {
+		t.Fatal(err)
+	}
+	reg.Close()
+	if r := VerifyDataDir(backupDir, regCopy); r.OK() {
+		t.Errorf("VerifyDataDir passed with posts of communities missing from communities.db")
+	}
+
 	// A post that SQLite does not know about is an error: a restored service
 	// could reuse its ID.
 	db, err := sql.Open("sqlite", filepath.Join(backupDir, "meta.sqlite3"))
@@ -244,7 +301,7 @@ func TestVerifyDataDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	db.Close()
-	if r := VerifyDataDir(backupDir); r.OK() {
+	if r := VerifyDataDir(backupDir, FindCommunitiesDB([]string{backupDir})); r.OK() {
 		t.Errorf("VerifyDataDir passed with a post missing from meta.sqlite3")
 	}
 

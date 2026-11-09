@@ -35,7 +35,14 @@ import (
 // extra metadata rows, while an older one could let a restored service reuse an
 // ID that already exists in Pebble.
 //
-// To restore, put the backed-up meta.sqlite3 back together with the Pebble DBs
+// The community registry (communities.db, shared by all shards and kept in
+// the data dir of the first one) is copied last, after every engine, so that
+// it knows every community ID the copies of the posts refer to. It goes into
+// the backup of the engine whose data dir holds it. Pebble only keeps
+// community IDs, so the names and shards of the communities exist only in
+// communities.db, and no rebuild can recover them: it must be backed up.
+//
+// To restore, put the backed-up meta.sqlite3 (and communities.db) back together with the Pebble DBs
 // and do NOT run `post.svc -rebuild`: SQLite holds a few things Pebble does not
 // (e.g. titles changed by UpdatePostTitle, and the counters of deleted posts
 // imported from .DIR), which a rebuild would lose. Rebuild only when
@@ -122,6 +129,19 @@ func backupEngines(engines []*Engine, dest string, sharded bool) ([]string, erro
 				return nil, fmt.Errorf("shard %d (%s): %w", i, e.cfg.DataDir, err)
 			}
 			return nil, err
+		}
+	}
+	if reg := engines[0].reg; reg != nil {
+		owner := 0
+		for i, e := range engines {
+			if filepath.Clean(e.cfg.DataDir) == filepath.Clean(reg.Dir()) {
+				owner = i
+				break
+			}
+		}
+		if err := reg.Backup(filepath.Join(tmpDirs[owner], CommunitiesDBName)); err != nil {
+			cleanup()
+			return nil, fmt.Errorf("backup %s: %w", CommunitiesDBName, err)
 		}
 	}
 	for i, tmp := range tmpDirs {
