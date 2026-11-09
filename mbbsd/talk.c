@@ -518,13 +518,13 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	uin->lockmode == M_FIVE || uin->lockmode == M_CONN6 || uin->lockmode == CHC) {
 	outs("人家在忙啦");
     } else if (!HasUserPerm(PERM_SYSOP) &&
-	       ((fri_stat & HRM) || ((!uin->pager) && !(fri_stat & HFM)))) {
+	       ((fri_stat & HRM) || ((!uin->wmsg) && !(fri_stat & HFM)))) {
 	outs("對方關掉呼叫器了");
     } else if (!HasUserPerm(PERM_SYSOP) &&
-	       ((fri_stat & HRM) || uin->pager == PAGER_DISABLE)) {
+	       ((fri_stat & HRM) || uin->wmsg == WMSG_DISABLE)) {
 	outs("對方拔掉呼叫器了");
     } else if (!HasUserPerm(PERM_SYSOP) &&
-	       !(fri_stat & HFM) && uin->pager == PAGER_FRIENDONLY) {
+	       !(fri_stat & HFM) && uin->wmsg == WMSG_FRIENDONLY) {
 	outs("對方只接受好友的呼叫");
     } else if (!(pid = uin->pid) /* || (kill(pid, 0) == -1) */ ) {
 	//resetutmpent();
@@ -681,7 +681,7 @@ descript(int show_mode, const userinfo_t * uentp, int diff, char *description, i
     // Map to MODE_STRING
     switch (show_mode) {
     case 0:
-	return (((uentp->pager != PAGER_DISABLE && uentp->pager != PAGER_ANTIWB && diff) ||
+	return (((uentp->wmsg != WMSG_DISABLE && uentp->wmsg != WMSG_ANTIWB && diff) ||
 		 HasUserPerm(PERM_SYSOP)) ?  uentp->from : "*");
     case 1:
 	return friend_descript(uentp, description, len);
@@ -1057,7 +1057,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
 #endif
              ch);
 
-    pager[0] = (friend & HRM) ? 'X' : pagerchar[uentp->pager % 5];
+    pager[0] = (friend & HRM) ? 'X' : pagerchar[uentp->wmsg % 5];
     pager[1] = (uentp->invisible ? ')' : ' ');
     pager[2] = 0;
 
@@ -1070,7 +1070,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
                    pager,
                    fcolor[state] ? xuid : uentp->userid,
                    uentp->nickname,
-                   descript(*cx->show_mode, uentp, uentp->pager & !(friend & HRM),
+                   descript(*cx->show_mode, uentp, uentp->wmsg & !(friend & HRM),
                             description, sizeof(description)),
 #if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
                    *cx->show_board ? (uentp->brc_id == 0 ? "" :
@@ -1218,9 +1218,9 @@ userlist_broadcast(void)
                     continue;
                 if (!isvisible_stat(currutmp, uentp, frstate))
                     continue;
-                if (uentp->pager == PAGER_ANTIWB)
+                if (uentp->wmsg == WMSG_ANTIWB)
                     continue;
-                if (uentp->pager == PAGER_FRIENDONLY && !(frstate & HFM))
+                if (uentp->wmsg == WMSG_FRIENDONLY && !(frstate & HFM))
                     continue;
                 if (frstate & HRM)
                     continue;

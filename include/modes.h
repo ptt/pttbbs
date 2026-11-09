@@ -192,18 +192,18 @@
 #define WATERBALL_CONFIRM_ANGEL 7
 #define WATERBALL_CONFIRM_ANSWER 8
 
-/* chat.c, talk.c: pager modes */
-#define PAGER_OFF	(0)
-#define PAGER_ON	(1)
-#define PAGER_DISABLE	(2)
-#define PAGER_ANTIWB	(3)
-#define PAGER_FRIENDONLY	(4)
+/* wmsg.c, talk.c: water ball (pager) modes */
+#define WMSG_OFF	(0)
+#define WMSG_ON	(1)
+#define WMSG_DISABLE	(2)
+#define WMSG_ANTIWB	(3)
+#define WMSG_FRIENDONLY	(4)
 
-#define PAGER_MODES 	(5)
+#define WMSG_MODES 	(5)
 
-#define PAGER_UI_NEW	    0x00000000  // default (merged PAGER_UI_ORIG into PAGER_UI_NEW)
-#define PAGER_UI_LEGACY	    0x00000001  // legacy value (was: NEW) that should be removed soon.
-#define PAGER_UI_OFO	    0x00000002
+#define WMSG_UI_NEW	    0x00000000  // default (merged WMSG_UI_ORIG into WMSG_UI_NEW)
+#define WMSG_UI_LEGACY	    0x00000001  // legacy value (was: NEW) that should be removed soon.
+#define WMSG_UI_OFO	    0x00000002
 
 /* stuff.c: show_file */
 #define SHOWFILE_RAW	     (0x00)

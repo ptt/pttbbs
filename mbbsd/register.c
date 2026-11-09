@@ -777,7 +777,7 @@ new_register(void)
     newuser.userlevel = PERM_DEFAULT;
     newuser.uflag = UF_BRDSORT | UF_ADBANNER;
     newuser.firstlogin = newuser.lastlogin = now;
-    newuser.pager = PAGER_ON;
+    newuser.wmsg = WMSG_ON;
     newuser.numlogindays = 1;
     newuser.ua_version = ua_version;
     STRLCPY(newuser.lasthost, fromhost);

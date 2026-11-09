@@ -1105,10 +1105,10 @@ ccw_chat_peek_cmd(CCW_CTX *ctx, const char *buf, int local GCC_UNUSED)
     if (ccw_partial_match(buf, "pager"))
     {
         char genbuf[STRLEN];
-        currutmp->pager ++;
-        currutmp->pager %= PAGER_MODES;
+        currutmp->wmsg ++;
+        currutmp->wmsg %= WMSG_MODES;
         SNPRINTF(genbuf, "◆ 您的呼叫器已設為: [%s]",
-                str_pager_modes[currutmp->pager]);
+                str_pager_modes[currutmp->wmsg]);
         ccw_add_line(ctx, genbuf, CCW_LOCAL_MSG);
         return 1;
     }

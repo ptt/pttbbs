@@ -108,13 +108,13 @@ const char * const str_permboard[NUMPERMS] = {
 };
 
 /* modes.h */
-const char * const str_pager_modes[PAGER_MODES] =
+const char * const str_pager_modes[WMSG_MODES] =
 {
-    [PAGER_OFF]        = "關閉",
-    [PAGER_ON]         = "開啟",
-    [PAGER_DISABLE]    = "拔掉",
-    [PAGER_ANTIWB]     = "防水",
-    [PAGER_FRIENDONLY] = "好友",
+    [WMSG_OFF]        = "關閉",
+    [WMSG_ON]         = "開啟",
+    [WMSG_DISABLE]    = "拔掉",
+    [WMSG_ANTIWB]     = "防水",
+    [WMSG_FRIENDONLY] = "好友",
 };
 
 int             usernum;
@@ -282,14 +282,14 @@ int             KEY_ESC_arg;
 int             watermode = -1;
 int             wmofo = NOTREPLYING;
 /*
- * PAGER_UI_IS(PAGER_UI_NEW):
+ * WMSG_UI_IS(WMSG_UI_NEW):
  * ????????????????????
  * Ptt 水球回顧   (FIXME: guessed by scw)
  * watermode = -1 沒在回水球
  *           = 0   在回上一顆水球  (Ctrl-R)
  *           > 0   在回前 n 顆水球 (Ctrl-R Ctrl-R)
  *
- * PAGER_UI_IS(PAGER_UI_OFO)  by in2
+ * WMSG_UI_IS(WMSG_UI_OFO)  by in2
  * wmofo     = NOTREPLYING     沒在回水球
  *           = REPLYING        正在回水球
  *           = RECVINREPLYING  回水球間又接到水球

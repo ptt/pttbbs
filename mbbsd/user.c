@@ -563,7 +563,7 @@ static const CustomItem items[] = { {
 #endif
     }, {
         .desc = "PAGER      使用OFO水球模式",
-        .flag =  UF_PAGER_OFO,
+        .flag =  UF_WMSG_OFO,
     }, {
         .desc = "ANGEL      小天使神諭呼叫器: ",
         .perm = PERM_ANGEL,

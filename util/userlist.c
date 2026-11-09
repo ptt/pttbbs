@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
 		f = &SHM->uinfo[i];
 		printf(
 		    "%4d(%d) p[%d] i[%d] u[%s] n[%s] f[%s] m[%d] t[%lld]\n",
-		    ++counter, i, f->pager, f->invisible, f->userid,
+		    ++counter, i, f->wmsg, f->invisible, f->userid,
 		    f->nickname, f->from, f->mode, (long long)time4_to_time(f->lastact));
 	    }
 	printf("\nTotal: %d(%d)\n", counter, SHM->number);

@@ -515,7 +515,7 @@ pwcuExitSave	()
 {
     // determine dirty
     if (pwcu_dirty	||
-	cuser.pager	!= currutmp->pager  ||
+	cuser.wmsg	!= currutmp->wmsg  ||
 	cuser.invisible != currutmp->invisible)
     {
 	// maybe dirty, let's work harder.
@@ -526,7 +526,7 @@ pwcuExitSave	()
 	// dirty cache, however maybe it's not that important.
 
 	// configure new utmp values
-	u.pager     = currutmp->pager;
+	u.wmsg      = currutmp->wmsg;
 	u.invisible = currutmp->invisible;
 
 	// configure those changed by 'not important variables' API

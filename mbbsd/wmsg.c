@@ -12,7 +12,6 @@
 // star[2] [IDLEN] space[1] [msg] space[1] prevent-col80[NUL]
 // So the input size should be 64.
 #define WMSG_INPUT_SIZE (STRLEN - IDLEN - 2 - 1 - 1)
-#define PAGER_MSG_INPUT_SIZE WMSG_INPUT_SIZE
 
 // As a result, the prompts should be less than IDLEN + 3.
 #define PROMPT_OFO          "丟%s:"
@@ -27,7 +26,6 @@
 #define ERR_TARGET_NOT_ONLINE "糟糕! 對方已落跑了(不在站上)! "
 
 const int WMSG_TABS = WB_OFO_USER_NUM;
-#define PAGER_TABS WMSG_TABS
 static char     t_last_write[STRLEN];
 
 static const char *
@@ -48,8 +46,8 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
     if (!HasBasicUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_VIOLATELAW))
         return 0;
 
-    return (uentp->pager != PAGER_ANTIWB &&
-            (fri_stat & HFM || uentp->pager != PAGER_FRIENDONLY));
+    return (uentp->wmsg != WMSG_ANTIWB &&
+            (fri_stat & HFM || uentp->wmsg != WMSG_FRIENDONLY));
 }
 
 static void
@@ -107,7 +105,7 @@ wmsg_render_history_list(const water_t *w, int start_row, int max_rows, int sele
         int a = (w->top - i - 1 + MAX_REVIEW) % MAX_REVIEW;
         int fg = (isOFO && (i % 2 == 0)) ? 33 : 37;
         int pad1 = (isOFO) ? IDLEN : 0;
-        int pad2 = (isOFO) ? -PAGER_MSG_INPUT_SIZE : 0;
+        int pad2 = (isOFO) ? -WMSG_INPUT_SIZE : 0;
 
         move(i + start_row, 0);
         if (selected_idx == i)
@@ -345,7 +343,7 @@ ofo_reply_waterball(water_t *tw, int ch)
     char genbuf[256];
     int confirm_mode = ofo_get_confirm_mode(tw, genbuf, sizeof(genbuf));
 
-    if (getdata_buf(0, 0, genbuf, msg, PAGER_MSG_INPUT_SIZE, DOECHO)) {
+    if (getdata_buf(0, 0, genbuf, msg, WMSG_INPUT_SIZE, DOECHO)) {
         if (my_write(tw->pid, msg, tw->userid, confirm_mode, tw->uin))
             STRLCPY(tw->msg[5].last_call_in, t_last_write);
     }
@@ -454,9 +452,9 @@ my_write_restore_state(char c0, unsigned char mode0, int currstat0)
 static bool
 my_write_check_wmsg_status(void)
 {
-    switch (currutmp->pager) {
-    case PAGER_DISABLE:
-    case PAGER_ANTIWB:
+    switch (currutmp->wmsg) {
+    case WMSG_DISABLE:
+    case WMSG_ANTIWB:
         if (HasUserPerm(PERM_SYSOP | PERM_ACCOUNTS | PERM_BOARDS)) {
             move(1, 0);
             clrtoeol();
@@ -464,11 +462,11 @@ my_write_check_wmsg_status(void)
         } else {
             if ('n' == vans("您的呼叫器目前設定為關閉。要打開它嗎?[Y/n]:"))
                 return false;
-            currutmp->pager = PAGER_ON;
+            currutmp->wmsg = WMSG_ON;
         }
         break;
 
-    case PAGER_FRIENDONLY:
+    case WMSG_FRIENDONLY:
         move(1, 0);
         clrtoeol();
         outs(ANSI_COLOR(1;31) "你的呼叫器目前只接受好友傳訊息，若對方非好友則可能無法回話。" ANSI_RESET);
@@ -578,10 +576,10 @@ my_write_is_rejected(int flag, userinfo_t *uin, int fri_stat)
                       flag == WATERBALL_CONFIRM_ANGEL || flag == WATERBALL_CONFIRM_ANSWER))
         return false;
 
-    if (uin->pager == PAGER_ANTIWB || uin->pager == PAGER_DISABLE)
+    if (uin->wmsg == WMSG_ANTIWB || uin->wmsg == WMSG_DISABLE)
         return true;
 
-    if (uin->pager == PAGER_FRIENDONLY && !(fri_stat & HFM))
+    if (uin->wmsg == WMSG_FRIENDONLY && !(fri_stat & HFM))
         return true;
 
     return false;
@@ -681,7 +679,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     char msg[STRLEN];
     if (is_interactive) {
         watermode = 0;
-        if (!my_write_get_input(prompt, msg, PAGER_MSG_INPUT_SIZE, &flag, &uin, destid)) {
+        if (!my_write_get_input(prompt, msg, WMSG_INPUT_SIZE, &flag, &uin, destid)) {
             my_write_restore_state(c0, mode0, currstat0);
             watermode = -1;
             return 0;
@@ -843,7 +841,7 @@ call_in(const userinfo_t * uentp, int fri_stat)
 int
 wmsg_toggle_mode(void)
 {
-    currutmp->pager = (currutmp->pager + 1) % PAGER_MODES;
+    currutmp->wmsg = (currutmp->wmsg + 1) % WMSG_MODES;
     return 0;
 }
 
@@ -1028,7 +1026,7 @@ wmsg_global_key_hook(int ch)
     switch (ch)
     {
     case Ctrl('R'):
-        if (HasUserFlag(UF_PAGER_OFO))
+        if (HasUserFlag(UF_WMSG_OFO))
             return wmsg_handle_ctrl_r_ofo(ch);
         return wmsg_handle_ctrl_r_default(ch);
     }
@@ -1129,18 +1127,18 @@ swater_get_slot(const msgque_t *msg)
     int waterinit = 0;
     water_t *tmp;
 
-    assert(PAGER_TABS <= ARRAY_SIZE(swater));
+    assert(WMSG_TABS <= ARRAY_SIZE(swater));
 
-    for (i = 0; i < PAGER_TABS; i++) {
+    for (i = 0; i < WMSG_TABS; i++) {
         if (swater[i] == NULL)
             break;
         if (is_swater_compatible(swater[i], msg))
             break;
     }
 
-    if (i == PAGER_TABS) {
+    if (i == WMSG_TABS) {
         waterinit = 1;
-        i = PAGER_TABS - 1;
+        i = WMSG_TABS - 1;
         memset(swater[i], 0, sizeof(water_t));
     } else if (!swater[i]) {
         water_usies = i + 1;
@@ -1193,7 +1191,7 @@ static inline int
 can_pop_wmsg_ui(void)
 {
     return currutmp->mode != 0 &&
-           currutmp->pager != PAGER_OFF &&
+           currutmp->wmsg != WMSG_OFF &&
            cuser.userlevel != 0 &&
            currutmp->msgcount != 0 &&
            currutmp->mode != TALK &&
@@ -1291,7 +1289,7 @@ write_request(int sig)
     syncnow();
     check_water_init();
 
-    if (HasUserFlag(UF_PAGER_OFO)) {
+    if (HasUserFlag(UF_WMSG_OFO)) {
         write_request_ofo(sig);
     } else {
         write_request_default();

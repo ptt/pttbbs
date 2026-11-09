@@ -21,7 +21,7 @@
  --------------------------                       --------------------------
   1. my_write() 觸發
   2. 檢查發送權限 & 訊息輸入
-  3. 檢查接收端狀態 (PAGER_ON?)
+  3. 檢查接收端狀態 (WMSG_ON?)
   4. 呼叫 write_message() ---------( SHM 原子 CAS 寫入 )----> uin->msgs[pos]
   5. 發送 UNIX 訊號 -----------------( SIGUSR2 )-------------> 6. 觸發 write_request(SIGUSR2)
                                                                  7. show_call_in() 顯示水球
@@ -47,7 +47,7 @@ typedef struct msgque_t {
 #### `userinfo_t` (共享記憶體中的使用者動態資訊)
 位於 SHM `utmpshm->uinfo[]` 中，包含使用者的線上即時狀態：
 - `pid_t pid`: 該連線的進程 ID。
-- `unsigned char pager`: 呼叫器狀態（`PAGER_ON` / `PAGER_OFF` / `PAGER_DISABLE` / `PAGER_ANTIWB` / `PAGER_FRIENDONLY`）。
+- `unsigned char wmsg`: 呼叫器狀態（`WMSG_ON` / `WMSG_OFF` / `WMSG_DISABLE` / `WMSG_ANTIWB` / `WMSG_FRIENDONLY`）。
 - `int msgcount`: 當前未讀水球數量。
 - `msgque_t msgs[MAX_MSGS]`: 接收水球的緩衝佇列（預設 `MAX_MSGS = 10`）。
 
@@ -60,7 +60,7 @@ typedef struct msgque_t {
 ### 3.1 核心步驟
 
 1. **檢查自身 Pager 狀態 (`my_write_check_pager_status`)**：
-   若發送者自身的 `pager` 處於 `PAGER_OFF` 或 `PAGER_DISABLE`，提示無法發送。
+   若發送者自身的 `wmsg` 處於 `WMSG_OFF` 或 `WMSG_DISABLE`，提示無法發送。
 2. **取得訊息輸入 (`my_write_get_input`)**：
    提示使用者輸入單行文字，並去除 ANSI 控碼 (`strip_control_sequence`)。
 3. **二次確認 (`my_write_confirm_send`)**：
@@ -72,8 +72,8 @@ typedef struct msgque_t {
 6. **判斷接收者是否拒收 (`my_write_is_rejected`)**：
    - `WATERBALL_ALOHA`: 永遠不拒收。
    - 站務員 (SYSOP) / 小天使訊息: 繞過拒收限制。
-   - 接收者為 `PAGER_ANTIWB` 或 `PAGER_DISABLE`: 拒收。
-   - 接收者為 `PAGER_FRIENDONLY` 且發送者不在對方好友名單: 拒收。
+   - 接收者為 `WMSG_ANTIWB` 或 `WMSG_DISABLE`: 拒收。
+   - 接收者為 `WMSG_FRIENDONLY` 且發送者不在對方好友名單: 拒收。
 7. **訊息交付與發送 Signal (`my_write_deliver` ➔ `write_message`)**：
    - 轉換發送者 ID (處理 Angel 小天使稱號) 與水球模式 (`msgmode`)。
    - 呼叫通用底層寫入函式 `write_message(uip, uin->pid, currpid, from_id, msg, msgmode)`：
@@ -99,8 +99,8 @@ signal_restart(SIGUSR2, write_request);
 當接收端收到 `SIGUSR2` 訊號時，系統呼叫 `write_request(sig)`：
 
 1. **判斷目前 UI 模式**：
-   - `PAGER_UI_OFO`: 執行 `write_request_ofo(sig)`。
-   - `PAGER_UI_NEW`: 執行 `write_request_default()`。
+   - `WMSG_UI_OFO`: 執行 `write_request_ofo(sig)`。
+   - `WMSG_UI_NEW`: 執行 `write_request_default()`。
 2. **判斷是否能彈出 UI (`can_pop_wmsg_ui`)**：
    若使用者正處於文章編輯中 (`EDITING`)、聊天中 (`CHATING`)、呼叫中 (`TALK`) 或已關閉 Pager，系統僅播放音效提示 (`bell()`)，並將水球靜默寫入歷史紀錄。
 3. **畫面繪製與音效 (`show_call_in`)**：

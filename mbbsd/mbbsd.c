@@ -737,7 +737,7 @@ setup_utmp(int mode)
     uinfo.chc_tie   = cuser.chc_tie;
     uinfo.chess_elo_rating = cuser.chess_elo_rating;
     uinfo.invisible = (cuser.invisible % 2) && (!HasUserPerm(PERM_VIOLATELAW));
-    uinfo.pager	    = cuser.pager % PAGER_MODES;
+    uinfo.wmsg	    = cuser.wmsg % WMSG_MODES;
 
     getnewutmpent(&uinfo);
 

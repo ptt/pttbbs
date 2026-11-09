@@ -85,8 +85,8 @@ typedef struct userec_t {
     char	justify[REGLEN+1];/* 審核資料 */
     uint8_t     _unused_birth[3]; /* 生日 月日年 */
     uint8_t     over_18;        /* 是否已滿18歲 */
-    uint8_t	deprecated_pager_ui_type;	/* 呼叫器界面類別,移入 UF_PAGER_OFO */
-    uint8_t	pager;		/* 呼叫器狀態 */
+    uint8_t	deprecated_wmsg_ui_type;	/* 呼叫器界面類別,移入 UF_WMSG_OFO */
+    uint8_t	wmsg;		/* 呼叫器狀態 */
     uint8_t	invisible;	/* 隱形狀態 */
     uint8_t	u_2fa;		/* 雙重驗證 2FA */
     char	_unused4[1];
@@ -431,7 +431,7 @@ typedef struct userinfo_t {
     unsigned char   deprecated_active; /* Deprecated/Unused legacy field; PTT BBS uses pid != 0 */
     unsigned char   invisible;      /* Used by cloaking function in Xyz menu */
     unsigned char   mode;           /* UL/DL, Talk Mode, Chat Mode, ... */
-    unsigned char   pager;          /* pager toggle, YEA, or NA */
+    unsigned char   wmsg;           /* WMSG_*: who may send water balls */
     char    _unused5;
     uint16_t _unused_conn6_win;
     time4_t lastact;               /* 上次使用者動的時間 */
