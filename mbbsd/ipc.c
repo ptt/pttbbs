@@ -1,5 +1,6 @@
 #include "bbs.h"
 #include "ipc.h"
+#include "livepost.h"
 
 int
 mbbsd_ipc_handler(const ipc_hdr_t *hdr, const void *payload)
@@ -16,8 +17,8 @@ mbbsd_ipc_handler(const ipc_hdr_t *hdr, const void *payload)
         if (!ps)
             return 0;
         /* Queued by the live provider, which posts VKEY_EV_PUBSUB for the
-         * live loop; see more.c. */
-        more_on_live_comment(ps->bid, aidu_raw(ps->aid), ps->text, ps->fsize);
+         * live loop; see livepost.c. */
+        live_on_comment(ps->bid, aidu_raw(ps->aid), ps->text, ps->fsize);
         return 0;
     }
 
@@ -56,7 +57,7 @@ mbbsd_ipc_reconnect_cb(int new_fd GCC_UNUSED)
     }
     vkey_sync_ipc();
     vkey_set_ipc_handler(mbbsd_ipc_handler);
-    more_live_resubscribe();
+    live_resubscribe();
 }
 
 void

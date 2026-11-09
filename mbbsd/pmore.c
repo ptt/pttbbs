@@ -493,12 +493,13 @@ MmappedFile mf = {
     NULL // detachHandler
 };      // current file
 
-/* Screen rows holding content in the last mf_display(), and what was shown
- * when entering live mode (see pmore_cmd_live). */
+/* Screen rows holding content, and the comment state at their end, in the
+ * last mf_display() (see pmore_prepare_live). */
 static int   mf_disprows = 0;
-static int   mf_live_rows = 0;
-static off_t mf_live_size = 0;
-static char  mf_live_op_author[IDLEN + 1] = "";
+static comment_ctx_t mf_cmt_ctx;
+/* The callbacks of the running pmore2() (see pmore_go_live). */
+static const struct pmore_callbacks *mf_cb;
+static void *mf_cb_ctx;
 
 /* mf_* navigation commands return value meanings */
 enum MF_NAV_COMMANDS {
@@ -1693,7 +1694,7 @@ mf_display()
     url_tracker_init_from_prev_line(&url_state, (const char *)mf.disps,
                                     (const char *)mf.start, (const char *)mf.end);
 
-    comment_ctx_t cmt_ctx = {
+    mf_cmt_ctx = (comment_ctx_t){
         .buf_start = mf.start,
         .buf_end = mf.end,
         .comments_start = mf.comments_start,
@@ -1706,7 +1707,7 @@ mf_display()
 
     /* Page starts in the middle of a comment: find its header. */
     if (mf.disps >= mf.comments_start && strncmp((const char *)mf.disps, "| ", 2) == 0)
-        comment_init_op_state(&cmt_ctx, mf.disps);
+        comment_init_op_state(&mf_cmt_ctx, mf.disps);
 
     while (lines < MFDISP_PAGE)
     {
@@ -1786,7 +1787,7 @@ mf_display()
         /* Is currentline visible? */
         if (lines < startline || lines > endline)
         {
-            comment_update_line_state(&cmt_ctx, mf.dispe);
+            comment_update_line_state(&mf_cmt_ctx, mf.dispe);
             MFDISP_SKIPCURLINE();
             newline = MFDISP_NEWLINE_SKIP;
         }
@@ -1870,7 +1871,7 @@ mf_display()
             MFDISP_SKIPCURLINE();
         }
         else if (mf.dispe >= mf.comments_start && bpref.rawmode == MFDISP_RAW_NA &&
-                 comment_render_header(&cmt_ctx, mf.dispe, (const unsigned char **)&mf.dispe))
+                 comment_render_header(&mf_cmt_ctx, mf.dispe, (const unsigned char **)&mf.dispe))
         {
             /* case 2.5, comment header */
             wrapping = 0;
@@ -1905,22 +1906,22 @@ mf_display()
                 {
                     outs(ANSI_COLOR(0;36));
                     flResetColor = 1;
-                    cmt_ctx.cur_is_op = 0;
+                    mf_cmt_ctx.cur_is_op = 0;
                 } else if (IS_REF_MARK(line_head) ||
                            !strncmp((char*)line_head, "==>", 3))
                 {
                     outs(ANSI_COLOR(0;32));
                     flResetColor = 1;
-                    cmt_ctx.cur_is_op = 0;
+                    mf_cmt_ctx.cur_is_op = 0;
                 }
-                else if (comment_render_body_prefix(&cmt_ctx, line_head, &mf.dispe, &col, (int *)&flResetColor))
+                else if (comment_render_body_prefix(&mf_cmt_ctx, line_head, &mf.dispe, &col, (int *)&flResetColor))
                 {
                     /* case 2.6, comment body */
                     is_comment_body = 1;
                 }
                 else
                 {
-                    cmt_ctx.cur_is_op = 0;
+                    mf_cmt_ctx.cur_is_op = 0;
                 }
             }
 
@@ -2076,7 +2077,7 @@ mf_display()
                                         ref_len--;
                                     }
 
-                                    const char *t_color = comment_get_body_color(&cmt_ctx);
+                                    const char *t_color = comment_get_body_color(&mf_cmt_ctx);
                                     if (t_color && *t_color)
                                         outs(t_color);
                                     else
@@ -2588,7 +2589,8 @@ PMORE_UINAV_FORWARDLINE()
     mf_forward(1);
 }
 
-#define REENTRANT_RESTORE() { mf = bkmf; fh = bkfh; }
+#define REENTRANT_RESTORE() { mf = bkmf; fh = bkfh; \
+                              mf_cb = bkcb; mf_cb_ctx = bkcb_ctx; }
 
 #ifndef HAVE_CMD_T
 #define HAVE_CMD_T 1
@@ -2628,54 +2630,21 @@ typedef struct {
 } pmore_exec_ctx_t;
 
 /*
- * Show the last page and remember how many rows hold content (live output
- * continues below them, then scrolls) and how much of the file was shown.
+ * For the caller's live mode, which takes over the screen after leaving pmore:
+ * show the last page and give on_live the screen row below its content (live
+ * output continues there, then scrolls), the file size shown and the comment
+ * state at its end, to render the comments that follow.
  */
-static void
-mf_enter_live(void)
+void
+pmore_go_live(void)
 {
+    if (!mf_cb || !mf_cb->on_live)
+        return;
     mf_goBottom();
     mf_display();
-    mf_live_rows = mf_disprows;
-    mf_live_size = mf.len;
-    strlcpy(mf_live_op_author, fh.op_author, sizeof(mf_live_op_author));
-}
-
-/*
- * 'v': hand the screen over to the caller's live mode (see mf_enter_live),
- * then exit with RET_LIVE.
- */
-MFPROTO int
-pmore_cmd_live(cmd_ctx_t *ctx)
-{
-    pmore_exec_ctx_t *p = (pmore_exec_ctx_t *)ctx->priv;
-    if (!p || !p->cb || !p->cb->can_live || !p->cb->can_live(p->user_ctx))
-        return 0;
-
-    mf_enter_live();
-    ctx->redraw = false;
-    ctx->quit = true;
-    p->retval = RET_LIVE;
-    return 0;
-}
-
-void
-pmore_get_live_view(int *rows, off_t *shown_size)
-{
-    if (rows)
-        *rows = mf_live_rows;
-    if (shown_size)
-        *shown_size = mf_live_size;
-}
-
-int
-pmore_get_live_comment_view(char *op_author, size_t szop_author, int *theme)
-{
-    if (op_author && szop_author)
-        strlcpy(op_author, mf_live_op_author, szop_author);
-    if (theme)
-        *theme = comment_pref_theme();
-    return bpref.rawmode == MFDISP_RAW_NA;
+    comment_ctx_t cmt = mf_cmt_ctx;
+    cmt.buf_start = cmt.buf_end = cmt.comments_start = NULL;
+    mf_cb->on_live(mf_disprows, mf.len, &cmt, fh.op_author, mf_cb_ctx);
 }
 
 MFPROTO int
@@ -3000,8 +2969,6 @@ const cmd_t pmore_cmds[] = {
     { 'o', "選項設定", "調整 pmore 瀏覽偏好設定", pmore_cmd_pref, 0, CMD_PRIO_NORM },
     { 'O', NULL, NULL, pmore_cmd_pref, 0, CMD_PRIO_NONE },
     { '\\', "色彩顯示模式", "切換 ANSI 色彩顯示模式", pmore_cmd_rawmode, 0, CMD_PRIO_NORM },
-    { 'v', "實況模式", "進入實況模式 (Live) 即時顯示新推文", pmore_cmd_live, 0, CMD_PRIO_NORM },
-    { 'V', NULL, NULL, pmore_cmd_live, 0, CMD_PRIO_NONE },
 #ifdef PMORE_USE_INTERNAL_HELP
     { 'h', "說明", "顯示 pmore 操作說明", pmore_cmd_help, 0, CMD_PRIO_LOW },
     { 'H', NULL, NULL, pmore_cmd_help, 0, CMD_PRIO_NONE },
@@ -3055,6 +3022,10 @@ _pmore2(
 
     bkmf = mf; /* simple re-entrant hack */
     bkfh = fh;
+    const struct pmore_callbacks *bkcb = mf_cb;
+    void *bkcb_ctx = mf_cb_ctx;
+    mf_cb = cb;
+    mf_cb_ctx = ctx;
     RESETFH();
     RESETMF();
 
@@ -3073,14 +3044,9 @@ _pmore2(
 
     clear();
 
-    /* Caller asked to start in live mode: same as pressing 'v' at once. */
-    if (cb->start_live && cb->can_live &&
-        cb->start_live(ctx) && cb->can_live(ctx))
-    {
-        mf_enter_live();
-        retval = RET_LIVE;
+    /* The caller may leave at once, e.g. to go straight to its live mode. */
+    if (cb->start && (retval = cb->start(ctx)) != 0)
         flExit = 1;
-    }
 
     while (!flExit)
     {

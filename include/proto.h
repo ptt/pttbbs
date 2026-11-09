@@ -526,8 +526,6 @@ int  mbbsd_ipc_handler(const ipc_hdr_t *hdr, const void *payload);
 int  wmsg_on_deliver(const ipc_wmsg_t *w);
 int  talk_on_request(const ipc_talk_t *t);
 void ipc_init(const char *userid, pid_t pid, int uslot);
-void more_on_live_comment(uint32_t bid, aidu_t aid, const char *text, uint64_t fsize);
-void more_live_resubscribe(void);
 void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
@@ -560,10 +558,11 @@ void m_sob_brd(char *bname,char *fromdir);
 /* pager (more) */
 int more(const char *fpath, int promptend);
 /* Readers (posts, mails, the announce) use more_ex() with these. */
+struct live_ctx;
 typedef struct more_hooks {
     const cmd_layer_t *layers;
     const char *title;          // of the help screen
-    int  (*comment)(void *ctx); // add a comment; returns FULLUPDATE/DIRCHANGED
+    struct live_ctx *live;      // live mode of a post (livepost.h), or NULL
     void *ctx;
     // 's': switch boards; set only in a post read from a board's list, not
     // in readers opened from other flows, which go on with the old board
@@ -576,6 +575,8 @@ int more_inmemory(void *content, int size, int promptend);
 void more_leave(cmd_ctx_t *ctx, int retval);
 int more_at_top(cmd_ctx_t *ctx);        // the first page is shown
 int more_at_end(cmd_ctx_t *ctx);        // the last page is shown
+void *more_caller_ctx(cmd_ctx_t *ctx);  // more_hooks_t.ctx
+bool more_leave_live(cmd_ctx_t *ctx);   // leave for more_hooks_t.live
 extern const cmd_t more_list_nav_cmds[];    // f/b, past the ends: READ_NEXT/PREV
 extern const cmd_t more_thread_nav_cmds[];  // ][=aAt: RELATE_*, AUTHOR_*
 extern const cmd_t more_reader_cmds[];      // z (chess), L (BBSLua)
@@ -585,6 +586,7 @@ void pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx));
 extern const cmd_t pmore_cmds[];
 extern const cmd_t pmore_movie_cmds[];
 
+struct comment_ctx;
 struct pmore_callbacks {
     int (*process_key)(int key, void *ctx);
     // Before reading each key: whether the first / last page is shown.
@@ -593,19 +595,18 @@ struct pmore_callbacks {
     int (*help)(int y, void *ctx);
     int (*vkey)(void *ctx);
     int (*exit)(void *ctx);
-    int (*can_live)(void *ctx);     // non-zero: 'v' exits pmore with RET_LIVE
-    int (*start_live)(void *ctx);   // non-zero: enter live mode right away, as
-                                    // if 'v' was pressed (needs can_live)
+    int (*start)(void *ctx);        // once the file is attached: non-zero
+                                    // leaves pmore at once, returning it
+    // pmore_go_live(): the last page is shown; row is the screen row below
+    // its content, shown the file bytes shown, cmt the comment state at its
+    // end (without the buffer) and op_author the author of the post.
+    void (*on_live)(int row, off_t shown, const struct comment_ctx *cmt,
+                    const char *op_author, void *ctx);
 };
 
-/* After pmore returned RET_LIVE: screen rows holding content on the last page
- * and the file size it was showing. */
-void pmore_get_live_view(int *rows, off_t *shown_size);
-
-/* After pmore returned RET_LIVE: how the last page rendered new format
- * comments. Returns 0 if they were shown raw (not rendered). */
-int pmore_get_live_comment_view(char *op_author, size_t szop_author,
-                                int *theme);
+/* While pmore runs (e.g. from its key handler or start callback): shows the
+ * last page for live mode and gives it to on_live; then leave pmore. */
+void pmore_go_live(void);
 
 int pmore2(
         const char *fpath, int promptend, void *ctx,

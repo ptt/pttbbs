@@ -37,7 +37,7 @@ typedef struct {
 } comment_theme_t;
 
 /* Context passed for comment rendering */
-typedef struct {
+typedef struct comment_ctx {
     const unsigned char *buf_start;     /* mf.start */
     const unsigned char *buf_end;       /* mf.end */
     const unsigned char *comments_start;/* mf.comments_start */

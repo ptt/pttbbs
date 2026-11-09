@@ -3,6 +3,7 @@
 #include "daemons.h"
 #include "activity.h"
 #include "content.h"
+#include "livepost.h"
 #include <arpa/inet.h>
 
 #define SMHASHLEN (64/8)
@@ -2429,9 +2430,10 @@ typedef struct {
     int ent;
     fileheader_t *fhdr;
     const char *direct;
+    live_ctx_t live;
 } read_post_ctx_t;
 
-/* more_hooks_t.comment: lets live mode comment on the article being read. */
+/* Lets live mode comment on the article being read. */
 static int
 read_post_comment(void *ctx)
 {
@@ -2451,6 +2453,16 @@ static int rp_cmd_query(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOQUERYINFO);
 static int rp_cmd_edittitle(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_EDITTITLE); }
 static int rp_cmd_edit(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_EDITPOST); }
 
+/* 'v': live mode (livepost.c), run by read_post() after leaving the pager. */
+static int
+rp_cmd_live(cmd_ctx_t *ctx)
+{
+    const read_post_ctx_t *rp = (const read_post_ctx_t *)more_caller_ctx(ctx);
+    if (rp && rp->live.bid)
+        more_leave_live(ctx);
+    return 0;
+}
+
 static const cmd_t read_post_cmds[] = {
     { 'y', "回應", "回覆文章至看板或信箱", rp_cmd_replyall, 0, CMD_PRIO_HIGH },
     { 'Y', NULL, NULL, rp_cmd_replyall, 0, CMD_PRIO_NONE },
@@ -2464,6 +2476,8 @@ static const cmd_t read_post_cmds[] = {
     { 'Q', "查詢資訊", "查詢文章代碼(AID)與檔案資訊", rp_cmd_query, 0, CMD_PRIO_LOW },
     { 'E', "修改文章", "編輯目前文章內容", rp_cmd_edit, 0, CMD_PRIO_LOW },
     { 'T', "修改標題", "修改目前文章標題", rp_cmd_edittitle, 0, CMD_PRIO_LOW },
+    { 'v', "實況模式", "進入實況模式 (Live) 即時顯示新推文", rp_cmd_live, 0, CMD_PRIO_NORM },
+    { 'V', NULL, NULL, rp_cmd_live, 0, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -2480,6 +2494,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            genbuf[PATHLEN];
     int             more_result;
+    int             live_bid = currbid;
 
     if (fhdr->owner[0] == '-' || fhdr->filename[0] == 'L' || !fhdr->filename[0])
 	return READ_SKIP;
@@ -2522,6 +2537,8 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
             SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
         }
         setbfile(genbuf, bnbuf, fhdr->filename);
+        // Comments go to (and are published for) the original board.
+        live_bid = getbnum(bnbuf);
 
 #ifdef DEBUG
         vmsgf("redirect: %s", genbuf);
@@ -2537,14 +2554,22 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     // Real read.
-    {
-        read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
-        const more_hooks_t hooks = { .layers = read_post_layers,
-                                     .title = "文章閱讀",
-                                     .comment = read_post_comment, .ctx = &rp,
-                                     .select_board = select_board_to_read };
-        more_result = more_ex(genbuf, YEA, &hooks);
+    read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
+    if (live_bid > 0 && strstr(genbuf, "boards/")) {
+        rp.live.aid = fn2aidu(fhdr->filename);
+        if (aidu_raw(rp.live.aid))
+            rp.live.bid = (uint32_t)live_bid;
     }
+    rp.live.start = rp.live.bid && live_check_repeat(rp.live.bid, rp.live.aid);
+    const more_hooks_t hooks = { .layers = read_post_layers,
+                                 .title = "文章閱讀",
+                                 .live = &rp.live, .ctx = &rp,
+                                 .select_board = select_board_to_read };
+    more_result = more_ex(genbuf, YEA, &hooks);
+    if (more_result > FULLUPDATE || rp.live.entered)
+        live_reset_repeat();    // left by a reader key, not to refresh
+    if (rp.live.entered)
+        more_result = live_run(&rp.live, genbuf, read_post_comment, &rp);
 
     {
 	time4_t posttime = get_fhdr_stamp_ts(fhdr->filename);
