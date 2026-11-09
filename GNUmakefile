@@ -10,6 +10,7 @@ all: $(SUBDIRS)
 mbbsd: common
 util: common
 service: common
+service-private: common
 
 $(SUBDIRS):
 	$(MAKE) -C $@
