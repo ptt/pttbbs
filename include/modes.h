@@ -4,18 +4,14 @@
 /* common return values of read.c */
 #define DONOTHING       0       /* Read menu command return states */
 #define FULLUPDATE      1       /* Entire screen was destroyed in this oper */
-#define PARTUPDATE      2       /* Only the top three lines were destroyed */
 #define DOQUIT          3       /* Exit read menu was executed */
 #define NEWDIRECT       4       /* Directory has changed, re-read files */
 #define READ_NEXT       5       /* Direct read next file */
 #define READ_PREV       6       /* Direct read prev file */
 #define DIRCHANGED      8       /* Index file was changed */
-#define READ_REDRAW     9
-#define PART_REDRAW     10
-#define TITLE_REDRAW    11
-#define READ_SKIP       12      
-#define HEADERS_RELOAD  13      
-#define POST_SUCCESS    14
+#define READ_REDRAW     9       /* Redraw the screen */
+#define PART_REDRAW     10      /* Reload the entries */
+#define READ_SKIP       12
 
 /* Only read.c lists (posts, mails): returned by their item functions. */
 enum {
@@ -28,7 +24,7 @@ enum {
     RET_READ_AUTHOR_PREV,
     RET_READ_MAX = 0x3f,
 };
-_Static_assert(POST_SUCCESS < RET_READ_MIN, "read.c values overflow");
+_Static_assert(READ_SKIP < RET_READ_MIN, "read.c values overflow");
 _Static_assert(RET_READ_AUTHOR_PREV <= RET_READ_MAX, "RET_READ_* overflow");
 
 /* The first private value of a caller and its key bindings (e.g. read_post). */

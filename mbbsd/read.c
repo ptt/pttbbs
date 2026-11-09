@@ -1104,12 +1104,9 @@ read_apply_mode(read_ctx_t *cx, cmd_ctx_t *ctx, int mode) {
         ctx->reload = true;
         ctx->redraw = true;
         break;
-    case PARTUPDATE:
     case PART_REDRAW:
-    case HEADERS_RELOAD:
         ctx->reload = true;
         break;
-    case TITLE_REDRAW:
     case READ_REDRAW:
         ctx->redraw = true;
         break;
@@ -1453,7 +1450,7 @@ read_cmd_tag(cmd_ctx_t *ctx) {
     if (ToggleTagItem(&headers[row])) {
         int cur_ln = read_view_v2p(&cx->view, ctx->curr);
         read_move_cursor(cx, ctx, cur_ln + 1, 1);
-        read_apply_mode(cx, ctx, PARTUPDATE);
+        read_apply_mode(cx, ctx, PART_REDRAW);
     }
     return 0;
 }
