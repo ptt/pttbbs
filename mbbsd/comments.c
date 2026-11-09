@@ -395,6 +395,22 @@ comment_theme_menu_options(void)
     return "經典醒目\t單純易讀\t對齊顯示";
 }
 
+static int s_comment_pref_theme = COMMENT_THEME_CLASSIC;
+
+int
+comment_pref_theme(void)
+{
+    return s_comment_pref_theme;
+}
+
+void
+comment_set_pref_theme(int theme_idx)
+{
+    if (theme_idx < 0 || theme_idx >= COMMENT_THEMES)
+        theme_idx = COMMENT_THEME_CLASSIC;
+    s_comment_pref_theme = theme_idx;
+}
+
 static void
 comment_print_fill(const comment_theme_t *thm, int pad)
 {

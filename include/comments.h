@@ -56,6 +56,10 @@ const char *comment_theme_name(int theme_idx);
 int comment_theme_count(void);
 const char *comment_theme_menu_options(void);
 
+/* The comment theme the user chose (e.g. in the pager options), per session. */
+int comment_pref_theme(void);
+void comment_set_pref_theme(int theme_idx);
+
 /* Initialize OP state at page start if line_head is a comment body line */
 void comment_init_op_state(comment_ctx_t *ctx,
                            const unsigned char *line_head);

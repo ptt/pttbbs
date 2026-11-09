@@ -561,13 +561,12 @@ typedef struct
 
         oldwrapmode,    // traditional wrap
         oldstatusbar,   // traditional statusbar
-        rawmode,        // show file as-is.
-        comment_theme;  // comment color theme
+        rawmode;        // show file as-is.
 } MF_BrowsingPreference;
 
 MF_BrowsingPreference bpref =
 { MFDISP_WRAP_WRAP, MFDISP_SEP_DEFAULT, 1,
-    0, 0, 0, 0 };
+    0, 0, 0 };
 
 /* structure generalized for the one-arg mf_attach_handler */
 struct SimpleBuffer {
@@ -1701,7 +1700,7 @@ mf_display()
         .op_author = fh.op_author,
         .show_comment_ip = 1,
         .max_width = t_columns - 1,
-        .theme = bpref.comment_theme,
+        .theme = comment_pref_theme(),
         .cur_is_op = 0,
     };
 
@@ -2675,7 +2674,7 @@ pmore_get_live_comment_view(char *op_author, size_t szop_author, int *theme)
     if (op_author && szop_author)
         strlcpy(op_author, mf_live_op_author, szop_author);
     if (theme)
-        *theme = bpref.comment_theme;
+        *theme = comment_pref_theme();
     return bpref.rawmode == MFDISP_RAW_NA;
 }
 
@@ -3518,7 +3517,7 @@ pmore_Preference()
                 "\\", 1, "色彩顯示方式:", -1,
                 "預設格式化內容\t原始ANSI控制碼\t純文字");
 
-        pmore_prefEntry(bpref.comment_theme,
+        pmore_prefEntry(comment_pref_theme(),
                 "c", 1, "留言色彩主題:", -1,
                 comment_theme_menu_options());
 
@@ -3545,7 +3544,8 @@ pmore_Preference()
                 bpref.rawmode = (bpref.rawmode+1) % MFDISP_RAW_MODES;
                 break;
             case 'c':
-                bpref.comment_theme = (bpref.comment_theme + 1) % comment_theme_count();
+                comment_set_pref_theme((comment_pref_theme() + 1) %
+                                       comment_theme_count());
                 break;
             case 'w':
                 bpref.wrapmode = (bpref.wrapmode+1) % MFDISP_WRAP_MODES;
