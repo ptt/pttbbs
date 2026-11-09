@@ -1937,19 +1937,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     setdirpath(genbuf, direct, fhdr->filename);
     if (!is_file_owner(fhdr, &cuser))
-    {
-#ifdef USE_SYSOP_EDIT
-	if (!HasUserPerm(PERM_SYSOP))
-	    return DONOTHING;
-
-	// admin edit!
-	file_appendf("log/security",
-		"%d %s %d %s admin edit (board) file=%s\n",
-		(int)now, Cdate(&now), getpid(), cuser.userid, genbuf);
-#else
         return DONOTHING;
-#endif
-    }
 
     if (!dashf(genbuf)) {
         vmsg("此檔已損毀，無法編輯。您可以試著刪除它。");

@@ -20,34 +20,6 @@
  *     documentation and/or other materials provided with the distribution.
  */
 
-#ifdef USE_SYSOP_EDIT
-static int
-check_sysop_edit_perm(const char *fpath)
-{
-    if (!HasUserPerm(PERM_SYSOP) ||
-	strcmp(fpath, "etc/ve.hlp") == 0)
-	return 0;
-
-    if (fpath && *fpath) {
-        if (strstr(fpath, BBSHOME) == fpath)
-            fpath += (strlen(BBSHOME) + 1);
-
-        // allow only files in board, man or home.
-        if (!(strstr(fpath, "boards/") == fpath ||
-              strstr(fpath, "home/") == fpath ||
-              strstr(fpath, "man/") == fpath))
-            return 0;
-    }
-
-#ifdef BN_SECURITY
-    if (strcmp(currboard, BN_SECURITY) == 0)
-	return 0;
-#endif // BN_SECURITY
-
-    return 1;
-}
-#endif
-
 typedef struct {
     int retval;
     int *lineno;
@@ -61,16 +33,7 @@ static int pager_cmd_bbslua(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval
 #endif
 static int pager_cmd_query(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOQUERYINFO; return 0; }
 static int pager_cmd_copy2tmp(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_COPY2TMP; return 0; }
-static int pager_cmd_edit(cmd_ctx_t *ctx) {
-#ifdef USE_SYSOP_EDIT
-    if (check_sysop_edit_perm("")) {
-        ((pager_ctx_t *)ctx->priv)->retval = RET_DOSYSOPEDIT;
-        return 0;
-    }
-#endif
-    ((pager_ctx_t *)ctx->priv)->retval = RET_EDITPOST;
-    return 0;
-}
+static int pager_cmd_edit(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_EDITPOST; return 0; }
 static int pager_cmd_edittitle(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_EDITTITLE; return 0; }
 static int pager_cmd_comment(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_DOCOMMENT; return 0; }
 static int pager_cmd_score(cmd_ctx_t *ctx) { ((pager_ctx_t *)ctx->priv)->retval = RET_SCORE; return 0; }
@@ -214,18 +177,6 @@ common_pager_exit_handler(int r, const char *fpath, const more_hooks_t *hooks)
     // post processing
     switch(r)
     {
-#ifdef USE_SYSOP_EDIT
-	case RET_DOSYSOPEDIT:
-	    r = FULLUPDATE;
-	    if (!check_sysop_edit_perm(fpath))
-		break;
-	    file_appendf("log/security",
-		    "%u %s %d %s admin edit file=%s\n",
-		    (unsigned)now, Cdate(&now), getpid(), cuser.userid, fpath);
-	    veditfile(fpath);
-	    break;
-#endif
-
 	case RET_COPY2TMP:
 	    r = FULLUPDATE;
 	    if (HasUserPerm(PERM_BASIC))

@@ -109,7 +109,6 @@
 #define PMORE_ACCURATE_WRAPEND          // try more harder to find file end in wrap mode
 #define PMORE_AUTOEXIT_FIRSTPAGE        // when prompt=NA, show only page 1
 #define PMORE_TRADITIONAL_FULLCOL       // to work with traditional ascii arts
-#define PMORE_LOG_SYSOP_EDIT            // log whenever sysop uses E
 #define PMORE_OVERRIDE_TIME             // override time format if possible
 #define PMORE_EXPAND_ESC_STAR           // expand ^[*s style TWBBS variable expansion.
 
