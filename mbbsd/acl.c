@@ -348,6 +348,43 @@ ui_unmute_user_for_board(const char *uid, const char *board) {
     return 0;
 }
 
+// Prints the mute history of the user (on all boards) below the cursor,
+// and offers to view it all if it doesn't fit the screen.
+static void
+ui_print_user_muted_history(const char *uid) {
+    AUTO_HOMEFILE(history_log, uid, FN_USER_MUTED_HISTORY);
+    char buf[ANSILINELEN];
+    int y = vgety() + (vgetx() > 0 ? 1 : 0) + 1;
+    bool more_lines = false;
+    FILE *fp;
+
+    mvouts(y++, 0, "歷史紀錄：");
+    if (!(fp = fopen(history_log, "rt"))) {
+        mvouts(y, 0, "(無)");
+        pressanykey();
+        return;
+    }
+    while (fgets(buf, sizeof(buf), fp)) {
+        if (y >= b_lines) {
+            more_lines = true;
+            break;
+        }
+        chomp(buf);
+        // One screen line each, or the lines below would be pushed down.
+        buf[stream_col_offset(t_columns - 1, buf, NULL)] = '\0';
+        mvouts(y++, 0, buf);
+        outs(ANSI_RESET);
+    }
+    fclose(fp);
+
+    if (!more_lines) {
+        pressanykey();
+        return;
+    }
+    if (tolower(vmsg("要檢視使用者完整的歷史紀錄嗎？ [y/N]")) == 'y')
+        more(history_log, YEA);
+}
+
 int
 edit_muted_list_for_board(const char *board) {
     // TODO generalize this.
@@ -382,7 +419,7 @@ edit_muted_list_for_board(const char *board) {
         ANSI_RESET
         );
 
-        getdata(1, 0, "(A)增加 (D)提前清除 (S)取得目前狀態 "
+        getdata(1, 0, "(A)增加 (D)提前清除 (S)查詢帳號 "
                       "(L)列出設定歷史 "
                       "[Q]結束? ",
                 ans, 2, LCECHO);
@@ -398,7 +435,7 @@ edit_muted_list_for_board(const char *board) {
                     continue;
                 move(1, 0); clrtobot();
                 ui_print_user_muted_status_for_board(uid, board);
-                pressanykey();
+                ui_print_user_muted_history(uid);
                 break;
 
             case 'a':
