@@ -37,9 +37,19 @@ typedef struct {
     const char *fpath;
     const more_hooks_t *hooks;
     int retval;             // more_ex() returns this once a key binding leaves
+    int action;             // PAGER_DO_*: to do after leaving the pager
 } pager_run_t;
 
 #define PAGER_RUN(ctx) ((pager_run_t *)(ctx)->priv)
+
+// The pager's own commands, which take the screen; they run after leaving
+// pmore, see pager_run_action().
+enum {
+    PAGER_DO_NONE = 0,
+    PAGER_DO_COPY2TMP,
+    PAGER_DO_CHESS,
+    PAGER_DO_BBSLUA,
+};
 
 #define PAGER_MAX_LAYERS (PSB_MAX_CMD_LAYERS)
 
@@ -94,6 +104,14 @@ more_leave_live(cmd_ctx_t *ctx)
 }
 
 static int
+pager_leave_to(cmd_ctx_t *ctx, int action)
+{
+    more_leave(ctx, FULLUPDATE);
+    PAGER_RUN(ctx)->action = action;
+    return 0;
+}
+
+static int
 pager_cmd_quit(cmd_ctx_t *ctx)
 {
     ctx->quit = true;
@@ -104,8 +122,7 @@ pager_cmd_quit(cmd_ctx_t *ctx)
 static int
 pager_cmd_copy2tmp(cmd_ctx_t *ctx)
 {
-    more_leave(ctx, RET_COPY2TMP);
-    return 0;
+    return pager_leave_to(ctx, PAGER_DO_COPY2TMP);
 }
 
 #ifdef USE_PMORE
@@ -129,11 +146,11 @@ static const cmd_t pager_common_cmds[] = {
 
 static int more_cmd_read_next(cmd_ctx_t *ctx) { more_leave(ctx, READ_NEXT); return 0; }
 static int more_cmd_read_prev(cmd_ctx_t *ctx) { more_leave(ctx, READ_PREV); return 0; }
-static int more_cmd_relate_next(cmd_ctx_t *ctx) { more_leave(ctx, RELATE_NEXT); return 0; }
-static int more_cmd_relate_prev(cmd_ctx_t *ctx) { more_leave(ctx, RELATE_PREV); return 0; }
-static int more_cmd_relate_first(cmd_ctx_t *ctx) { more_leave(ctx, RELATE_FIRST); return 0; }
-static int more_cmd_author_next(cmd_ctx_t *ctx) { more_leave(ctx, AUTHOR_NEXT); return 0; }
-static int more_cmd_author_prev(cmd_ctx_t *ctx) { more_leave(ctx, AUTHOR_PREV); return 0; }
+static int more_cmd_relate_next(cmd_ctx_t *ctx) { more_leave(ctx, RET_READ_RELATE_NEXT); return 0; }
+static int more_cmd_relate_prev(cmd_ctx_t *ctx) { more_leave(ctx, RET_READ_RELATE_PREV); return 0; }
+static int more_cmd_relate_first(cmd_ctx_t *ctx) { more_leave(ctx, RET_READ_RELATE_FIRST); return 0; }
+static int more_cmd_author_next(cmd_ctx_t *ctx) { more_leave(ctx, RET_READ_AUTHOR_NEXT); return 0; }
+static int more_cmd_author_prev(cmd_ctx_t *ctx) { more_leave(ctx, RET_READ_AUTHOR_PREV); return 0; }
 
 // Past the ends: read the next (previous) item; else the pager scrolls.
 static int
@@ -179,9 +196,9 @@ const cmd_t more_thread_nav_cmds[] = {
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
-static int more_cmd_chess(cmd_ctx_t *ctx) { more_leave(ctx, RET_DOCHESSREPLAY); return 0; }
+static int more_cmd_chess(cmd_ctx_t *ctx) { return pager_leave_to(ctx, PAGER_DO_CHESS); }
 #if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-static int more_cmd_bbslua(cmd_ctx_t *ctx) { more_leave(ctx, RET_DOBBSLUA); return 0; }
+static int more_cmd_bbslua(cmd_ctx_t *ctx) { return pager_leave_to(ctx, PAGER_DO_BBSLUA); }
 #endif
 
 const cmd_t more_reader_cmds[] = {
@@ -275,14 +292,13 @@ common_pager_position(bool at_top, bool at_end, void *ctx)
 }
 #endif
 
-static int
-common_pager_exit_handler(int r, const char *fpath, const more_hooks_t *hooks)
+/* Runs what a key binding left the pager for (pager_run_t.action). */
+static void
+pager_run_action(int action, const char *fpath)
 {
-    // post processing
-    switch(r)
+    switch (action)
     {
-	case RET_COPY2TMP:
-	    r = FULLUPDATE;
+	case PAGER_DO_COPY2TMP:
 	    if (HasUserPerm(PERM_BASIC))
 	    {
 		char buf[PATHLEN];
@@ -295,33 +311,19 @@ common_pager_exit_handler(int r, const char *fpath, const more_hooks_t *hooks)
 	    }
 	    break;
 
-	case RET_SELECTBRD:
-	    r = FULLUPDATE;
-	    // Only where the caller allows it (see more_hooks_t.select_board);
-	    // other readers are opened from flows that go on with their board
-	    // (vote results, a post's edit history or the recycle bin).
-	    if (hooks && hooks->select_board)
-		r = hooks->select_board();
-	    else
-		vmsg("這裡不能切換看板。");
-	    break;
-
-	case RET_DOCHESSREPLAY:
-	    r = FULLUPDATE;
+	case PAGER_DO_CHESS:
 	    if (HasUserPerm(PERM_BASIC))
 		ChessReplayGame(fpath);
 	    break;
 
 #if defined(USE_BBSLUA) && !defined(DISABLE_BBSLUA_IN_PAGER)
-	case RET_DOBBSLUA:
-	    r = FULLUPDATE;
+	case PAGER_DO_BBSLUA:
 	    // check permission again
 	    if (HasUserPerm(PERM_BASIC))
 		bbslua(fpath);
 	    break;
 #endif
     }
-    return r;
 }
 
 #ifndef USE_PMORE ///////////////////////////////////////////////////////////
@@ -537,7 +539,8 @@ more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
 	    lineno = 0;
     }
     fclose(fp);
-    return abort > 0 ? common_pager_exit_handler(abort, fpath, hooks) : 0;
+    pager_run_action(run.action, fpath);
+    return abort > 0 ? abort : 0;
 }
 
 #else	// USE_PMORE ////////////////////////////////////////////////////////
@@ -600,13 +603,14 @@ more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
         cb.on_live = common_pager_on_live;
     }
     int r = pmore2(fpath, promptend, &run, &cb);
-    return common_pager_exit_handler(r, fpath, hooks);
+    pager_run_action(run.action, fpath);
+    return r;
 }
 
 static int
 memory_pager_exit_handler(int r, const void *ctx GCC_UNUSED)
 {
-    // TODO: port some functionality from `common_pager_exit_handler'.
+    // TODO: port some functionality from `pager_run_action'.
     return r;
 }
 

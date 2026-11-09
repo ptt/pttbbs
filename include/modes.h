@@ -17,20 +17,22 @@
 #define HEADERS_RELOAD  13      
 #define POST_SUCCESS    14
 
-// values returned by pager
-#define RET_DOREPLY	    (999)
-#define RET_DOCOMMENT	    (998)
-#define RET_DOQUERYINFO	    (997)
-#define RET_DOCHESSREPLAY   (995)
-#define RET_DOBBSLUA	    (994)
-#define RET_COPY2TMP	    (993)
-#define RET_SELECTBRD	    (992)
-#define RET_DOREPLYALL	    (991)
-#define RET_SELECTAID	    (990)
-#define RET_EDITPOST	    (988)
-#define RET_EDITTITLE	    (987)
-#define RET_SCORE	    (986)
-#define RET_MIN_SPECIAL     (900)   // A sentinel indicating special return.
+/* Only read.c lists (posts, mails): returned by their item functions. */
+enum {
+    RET_READ_MIN = 0x20,
+    RET_READ_AID = RET_READ_MIN,    /* search by AID ('#', posts only) */
+    RET_READ_RELATE_FIRST,
+    RET_READ_RELATE_NEXT,
+    RET_READ_RELATE_PREV,
+    RET_READ_AUTHOR_NEXT,
+    RET_READ_AUTHOR_PREV,
+    RET_READ_MAX = 0x3f,
+};
+_Static_assert(POST_SUCCESS < RET_READ_MIN, "read.c values overflow");
+_Static_assert(RET_READ_AUTHOR_PREV <= RET_READ_MAX, "RET_READ_* overflow");
+
+/* The first private value of a caller and its key bindings (e.g. read_post). */
+#define RET_PRIVATE_MIN (0x100)
 
 /* user ¾Þ§@ª¬ºA»P¼Ò¦¡ */
 #define IDLE            0

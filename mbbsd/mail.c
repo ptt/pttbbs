@@ -1868,10 +1868,14 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 int b_call_in(int ent, const fileheader_t * fhdr, const char *direct);
 
 /* Key bindings of the mail reader; mail_read() does the work after leaving. */
+enum {
+    MR_REPLY = RET_PRIVATE_MIN,
+};
+
 static int
 mail_read_cmd_reply(cmd_ctx_t *ctx)
 {
-    more_leave(ctx, RET_DOREPLY);
+    more_leave(ctx, MR_REPLY);
     return 0;
 }
 
@@ -1919,8 +1923,7 @@ mail_read(int ent, fileheader_t * fhdr, const char *direct)
 	    clear();
 	    vmsg("此封信無內容。");
 	    return FULLUPDATE;
-	case RET_DOREPLY:
-	case RET_DOREPLYALL:
+	case MR_REPLY:
 	    mailbox_reply(ent, fhdr, direct);
 	    return FULLUPDATE;
     }

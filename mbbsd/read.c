@@ -889,23 +889,23 @@ read_key_handle_mode_navigation(read_ctx_t *cx, int mode, int *new_ln_ptr, char 
     case READ_NEXT:
         *new_ln_ptr = locmem->crs_ln + 1;
         break;
-    case RELATE_PREV:
+    case RET_READ_RELATE_PREV:
         *new_ln_ptr = thread(cx, RELATE_PREV);
         break;
-    case RELATE_NEXT:
+    case RET_READ_RELATE_NEXT:
         *new_ln_ptr = thread(cx, RELATE_NEXT);
         if (*new_ln_ptr == locmem->crs_ln) {
             *default_ch_ptr = 0;
             return 1;
         }
         break;
-    case RELATE_FIRST:
+    case RET_READ_RELATE_FIRST:
         *new_ln_ptr = thread(cx, RELATE_FIRST);
         break;
-    case AUTHOR_PREV:
+    case RET_READ_AUTHOR_PREV:
         *new_ln_ptr = thread(cx, AUTHOR_PREV);
         break;
-    case AUTHOR_NEXT:
+    case RET_READ_AUTHOR_NEXT:
         *new_ln_ptr = thread(cx, AUTHOR_NEXT);
         break;
     }
@@ -1577,7 +1577,7 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
         if (mode == READ_SKIP)
             mode = lastmode;
 
-        if (mode == RET_SELECTAID) {
+        if (mode == RET_READ_AID) {
             int new_ln = cx->locmem->crs_ln;
             char default_ch = 0;
             select_by_aid(cx, &new_ln, &newdirect_new_ln, &default_ch);
@@ -1589,9 +1589,9 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
         }
 
         if (mode == READ_PREV || mode == READ_NEXT ||
-            mode == RELATE_PREV || mode == RELATE_FIRST ||
-            mode == AUTHOR_NEXT || mode == AUTHOR_PREV ||
-            mode == RELATE_NEXT) {
+            mode == RET_READ_RELATE_PREV || mode == RET_READ_RELATE_FIRST ||
+            mode == RET_READ_AUTHOR_NEXT || mode == RET_READ_AUTHOR_PREV ||
+            mode == RET_READ_RELATE_NEXT) {
             lastmode = mode;
             int new_ln = cx->locmem->crs_ln;
             char default_ch = 0;

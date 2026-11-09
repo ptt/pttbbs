@@ -2441,17 +2441,31 @@ read_post_comment(void *ctx)
     return comment(rp->ent, rp->fhdr, rp->direct);
 }
 
-/* Key bindings of the post reader; read_post() does the work after leaving. */
+/*
+ * Key bindings of the post reader. They leave the pager and read_post() does
+ * the work (back to the list after it), as these change the post or the list.
+ */
+enum {
+    RP_REPLY = RET_PRIVATE_MIN,
+    RP_REPLYALL,
+    RP_COMMENT,
+    RP_SCORE,
+    RP_QUERYINFO,
+    RP_EDITPOST,
+    RP_EDITTITLE,
+    RP_SELECTBRD,
+};
+
 static int rp_leave(cmd_ctx_t *ctx, int r) { more_leave(ctx, r); return 0; }
-static int rp_cmd_reply(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOREPLY); }
-static int rp_cmd_replyall(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOREPLYALL); }
-static int rp_cmd_comment(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOCOMMENT); }
-static int rp_cmd_score(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_SCORE); }
-static int rp_cmd_selectbrd(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_SELECTBRD); }
-static int rp_cmd_selectaid(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_SELECTAID); }
-static int rp_cmd_query(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_DOQUERYINFO); }
-static int rp_cmd_edittitle(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_EDITTITLE); }
-static int rp_cmd_edit(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_EDITPOST); }
+static int rp_cmd_reply(cmd_ctx_t *ctx) { return rp_leave(ctx, RP_REPLY); }
+static int rp_cmd_replyall(cmd_ctx_t *ctx) { return rp_leave(ctx, RP_REPLYALL); }
+static int rp_cmd_comment(cmd_ctx_t *ctx) { return rp_leave(ctx, RP_COMMENT); }
+static int rp_cmd_score(cmd_ctx_t *ctx) { return rp_leave(ctx, RP_SCORE); }
+static int rp_cmd_selectbrd(cmd_ctx_t *ctx) { return rp_leave(ctx, RP_SELECTBRD); }
+static int rp_cmd_selectaid(cmd_ctx_t *ctx) { return rp_leave(ctx, RET_READ_AID); }
+static int rp_cmd_query(cmd_ctx_t *ctx) { return rp_leave(ctx, RP_QUERYINFO); }
+static int rp_cmd_edittitle(cmd_ctx_t *ctx) { return rp_leave(ctx, RP_EDITTITLE); }
+static int rp_cmd_edit(cmd_ctx_t *ctx) { return rp_leave(ctx, RP_EDITPOST); }
 
 /* 'v': live mode (livepost.c), run by read_post() after leaving the pager. */
 static int
@@ -2563,8 +2577,7 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     rp.live.start = rp.live.bid && live_check_repeat(rp.live.bid, rp.live.aid);
     const more_hooks_t hooks = { .layers = read_post_layers,
                                  .title = "文章閱讀",
-                                 .live = &rp.live, .ctx = &rp,
-                                 .select_board = select_board_to_read };
+                                 .live = &rp.live, .ctx = &rp };
     more_result = more_ex(genbuf, YEA, &hooks);
     if (more_result > FULLUPDATE || rp.live.entered)
         live_reset_repeat();    // left by a reader key, not to refresh
@@ -2594,23 +2607,25 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	    clear();
 	    vmsg("此文章無內容");
 	    return FULLUPDATE;
-	case RET_DOREPLY:
-	case RET_DOREPLYALL:
+	case RP_REPLY:
+	case RP_REPLYALL:
 	    do_reply(fhdr);
             return FULLUPDATE;
-	case RET_SCORE: // Use comment until the rating/vote system is ready.
-	case RET_DOCOMMENT:
+	case RP_SCORE: // Use comment until the rating/vote system is ready.
+	case RP_COMMENT:
             comment(ent, fhdr, direct);
 	    return FULLUPDATE;
-	case RET_DOQUERYINFO:
+	case RP_QUERYINFO:
 	    view_postinfo(ent, fhdr, direct, b_lines-3);
 	    return FULLUPDATE;
-        case RET_EDITPOST:
+        case RP_EDITPOST:
             edit_post(ent, fhdr, direct);
             return FULLUPDATE;
-        case RET_EDITTITLE:
+        case RP_EDITTITLE:
             edit_title(ent, fhdr, direct);
             return FULLUPDATE;
+        case RP_SELECTBRD:
+            return select_board_to_read();
     }
     if(more_result)
 	return more_result;

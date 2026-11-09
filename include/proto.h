@@ -564,10 +564,6 @@ typedef struct more_hooks {
     const char *title;          // of the help screen
     struct live_ctx *live;      // live mode of a post (livepost.h), or NULL
     void *ctx;
-    // 's': switch boards; set only in a post read from a board's list, not
-    // in readers opened from other flows, which go on with the old board
-    // (vote results, a post's edit history or the recycle bin)
-    int  (*select_board)(void);
 } more_hooks_t;
 int more_ex(const char *fpath, int promptend, const more_hooks_t *hooks);
 int more_inmemory(void *content, int size, int promptend);
@@ -578,7 +574,7 @@ int more_at_end(cmd_ctx_t *ctx);        // the last page is shown
 void *more_caller_ctx(cmd_ctx_t *ctx);  // more_hooks_t.ctx
 bool more_leave_live(cmd_ctx_t *ctx);   // leave for more_hooks_t.live
 extern const cmd_t more_list_nav_cmds[];    // f/b, past the ends: READ_NEXT/PREV
-extern const cmd_t more_thread_nav_cmds[];  // ][=aAt: RELATE_*, AUTHOR_*
+extern const cmd_t more_thread_nav_cmds[];  // ][=aAt: RET_READ_RELATE/AUTHOR_*
 extern const cmd_t more_reader_cmds[];      // z (chess), L (BBSLua)
 /* piaip's new pager, pmore.c */
 int pmore (const char *fpath, int promptend);
