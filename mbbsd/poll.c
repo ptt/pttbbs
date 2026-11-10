@@ -585,12 +585,18 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
 	    outs(ERR_BOARD_UPDATE);
 	reset_board(pos);
     } else if (genbuf[0] == 'b') {
+	getdata(b_lines - 1, 0, "確定要提早開票嗎？開票後無法恢復 (Y/N) [N] ",
+		genbuf, 4, LCECHO);
+	if (genbuf[0] != 'y')
+	    return FULLUPDATE;
+
 	b_result_one(vbuf, fhp, &total);
 	fhp->npolls = poll_count(bname);
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	    outs(ERR_BOARD_UPDATE);
 
 	reset_board(pos);
+	vmsg("已提早開票");
     }
     return FULLUPDATE;
 }
@@ -605,7 +611,8 @@ poll_view_all(const char *bname)
     char            inbuf[80];
     poll_buffer_t   vbuf;
 
-    move(0, 0);
+    vs_hdr2("觀察投票", bname);
+    move(2, 0);
     for (i = 0; i < MAX_POLL_NR; i++) {
 	pollbuf_init(&vbuf, i);
 	setbfile(buf, bname, vbuf.control);
@@ -624,8 +631,10 @@ poll_view_all(const char *bname)
 	}
     }
 
-    if (x < 0)
+    if (x < 0) {
+	vmsg("目前沒有投票");
 	return FULLUPDATE;
+    }
 
     SNPRINTF(buf, "要看幾號投票 [%d] ", x);
     getdata(b_lines - 1, 0, buf, genbuf, 4, LCECHO);
@@ -671,17 +680,22 @@ validate_poll_logconf(const vform_def_t *def GCC_UNUSED, const void *data, void 
 
 static const vform_def_t poll_logconf_form = {
     .title        = "投票記錄選項設定",
-    .subtitle     = "若欲記錄以下項目，請務必於投票前事先公告",
+    // Shown with the form, which clears the screen.
+    .subtitle     = "以下設定之相關規範請參閱 BoardAnnouce 板置底公告：\n"
+                    "《[公告] 看板投票功能更新、相關規範公告》\n"
+                    "若板主欲於投票時記錄以下任何一項資訊，請事先與看板使用者溝通，\n"
+                    "並於投票前至少七日，事先公告將記錄之項目，違者將受處分。",
     .mode         = VFORM_MODE_INPLACE,
     .fields       = poll_logconf_fields,
     .num_fields   = ARRAY_SIZE(poll_logconf_fields),
     .form_validator = validate_poll_logconf,
 };
 
-static void
+// Returns 0 if cancelled.
+static int
 poll_logconf_ask(poll_logconf_t *logconf) {
     poll_logconf_init(logconf);
-    vform_run(&poll_logconf_form, logconf, NULL);
+    return vform_run(&poll_logconf_form, logconf, NULL);
 }
 
 static int
@@ -749,6 +763,8 @@ poll_maintain(const char *bname)
     boardheader_t  *fhp;
     char            genbuf[4];
     poll_buffer_t   vbuf;
+    bool            confirmed = false;
+    char            ptitle[STRLEN];
 
     if (!CBRD_IS_BM())
 	return 0;
@@ -787,10 +803,9 @@ poll_maintain(const char *bname)
 
 	    return FULLUPDATE;
 	} else if (genbuf[0] != 'm') {
-	    if (fhp->npolls >= MAX_POLL_NR)
-		vmsg("不得舉辦過多投票");
 	    return FULLUPDATE;
 	}
+	confirmed = true;
     }
 
     x = 1;
@@ -801,16 +816,20 @@ poll_maintain(const char *bname)
     } while (dashf(buf) && x <= MAX_POLL_NR);
 
     --x;
-    if (x >= MAX_POLL_NR)
+    if (x >= MAX_POLL_NR) {
+	vmsg("不得舉辦過多投票");
 	return FULLUPDATE;
+    }
 
-    getdata(b_lines - 1, 0,
-	    "確定要舉辦投票嗎？ [y/N]: ",
-	    inbuf, 4, LCECHO);
-    if (inbuf[0] != 'y')
-	return FULLUPDATE;
+    // Asked already when choosing (M).
+    if (!confirmed) {
+	getdata(b_lines - 1, 0,
+		"確定要舉辦投票嗎？ [y/N]: ",
+		inbuf, 4, LCECHO);
+	if (inbuf[0] != 'y')
+	    return FULLUPDATE;
+    }
 
-    vs_hdr("舉辦投票");
     pollbuf_init(&vbuf, x);
     // A slot without a control file may still hold files of an earlier
     // poll, as one closed without items left them: they are not this one's.
@@ -818,13 +837,13 @@ poll_maintain(const char *bname)
     setbfile(buf, bname, vbuf.lock);
     unlink(buf);
 
-    clear();
-    move(0, 0);
-    prints("第 %d 號投票\n", x);
+    vs_hdr2("舉辦投票", bname);
+    mvprints(2, 0, "第 %d 號投票", x);
     setbfile(buf, bname, vbuf.title);
     getdata(4, 0, "請輸入投票名稱:", inbuf, 50, DOECHO);
     if (inbuf[0] == '\0')
 	STRLCPY(inbuf, "不知名的");
+    STRLCPY(ptitle, inbuf);
     fp = fopen(buf, "w");
     assert(fp);
     fputs(inbuf, fp);
@@ -840,6 +859,10 @@ poll_maintain(const char *bname)
     aborted = 0;
     setbfile(buf, bname, vbuf.flags);
     unlink(buf);
+
+    // Back from the editor.
+    vs_hdr2("舉辦投票", bname);
+    mvprints(2, 0, "第 %d 號投票: %s", x, ptitle);
 
     getdata(4, 0,
 	    "是否限定投票者名單：(y)編輯可投票人員名單[n]任何人皆可投票:[N]",
@@ -859,6 +882,11 @@ poll_maintain(const char *bname)
 	    .import_fn = NULL,
 	};
 	edit_user_list(TEMP_BFILE(bname, FN_POLL_VOTERS), &cfg);
+
+	// Back from the list.
+	vs_hdr2("舉辦投票", bname);
+	mvprints(2, 0, "第 %d 號投票: %s", x, ptitle);
+	mvouts(4, 0, "已設定可投票人員名單");
     } else {
 	if (dashf(buf))
 	    unlink(buf);
@@ -886,18 +914,16 @@ poll_maintain(const char *bname)
 	    unlink(buf);
     }
 
-    move(8, 0);
-    prints("以下設定之相關規範請參閱 BoardAnnouce 板置底公告：\n");
-    prints("《[公告] 看板投票功能更新、相關規範公告》\n");
-    prints("\n");
-    prints("若板主欲於投票時記錄以下任何一項資訊，請事先與看板使用者溝通，\n");
-    prints("並於投票前至少七日，事先公告將記錄之項目，違者將受處分。\n");
-
     setbfile(buf, bname, vbuf.logconf);
 
     {
 	poll_logconf_t logconf;
-	poll_logconf_ask(&logconf);
+	if (!poll_logconf_ask(&logconf)) {
+	    // Nothing is counted before the control file.
+	    poll_unlink_files(&vbuf, bname);
+	    vmsg("取消此次投票");
+	    return FULLUPDATE;
+	}
 	poll_logconf_save(&logconf, buf);
     }
 
@@ -942,6 +968,12 @@ poll_maintain(const char *bname)
     num = 0;
     x = 0;	/* x is the page number */
     while (!aborted) {
+	if (num == 0 && x > 0) {
+	    // A new page of items.
+	    move(1, 0); clrtobot();
+	    prints("第 %d 頁選項 (已輸入 %d 項), 按 ENTER 完成設定",
+		   x + 1, x * ITEM_PER_PAGE);
+	}
 	if( num % 15 == 0 ){
 	    for( i = num ; i < num + 15 ; ++i ){
 		move((i % 15) + 2, (i / 15) * 40);
@@ -955,7 +987,8 @@ poll_maintain(const char *bname)
 	    fprintf(fp, "%1c) %s\n", (num + 'A'), inbuf);
 	    num++;
 	}
-	if ((*inbuf == '\0' && num >= 1) || x == MAX_POLL_PAGE)
+	// Also done at the start of a new page.
+	if ((*inbuf == '\0' && (num >= 1 || x > 0)) || x == MAX_POLL_PAGE)
 	    aborted = 1;
 	if (num == ITEM_PER_PAGE) {
 	    x++;
@@ -980,7 +1013,7 @@ poll_maintain(const char *bname)
     if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	outs(ERR_BOARD_UPDATE);
     reset_board(pos);
-    outs("開始投票了！");
+    vmsg("開始投票了！");
 
     return FULLUPDATE;
 }
