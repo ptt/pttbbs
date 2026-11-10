@@ -48,12 +48,14 @@ func TestDeletedTitle(t *testing.T) {
 	}{
 		{"self", deleted("userA", 0, "userA", 0, "", 0), "(本文已被刪除) [userA]"},
 		{"self by ID", deleted("userA", 7, "sysop", 7, "", 0), "(本文已被刪除) [userA]"},
-		{"moderator", deleted("userA", 0, "bm", 0, "", 0), "(本文已被刪除) <userA>"},
-		{"other by ID", deleted("userA", 7, "userA", 8, "", 0), "(本文已被刪除) <userA>"},
+		{"moderator", deleted("userA", 0, "bm", 0, "", 0), "(本文已被移除) <userA>"},
+		{"other by ID", deleted("userA", 7, "userA", 8, "", 0), "(本文已被移除) <userA>"},
 		{"anonymous", deleted("userA", 0, "userA", 0, "", model.FileAnonymous), "(本文已被刪除)"},
-		{"no creator", deleted("", 0, "bm", 0, "", 0), "(本文已被刪除)"},
-		{"internal reason", deleted("userA", 0, "bm", 0, "del_range", 0), "(本文已被刪除) <userA>"},
-		{"moderator title", deleted("userA", 0, "bm", 0, "(已被bm刪除) <userA>", 0), "(已被bm刪除) <userA>"},
+		{"anonymous removed", deleted("userA", 0, "bm", 0, "", model.FileAnonymous), "(本文已被移除)"},
+		{"no creator", deleted("", 0, "bm", 0, "", 0), "(本文已被移除)"},
+		{"internal reason", deleted("userA", 0, "bm", 0, "del_range", 0), "(本文已被移除) <userA>"},
+		{"moderator title", deleted("userA", 0, "bm", 0, "(已被bm移除) <userA>", 0), "(已被bm移除) <userA>"},
+		{"old moderator title", deleted("userA", 0, "bm", 0, "(已被bm刪除) <userA>", 0), "(已被bm刪除) <userA>"},
 	}
 	for _, c := range cases {
 		got := DeletedTitle(&c.post)
@@ -65,6 +67,20 @@ func TestDeletedTitle(t *testing.T) {
 		p := deleted(creator, 0, by, 0, reason, 0)
 		if again := DeletedTitle(&p); again != got {
 			t.Errorf("%s: title %q parsed to %+v, which gives %q", c.name, got, p, again)
+		}
+	}
+}
+
+func TestParseOldDeletedTitle(t *testing.T) {
+	// Older mbbsd wrote "(本文已被刪除)" also for posts removed by others.
+	for _, c := range []struct {
+		title, author, by string
+	}{
+		{"(本文已被刪除) <userA>", "userA", safeDelOwner},
+		{"(本文已被刪除) [userA]", "userA", "userA"},
+	} {
+		if author, by, reason := parseDeletedTitle(c.title); author != c.author || by != c.by || reason != "" {
+			t.Errorf("parseDeletedTitle(%q) = %q, %q, %q, want %q, %q, \"\"", c.title, author, by, reason, c.author, c.by)
 		}
 	}
 }
@@ -190,7 +206,7 @@ func TestSyncDir(t *testing.T) {
 		{filename: "M.1728000002.A.002", owner: "userB", title: "第二篇", modified: 1728000200,
 			content: "本文二\n" + sig + "噓 userA: 噓 10/01 12:05\n"},
 		// 2: already safe-deleted by a moderator in .DIR
-		{filename: ".d1728000003.A.003", owner: "-", title: "(本文已被刪除) <userC>", modified: 1728000300,
+		{filename: ".d1728000003.A.003", owner: "-", title: "(本文已被移除) <userC>", modified: 1728000300,
 			score: -3, comments: 4},
 		// 3: anonymous, in post.svc but (later) not in .DIR
 		{filename: "M.1728000004.A.004", owner: "Anonymous.", title: "第四篇", modified: 1728000400,

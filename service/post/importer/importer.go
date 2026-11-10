@@ -1072,10 +1072,18 @@ func postModified(fhdr *FileHeader, ctime int64) int64 {
 // in none of the standard forms was entered by the moderator who deleted the
 // post, and is kept as the reason, so that DeletedTitle reproduces it.
 func parseDeletedTitle(title string) (author, deletedBy, reason string) {
-	if title == safeDelTitle {
+	switch title {
+	case safeDelTitle:
 		return "", "", ""
+	case safeRemoveTitle:
+		return "", safeDelOwner, ""
 	}
-	if rest, ok := strings.CutPrefix(title, safeDelTitle+" "); ok && len(rest) > 2 {
+	// Older mbbsd wrote safeDelTitle also for posts removed by others.
+	for _, prefix := range []string{safeDelTitle, safeRemoveTitle} {
+		rest, ok := strings.CutPrefix(title, prefix+" ")
+		if !ok || len(rest) <= 2 {
+			continue
+		}
 		inner := rest[1 : len(rest)-1]
 		switch {
 		case rest[0] == '[' && rest[len(rest)-1] == ']' && !strings.ContainsAny(inner, " []<>"):
@@ -1084,14 +1092,18 @@ func parseDeletedTitle(title string) (author, deletedBy, reason string) {
 			return inner, safeDelOwner, ""
 		}
 	}
-	// Moderator's title, by default "(已被<moderator>刪除) <author>".
+	// Moderator's title, by default "(已被<moderator>移除) <author>" (or
+	// "刪除" by older mbbsd).
 	author, deletedBy = "", safeDelOwner
 	if i := strings.LastIndex(title, "<"); i >= 0 && strings.HasSuffix(title, ">") {
 		author = title[i+1 : len(title)-1]
 	}
 	if rest, ok := strings.CutPrefix(title, "(已被"); ok {
-		if i := strings.Index(rest, "刪除)"); i > 0 {
-			deletedBy = rest[:i]
+		for _, verb := range []string{"移除)", "刪除)"} {
+			if i := strings.Index(rest, verb); i > 0 {
+				deletedBy = rest[:i]
+				break
+			}
 		}
 	}
 	return author, deletedBy, title

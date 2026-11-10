@@ -36,11 +36,13 @@ const (
 )
 
 // What mbbsd writes to .DIR when it safe-deletes a post (set_safedel_fhdr
-// in mbbsd/record.c, FN_SAFEDEL and STR_SAFEDEL_TITLE in include/common.h).
+// in mbbsd/record.c, FN_SAFEDEL, STR_SAFEDEL_TITLE and STR_SAFEREMOVE_TITLE
+// in include/common.h): deleted by the author, or removed by others.
 const (
-	safeDelPrefix = ".d"
-	safeDelTitle  = "(本文已被刪除)"
-	safeDelOwner  = "-"
+	safeDelPrefix   = ".d"
+	safeDelTitle    = "(本文已被刪除)"
+	safeRemoveTitle = "(本文已被移除)"
+	safeDelOwner    = "-"
 )
 
 // internalDeleteReasons are the reasons that mbbsd and utilities send to
@@ -123,13 +125,17 @@ func DeletedTitle(p *model.Post) string {
 		// A title entered by the moderator who removed it.
 		return p.Reason
 	}
+	title := safeDelTitle
+	if p.Removed {
+		title = safeRemoveTitle
+	}
 	if p.Filemode&model.FileAnonymous != 0 || p.CreatorName == "" || p.CreatorName == safeDelOwner {
-		return safeDelTitle
+		return title
 	}
 	if p.Deleted {
-		return fmt.Sprintf("%s [%s]", safeDelTitle, p.CreatorName)
+		return fmt.Sprintf("%s [%s]", title, p.CreatorName)
 	}
-	return fmt.Sprintf("%s <%s>", safeDelTitle, p.CreatorName)
+	return fmt.Sprintf("%s <%s>", title, p.CreatorName)
 }
 
 // stampTime returns the creation time in the file name of a post, or 0.

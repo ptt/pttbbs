@@ -1454,13 +1454,20 @@ b_quick_acl(int ent GCC_UNUSED, fileheader_t *fhdr GCC_UNUSED,
     char uid[IDLEN+2];
     strncpy(uid, fhdr->owner, sizeof(uid));
 #ifdef STR_SAFEDEL_TITLE
-    if (fhdr->filename[0] == '.' &&
+    // Deleted "(本文已被刪除) [author]" or removed "(本文已被移除) <author>"
+    // (older mbbsd wrote STR_SAFEDEL_TITLE for both).
+    const char *safedel_prefix =
         strncmp(fhdr->title, STR_SAFEDEL_TITLE,
-                strlen(STR_SAFEDEL_TITLE)) == 0) {
-        char *ps = &fhdr->title[strlen(STR_SAFEDEL_TITLE)];
-        if (ps[0] == ' ' && ps[1] == '[') {
+                strlen(STR_SAFEDEL_TITLE)) == 0 ? STR_SAFEDEL_TITLE :
+        strncmp(fhdr->title, STR_SAFEREMOVE_TITLE,
+                strlen(STR_SAFEREMOVE_TITLE)) == 0 ? STR_SAFEREMOVE_TITLE :
+        NULL;
+    if (fhdr->filename[0] == '.' && safedel_prefix) {
+        char *ps = &fhdr->title[strlen(safedel_prefix)];
+        if (ps[0] == ' ' && (ps[1] == '[' || ps[1] == '<')) {
+            char close = (ps[1] == '[') ? ']' : '>';
             ps += 2;
-            char *pe = strchr(ps, ']');
+            char *pe = strchr(ps, close);
             if (pe) {
                 size_t len = pe - ps;
                 if (len >= sizeof(uid))

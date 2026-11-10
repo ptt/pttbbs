@@ -188,10 +188,10 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
 	// i'm the one to delete it
 	SNPRINTF(fhdr->title, "%s [%s]", STR_SAFEDEL_TITLE, fhdr->owner);
     }
-    else // deleted by BM, system, SYSOP, or other services...
+    else // removed by BM, system, SYSOP, or other services...
 	// maybe not revealing the names would be better.
     {
-	SNPRINTF(fhdr->title, "%s <%s>", STR_SAFEDEL_TITLE, fhdr->owner);
+	SNPRINTF(fhdr->title, "%s <%s>", STR_SAFEREMOVE_TITLE, fhdr->owner);
     }
     // SNPRINTF(fhdr->title, "%s", STR_SAFEDEL_TITLE);
 #ifdef FN_SAFEDEL_PREFIX_LEN

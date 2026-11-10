@@ -1902,7 +1902,7 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 		reason := p.Reason
 		if reason == "" {
 			if p.Removed {
-				reason = "本文已被隱藏"
+				reason = "本文已被移除"
 			} else {
 				reason = "本文已被刪除"
 			}
@@ -3137,7 +3137,7 @@ func (e *Engine) RenderLegacyPostText(postID uint64, asBig5 bool) ([]byte, error
 		reason := p.Reason
 		if reason == "" {
 			if p.Removed {
-				reason = "本文已被隱藏"
+				reason = "本文已被移除"
 			} else {
 				reason = "本文已被刪除"
 			}

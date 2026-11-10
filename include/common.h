@@ -84,9 +84,14 @@
 #define FN_SAFEDEL	".deleted"
 #endif // USE_EDIT_HISTORY
 #endif // FN_SAFEDEL
+// Titles of safe-deleted posts: deleted by the author, or removed by
+// moderators (like Lemmy). service/post/importer knows them too.
 #ifndef STR_SAFEDEL_TITLE
 #define STR_SAFEDEL_TITLE   "(本文已被刪除)"
-#endif 
+#endif
+#ifndef STR_SAFEREMOVE_TITLE
+#define STR_SAFEREMOVE_TITLE "(本文已被移除)"
+#endif
 #define FN_EDITHISTORY  ".history"
 
 #ifndef SAFE_ARTICLE_DELETE_NUSER
