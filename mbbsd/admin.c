@@ -1253,16 +1253,28 @@ m_mod_board(char *bname)
 	if (HasUserPerm(PERM_BOARDS)) {
 	    char            path[PATHLEN];
 	    setbfile(genbuf, bname, FN_TICKET_LOCK);
+	    if (!dashf(genbuf)) {
+		vmsg("此看板的樂透沒有卡住");
+		break;
+	    }
+	    if (vans(TEMPFORMAT(STRLEN, "確定要解除 %s 卡住的樂透嗎？[y/N] ", bname)) != 'y')
+		break;
 	    setbfile(path, bname, FN_TICKET_END);
-	    rename(genbuf, path);
+	    if (rename(genbuf, path) == 0)
+		vmsg("樂透已解卡");
+	    else
+		vmsg("解卡失敗");
 	}
 	break;
     case 's':
 	if (HasUserPerm(PERM_BOARDS)) {
 	  char bpath[PATHLEN];
+	  if (vans(TEMPFORMAT(STRLEN, "確定要重建 %s 的文章索引嗎？[y/N] ", bh.brdname)) != 'y')
+	      break;
 	  setbpath(bpath, bh.brdname);
 	  AUTO_STR(cmd, BBSHOME "/bin/buildir %s &", bpath);
 	  system(cmd);
+	  vmsg("已開始在背景重建文章索引");
 	}
 	break;
     case 'c':
@@ -1277,6 +1289,9 @@ m_mod_board(char *bname)
 		vmsg("不可合併相同看板");
 		break;
 	    }
+	    if (vans(TEMPFORMAT(STRLEN, "確定要把 %s 的文章合併到 %s 嗎？[y/N] ",
+			    frombname, bname)) != 'y')
+		break;
             setbdir(genbuf, bname);
             setbdir(fromdir, frombname);
             merge_dir(genbuf, fromdir, 0);
@@ -1309,10 +1324,13 @@ m_mod_board(char *bname)
 	    break;
     case 'v':
 	memcpy(&newbh, &bh, sizeof(bh));
-	outs("看板發文的文章金錢獎勵方法目前為");
-	outs((bh.brdattr & BRD_NOCREDIT) ?
-             ANSI_COLOR(1;31) "禁止" ANSI_RESET : "正常");
-	getdata(21, 0, "確定更改？", genbuf, 5, LCECHO);
+	move(20, 0); clrtobot();
+	prints("看板發文的文章金錢獎勵方法目前為%s",
+	       (bh.brdattr & BRD_NOCREDIT) ?
+	       ANSI_COLOR(1;31) "禁止" ANSI_RESET : "正常");
+	getdata(21, 0, (bh.brdattr & BRD_NOCREDIT) ?
+		"確定改為正常？[y/N] " : "確定改為禁止？[y/N] ",
+		genbuf, 5, LCECHO);
 	if (genbuf[0] == 'y') {
             newbh.brdattr ^= BRD_NOCREDIT;
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
@@ -1325,6 +1343,7 @@ m_mod_board(char *bname)
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("ViolateLawSet", newbh.brdname);
+	    vmsg("設定已更改");
 	}
 	break;
     case 'd':
@@ -1332,7 +1351,7 @@ m_mod_board(char *bname)
 	    break;
 	getdata_str(9, 0, MSG_SURE_NY, genbuf, 3, LCECHO, "N");
 	if (genbuf[0] != 'y' || !bname[0])
-	    outs(MSG_DEL_CANCEL);
+	    vmsg(MSG_DEL_CANCEL);
 	// Checked once confirmed, as boards can be moved in while asking.
 	else if (!mod_board_still_allowed(bid, &bh, MODE_GROUP_LEAD))
 	    break;
@@ -1340,6 +1359,7 @@ m_mod_board(char *bname)
 	    break;
 	else if (bh.brdattr & BRD_SYMBOLIC) {
 	    delete_board_link(&bh, bid);
+	    vmsg("看板連結已刪除");
 	}
 	else {
 	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));
@@ -1365,7 +1385,7 @@ m_mod_board(char *bname)
 	    reset_board(bid);
             sort_bcache();
 	    log_usies("DelBoard", bh.desc);
-	    outs("刪板完畢");
+	    vmsg("刪板完畢");
 	}
 	break;
     case 'e':
