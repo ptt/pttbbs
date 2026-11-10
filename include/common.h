@@ -51,6 +51,7 @@
 #define FN_OVERRIDES    "overrides"
 #define FN_TICKET       "ticket"
 #define FN_TICKET_END   "ticket.end"
+#define FN_TICKET_SETUP "ticket.setup"   /* a new lottery being set up */
 #define FN_TICKET_SETUP_LOCK "ticket.setup.lock" /* held while setting one up */
 #define FN_TICKET_LOCK  "ticket.end.lock"
 #define FN_TICKET_ITEMS "ticket.items"

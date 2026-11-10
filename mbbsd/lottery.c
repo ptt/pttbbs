@@ -793,7 +793,7 @@ hold_gamble(void)
         return DONOTHING;
     char            fn_ticket[128], fn_ticket_end[128], genbuf[128], msg[256] = "",
                     yn[10] = "";
-    char tmp[128];
+    char tmp[128], fn_setup[PATHLEN];
     boardheader_t  *bp = getbcache(currbid);
     int             i;
     FILE           *fp = NULL;
@@ -809,6 +809,10 @@ hold_gamble(void)
     setbfile(fn_ticket, currboard, FN_TICKET);
     setbfile(fn_ticket_end, currboard, FN_TICKET_END);
     setbfile(genbuf, currboard, FN_TICKET_LOCK);
+    // Staged apart from ticket.end ("closed, awaiting the draw"), so a setup
+    // cut short leaves no phantom pool.
+    setbfile(fn_setup, currboard, FN_TICKET_SETUP);
+    setbfile(tmp, currboard, FN_TICKET_SETUP ".items");
 
     if (dashf(fn_ticket)) {
 	getdata(b_lines - 1, 0, "已經有舉辦樂透, "
@@ -870,11 +874,18 @@ hold_gamble(void)
 	why = "其他板主已在處理樂透，請稍後再試";
 	goto give_up;
     }
+    // No lottery, so no end time: a past one left behind could close this
+    // lottery as it goes live.
+    if (bp->endgamble) {
+	bp->endgamble = 0;
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+    }
     lottery_form_t form = { .price = 100 };
     if (vform_run(&lottery_form_def, &form, NULL) <= 0)
 	goto give_up;
-    if (veditfile(fn_ticket_end) < 0) {
-	unlink(fn_ticket_end);
+    unlink(fn_setup);  // left from an aborted setup
+    if (veditfile(fn_setup) < 0) {
 	why = "取消舉辦樂透";
 	goto give_up;
     }
@@ -883,14 +894,11 @@ hold_gamble(void)
     // when it is due. Checked again after editing.
     time4_t endgamble = lottery_end_time(&form);
     if (endgamble && !time4_gt(endgamble, now)) {
-	unlink(fn_ticket_end);
 	why = "截止時間已過，請重新舉辦";
 	goto give_up;
     }
 
-    setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
     if (!(fp = fopen(tmp, "w"))) {
-	unlink(fn_ticket_end);
 	why = "系統錯誤，無法舉辦樂透";
 	goto give_up;
     }
@@ -913,48 +921,61 @@ hold_gamble(void)
 	     );
     strcat(msg, genbuf);
 
-    if (bp->endgamble != endgamble) {
-	bp->endgamble = endgamble;
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
-    }
-
-    // Install the new lottery and clear the old records only while no
-    // lottery is open: buyers record only into an open lottery, checked
-    // under the lottery lock, so nothing can be recorded into the files
-    // cleared here. (The lock itself matters here only against binaries
-    // from before it, during a rolling restart.) The new ticket.items
-    // carries a new generation id, so a purchase still bound to the old
-    // lottery is refused once this one opens.
+    // Go live under the lottery lock. Checked again: an older binary
+    // doesn't take the setup lock.
     char tkpath[PATHLEN];
-    int tkfd;
     setbpath(tkpath, currboard);
-    tkfd = lock_ticket(tkpath);
+    int tkfd = lock_ticket(tkpath);
+    if (tkfd < 0) {
+	why = "系統錯誤，無法舉辦樂透";
+	goto give_up;
+    }
+    if (lottery_in_progress(currboard)) {
+	unlock_ticket(tkfd);
+	why = "其他板主已在處理樂透，請稍後再試";
+	goto give_up;
+    }
+    // No lottery is open, so no bet is recorded into these.
+    setbfile(genbuf, currboard, FN_TICKET_RECORD);
+    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
+    setbfile(genbuf, currboard, FN_TICKET_USER);
+    unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
+
     setbfile(genbuf, currboard, FN_TICKET_ITEMS);
-    setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
-    if (!dashf(fn_ticket)) {
-	Rename(tmp, genbuf);
-	setbfile(genbuf, currboard, FN_TICKET_RECORD);
-	unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
-	setbfile(genbuf, currboard, FN_TICKET_USER);
-	unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
+    /* Tim 控制CS, 以免正在玩的user把資料已經寫進來 */
+    // link() fails rather than replace a "ticket" an older binary just made.
+    int live = (Rename(tmp, genbuf) == 0 && link(fn_setup, fn_ticket) == 0);
+    /* 設定完才把檔名改過來 */
+    if (live) {
+	unlink(fn_setup);
+	// The end time only once live.
+	if (bp->endgamble != endgamble) {
+	    bp->endgamble = endgamble;
+	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+	    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+	}
+	modlog_t log;
+	modlog(currboard, NULL, modlog_init(&log, "舉辦樂透"));
     }
     unlock_ticket(tkfd);
+    if (!live) {
+	why = "系統錯誤，無法舉辦樂透";
+	goto give_up;
+    }
+    close(lkfd);
 
+    // Announced only once it is live.
     SNPRINTF(genbuf, TN_ANNOUNCE " %s 板 開始舉辦樂透!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
     post_msg("Record", genbuf + 7, msg, "[馬路探子]");
-    /* Tim 控制CS, 以免正在玩的user把資料已經寫進來 */
-    rename(fn_ticket_end, fn_ticket);
-    /* 設定完才把檔名改過來 */
-    close(lkfd);
 
-    modlog_t log;
-    modlog(currboard, NULL, modlog_init(&log, "舉辦樂透"));
     vmsg("樂透彩券設定完成");
     return FULLUPDATE;
 
 give_up:
+    // Holding the setup lock, so the staging files are this setup's.
+    unlink(fn_setup);
+    unlink(tmp);
     close(lkfd);
     if (why)
 	vmsg(why);
