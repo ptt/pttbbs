@@ -1,7 +1,5 @@
 #include "bbs.h"
 
-#ifdef ASSESS
-
 static time4_t
 adjust_badpost_time(time4_t timeremovebadpost) {
     time4_t min_timer;
@@ -205,4 +203,3 @@ reassign_badpost(const char *userid) {
 
     return 0;
 }
-#endif

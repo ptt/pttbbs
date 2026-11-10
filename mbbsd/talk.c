@@ -312,9 +312,8 @@ my_query(const char *uident)
 
 	move(vgety(), 40);
 	prints("¡m¦³®Ä¤å³¹¡n%d ½g", muser.numposts);
-#ifdef ASSESS
-	prints(" (°h:%d)", muser.badpost);
-#endif
+	if (IS_ENABLED(CONFIG_ASSESS))
+	    prints(" (°h:%d)", muser.badpost);
 	outc('\n');
 
 	// ------------------------------------------------------------

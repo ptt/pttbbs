@@ -685,6 +685,13 @@
 #if defined(SAFE_ARTICLE_DELETE) && !defined(CONFIG_SAFE_ARTICLE_DELETE)
 #define CONFIG_SAFE_ARTICLE_DELETE 1
 #endif
+#ifndef CONFIG_ASSESS
+# ifdef ASSESS
+#  define CONFIG_ASSESS 1
+# else
+#  define CONFIG_ASSESS 0
+# endif
+#endif
 #if defined(OLDRECOMMEND) && !defined(CONFIG_OLD_RECOMMEND)
 #define CONFIG_OLD_RECOMMEND 1
 #endif

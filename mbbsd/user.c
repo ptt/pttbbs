@@ -325,9 +325,8 @@ user_display(const userec_t * u, int adminmode)
     }
 
     // conditional fields
-#ifdef ASSESS
-    prints("\t退文數目: %u\n", (unsigned int)u->badpost);
-#endif // ASSESS
+    if (IS_ENABLED(CONFIG_ASSESS))
+	prints("\t退文數目: %u\n", (unsigned int)u->badpost);
 
     if (IS_ENABLED(CONFIG_ANGEL) && adminmode)
 	prints("\t小 天 使: %s\n",
@@ -1353,11 +1352,10 @@ prompt_again:
 	return;
 
     case '8':
-#ifdef ASSESS
-        reassign_badpost(x.userid);
-#else
-        vmsg("本站目前不支援退文設定。");
-#endif
+        if (IS_ENABLED(CONFIG_ASSESS))
+            reassign_badpost(x.userid);
+        else
+            vmsg("本站目前不支援退文設定。");
         return;
 
     case 'v':

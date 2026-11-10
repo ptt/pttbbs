@@ -1140,9 +1140,8 @@ static const menuitem_t userlist[] = {
     },
     {u_register,    PERM_BASIC,     "Register      新增帳號認證"},
     {u_setup_2fa,   PERM_BASIC,     "2FA           設定兩階段認證"},
-#ifdef ASSESS
-    {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除退文"},
-#endif // ASSESS
+    IF_ENABLED(CONFIG_ASSESS,
+    {u_cancelbadpost,PERM_LOGINOK,  "Bye BadPost   申請刪除退文"},)
     {NULL, 0, NULL}
 };
 

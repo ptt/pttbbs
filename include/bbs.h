@@ -55,9 +55,7 @@ extern "C" {
 #include "fnv_hash.h"
 #include "convert.h"
 
-#ifdef ASSESS
-    #include "assess.h"
-#endif
+#include "assess.h"
 
 #ifndef INCLUDE_VAR_H
     #include "var.h"

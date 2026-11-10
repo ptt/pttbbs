@@ -19,13 +19,11 @@ char *get_restriction_reason(
                  limits_logins * 10, numlogindays);
         return msg;
     }
-#ifdef ASSESS
-    if  (badpost > (255 - limits_badpost)) {
+    if (IS_ENABLED(CONFIG_ASSESS) && badpost > (255 - limits_badpost)) {
         snprintf(msg, sz_msg, "退文超過 %d (目前%d)",
                  255 - limits_badpost, badpost);
         return msg;
     }
-#endif
     return NULL;
 }
 

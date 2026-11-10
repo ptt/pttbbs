@@ -303,12 +303,12 @@ edit_user_list(const char *fpath, const user_list_cfg_t *cfg)
 		    "要從名單中清除幾個月沒上站的使用者？ (0=不清除)[0] ",
 		    uident, 4, NUMECHO);
 	    expire = atoi(uident);
-#ifdef ASSESS
-	    getdata(3, 0,
-		    "要從名單中清除有幾篇以上退文的使用者？ (0=不清除)[0] ",
-		    uident, 4, NUMECHO);
-	    badpost = atoi(uident);
-#endif
+	    if (IS_ENABLED(CONFIG_ASSESS)) {
+		getdata(3, 0,
+			"要從名單中清除有幾篇以上退文的使用者？ (0=不清除)[0] ",
+			uident, 4, NUMECHO);
+		badpost = atoi(uident);
+	    }
             move(4, 0);
             outs("將清除下列類別的帳號:\n");
             outs(" * 已消失的帳號\n");

@@ -112,8 +112,8 @@ do_order_song(void)
     const char *override_receiver = NULL;
 
     // 由於變免費了，改成要看退文跟登入天數
-#if defined(ORDERSONG_MAX_BADPOST) && defined(ASSESS)
-    if (cuser.badpost > ORDERSONG_MAX_BADPOST) {
+#ifdef ORDERSONG_MAX_BADPOST
+    if (IS_ENABLED(CONFIG_ASSESS) && cuser.badpost > ORDERSONG_MAX_BADPOST) {
         vmsgf("為避免濫用，留言前請先消除退文記錄至 %d 篇以下",
                 ORDERSONG_MAX_BADPOST);
         return 0;
