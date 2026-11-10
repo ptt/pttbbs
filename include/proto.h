@@ -57,6 +57,25 @@ time4_t is_muted_by_board(const char *board);
 int mute_user_for_board(const char *user, const char *board, time4_t expire, const char *reason);
 int edit_muted_list_for_board(const char *board);
 int edit_user_acl_for_board(const char *uid, const char *board);
+/* Modlog (ºÞ²z¬ö¿ý): see docs/modlog.md */
+#define MODLOG_REASON_LEN (50)
+void modlog(const char *bname, const char *reason, const char *fmt, ...)
+    GCC_CHECK_FORMAT(3, 4);
+void modlog_police(const char *bname, const char *reason, const char *fmt, ...)
+    GCC_CHECK_FORMAT(3, 4);
+int modlog_ask_reason(const char *bname, int y, char *reason, size_t sz);
+int modlog_police_ask_reason(const char *bname, int y, char *reason, size_t sz);
+int modlog_ask_reason_choice(const char *bname, int y, char *reason, size_t sz,
+                             const char * const *choices, int nchoices);
+int modlog_preview(int y, const char *bname, const char *reason,
+                   const char *fmt, ...) GCC_CHECK_FORMAT(4, 5);
+int modlog_police_preview(int y, const char *bname, const char *reason,
+                          const char *fmt, ...) GCC_CHECK_FORMAT(4, 5);
+int modlog_form(const char *bname, const char *title);
+void modlog_audit_detail(const char *bname, const char *fmt, ...)
+    GCC_CHECK_FORMAT(2, 3);
+int modlog_view(const char *bname, int secure);
+int modlog_edit(const char *bname);
 
 /* assess */
 int inc_badpost(const char *, int num);
