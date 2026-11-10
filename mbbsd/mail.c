@@ -2359,7 +2359,7 @@ mail_save(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct
 static int
 del_range_mail(int ent, fileheader_t * fhdr, char *direct)
 {
-    int ret = del_range(ent, fhdr, direct, direct);
+    int ret = del_range(ent, fhdr, direct, direct, NULL);
     if (ret == DIRCHANGED)
         setupmailusage();
     return ret;

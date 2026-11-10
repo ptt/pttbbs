@@ -2424,20 +2424,33 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
     pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
     char reason[40];
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
-    if (!resp || resp->type < 0)
+    const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
+    if (!resp || resp->type < 0 || !key)
         return 0;
-    if (!getdata(b_lines-2, 0, "請輸入刪除原因: ",
-                 reason, sizeof(reason), DOECHO)) {
-        ctx->redraw_footer_lines = 3;
+    // Asking in a full screen form.
+    ctx->redraw = true;
+    char msg[sizeof(resp->msg)];
+    memcpy(msg, resp->msg, sizeof(msg) - 1);
+    msg[sizeof(msg) - 1] = '\0';
+    strip_control_sequence(msg, msg);
+    mbs_sanitize(msg, sizeof(msg));
+    int y = modlog_form(key->board, "移除推文");
+    mvprints(y, 0, "%-12.12s %s", resp->userid, msg);
+    if ((y = modlog_ask_reason(key->board, y + 2, reason,
+                               sizeof(reason))) < 0)
         return 0;
-    }
-    if (vans("確定要刪除嗎？ (y/N) ") == 'y') {
-        if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason) != 0) {
+    y = modlog_preview(y, key->board, reason, "移除 %s 的推文 (%s)",
+                       resp->userid, key->file) + 1;
+    char ans[3];
+    getdata(y, 0, "確定要移除嗎？ (y/N) ", ans, sizeof(ans), LCECHO);
+    if (ans[0] == 'y') {
+        char owner[IDLEN + 1];
+        STRLCPY(owner, resp->userid);
+        if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason) != 0)
             vmsg("刪除失敗。可能原文已被修改。");
-        }
-        ctx->redraw = true;
-    } else {
-        ctx->redraw_footer_lines = 3;
+        else
+            modlog(key->board, reason, "移除 %s 的推文 (%s)",
+                   owner, key->file);
     }
     return 0;
 }

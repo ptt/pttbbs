@@ -34,49 +34,15 @@ static char * const badpost_reason[] = {
 };
 
 
-// Asks for the reason of a bad post. Returns 0 with the reason in reason,
-// or -1 when cancelled.
+// The usual reasons of bad posts, for modlog_ask_reason_choice().
 int
-ask_badpost_reason(char *reason, size_t size)
+badpost_reasons(const char * const **reasons)
 {
-    char genbuf[STRLEN];
-    int i;
-
-    while (1) {
-        move(b_lines - 2, 0);
-        clrtobot();
-        for (i = 0; i < (int)ARRAY_SIZE(badpost_reason); i++)
-            prints("%d.%s ", i + 1, badpost_reason[i]);
-        prints("%d.%s ", i + 1, "其他");
-        prints("0.取消退文 ");
-        do {
-            getdata(b_lines - 1, 0, "請選擇: ", genbuf, 2, NUMECHO);
-            // An empty answer cancels too: callers ask before deleting.
-            if (!genbuf[0] || genbuf[0] == '0') {
-                vmsg("取消設定退文。");
-                return -1;
-            }
-            i = genbuf[0] - '1';
-            if (i < 0 || i > (int)ARRAY_SIZE(badpost_reason))
-                bell();
-            else
-                break;
-        } while (1);
-
-        if (i < (int)ARRAY_SIZE(badpost_reason)) {
-            strlcpy(reason, badpost_reason[i], size);
-            return 0;
-        }
-        // "other": an empty reason goes back to the menu
-        if (getdata(b_lines, 0, "請輸入原因", reason,
-                    size < 50 ? size : 50, DOECHO))
-            return 0;
-        bell();
-    }
+    *reasons = (const char * const *)badpost_reason;
+    return (int)ARRAY_SIZE(badpost_reason);
 }
 
-// Records a bad post with the reason from ask_badpost_reason(), without
-// asking anything.
+// Records a bad post with the given reason, without asking anything.
 void
 apply_badpost(const char *userid, const fileheader_t *fhdr,
 	      const char *newpath, const char *reason)

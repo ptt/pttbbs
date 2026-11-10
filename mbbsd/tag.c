@@ -27,6 +27,10 @@ void ClearTagList() {
     TagNum = 0;
 }
 
+int TagCount() {
+    return IsEmptyTagList() ? 0 : TagNum;
+}
+
 struct TagItem *FindTaggedItem(const fileheader_t *fh) {
     if (IsEmptyTagList())
         return NULL;

@@ -1062,6 +1062,19 @@ edit_board_general_form(boardheader_t *bh, int bid)
              (bh->brdattr & BRD_NOCREDIT) ? "禁止" : "正常",
              (newbh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常");
     post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+    if (name_changed)
+        modlog(newbh.brdname, NULL, "修改看板名稱: %s => %s",
+               bh->brdname, newbh.brdname);
+    if (class_changed)
+        modlog(newbh.brdname, NULL, "修改看板類別: %s => %s",
+               bh->bclass, newbh.bclass);
+    if (desc_changed)
+        modlog(newbh.brdname, NULL, "修改看板中文敘述: %s => %s",
+               bh->desc, newbh.desc);
+    if (reward_changed)
+        modlog(newbh.brdname, NULL, "修改文章金錢獎勵: %s => %s",
+               (bh->brdattr & BRD_NOCREDIT) ? "禁止" : "正常",
+               (newbh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常");
     memcpy(bh, &newbh, sizeof(boardheader_t));
     vmsg("看板設定已更新完畢");
     return 1;
@@ -1167,6 +1180,9 @@ m_mod_board(char *bname)
 			  "屬性: 0x%08x => 0x%08x\n",
 		     bh.brdname, bh.brdattr, newbh.brdattr);
 	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+	    modlog(newbh.brdname, NULL,
+		   "修改看板屬性: 0x%08x => 0x%08x",
+		   bh.brdattr, newbh.brdattr);
 	    vmsg("看板屬性已更新完畢");
 	}
 	break;
@@ -1214,6 +1230,10 @@ m_mod_board(char *bname)
 			  "權限: 0x%08x => 0x%08x\n",
 		     bh.brdname, bh.brdattr, newbh.brdattr, bh.level, newbh.level);
 	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+	    modlog(newbh.brdname, NULL,
+		   "修改看板讀寫權限: 屬性 0x%08x => 0x%08x, "
+		   "權限 0x%08x => 0x%08x",
+		   bh.brdattr, newbh.brdattr, bh.level, newbh.level);
 	    vmsg("看板權限已更新完畢");
 	}
 	break;
@@ -1244,6 +1264,13 @@ m_mod_board(char *bname)
 			 bh.brdname, bm_buf1, bm_buf2,
 			 bh.moderator_notes, newbh.moderator_notes);
 		post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
+		modlog(newbh.brdname, NULL,
+		       "修改板主名單: %s => %s",
+		       bm_buf1, bm_buf2);
+		if (strcmp(bh.moderator_notes, newbh.moderator_notes) != 0)
+		    modlog(newbh.brdname, NULL,
+			   "修改板主名單彩蛋: %s => %s",
+			   bh.moderator_notes, newbh.moderator_notes);
 		board_enable_moderator_perms(&newbh);
 		vmsg("板主名單已更新完畢");
 	    }
@@ -1260,9 +1287,10 @@ m_mod_board(char *bname)
 	    if (vans(TEMPFORMAT(STRLEN, "確定要解除 %s 卡住的樂透嗎？[y/N] ", bname)) != 'y')
 		break;
 	    setbfile(path, bname, FN_TICKET_END);
-	    if (rename(genbuf, path) == 0)
+	    if (rename(genbuf, path) == 0) {
+		modlog(bname, NULL, "樂透解卡");
 		vmsg("樂透已解卡");
-	    else
+	    } else
 		vmsg("解卡失敗");
 	}
 	break;
@@ -1274,6 +1302,7 @@ m_mod_board(char *bname)
 	  setbpath(bpath, bh.brdname);
 	  AUTO_STR(cmd, BBSHOME "/bin/buildir %s &", bpath);
 	  system(cmd);
+	  modlog(bh.brdname, NULL, "重建文章索引 (救回文章)");
 	  vmsg("已開始在背景重建文章索引");
 	}
 	break;
@@ -1296,6 +1325,7 @@ m_mod_board(char *bname)
             setbdir(fromdir, frombname);
             merge_dir(genbuf, fromdir, 0);
 	    touchbtotal(bid);
+	    modlog(bname, NULL, "合併看板 %s 的文章", frombname);
 	    vmsg("看板合併完畢");
 	}
 	break;
@@ -1319,6 +1349,9 @@ m_mod_board(char *bname)
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("SetBoardBvote", newbh.brdname);
+	    if (newbh.npolls != bh.npolls)
+		modlog(newbh.brdname, NULL, "修改投票數: %d => %d",
+		       (int)bh.npolls, (int)newbh.npolls);
 	    break;
 	} else
 	    break;
@@ -1343,6 +1376,9 @@ m_mod_board(char *bname)
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("ViolateLawSet", newbh.brdname);
+	    modlog(newbh.brdname, NULL, "修改文章金錢獎勵: %s => %s",
+		   (bh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常",
+		   (newbh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常");
 	    vmsg("設定已更改");
 	}
 	break;

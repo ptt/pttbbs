@@ -2694,9 +2694,15 @@ do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *dir
 
     if ((HasUserPerm(PERM_BOARDS) || CBRD_IS_GROUP_LEAD()) && buf[0] == 'a') {
 
+	uint8_t ol = bp->post_limit_logins, ob = bp->post_limit_badpost;
 	editLimits(
 		&bp->post_limit_logins,
 		&bp->post_limit_badpost, NULL);
+	if (ol != bp->post_limit_logins || ob != bp->post_limit_badpost)
+	    modlog(bp->brdname, NULL,
+		   "修改發文限制: 登入 %d => %d 次, 退文上限 %d => %d 篇",
+		   ol * 10, bp->post_limit_logins * 10,
+		   255 - ob, 255 - bp->post_limit_badpost);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
@@ -2706,10 +2712,16 @@ do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *dir
 
     } else if (buf[0] == 'b') {
 
+	uint8_t ol = bp->petition_limit_logins, ob = bp->petition_limit_badpost;
 	editLimits(
 		&bp->petition_limit_logins,
 		&bp->petition_limit_badpost,
 		PETITION_LIMITS_NOTICE);
+	if (ol != bp->petition_limit_logins || ob != bp->petition_limit_badpost)
+	    modlog(bp->brdname, NULL,
+		   "修改連署限制: 登入 %d => %d 次, 退文上限 %d => %d 篇",
+		   ol * 10, bp->petition_limit_logins * 10,
+		   255 - ob, 255 - bp->petition_limit_badpost);
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
@@ -2755,6 +2767,20 @@ cite_post(int ent GCC_UNUSED, const fileheader_t * fhdr,
     a_copyitem(TEMP_BFILE(currboard, fhdr->filename), title, 0, 1);
     b_man();
     return FULLUPDATE;
+}
+
+// Shows a post as in the list at line y, after label (may be NULL), for the
+// moderation forms. Returns the line below it.
+static int
+show_post_line(int y, const char *label, int ent, const fileheader_t *fhdr)
+{
+    char line[ANSILINELEN];
+    snprintf(line, sizeof(line), "%s%7d %5.5s %-*s %s", label ? label : "",
+             ent, fhdr->date, IDLEN, fhdr->owner, fhdr->title);
+    strip_control_sequence(line, line);
+    line[stream_col_offset(t_columns - 1, line, NULL)] = '\0';
+    mvouts(y, 0, line);
+    return y + 1;
 }
 
 int
@@ -2839,17 +2865,32 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         }
     }
 
-    if (allow >= 2) {
-        // Render in b_lines -2
-        move(b_lines - 4, 0); clrtobot();
-        prints("\n%11s%s %-*s %s", "", tmpfhdr.date, IDLEN, tmpfhdr.owner,
-               tmpfhdr.title);
+    // Moderators changing posts of others are recorded in the modlog, shown
+    // in a full screen form.
+    char log_action[ANSILINELEN] = "";
+    bool by_mod = currbid > 0 &&
+                  (allow >= 2 || !is_file_owner(fhdr, &cuser));
+    int y_confirm = b_lines - 1;
+    if (by_mod) {
+        char extra[STRLEN] = "";
+        if (strcmp(fhdr->owner, tmpfhdr.owner) != 0 ||
+            strncmp(fhdr->date, tmpfhdr.date, 5) != 0)
+            snprintf(extra, sizeof(extra), " (作者 %s => %s, 日期 %.5s => %.5s)",
+                     fhdr->owner, tmpfhdr.owner, fhdr->date, tmpfhdr.date);
+        snprintf(log_action, sizeof(log_action),
+                 "修改 %s 的文章標題: %s => %s%s",
+                 fhdr->owner, fhdr->title, tmpfhdr.title, extra);
+
+        int y = modlog_form(currboard, "修改文章標題");
+        y = show_post_line(y, "原本: ", ent, fhdr);
+        y = show_post_line(y, "改為: ", ent, &tmpfhdr) + 1;
+        y_confirm = modlog_preview(y, currboard, NULL, "%s", log_action) + 1;
     }
 
     if (fee > 0) {
-        getdata(b_lines - 1, 0, TEMPFORMAT(STRLEN, "修改此標題需扣除全部稿費 %d " MONEYNAME "，確定(Y/N)?[n] ", fee), genbuf, 3, LCECHO);
+        getdata(y_confirm, 0, TEMPFORMAT(STRLEN, "修改此標題需扣除全部稿費 %d " MONEYNAME "，確定(Y/N)?[n] ", fee), genbuf, 3, LCECHO);
     } else {
-        getdata(b_lines - 1, 0, "確定(Y/N)?[n] ", genbuf, 3, LCECHO);
+        getdata(y_confirm, 0, "確定(Y/N)?[n] ", genbuf, 3, LCECHO);
     }
     if (genbuf[0] != 'y')
         return FULLUPDATE;
@@ -2873,6 +2914,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         pay(fee, "%s 看板修改此標題扣除稿費: %s", currboard, tmpfhdr.title);
         vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
     }
+    if (by_mod)
+        modlog(currboard, NULL, "%s", log_action);
     LOG_IF(LOG_CONF_EDIT_TITLE,
            log_filef("log/edit_title.log",
                      "%s(%d) %s %s=>%s %s=>%s %s => %s\n",
@@ -3222,10 +3265,45 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     return FULLUPDATE;
 }
 
+// Why del_range() skips a record, or NULL to delete it.
+static const char *
+del_range_bypass(const fileheader_t *fh, const char *direct, int check_mark,
+                 int check_digest, int is_board)
+{
+    /* FILE_BOTTOM aliases FILE_MULTI in mail. */
+    if (is_board && (fh->filemode & FILE_BOTTOM))
+        return "置底文章";
+    if (check_mark && fh->filemode & FILE_MARKED)
+        return "標記為 m 的項目";
+    /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
+    if (check_digest && fh->filemode & FILE_DIGEST)
+        return "文摘";
+    if (dashd(TEMP_DIRPATH(direct, fh->filename)))
+        return "子目錄";
+    return NULL;
+}
+
+// How many of the records del_range() deletes.
+static int
+del_range_count(const fileheader_t *recs, int num, const char *direct,
+                int check_mark, int check_digest, int is_board)
+{
+    int n = 0;
+    for (int i = 0; i < num; i++)
+        if (!del_range_bypass(recs + i, direct, check_mark, check_digest,
+                              is_board))
+            n++;
+    return n;
+}
+
 int
 del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
-          const char *direct, const char *backup_direct)
+          const char *direct, const char *backup_direct,
+          const char *modlog_board)
 {
+    // When modlog_board is set, a reason is asked and the deletion is put
+    // in the modlog.
+    char log_reason[MODLOG_REASON_LEN] = "";
     char            numstr[8];
     int             num1, num2, num, cdeleted = 0;
     fileheader_t *recs = NULL;
@@ -3258,9 +3336,9 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
 	return FULLUPDATE;
     }
 
-    // let's do a full screen delete.
+    // let's do a full screen delete. Moderators remove posts of others.
     clear();
-    vs_hdr("刪除範圍");
+    vs_hdr(modlog_board ? "移除範圍" : "刪除範圍");
 
     getdata(2, 0, "起點: ", numstr, 7, DOECHO);
     num1 = atoi(numstr);
@@ -3305,7 +3383,21 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
         check_digest = 1;
     }
 
-    getdata(10, 0, MSG_SURE_NY, numstr, 3, LCECHO);
+    // The reason and what will be recorded first, then confirm below it.
+    int y = 10;
+    if (modlog_board) {
+        if ((y = modlog_ask_reason(modlog_board, 9, log_reason,
+                                   sizeof(log_reason))) < 0) {
+            free(recs);
+            return FULLUPDATE;
+        }
+        y = modlog_preview(y, modlog_board, log_reason,
+                           "移除範圍 #%d - #%d 內的 %d 篇%s", num1, num2,
+                           del_range_count(recs, num, direct, check_mark,
+                                           check_digest, is_board),
+                           (currmode & MODE_DIGEST) ? "文摘" : "文章") + 1;
+    }
+    getdata(y, 0, MSG_SURE_NY, numstr, 3, LCECHO);
     if (*numstr != 'y') {
         free(recs);
         return FULLUPDATE;
@@ -3324,21 +3416,8 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
         for (i = 0; ret == 0 && i < num; i++) {
             // first, check if the record is ready for being deleted.
             fileheader_t *fh = recs + i;
-            const char *bypass = NULL;
-
-            /* FILE_BOTTOM aliases FILE_MULTI in mail. */
-            if (is_board && (fh->filemode & FILE_BOTTOM)) {
-                bypass = "置底文章";
-            } else if (check_mark && fh->filemode & FILE_MARKED) {
-                bypass = "標記為 m 的項目";
-            } else if (check_digest && fh->filemode & FILE_DIGEST) {
-                /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
-                bypass = "文摘";
-            } else {
-                if (dashd(TEMP_DIRPATH(direct, fh->filename))) {
-                    bypass = "子目錄";
-                }
-            }
+            const char *bypass = del_range_bypass(fh, direct, check_mark,
+                                                  check_digest, is_board);
 
             if (bypass) {
                 id++;
@@ -3373,6 +3452,11 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     // clean up
     free(recs);
     fixkeep(direct, num1);
+    if (modlog_board && cdeleted > 0)
+        modlog(modlog_board, log_reason,
+               "移除範圍 #%d - #%d 內的 %d 篇%s",
+               num1, num2, cdeleted,
+               (currmode & MODE_DIGEST) ? "文摘" : "文章");
 
     if (ret < 0) {
         clear();
@@ -3401,7 +3485,7 @@ del_range_post(int ent, fileheader_t * fhdr, char *direct)
             return DONOTHING;
     }
 
-    ret = del_range(ent, fhdr, direct, direct);
+    ret = del_range(ent, fhdr, direct, direct, currboard);
     if (ret == DIRCHANGED) {
         setbtotal(currbid);
         if (currbid > 0) {
@@ -3424,6 +3508,34 @@ del_post_check_mode(const fileheader_t *fhdr, int mode, char key, const char *la
         vmsgf("文章被%s，無法刪除，請洽板主", label);
     return true;
 }
+
+// Mails a post removed by a moderator (at path) back to its author, with
+// the reason. Returns 0 on success.
+int
+mail_removed_post(const char *author, const char *bname, const char *title,
+                  const char *reason, const char *path)
+{
+    char subject[TTLEN + 1];
+
+    if (!author || !*author)
+        return -1;
+    snprintf(subject, sizeof(subject), "文章被移除: %s", title);
+    mbs_safe_trim(subject);
+    AUTO_STR(msg, "你在 %s 的發文已被移除%s%s\n原文如下：\n\n", bname,
+             reason && *reason ? "，原因：" : "。",
+             reason && *reason ? reason : "");
+    if (save_mailbox("[系統]", author, subject, msg, path, 0,
+                     MAILSEND_FLAG_NONE, NULL) != MAILSEND_OK)
+        return -1;
+    sendalert(author, ALERT_NEW_MAIL);
+    return 0;
+}
+
+// What del_post() puts in the modlog, also previewed before confirming.
+#define MODLOG_DEL_POST_FMT "%s %s 的%s: %s"
+#define MODLOG_DEL_POST_ARGS \
+    as_badpost ? "退回" : "移除", log_owner, \
+    (currmode & MODE_DIGEST) ? "文摘" : "文章", log_title
 
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
@@ -3486,35 +3598,85 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 
     if (fhdr->filename[0]=='L') fhdr->filename[0]='M';
 
+    // Ask in a full screen form, below the post to delete.
+    show_post_line(modlog_form(currboard, not_owned ? "移除文章" : "刪除文章"),
+                   NULL, ent, fhdr);
+
+    // Moderators deleting posts of others must say why, for the modlog.
+    // Copied as deleting may change the header.
+    char log_reason[MODLOG_REASON_LEN] = "";
+    char log_title[TTLEN + 1], log_owner[IDLEN + 2];
+    STRLCPY(log_title, fhdr->title);
+    STRLCPY(log_owner, fhdr->owner);
+    int y = 4;
+
+    // Ask about the bad post before deleting anything: moderators may
+    // drop the connection at these prompts.
+    // Not for self-owned posts, invalid authors or digest mode.
+    int bp_can = IS_ENABLED(CONFIG_ASSESS) &&
+                 not_owned && tusernum > 0 && !(currmode & MODE_DIGEST);
+    // TODO use macro for the duration
+    int bp_old = bp_can &&
+        time4_diff(now, get_fhdr_stamp_ts(fhdr->filename)) > 7 * DAY_SECONDS;
+    if (bp_can && !bp_old) {
+        getdata(y++, 0, "惡退文章?(y/N/q取消)[N] ", genbuf, 3, LCECHO);
+        if (genbuf[0] == 'q')
+            return FULLUPDATE;
+        as_badpost = (genbuf[0] == 'y');
+    }
+
+    if (not_owned) {
+        // The reason of a bad post is the reason of deleting it.
+        if (as_badpost) {
+            const char * const *choices;
+            int n = badpost_reasons(&choices);
+            y = modlog_ask_reason_choice(bp->brdname, y, log_reason,
+                                         sizeof(log_reason), choices, n);
+        } else {
+            y = modlog_ask_reason(bp->brdname, y, log_reason,
+                                  sizeof(log_reason));
+        }
+        if (y < 0)
+            return FULLUPDATE;
+        // What will be recorded, before confirming.
+        y = modlog_preview(y, bp->brdname, log_reason, MODLOG_DEL_POST_FMT,
+                           MODLOG_DEL_POST_ARGS) + 1;
+        // The author gets the post by mail (by apply_badpost() for bad
+        // posts), as it is not shown on the board anymore.
+        mvouts(y, 0, tusernum > 0 ?
+               ANSI_COLOR(1;32) "移除後，原文會寄到作者的信箱。" ANSI_RESET :
+               ANSI_COLOR(1;33) "作者帳號已不存在，不會寄回。" ANSI_RESET);
+        y += 2;
+    }
+
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     // query if user really wants to delete it
     if (not_owned && !is_anon && fhdr->owner[0])
     {
 	// manager (bm, sysop, police)
 	do {
-	    getdata(1, 0, "請確定刪除(Y/N/R加註理由)?[N]", genbuf, 3, LCECHO);
+	    getdata(y, 0, "請確定移除(Y/N/R自訂移除後標題)?[N]", genbuf, 3,
+		    LCECHO);
 
 	    // for y/n, skip.
 	    if (genbuf[0] != 'r')
 		break;
 
 	    // build reason string (based on STR_SAFEDEL_TITLE)
-	    SNPRINTF(reason, "(已被%s刪除) <%s>",
+	    SNPRINTF(reason, "(已被%s移除) <%s>",
 		    cuser.userid, fhdr->owner);
-	    move(3, 0); clrtoeol();
-	    getdata_str(2, 0, " >> 請輸入刪除後要顯示的標題: □ ",
+	    getdata_str(y + 1, 0, " >> 請輸入移除後要顯示的標題: □ ",
 		    reason, sizeof(reason), DOECHO, reason);
 
 	    if (!reason[0])
 	    {
-		vmsg("未輸入理由，放棄刪除。");
+		vmsg("未輸入標題，放棄移除。");
 		genbuf[0] = 'n';
 		break;
 	    }
 
 	    // confirm again!
-	    move(4, 0); clrtoeol();
-	    getdata(3, 0, "請再次確定是否要用上述理由刪除(Y/N)?[N]",
+	    getdata(y + 2, 0, "請再次確定是否要用上述標題移除(Y/N)?[N]",
 		    genbuf, 3, LCECHO);
 
 	    // since the default y/n is same to MSG_DEL_NY, we reuse the genbuf[0] here.
@@ -3522,7 +3684,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     } else
 #endif
     {
-	getdata(1, 0, MSG_DEL_NY, genbuf, 3, LCECHO);
+	getdata(y, 0, MSG_DEL_NY, genbuf, 3, LCECHO);
     }
 
     if (genbuf[0] == 'y') {
@@ -3545,24 +3707,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             0)
             del_fee = 0;
 
-        // Ask about the bad post before deleting anything: moderators may
-        // drop the connection at these prompts.
-        // Not for self-owned posts, invalid authors or digest mode.
-        char bp_reason[STRLEN] = "";
-        int bp_can = IS_ENABLED(CONFIG_ASSESS) &&
-                 not_owned && tusernum > 0 && !(currmode & MODE_DIGEST);
-        // TODO use macro for the duration
-        int bp_old = bp_can &&
-            time4_diff(now, get_fhdr_stamp_ts(fhdr->filename)) > 7 * DAY_SECONDS;
-        if (bp_can && !bp_old) {
-            char ans[3];
-            move(5, 0); clrtobot();
-            getdata(5, 0, "惡退文章?(y/N)[N] ", ans, sizeof(ans), LCECHO);
-            if (ans[0] == 'y' &&
-                ask_badpost_reason(bp_reason, sizeof(bp_reason)) == 0)
-                as_badpost = 1;
-        }
-
         if (!not_owned) {
             reload_money();
             if (cuser.money < del_fee) {
@@ -3578,7 +3722,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 	   ((reason[0] || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
             !(currmode & MODE_DIGEST) &&
-            !safe_article_delete(ent, fhdr, direct, reason[0] ? reason : NULL)) ||
+            !safe_article_delete(ent, fhdr, direct,
+                                 reason[0] ? reason :
+                                 // Anonymous: set_safedel_fhdr() can't tell
+                                 // removed from deleted by the author.
+                                 (not_owned && is_anon) ?
+                                 STR_SAFEREMOVE_TITLE : NULL)) ||
 #endif
             !delete_fileheader(direct, fhdr, ent)) {
             // do this immediately after .DIR change in case connection
@@ -3592,8 +3741,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             // BN_NEWIDPOST.
             deleteCrossPost(fhdr, bp->brdname);
 
-            move(b_lines - 10, 0); clrtobot();
-            prints("\n正在刪除文章: %s\n", fhdr->title);
+            // Below the post shown on line 2, as the questions are done.
+            move(4, 0); clrtobot();
+            outs(not_owned ? "已移除文章。\n" : "已刪除文章。\n");
 
             // check delete_file_content for del_ret
             if (!IS_DELETE_FILE_CONTENT_OK(del_ret)) {
@@ -3613,10 +3763,26 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    } else if (bp_old) {
 		outs("退文設定: 文章超過一週 (跳過)\n");
 	    } else if (as_badpost) {
-		apply_badpost(getuserid(tusernum), fhdr, newpath, bp_reason);
+		apply_badpost(getuserid(tusernum), fhdr, newpath, log_reason);
+		outs("原文已隨退文通知寄到作者的信箱。\n");
 	    }
             if (*newpath && *reason) {
                 file_appendf(newpath, STR_POST_MARK "Delete Reason: %s\n", reason);
+            }
+            if (not_owned)
+                modlog(bp->brdname, log_reason, MODLOG_DEL_POST_FMT,
+                       MODLOG_DEL_POST_ARGS);
+            // Mail the post to the author, as it is not shown on the board
+            // anymore. apply_badpost() mails bad posts already.
+            if (not_owned && tusernum > 0 && !as_badpost && *newpath &&
+                IS_DELETE_FILE_CONTENT_OK(del_ret)) {
+                if (mail_removed_post(getuserid(tusernum), bp->brdname,
+                                      log_title, log_reason, newpath) == 0) {
+                    outs("原文已寄到作者的信箱。\n");
+                } else {
+                    outs(ANSI_COLOR(1;31) "* 無法將原文寄到作者的信箱。"
+                         ANSI_RESET "\n");
+                }
             }
 
             if (del_fee <= 0)
@@ -3638,10 +3804,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		    }
 
                     pay_as_uid(tusernum, del_fee,
-                            "%s 看板 文章「%s」被%s，扣除稿酬%s %s",
-                            currboard,  fhdr->title,
-                            as_badpost ? "退回" : "刪除",
-                            reason[0] ? "。原因:" : "", reason);
+                            "%s 看板 文章「%s」被%s，扣除稿酬%s%s",
+                            currboard, log_title,
+                            as_badpost ? "退回" : "移除",
+                            log_reason[0] ? "。原因: " : "", log_reason);
                     sendalert_uid(tusernum, ALERT_PWD_PERM);
 		}
 	    }
@@ -3711,9 +3877,16 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
         }
 
-	getdata(b_lines - 1, 0, "請輸入鎖定理由：", genbuf, 50, DOECHO);
-
-	if (vans("要將文章鎖定嗎(y/N)?") != 'y')
+	int y = show_post_line(modlog_form(currboard, "鎖定文章"), NULL, ent,
+			       fhdr) + 1;
+	if ((y = modlog_police_ask_reason(currboard, y, genbuf,
+					  MODLOG_REASON_LEN)) < 0)
+	    return FULLUPDATE;
+	y = modlog_police_preview(y, currboard, genbuf, "鎖定文章: %s",
+				  fhdr->title) + 1;
+	char ans[3];
+	getdata(y, 0, "要將文章鎖定嗎(y/N)?", ans, sizeof(ans), LCECHO);
+	if (ans[0] != 'y')
 	    return FULLUPDATE;
 
         AUTO_BFILE(fn1, currboard, fhdr->filename);
@@ -3728,6 +3901,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         }
 
         post_policelog2(currboard, fhdr->title, "鎖文", genbuf, 1, fn1);
+        modlog_police(currboard, genbuf, "鎖定文章: %s", fhdr->title);
 
         // Rename the file to be secure, introducing new X-dot file here.
         // We can not use L-dot prefix since there may be some code that
@@ -3737,7 +3911,13 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         Rename(fn1, fnx);
         fhdr->filename[0] = 'L';
     } else if (fhdr->filename[0]=='L') {
-	if (vans("要將文章鎖定解除嗎(y/N)?") != 'y')
+	int y = show_post_line(modlog_form(currboard, "解除鎖定文章"), NULL,
+			       ent, fhdr) + 1;
+	y = modlog_police_preview(y, currboard, NULL, "解除鎖定文章: %s",
+				  fhdr->title) + 1;
+	char ans[3];
+	getdata(y, 0, "要將文章鎖定解除嗎(y/N)?", ans, sizeof(ans), LCECHO);
+	if (ans[0] != 'y')
 	    return FULLUPDATE;
         fhdr->filename[0] = 'X';
         AUTO_BFILE(fnx, currboard, fhdr->filename);
@@ -3748,6 +3928,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         if (access(fnx, 0) == 0)
             Rename(fnx, fn1);
         post_policelog(currboard, fhdr->title, "鎖文", genbuf, 0);
+        modlog_police(currboard, NULL, "解除鎖定文章: %s", fhdr->title);
     } else {
         vmsg("無法進行鎖定或解除。");
         return FULLUPDATE;
@@ -3818,7 +3999,17 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     if (!CBRD_IS_BM())
 	return DONOTHING;
 
-    getdata(b_lines - 1, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
+    char log_reason[MODLOG_REASON_LEN];
+    char log_action[ANSILINELEN];
+    snprintf(log_action, sizeof(log_action), "將文章推薦值 (%d) 歸零: %s",
+             (int)fhdr->score, fhdr->title);
+    int y = show_post_line(modlog_form(currboard, "推薦值歸零"), NULL, ent,
+                           fhdr) + 1;
+    if ((y = modlog_ask_reason(currboard, y, log_reason,
+                               sizeof(log_reason))) < 0)
+	return FULLUPDATE;
+    y = modlog_preview(y, currboard, log_reason, "%s", log_action) + 1;
+    getdata(y, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
     fhdr->score = 0;
@@ -3835,6 +4026,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     if (dashf(fn))
         file_appendf(fn, STR_REF_MARK "%s 於 %s 將推薦值歸零\n", cuser.userid,
                   Cdatelite(&now));
+    modlog(currboard, log_reason, "%s", log_action);
     return FULLUPDATE;
 }
 
@@ -4295,10 +4487,10 @@ b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
 }
 
 static int
-mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
-                  const char *direct GCC_UNUSED) {
+mask_post_content(int ent, fileheader_t * fhdr,
+                  const char *direct) {
     char pattern[STRLEN];
-    char reason[15];
+    char reason[MODLOG_REASON_LEN];
     char buf[ANSILINELEN], buf2[ANSILINELEN];
     char revpath[PATHLEN];
     char ans[3];
@@ -4317,11 +4509,10 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
         return FULLUPDATE;
     }
 
-    vs_hdr2("刪除特定文字", fhdr->title);
-    if (!getdata(1, 0, "刪除原因: ", reason, sizeof(reason), DOECHO))
-        return FULLUPDATE;
-    mvouts(3, 0, "請輸入要刪除的文字 (出現時會整行被[違規內容]取代, 最少兩個字元)\n");
-    if (!getdata(2, 0, "刪除文字: ", pattern, TTLEN, DOECHO) || strlen(pattern) < 2)
+    int y = show_post_line(modlog_form(currboard, "刪除特定文字"), NULL, ent,
+                           fhdr) + 1;
+    mvouts(y + 1, 0, "請輸入要刪除的文字 (出現時會整行被[違規內容]取代, 最少兩個字元)\n");
+    if (!getdata(y, 0, "刪除文字: ", pattern, TTLEN, DOECHO) || strlen(pattern) < 2)
         return FULLUPDATE;
 
     // try to render and build.
@@ -4331,8 +4522,9 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
         vmsg("文章已被刪除或鎖定。");
         return FULLUPDATE;
     }
-    mvouts(3, 0, ANSI_COLOR(1;31) "將刪除下列文字:" ANSI_RESET "\n");
-    i = 4;
+    move(y + 1, 0); clrtobot();
+    mvouts(y + 1, 0, ANSI_COLOR(1;31) "將刪除下列文字:" ANSI_RESET "\n");
+    i = y + 2;
     while (fgets(buf, sizeof(buf), fp)) {
         strip_control_sequence(buf, buf);
         if (mbs_strstr(buf, pattern)) {
@@ -4345,7 +4537,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
                     found = 0;
                     break;
                 }
-                i = 4;
+                i = y + 2;
                 move(i, 0);
                 clrtobot();
             }
@@ -4357,9 +4549,23 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
         vmsg("未修改檔案。");
         return FULLUPDATE;
     }
+    if (tolower(vmsg("按 q 放棄，或是任意鍵繼續: ")) == 'q') {
+        vmsg("未修改檔案。");
+        return FULLUPDATE;
+    }
+
+    // The reason, what will be recorded and the confirmation.
+    y = show_post_line(modlog_form(currboard, "刪除特定文字"), NULL, ent,
+                       fhdr);
+    mvprints(y, 0, "刪除文字: %s (共 %d 行)", pattern, found);
+    if ((y = modlog_ask_reason(currboard, y + 1, reason,
+                               sizeof(reason))) < 0)
+        return FULLUPDATE;
+    y = modlog_preview(y, currboard, reason, "刪除文章部份違規文字: %s",
+                       fhdr->title) + 1;
 
     /* XXX race condition here... */
-    getdata(b_lines, 0, "確定要刪除這些內容嗎? [y/N]: ", ans, sizeof(ans), LCECHO);
+    getdata(y, 0, "確定要刪除這些內容嗎? [y/N]: ", ans, sizeof(ans), LCECHO);
     if (*ans != 'y') {
         vmsg("未修改檔案。");
         return FULLUPDATE;
@@ -4416,6 +4622,7 @@ mask_post_content(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED,
               STR_POST_MARK "違規文字樣式: %s\n",
               cuser.userid, Cdatelite(&now), reason, pattern);
 
+    modlog(currboard, reason, "刪除文章部份違規文字: %s", fhdr->title);
     // 理論上要改 fhdr->modified, 不過在目前一團亂的同步機制下，多作多錯。
     vmsg("違規文字已刪除。");
     return FULLUPDATE;

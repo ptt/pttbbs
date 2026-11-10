@@ -79,7 +79,7 @@ int modlog_edit(const char *bname);
 
 /* assess */
 int inc_badpost(const char *, int num);
-int ask_badpost_reason(char *reason, size_t size);
+int badpost_reasons(const char * const **reasons);
 void apply_badpost(const char *userid, const fileheader_t *fhdr, const char *newpath, const char *reason);
 int reassign_badpost(const char *userid);
 
@@ -87,7 +87,8 @@ int reassign_badpost(const char *userid);
 int is_file_owner(const fileheader_t *, const userec_t*);
 int is_file_owner_id(const fileheader_t *fhdr, const char *userid);
 void delete_allpost(const char *userid);
-int del_range(int ent, const fileheader_t *fhdr, const char *direct, const char *backup_direct);
+int del_range(int ent, const fileheader_t *fhdr, const char *direct, const char *backup_direct, const char *modlog_board);
+int mail_removed_post(const char *author, const char *bname, const char *title, const char *reason, const char *path);
 int cmpfowner(fileheader_t *fhdr);
 int b_note_edit_bname(int bid);
 int Read(void);
@@ -904,6 +905,7 @@ struct TagItem *AddTagItem(const fileheader_t *fh);
 struct TagItem *ToggleTagItem(const fileheader_t *fh);
 int IsEmptyTagList();
 void ClearTagList();
+int TagCount();
 
 /* talk */
 #define iswritable(uentp)    \

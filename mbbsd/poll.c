@@ -504,6 +504,8 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
     short	    item_num = 0, i;
     int             num = 0, pos, *counts, total;
     time4_t         closetime = 0;
+    char            ptitle[STRLEN] = "";
+    char            log_reason[MODLOG_REASON_LEN];
 
     setbfile(buf, bname, vbuf->ballots);
     if ((num = dashs(buf)) < 0) /* file size */
@@ -516,6 +518,8 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
     if ((fp = fopen(buf, "r"))) {
 	fgets(inbuf, sizeof(inbuf), fp);
 	prints("\nщ布嘿: %s", inbuf);
+	STRLCPY(ptitle, inbuf);
+	chomp(ptitle);
 	fclose(fp);
     }
     setbfile(buf, bname, vbuf->control);
@@ -571,8 +575,14 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
     getdata(b_lines - 1, 0, "(A)щ布 (B)矗Ν秨布 (C)膥尿[C] ", genbuf,
 	    4, LCECHO);
     if (genbuf[0] == 'a') {
-	getdata(b_lines - 1, 0, "叫Ω絋粄щ布 (Y/N) [N] ", genbuf,
-		4, LCECHO);
+	int y = modlog_form(bname, "щ布");
+	mvprints(y, 0, "щ布嘿: %s (Τ %d 布)", ptitle, total);
+	if ((y = modlog_ask_reason(bname, y + 2, log_reason,
+				   sizeof(log_reason))) < 0)
+	    return FULLUPDATE;
+	y = modlog_preview(y, bname, log_reason, "щ布 (Τ %d 布): %s",
+			   total, ptitle) + 1;
+	getdata(y, 0, "叫Ω絋粄щ布 (Y/N) [N] ", genbuf, 4, LCECHO);
 	if (genbuf[0] != 'y')
 	    return FULLUPDATE;
 
@@ -584,12 +594,15 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	    outs(ERR_BOARD_UPDATE);
 	reset_board(pos);
+	modlog(bname, log_reason, "щ布 (Τ %d 布): %s",
+	       total, ptitle);
     } else if (genbuf[0] == 'b') {
 	getdata(b_lines - 1, 0, "絋﹚璶矗Ν秨布盾秨布礚猭確 (Y/N) [N] ",
 		genbuf, 4, LCECHO);
 	if (genbuf[0] != 'y')
 	    return FULLUPDATE;
 
+	modlog(bname, NULL, "矗Ν秨布: %s", ptitle);
 	b_result_one(vbuf, fhp, &total);
 	fhp->npolls = poll_count(bname);
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
@@ -785,10 +798,19 @@ poll_maintain(const char *bname)
 	if (genbuf[0] == 'v')
 	    return poll_view_all(bname);
 	else if (genbuf[0] == 'a') {
-            getdata(b_lines - 1, 0, "叫Ω絋粄┮Τщ布 (Y/N) [N] ", genbuf,
-                    4, LCECHO);
+            char log_reason[MODLOG_REASON_LEN];
+            int y = modlog_form(bname, "┮Τщ布");
+            mvprints(y, 0, "ヘ玡Τ %d щ布", (int)fhp->npolls);
+            if ((y = modlog_ask_reason(bname, y + 2, log_reason,
+                                       sizeof(log_reason))) < 0)
+                return FULLUPDATE;
+            y = modlog_preview(y, bname, log_reason, "┮Τщ布 (%d )",
+                               (int)fhp->npolls) + 1;
+            getdata(y, 0, "叫Ω絋粄┮Τщ布 (Y/N) [N] ", genbuf, 4,
+                    LCECHO);
             if (genbuf[0] != 'y')
                 return FULLUPDATE;
+            int nold = fhp->npolls;
 
 	    for (i = 0; i < MAX_POLL_NR; i++) {
 		pollbuf_init(&vbuf, i);
@@ -800,6 +822,7 @@ poll_maintain(const char *bname)
 	    fhp->npolls = poll_count(bname);
 	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 		outs(ERR_BOARD_UPDATE);
+	    modlog(bname, log_reason, "┮Τщ布 (%d )", nold);
 
 	    return FULLUPDATE;
 	} else if (genbuf[0] != 'm') {
@@ -1013,6 +1036,7 @@ poll_maintain(const char *bname)
     if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	outs(ERR_BOARD_UPDATE);
     reset_board(pos);
+    modlog(bname, NULL, "羭快щ布: %s", ptitle);
     vmsg("秨﹍щ布");
 
     return FULLUPDATE;

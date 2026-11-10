@@ -32,17 +32,55 @@ TagThread(const char *direct)
     return FULLUPDATE;
 }
 
+// Whether TagPruner() deletes a record.
 static int
-_iter_delete_tagged(void *ptr, void *opt) {
-    fileheader_t *fh = (fileheader_t*) ptr;
-    const char *direct = (const char*)opt;
-
+tag_prune_deletes(const fileheader_t *fh)
+{
     /* FILE_BOTTOM aliases FILE_MULTI in mail. */
     if ((fh->filemode & FILE_MARKED) ||
         (fh->filemode & FILE_DIGEST) ||
         ((fh->filemode & FILE_BOTTOM) && currstat != RMAIL))
         return 0;
-    if (!FindTaggedItem(fh))
+    return FindTaggedItem(fh) != NULL;
+}
+
+// Moderators mail removed posts back to their authors, up to this many.
+#define TAG_PRUNE_MAIL_MAX (20)
+
+// The tagged posts to remove from a board, for mailing them back and the
+// audit record.
+typedef struct {
+    struct {
+        fileheader_t fh;
+        int recno;
+        int uid;    // author, or <= 0 if unknown
+    } *items;
+    int n, max, recno;
+} tag_prune_list_t;
+
+static int
+_iter_collect_tagged(void *ptr, void *opt) {
+    const fileheader_t *fh = (const fileheader_t *)ptr;
+    tag_prune_list_t *l = (tag_prune_list_t *)opt;
+
+    l->recno++;
+    if (!tag_prune_deletes(fh) || l->n >= l->max)
+        return 0;
+    l->items[l->n].fh = *fh;
+    l->items[l->n].recno = l->recno;
+    /* An anonymous post keeps its author in multi.anon_uid. */
+    l->items[l->n].uid = (fh->filemode & FILE_ANONYMOUS) ?
+        (int)fh->multi.anon_uid : searchuser(fh->owner, NULL);
+    l->n++;
+    return 0;
+}
+
+static int
+_iter_delete_tagged(void *ptr, void *opt) {
+    fileheader_t *fh = (fileheader_t*) ptr;
+    const char *direct = (const char*)opt;
+
+    if (!tag_prune_deletes(fh))
         return 0;
     // only called by home or board, no need for man.
     // so backup_direct can be same as direct.
@@ -72,8 +110,66 @@ TagPruner(int bid)
 
     if (IsEmptyTagList() || (currstat == READING && !CBRD_IS_BM()))
         return DONOTHING;
-    if (vans("刪除所有標記[N]?") != 'y')
-        return READ_REDRAW;
+    int ntagged = TagCount();
+    const char *kind = (currmode & MODE_DIGEST) ? "文摘" : "文章";
+    // On boards: which posts, to mail them back (not for digests) and for
+    // the audit record.
+    tag_prune_list_t list = { NULL, 0, 0, 0 };
+    int mail_back = 0;
+    if (bp) {
+        list.max = ntagged;
+        list.items = calloc(ntagged, sizeof(*list.items));
+        if (!list.items) {
+            vmsg("系統忙碌中，請稍後再試。");
+            return FULLUPDATE;
+        }
+        apply_fileheader(direct, _iter_collect_tagged, &list);
+        if (!(currmode & MODE_DIGEST))
+            ntagged = list.n;
+        mail_back = !(currmode & MODE_DIGEST) &&
+                    list.n <= TAG_PRUNE_MAIL_MAX;
+    }
+
+    // Moderators must say why, for the modlog, in a full screen form.
+    char log_reason[MODLOG_REASON_LEN] = "";
+    int y = b_lines;
+    if (bp) {
+        y = modlog_form(bp->brdname, "移除標記文章");
+        mvprints(y, 0, "共標記 %d 篇%s。", ntagged, kind);
+        if (mail_back)
+            mvouts(y + 1, 0, ANSI_COLOR(1;32) "移除後，原文會寄回各作者的信箱"
+                   "(您自己的或作者帳號已不存在的除外)。" ANSI_RESET);
+        else if (!(currmode & MODE_DIGEST))
+            mvprints(y + 1, 0, ANSI_COLOR(1;33) "超過 %d 篇，不會寄回原文。"
+                     ANSI_RESET, TAG_PRUNE_MAIL_MAX);
+        if ((y = modlog_ask_reason(bp->brdname, y + 3, log_reason,
+                                   sizeof(log_reason))) < 0) {
+            free(list.items);
+            return FULLUPDATE;
+        }
+        y = modlog_preview(y, bp->brdname, log_reason, "移除標記的 %d 篇%s",
+                           ntagged, kind) + 1;
+    }
+    char ans[3];
+    getdata(y, 0, bp ? "移除所有標記的文章[N]?" : "刪除所有標記[N]?", ans,
+            sizeof(ans), LCECHO);
+    if (ans[0] != 'y') {
+        free(list.items);
+        return bp ? FULLUPDATE : READ_REDRAW;
+    }
+
+    // Mail them back before the files are deleted.
+    int mailed = 0;
+    for (int i = 0; mail_back && i < list.n; i++) {
+        int uid = list.items[i].uid;
+        if (uid <= 0 || uid == usernum)
+            continue;
+        if (mail_removed_post(getuserid(uid), bp->brdname,
+                              list.items[i].fh.title, log_reason,
+                              TEMP_BFILE(bp->brdname,
+                                         list.items[i].fh.filename)) == 0)
+            mailed++;
+    }
 
     // ready to start.
     outmsg("處理中,請稍後...");
@@ -92,6 +188,28 @@ TagPruner(int bid)
         delete_range(currdirect, 0, 0);
 
     ClearTagList();
+    if (bp) {
+        modlog(bp->brdname, log_reason, "移除標記的 %d 篇%s", ntagged, kind);
+        // Which ones, in the audit record only.
+        for (int i = 0; i < list.n; i++) {
+            const fileheader_t *fh = &list.items[i].fh;
+            const char *author = list.items[i].uid > 0 ?
+                getuserid(list.items[i].uid) : NULL;
+            modlog_audit_detail(bp->brdname, "#%d %s%s%s%s %s (%s)",
+                                list.items[i].recno, fh->owner,
+                                (fh->filemode & FILE_ANONYMOUS) && author ?
+                                    " [" : "",
+                                (fh->filemode & FILE_ANONYMOUS) && author ?
+                                    author : "",
+                                (fh->filemode & FILE_ANONYMOUS) && author ?
+                                    "]" : "",
+                                fh->title, fh->filename);
+        }
+        free(list.items);
+        if (mailed)
+            vmsgf("已移除 %d 篇%s，並寄回 %d 封原文。", ntagged, kind,
+                  mailed);
+    }
     if (bid) {
         setbtotal(bid);
         if (bp) {

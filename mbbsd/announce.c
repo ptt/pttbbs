@@ -737,7 +737,7 @@ static void
 a_delrange(menu_t * pm, const char *backup_dir)
 {
     AUTO_STR(fname, "%s/" FN_DIR, pm->path);
-    del_range(0, NULL, fname, backup_dir);
+    del_range(0, NULL, fname, backup_dir, NULL);
     pm->num = get_num_records(fname, FHSZ);
 }
 

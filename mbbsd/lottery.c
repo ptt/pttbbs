@@ -624,6 +624,7 @@ hold_gamble(void)
 	if (yn[0] != 'y')
 	    return FULLUPDATE;
 	rename(fn_ticket, fn_ticket_end);
+	modlog(currboard, NULL, "樂透截止投注");
 	if (bp->endgamble) {
 	    bp->endgamble = 0;
 	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -642,6 +643,7 @@ hold_gamble(void)
 	        vmsg("負荷過高 請於系統負荷低時開獎..");
 		return FULLUPDATE;
 	    }
+	modlog(currboard, NULL, "樂透開獎");
 	openticket(currbid);
 	return FULLUPDATE;
     } else if (dashf(genbuf)) {
@@ -718,6 +720,7 @@ hold_gamble(void)
     rename(fn_ticket_end, fn_ticket);
     /* 設定完才把檔名改過來 */
 
+    modlog(currboard, NULL, "舉辦樂透");
     vmsg("樂透彩券設定完成");
     return FULLUPDATE;
 }
