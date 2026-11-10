@@ -15,6 +15,24 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## modlog: 看板管理紀錄
+
+板主、小組長、站長在看板上的管理動作與看板設定變更，改記入看板目錄下的
+`modlog` (公開，板主可編輯) 與 `modlog.audit` (稽核紀錄，不可編輯)。
+禁言 (水桶) 的設定也改記在這裡，所以舊的看板禁言歷史
+`boards/B/BOARD/muted.history` 要搬成 `modlog.audit`。
+
+請停掉所有舊 mbbsd後執行，建議先以 dry-run 模擬確認：
+
+```bash
+./upgrade/migrate_muted_history_to_modlog.py --dry-run
+./upgrade/migrate_muted_history_to_modlog.py
+```
+
+> - 內容不變，直接改名；若 `modlog.audit` 已存在，舊紀錄會放在它前面。
+> - 公開的 `modlog` 不會有舊紀錄，板主若需要可以自己把內容搬過去。
+
+---
 ## mail.svc: Mail service for bbsmail, outmail and Zip UserHome
 
 新增 `service/mail`（`mail.svc`），把站外信的收、寄與「打包私人資料」集中處理：
