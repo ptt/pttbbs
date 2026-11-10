@@ -921,8 +921,9 @@ hold_gamble(void)
 	     );
     strcat(msg, genbuf);
 
-    // Go live under the lottery lock. Checked again: an older binary
-    // doesn't take the setup lock.
+    // Go live under the lottery lock, with the abort signals blocked (no
+    // input until the restore), so a disconnect can't leave it half done.
+    // Checked again: an older binary doesn't take the setup lock.
     char tkpath[PATHLEN];
     setbpath(tkpath, currboard);
     int tkfd = lock_ticket(tkpath);
@@ -930,8 +931,11 @@ hold_gamble(void)
 	why = "系統錯誤，無法舉辦樂透";
 	goto give_up;
     }
+    sigset_t old_set;
+    block_abort_signals(&old_set);
     if (lottery_in_progress(currboard)) {
 	unlock_ticket(tkfd);
+	restore_abort_signals(&old_set);
 	why = "其他板主已在處理樂透，請稍後再試";
 	goto give_up;
     }
@@ -957,14 +961,16 @@ hold_gamble(void)
 	modlog_t log;
 	modlog(currboard, NULL, modlog_init(&log, "舉辦樂透"));
     }
+    // Unlock first: a kick held back exits at the restore.
     unlock_ticket(tkfd);
+    restore_abort_signals(&old_set);
     if (!live) {
 	why = "系統錯誤，無法舉辦樂透";
 	goto give_up;
     }
     close(lkfd);
 
-    // Announced only once it is live.
+    // Announced outside the region: posting takes .DIR locks.
     SNPRINTF(genbuf, TN_ANNOUNCE " %s 板 開始舉辦樂透!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
     post_msg("Record", genbuf + 7, msg, "[馬路探子]");
