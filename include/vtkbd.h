@@ -159,6 +159,7 @@ static inline bool vkey_isprint(int c) {
 #define I_TIMEOUT       0xDD3D /* additional fd timeout for select (replaced by vkey_poll */
 #define I_OTHERDATA     0xDD3E /* data arrived in additional fd */
 #define I_EV_PUBSUB     0xDD3F /* vkey event: PubSub (live) data; only for vkey_ex(VKEY_EV_PUBSUB) */
+#define I_EV_WMSG       0xDD3C /* vkey event: wmsg received; only for vkey_ex(VKEY_EV_WMSG) */
 
 #endif // _VTKBD_H
 

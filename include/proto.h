@@ -419,6 +419,7 @@ int  vkey_any(void);         // like vkey() but only returns real keys (for "pre
 // and vkey_poll() (and any nested call, e.g. from a key hook) never see them;
 // events stay pending until a caller that wants them comes along.
 #define VKEY_EV_PUBSUB  (1 << 0)    // -> I_EV_PUBSUB (live post comments)
+#define VKEY_EV_WMSG    (1 << 1)    // -> I_EV_WMSG (see wmsg_set_nonmodal)
 void vkey_post_event(int ev);       // mark event(s) pending
 int  vkey_has_event(void);          // pending & wanted by current caller?
 int  vkey_take_event(void);         // pop a wanted event as I_EV_* or 0
@@ -544,6 +545,9 @@ void show_call_in(int save, int which);
 void write_request (int sig);
 int  mbbsd_ipc_handler(const ipc_hdr_t *hdr, const void *payload);
 int  wmsg_on_deliver(const ipc_wmsg_t *w);
+void wmsg_set_nonmodal(bool on);
+unsigned wmsg_history_seq(void);
+bool wmsg_history_next(unsigned *seq, char *buf, size_t sz);
 int  talk_on_request(const ipc_talk_t *t);
 void ipc_init(const char *userid, pid_t pid, int uslot);
 void mkuserdir(const char *userid);

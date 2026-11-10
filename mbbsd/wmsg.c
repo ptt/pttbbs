@@ -28,6 +28,12 @@
 const int WMSG_TABS = WB_OFO_USER_NUM;
 static char     t_last_write[STRLEN];
 
+/* Non-modal: incoming wmsgs are not drawn nor wait for a key; instead
+ * VKEY_EV_WMSG is posted (e.g. live mode puts them in its comment stream). */
+static bool     wmsg_nonmodal = false;
+/* Number of wmsgs ever added to the global history (water[0]). */
+static unsigned wmsg_seq = 0;
+
 static const char *
 get_writelog_path(char *path) {
     setuserfile(path, fn_writelog);
@@ -50,26 +56,34 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
             (fri_stat & HFM || uentp->wmsg != WMSG_FRIENDONLY));
 }
 
+/* Formats a wmsg as shown on the screen (one line with ANSI colors). */
+static void
+format_msg(char *buf, size_t sz, const msgque_t *msg)
+{
+    if (IS_ENABLED(CONFIG_ANGEL) && msg->msgmode == MSGMODE_TOANGEL) {
+        snprintf(buf, sz, ANSI_COLOR(1;37;46) "★%s" ANSI_COLOR(37;45)
+                 " %s " ANSI_RESET, msg->userid, msg->last_call_in);
+    } else {
+        snprintf(buf, sz, ANSI_COLOR(1;33;46) "★%s" ANSI_COLOR(37;45)
+                 " %s " ANSI_RESET, msg->userid, msg->last_call_in);
+    }
+}
+
 static void
 show_msg(int save, const msgque_t *msg)
 {
     char buf[ANSILINELEN];
     int mode = msg->msgmode;
 
+    format_msg(buf, sizeof(buf), msg);
     if (IS_ENABLED(CONFIG_ANGEL) && mode == MSGMODE_TOANGEL) {
-        SNPRINTF(buf, ANSI_COLOR(1;37;46) "★%s" ANSI_COLOR(37;45)
-                 " %s " ANSI_RESET,
-                 msg->userid,
-                 msg->last_call_in);
         // I must be an Angel. Let's try to update angel beats info.
         // TODO maybe it's better to move this to "sender".
         angel_notify_activity(msg->userid);
-    } else {
-        SNPRINTF(buf, ANSI_COLOR(1;33;46) "★%s" ANSI_COLOR(37;45)
-                 " %s " ANSI_RESET, msg->userid,
-                 msg->last_call_in);
     }
-    outmsg(buf);
+    /* Non-modal: the owner of the screen shows it (see wmsg_set_nonmodal). */
+    if (!wmsg_nonmodal)
+        outmsg(buf);
 
     if (save && mode != MSGMODE_ALOHA) {
         char fpath[PATHLEN];
@@ -324,7 +338,7 @@ ofo_get_confirm_mode(const water_t *tw, char *genbuf, size_t sz)
 }
 
 static void
-ofo_reply_waterball(water_t *tw, int ch)
+ofo_reply_wmsg(water_t *tw, int ch)
 {
     if (!tw || !tw->uin)
         return;
@@ -390,7 +404,7 @@ ofo_my_write(void)
 
         default:
             done = 1;
-            ofo_reply_waterball(water_which, ch);
+            ofo_reply_wmsg(water_which, ch);
             break;
         }
     }
@@ -425,7 +439,7 @@ ofo_my_write(void)
  *    回答小主人 flag = WATERBALL_CONFIRM_ANSWER, 8 (pre-edit)
  */
 static inline int
-waterball_flag_to_msgmode(int flag)
+wmsg_flag_to_msgmode(int flag)
 {
     switch (flag) {
     case WATERBALL_ANGEL:
@@ -606,7 +620,7 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
         angel_log_msg_to_angel();
 
     int my_slot = currutmp ? get_utmp_slot(currutmp) : -1;
-    int msgmode = waterball_flag_to_msgmode(flag);
+    int msgmode = wmsg_flag_to_msgmode(flag);
     int res = write_message_full(uslot, uin->pid, currpid, my_slot, from_id, msg, msgmode);
 
     if (flag == WATERBALL_ALOHA)
@@ -739,7 +753,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         memset(&dummy_msg, 0, sizeof(dummy_msg));
         dummy_msg.pid = uin->pid;
         STRLCPY(dummy_msg.userid, destid);
-        dummy_msg.msgmode = waterball_flag_to_msgmode(flag);
+        dummy_msg.msgmode = wmsg_flag_to_msgmode(flag);
         dummy_msg.uslot = get_utmp_slot(uin);
         water_t *target_slot = swater_get_slot(&dummy_msg);
         if (target_slot)
@@ -1041,7 +1055,7 @@ wmsg_init_hooks(void)
 }
 
 /* ----------------------------------------------------- */
-/* Waterball & Pager Request Handlers & History          */
+/* wmsg & Pager Request Handlers & History          */
 /* ----------------------------------------------------- */
 
 void
@@ -1171,6 +1185,7 @@ add_history(const msgque_t * msg)
 
     /* 1. Always record to global linear history buffer (water[0]) */
     add_history_entry(&water[0], msg);
+    wmsg_seq++;
 
     /* 2. Record to per-user session history buffer (swater[0]) */
     water_t *target_slot = swater_get_slot(msg);
@@ -1209,7 +1224,7 @@ write_request_ofo(int sig)
     static int alreadyshow = 0;
     int i, msgcount;
 
-    if (sig) { /* Incoming waterball signal */
+    if (sig) { /* Incoming wmsg signal */
         /* If currently in REPLYING mode, switch to RECVINREPLYING
          * so write_request(0) is triggered after reply finishes. */
         if (wmofo == REPLYING)
@@ -1238,7 +1253,7 @@ write_request_default(void)
 {
     int i, msgcount;
 
-    if (!can_pop_wmsg_ui()) {
+    if (wmsg_nonmodal || !can_pop_wmsg_ui()) {
         msgcount = currutmp->msgcount;
         for (i = 0; i < msgcount; ++i) {
             show_call_in(1, i);
@@ -1294,6 +1309,48 @@ write_request(int sig)
     } else {
         write_request_default();
     }
+    if (wmsg_nonmodal)
+        vkey_post_event(VKEY_EV_WMSG);
+}
+
+/* While on, incoming wmsgs are neither drawn (show_msg) nor wait for a
+ * key (write_request) but post VKEY_EV_WMSG; read them with
+ * wmsg_history_next(). */
+void
+wmsg_set_nonmodal(bool on)
+{
+    wmsg_nonmodal = on;
+}
+
+/* The current position in the wmsg history, for wmsg_history_next(). */
+unsigned
+wmsg_history_seq(void)
+{
+    return wmsg_seq;
+}
+
+/*
+ * Formats (as shown on the screen) the wmsg recorded right after *seq
+ * into buf and advances *seq. Entries already dropped from the history are
+ * skipped. Returns false if there is nothing new.
+ */
+bool
+wmsg_history_next(unsigned *seq, char *buf, size_t sz)
+{
+    if (!water || *seq == wmsg_seq)
+        return false;
+
+    unsigned avail = (unsigned)water[0].count;
+    if (wmsg_seq - *seq > avail)
+        *seq = wmsg_seq - avail;
+    if (*seq == wmsg_seq)
+        return false;
+
+    int back = (int)(wmsg_seq - *seq);  // 1..count
+    int a = (water[0].top - back + MAX_REVIEW) % MAX_REVIEW;
+    format_msg(buf, sz, &water[0].msg[a]);
+    (*seq)++;
+    return true;
 }
 
 int

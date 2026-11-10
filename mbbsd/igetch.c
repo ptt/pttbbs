@@ -172,7 +172,8 @@ igetch(void)
     while (1)
     {
 	int ch = dogetch();
-	if (ch == I_TIMEOUT || ch == I_OTHERDATA || ch == I_EV_PUBSUB)
+	if (ch == I_TIMEOUT || ch == I_OTHERDATA || ch == I_EV_PUBSUB ||
+	    ch == I_EV_WMSG)
 	    return ch;
 
 	ch = vkey_decode(pvin, ch);

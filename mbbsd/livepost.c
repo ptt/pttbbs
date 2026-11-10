@@ -7,14 +7,16 @@
 // Pressing 'v' in the post reader shows the last page and leaves the pager;
 // read_post() then runs live_run(), which owns the screen: new comments of
 // the article (IPC PubSub) are printed below the last page and scrolled up
-// once the screen is full, with a dedicated status bar. 'q'/'Q' or LEFT
-// leaves live mode.
+// once the screen is full, with a dedicated status bar. wmsg received
+// meanwhile are put in the same stream (instead of a modal popup that the
+// status bar would overwrite). 'q'/'Q' or LEFT leaves live mode.
 ////////////////////////////////////////////////////////////////////////////
 
 #define LIVE_MAX_PENDING_COMMENTS 128
 #define LIVE_CATCHUP_MAX        (16 * 1024) // max bytes of missed comments to replay
 #define LIVE_STATUS_REFRESH_MS  1000
 #define LIVE_TIMER_MAX_SEC      (8 * 60 * 60)   // timer range: +/- 8 hours
+#define LIVE_EVENTS             (VKEY_EV_PUBSUB | VKEY_EV_WMSG)
 
 // After a user opened the same article this many times in a row within
 // LIVE_AUTO_PROMPT_SECS (likely re-entering to refresh new comments), offer
@@ -155,6 +157,7 @@ typedef struct {
     off_t   synced;     // file bytes already on screen (0: unknown)
     bool    countdown;  // timer is negative: counting down to the event
     comment_ctx_t cmt;  // state of the new format comment being printed
+    unsigned wmsg_seq;  // wmsg history already shown (wmsg_history_seq)
 } live_view_t;
 
 /* Move to the row for the next line, scrolling once the screen is full. */
@@ -311,6 +314,20 @@ live_flush(live_view_t *v)
     }
 }
 
+/* wmsg received since the last call: print them like comments. */
+static void
+live_flush_wmsg(live_view_t *v)
+{
+    char buf[ANSILINELEN];
+
+    while (wmsg_history_next(&v->wmsg_seq, buf, sizeof(buf))) {
+        live_next_row(v);
+        outs(buf);
+        outs(ANSI_RESET);
+        clrtoeol();
+    }
+}
+
 static void
 live_draw_status(const live_view_t *v, bool can_comment)
 {
@@ -407,6 +424,9 @@ live_run(const live_ctx_t *live, const char *fpath,
     v.row = rows;
     v.synced = shown;
     v.cmt = live->cmt;
+    /* Only wmsg from now on; they are not modal while we are here. */
+    v.wmsg_seq = wmsg_history_seq();
+    wmsg_set_nonmodal(true);
     syncnow();
     v.start = now;
     live_print_banner(&v);
@@ -418,13 +438,17 @@ live_run(const live_ctx_t *live, const char *fpath,
         live_check_countdown(&v);
         live_draw_status(&v, can_comment);
 
-        if (!vkey_poll_ex(LIVE_STATUS_REFRESH_MS, VKEY_EV_PUBSUB))
+        if (!vkey_poll_ex(LIVE_STATUS_REFRESH_MS, LIVE_EVENTS))
             continue;   // tick: refresh elapsed time
 
-        int ch = vkey_ex(VKEY_EV_PUBSUB);
+        int ch = vkey_ex(LIVE_EVENTS);
         switch (ch) {
         case I_EV_PUBSUB:
             live_flush(&v);
+            break;
+
+        case I_EV_WMSG:
+            live_flush_wmsg(&v);
             break;
 
         case EOF:
@@ -477,6 +501,7 @@ live_run(const live_ctx_t *live, const char *fpath,
         }
     }
 
+    wmsg_set_nonmodal(false);
     ipc_unsub(s_live.bid, aidu_raw(s_live.aid));
     s_live.active = false;
     live_provider_free();

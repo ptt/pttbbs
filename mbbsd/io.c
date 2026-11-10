@@ -467,6 +467,10 @@ vkey_take_event(void)
         ctx->ev_pending &= ~VKEY_EV_PUBSUB;
         return I_EV_PUBSUB;
     }
+    if (ev & VKEY_EV_WMSG) {
+        ctx->ev_pending &= ~VKEY_EV_WMSG;
+        return I_EV_WMSG;
+    }
     return 0;
 }
 
