@@ -75,7 +75,7 @@ func TestIPCServerWmsgPubSubAndTalk(t *testing.T) {
 		t.Fatalf("Read regB ack payload failed: %v", err)
 	}
 
-	// 3. Alice sends Waterball to Bob
+	// 3. Alice sends wmsg to Bob
 	wmsg := &WmsgPayload{
 		FromPID:   1001,
 		FromUSlot: 1,

@@ -328,7 +328,7 @@ typedef struct user_list_cfg {
     const char   *title;
     const char   *desc_prompt;
     unsigned int  max_entries;
-    int           allow_waterball;
+    int           allow_wmsg;
     int           allow_clean;
     int         (*import_fn)(const char *fpath, unsigned int max_entries, int count);
 } user_list_cfg_t;
@@ -452,7 +452,7 @@ ssize_t vbuf_from_tty(VBUF *v);
 
 typedef enum {
     VKEY_HOOK_PRIO_SYSTEM = 0, // System-level hotkeys (e.g., Ctrl-L redraw)
-    VKEY_HOOK_PRIO_MODAL,      // Modal dialogs/popups (e.g., active waterball list)
+    VKEY_HOOK_PRIO_MODAL,      // Modal dialogs/popups (e.g., active wmsg list)
     VKEY_HOOK_PRIO_WMSG,       // Global wmsg hotkeys (e.g., Ctrl-R)
 #define VKEY_HOOK_PRIO_PAGER VKEY_HOOK_PRIO_WMSG
     VKEY_HOOK_PRIO_NORMAL,     // Normal screen handlers (e.g., Ctrl-U userlist)

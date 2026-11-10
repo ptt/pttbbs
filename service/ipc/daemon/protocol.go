@@ -29,7 +29,7 @@ const (
 	IPCTypeStatsReq   uint16 = 0x0006
 	IPCTypeStatsResp  uint16 = 0x0007
 
-	// 0x0010 - 0x001F: Waterball (wmsg)
+	// 0x0010 - 0x001F: wmsg
 	IPCTypeWmsgSend    uint16 = 0x0010
 	IPCTypeWmsgDeliver uint16 = 0x0011
 

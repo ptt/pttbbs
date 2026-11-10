@@ -221,7 +221,7 @@ user_list_water(const char *fpath, const char *message)
 	    if ((tuid = searchuser(userid, NULL)) && tuid != usernum &&
 		(uentp = (userinfo_t *) search_ulist(tuid)) &&
 		isvisible_uid(tuid))
-		my_write(uentp->pid, message, uentp->userid, WATERBALL_PREEDIT, NULL);
+		my_write(uentp->pid, message, uentp->userid, WMSG_PREEDIT, NULL);
 	}
 	fclose(fp);
     }
@@ -278,7 +278,7 @@ edit_user_list(const char *fpath, const user_list_cfg_t *cfg)
 		     (cfg->desc_prompt && *cfg->desc_prompt) ? "(E)修改" : "",
 		     cfg->import_fn ? "(P)引入" : "",
 		     cfg->allow_clean ? "(C)整理有效名單" : "",
-		     cfg->allow_waterball ? "(W)水球" : "");
+		     cfg->allow_wmsg ? "(W)水球" : "");
 	} else {
 	    snprintf(prompt, sizeof(prompt),
 		     "(A)增加 %s(Q)結束?[Q] ",
@@ -350,7 +350,7 @@ edit_user_list(const char *fpath, const user_list_cfg_t *cfg)
 		unlink(fpath);
 		dirty = 1;
 	    }
-	} else if (uident[0] == 'w' && count && cfg->allow_waterball) {
+	} else if (uident[0] == 'w' && count && cfg->allow_wmsg) {
 	    char            wall[60];
 	    char            ans[4];
 	    if (!getdata(0, 0, "群體水球:", wall, sizeof(wall), DOECHO))
@@ -594,7 +594,7 @@ edit_special_list(void)
 	.title = title_buf,
 	.desc_prompt = "描述一下：",
 	.max_entries = MAX_NAMELIST,
-	.allow_waterball = 1,
+	.allow_wmsg = 1,
 	.allow_clean = 1,
 	.import_fn = friend_append,
     };
@@ -624,7 +624,7 @@ friend_edit(int type)
 	.title = friend_list[type],
 	.desc_prompt = friend_desc[type],
 	.max_entries = friend_max[type],
-	.allow_waterball = 1,
+	.allow_wmsg = 1,
 	.allow_clean = 1,
 	.import_fn = friend_append,
     };

@@ -1132,7 +1132,7 @@ bcfg_set_visible(cmd_ctx_t *ctx)
         .title = "看板會員名單",
         .desc_prompt = "看板會員描述：",
         .max_entries = MAX_USERS,
-        .allow_waterball = 1,
+        .allow_wmsg = 1,
         .allow_clean = 1,
         .import_fn = NULL,
     };
@@ -1153,7 +1153,7 @@ bcfg_set_poll_voters(cmd_ctx_t *ctx)
         .title = "私人投票名單",
         .desc_prompt = "投票者描述：",
         .max_entries = MAX_FRIEND,
-        .allow_waterball = 0,
+        .allow_wmsg = 0,
         .allow_clean = 1,
         .import_fn = NULL,
     };

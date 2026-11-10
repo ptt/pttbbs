@@ -508,7 +508,7 @@ vkey_decode(VBUF *inbuf, int raw_ch)
  * - vkey events (I_EV_*) are never requested, so never delivered here.
  * - I_OTHERDATA: the attached fd (talk/chat/chess peer) is detached while
  *   waiting, so its data stays queued in the socket for the owner of the fd
- *   to read afterwards (same as the waterball reply modal). Merely ignoring
+ *   to read afterwards (same as the wmsg reply modal). Merely ignoring
  *   it would busy-loop, since the unread fd stays readable.
  */
 int

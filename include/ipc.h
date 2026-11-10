@@ -30,9 +30,9 @@ enum {
     IPC_TYPE_STATS_REQ      = 0x0006,   /* Query service stats */
     IPC_TYPE_STATS_RESP     = 0x0007,   /* Service stats response */
 
-    /* 0x0010 - 0x001F: Waterball (wmsg) */
-    IPC_TYPE_WMSG_SEND      = 0x0010,   /* Client -> Service (Send waterball) */
-    IPC_TYPE_WMSG_DELIVER   = 0x0011,   /* Service -> Target Client (Deliver waterball) */
+    /* 0x0010 - 0x001F: wmsg */
+    IPC_TYPE_WMSG_SEND      = 0x0010,   /* Client -> Service (Send wmsg) */
+    IPC_TYPE_WMSG_DELIVER   = 0x0011,   /* Service -> Target Client (Deliver wmsg) */
 
     /* 0x0020 - 0x002F: PubSub (Live Post & Channels) */
     IPC_TYPE_SUB            = 0x0020,   /* Client -> Service (Subscribe to topic) */
@@ -82,7 +82,7 @@ typedef struct {
     char     message[64];
 } __attribute__((packed)) ipc_ack_t;
 
-/* Waterball payload (IPC_TYPE_WMSG_SEND, IPC_TYPE_WMSG_DELIVER) */
+/* wmsg payload (IPC_TYPE_WMSG_SEND, IPC_TYPE_WMSG_DELIVER) */
 typedef struct {
     char     from_userid[IPC_USERID_LEN];
     char     to_userid[IPC_USERID_LEN];

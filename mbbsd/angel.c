@@ -959,7 +959,7 @@ TalkToAngel(){
     if (my_write(uent->pid,
 		 TEMPFORMAT(IDLEN * 2, "問%s小天使: ", _myangel_nick),
 		 TEMPFORMAT(IDLEN + 1, "%s小天使", _myangel_nick),
-		 WATERBALL_ANGEL, uent)) {
+		 WMSG_ANGEL, uent)) {
 	lastuent = uent;
     }
 }

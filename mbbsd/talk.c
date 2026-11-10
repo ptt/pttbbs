@@ -1225,7 +1225,7 @@ userlist_broadcast(void)
                     continue;
                 if (kill(uentp->pid, 0) == -1)
                     continue;
-                my_write(uentp->pid, genbuf, uentp->userid, WATERBALL_PREEDIT, NULL);
+                my_write(uentp->pid, genbuf, uentp->userid, WMSG_PREEDIT, NULL);
             }
         }
     }

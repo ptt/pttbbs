@@ -2404,8 +2404,8 @@ m_read(void)
 // Optional Features
 
 static int
-mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
-               const char *direct GCC_UNUSED)
+mail_wmsg(int ent GCC_UNUSED, fileheader_t * fhdr,
+          const char *direct GCC_UNUSED)
 {
     assert(is_valid_fileheader(fhdr));
     if (!IS_ENABLED(CONFIG_OUTJOBSPOOL))
@@ -2517,7 +2517,7 @@ DEFINE_READ_ITEM_CMD(mail_cmd_del, mail_del)
 DEFINE_READ_ITEM_CMD(mail_cmd_mark, mail_mark)
 DEFINE_READ_ITEM_CMD(mail_cmd_read, mail_read)
 DEFINE_READ_ITEM_CMD(mail_cmd_save, mail_save)
-DEFINE_READ_ITEM_CMD(mail_cmd_waterball, mail_waterball)
+DEFINE_READ_ITEM_CMD(mail_cmd_wmsg, mail_wmsg)
 DEFINE_READ_NOITEM_CMD(mail_cmd_read_all, mail_read_all)
 DEFINE_READ_ITEM_CMD(mail_cmd_call_in, b_call_in)
 DEFINE_READ_ITEM_CMD(mail_cmd_forward, m_forward)
@@ -2551,8 +2551,8 @@ static const cmd_t mail_comms[] = {
     { 'c', NULL, "收入信件至私人信件夾", mail_cmd_cite, PERM_BASIC, CMD_PRIO_NONE, true },
     { 'C', NULL, NULL, mail_cmd_cite, PERM_BASIC, CMD_PRIO_NONE, true },
     { 's', NULL, "儲存信件", mail_cmd_save, PERM_MAILLIMIT, CMD_PRIO_NONE, true },
-    { 'u', NULL, "整理水球記錄後寄回", mail_cmd_waterball, 0, CMD_PRIO_NONE, true },
-    { 'U', NULL, NULL, mail_cmd_waterball, 0, CMD_PRIO_NONE, true },
+    { 'u', NULL, "整理訊息記錄後寄回", mail_cmd_wmsg, 0, CMD_PRIO_NONE, true },
+    { 'U', NULL, NULL, mail_cmd_wmsg, 0, CMD_PRIO_NONE, true },
     { 'D', NULL, "指定範圍刪除信件", mail_cmd_del_range, 0, CMD_PRIO_NONE, true },
     { KEY_TAB, NULL, "切換信箱顯示模式", mail_cmd_toggle_mode, 0, CMD_PRIO_NONE },
     { Ctrl('G'), NULL, "重建信箱索引(毀損時才用)", mail_cmd_built_index, PERM_BASIC, CMD_PRIO_NONE },

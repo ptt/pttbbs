@@ -111,7 +111,7 @@ func printUsage() {
 	fmt.Printf("Usage: ipc.ctl [options] <command> [arguments]\n\n")
 	fmt.Printf("Commands:\n")
 	fmt.Printf("  ping                        Check connectivity to ipc.svc\n")
-	fmt.Printf("  wmsg <to_userid> <msg>      Send a test waterball message\n")
+	fmt.Printf("  wmsg <to_userid> <msg>      Send a test wmsg\n")
 	fmt.Printf("  talk <to_userid> [sig]      Send a test talk/page request (sig: 1=Talk, 2=Gomo/Urgent, 3=CHC)\n")
 	fmt.Printf("  live-pub <topic> <comment>  Publish a live comment to a topic\n")
 	fmt.Printf("  live-sub <topic>            Subscribe and stream live comments for a topic\n")
@@ -247,7 +247,7 @@ func doWmsg(sockPath string, toUser, msg string) {
 	_, _ = io.ReadFull(conn, payload)
 	ack, _ := daemon.DecodeAckPayload(payload)
 	if ack.Code == 0 {
-		fmt.Printf("Success: Waterball sent to %s: \"%s\"\n", toUser, msg)
+		fmt.Printf("Success: wmsg sent to %s: \"%s\"\n", toUser, msg)
 	} else {
 		fmt.Printf("Failed: Code=%d, Message=%s\n", ack.Code, ack.MessageString())
 	}
@@ -557,7 +557,7 @@ func doStatus(sockPath string) {
 	fmt.Printf("  Active Live topics:    %d\n", stats.ActiveTopics)
 	fmt.Printf("  Active chess games:    %d\n", stats.ActiveChess)
 	fmt.Printf("  XChat bridge clients:  %d (backend: xchatd)\n", stats.ActiveXChat)
-	fmt.Printf("  Total waterballs:      %d\n", stats.TotalWmsg)
+	fmt.Printf("  Total wmsg:           %d\n", stats.TotalWmsg)
 	fmt.Printf("  Total talk requests:   %d\n", stats.TotalTalk)
 	fmt.Printf("  Total live comments:   %d\n", stats.TotalLive)
 	fmt.Printf("xchat bridge is active on %s (backend: xchatd)\n", xchatSock)

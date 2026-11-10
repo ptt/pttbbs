@@ -541,7 +541,7 @@ vkey_poll_impl(int timeout)
         }
         if (r & CIN_POLL_IPCFD) {
             syncnow();
-            /* Handlers consume the packets themselves (e.g. waterball shown,
+            /* Handlers consume the packets themselves (e.g. wmsg shown,
              * live comment queued); only a posted event that the current
              * caller asked for interrupts the wait. */
             if (vkey_process_ipc() > 0)

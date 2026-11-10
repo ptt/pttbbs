@@ -46,7 +46,7 @@ mbbsd_ipc_reconnect_cb(int new_fd GCC_UNUSED)
         if (ipc_register(currutmp->userid, currutmp->pid,
                          get_utmp_slot(currutmp)) != 0) {
             /* Not registered (timeout / rejected / I/O error): an
-             * unregistered link silently loses waterballs and talk requests,
+             * unregistered link silently loses wmsgs and talk requests,
              * so drop it and let the library retry with backoff. The register
              * call may already have closed the fd itself. */
             if (ipc_is_connected())

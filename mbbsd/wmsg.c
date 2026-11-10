@@ -327,14 +327,14 @@ ofo_get_confirm_mode(const water_t *tw, char *genbuf, size_t sz)
     if (IS_ENABLED(CONFIG_ANGEL) && is_angel_msgmode(tw->msg[0].msgmode)) {
         if (mbs_strstr(tw->userid, STR_ANGEL)) {
             strlcpy(genbuf, PROMPT_ANGEL_AGAIN, sz);
-            return WATERBALL_CONFIRM_ANGEL;
+            return WMSG_CONFIRM_ANGEL;
         } else {
             strlcpy(genbuf, PROMPT_ANGEL_ANSWER, sz);
-            return WATERBALL_CONFIRM_ANSWER;
+            return WMSG_CONFIRM_ANSWER;
         }
     }
     snprintf(genbuf, sz, PROMPT_OFO, tw->userid);
-    return WATERBALL_CONFIRM;
+    return WMSG_CONFIRM;
 }
 
 static void
@@ -422,33 +422,33 @@ ofo_my_write(void)
 
 /*
  * 被呼叫的時機:
- * 1. 丟群組訊息 flag = WATERBALL_PREEDIT, 1 (pre-edit)
- * 2. 回訊息     flag = WATERBALL_GENERAL, 0
- * 3. 上站aloha  flag = WATERBALL_ALOHA,   2 (pre-edit)
- * 4. 廣播       flag = WATERBALL_SYSOP,   3 if SYSOP
- *               flag = WATERBALL_PREEDIT, 1 otherwise
- * 5. 丟訊息     flag = WATERBALL_GENERAL, 0
- * 6. ofo_my_write  flag = WATERBALL_CONFIRM, 4 (pre-edit but confirm)
+ * 1. 丟群組訊息 flag = WMSG_PREEDIT, 1 (pre-edit)
+ * 2. 回訊息     flag = WMSG_GENERAL, 0
+ * 3. 上站aloha  flag = WMSG_ALOHA,   2 (pre-edit)
+ * 4. 廣播       flag = WMSG_SYSOP,   3 if SYSOP
+ *               flag = WMSG_PREEDIT, 1 otherwise
+ * 5. 丟訊息     flag = WMSG_GENERAL, 0
+ * 6. ofo_my_write  flag = WMSG_CONFIRM, 4 (pre-edit but confirm)
  * 7. (when IS_ENABLED(CONFIG_ANGEL))
- *    呼叫小天使 flag = WATERBALL_ANGEL,   5 (id = STR_ANGEL)
+ *    呼叫小天使 flag = WMSG_ANGEL,   5 (id = STR_ANGEL)
  * 8. (when IS_ENABLED(CONFIG_ANGEL))
- *    回答小主人 flag = WATERBALL_ANSWER,  6 (隱藏 id)
+ *    回答小主人 flag = WMSG_ANSWER,  6 (隱藏 id)
  * 9. (when IS_ENABLED(CONFIG_ANGEL))
- *    呼叫小天使 flag = WATERBALL_CONFIRM_ANGEL, 7 (pre-edit)
+ *    呼叫小天使 flag = WMSG_CONFIRM_ANGEL, 7 (pre-edit)
  * 10. (when IS_ENABLED(CONFIG_ANGEL))
- *    回答小主人 flag = WATERBALL_CONFIRM_ANSWER, 8 (pre-edit)
+ *    回答小主人 flag = WMSG_CONFIRM_ANSWER, 8 (pre-edit)
  */
 static inline int
 wmsg_flag_to_msgmode(int flag)
 {
     switch (flag) {
-    case WATERBALL_ANGEL:
-    case WATERBALL_CONFIRM_ANGEL:
+    case WMSG_ANGEL:
+    case WMSG_CONFIRM_ANGEL:
         return IS_ENABLED(CONFIG_ANGEL) ? MSGMODE_TOANGEL : MSGMODE_WRITE;
-    case WATERBALL_ANSWER:
-    case WATERBALL_CONFIRM_ANSWER:
+    case WMSG_ANSWER:
+    case WMSG_CONFIRM_ANSWER:
         return IS_ENABLED(CONFIG_ANGEL) ? MSGMODE_FROMANGEL : MSGMODE_WRITE;
-    case WATERBALL_ALOHA:
+    case WMSG_ALOHA:
         return MSGMODE_ALOHA;
     default:
         return MSGMODE_WRITE;
@@ -506,11 +506,11 @@ my_write_get_input(const char *prompt, char *msg, size_t msg_size,
         *uin_out = sender;
         if (IS_ENABLED(CONFIG_ANGEL)) {
             if (water_which->msg[i].msgmode == MSGMODE_FROMANGEL)
-                *flag_out = WATERBALL_ANGEL;
+                *flag_out = WMSG_ANGEL;
             else if (water_which->msg[i].msgmode == MSGMODE_TOANGEL)
-                *flag_out = WATERBALL_ANSWER;
+                *flag_out = WMSG_ANSWER;
             else
-                *flag_out = WATERBALL_GENERAL;
+                *flag_out = WMSG_GENERAL;
         }
         strlcpy(destid, water_which->msg[i].userid, IDLEN + 1);
     }
@@ -521,9 +521,9 @@ static bool
 my_write_confirm_send(int flag, const char *destid, const char *msg, userinfo_t *uin)
 {
     bool is_confirm_needed = (
-        flag == WATERBALL_GENERAL || flag == WATERBALL_CONFIRM ||
-        (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
-                       flag == WATERBALL_CONFIRM_ANGEL || flag == WATERBALL_CONFIRM_ANSWER))
+        flag == WMSG_GENERAL || flag == WMSG_CONFIRM ||
+        (IS_ENABLED(CONFIG_ANGEL) && (flag == WMSG_ANGEL || flag == WMSG_ANSWER ||
+                       flag == WMSG_CONFIRM_ANGEL || flag == WMSG_CONFIRM_ANSWER))
     );
 
     if (is_confirm_needed && uin && *uin->userid) {
@@ -548,11 +548,11 @@ my_write_validate_recipient(int flag, const char *destid, const userinfo_t *uin)
         return false;
 
     if (strcasecmp(destid, uin->userid) != 0) {
-        if (!IS_ENABLED(CONFIG_ANGEL) || (flag != WATERBALL_ANGEL && flag != WATERBALL_CONFIRM_ANGEL))
+        if (!IS_ENABLED(CONFIG_ANGEL) || (flag != WMSG_ANGEL && flag != WMSG_CONFIRM_ANGEL))
             return false;
     }
 
-    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WMSG_ANGEL || flag == WMSG_CONFIRM_ANGEL)) {
         if (strcasecmp(cuser.myangel, uin->userid) != 0 || uin->angelpause >= ANGELPAUSE_REJALL)
             return false;
     }
@@ -576,9 +576,9 @@ my_write_log_to_file(const char *destid, const char *msg)
 static bool
 my_write_is_rejected(int flag, userinfo_t *uin, int fri_stat)
 {
-    if (flag == WATERBALL_ALOHA)
+    if (flag == WMSG_ALOHA)
         return false;
-    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WMSG_ANGEL || flag == WMSG_CONFIRM_ANGEL)) {
         if (angel_reject_me(uin))
             return true;
     }
@@ -586,8 +586,8 @@ my_write_is_rejected(int flag, userinfo_t *uin, int fri_stat)
     if (HasUserPerm(PERM_SYSOP))
         return false;
 
-    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER ||
-                      flag == WATERBALL_CONFIRM_ANGEL || flag == WATERBALL_CONFIRM_ANSWER))
+    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WMSG_ANGEL || flag == WMSG_ANSWER ||
+                      flag == WMSG_CONFIRM_ANGEL || flag == WMSG_CONFIRM_ANSWER))
         return false;
 
     if (uin->wmsg == WMSG_ANTIWB || uin->wmsg == WMSG_DISABLE)
@@ -610,20 +610,20 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
         return;
 
     char from_id[IDLEN + 1];
-    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANSWER || flag == WATERBALL_CONFIRM_ANSWER)) {
+    if (IS_ENABLED(CONFIG_ANGEL) && (flag == WMSG_ANSWER || flag == WMSG_CONFIRM_ANSWER)) {
         angel_load_my_fullnick(from_id, sizeof(from_id));
     } else {
         STRLCPY(from_id, cuser.userid);
     }
 
-    if (IS_ENABLED(CONFIG_ANGEL) && flag == WATERBALL_ANGEL)
+    if (IS_ENABLED(CONFIG_ANGEL) && flag == WMSG_ANGEL)
         angel_log_msg_to_angel();
 
     int my_slot = currutmp ? get_utmp_slot(currutmp) : -1;
     int msgmode = wmsg_flag_to_msgmode(flag);
     int res = write_message_full(uslot, uin->pid, currpid, my_slot, from_id, msg, msgmode);
 
-    if (flag == WATERBALL_ALOHA)
+    if (flag == WMSG_ALOHA)
         return;
 
     if (res < 0) {
@@ -647,7 +647,7 @@ int
 my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *puin)
 {
     userinfo_t *uin = puin;
-    if (!uin && IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_CONFIRM_ANGEL)) {
+    if (!uin && IS_ENABLED(CONFIG_ANGEL) && (flag == WMSG_ANGEL || flag == WMSG_CONFIRM_ANGEL)) {
         userinfo_t *cand = search_ulist_userid(cuser.myangel);
         if (cand && (pid <= 0 || cand->pid == pid))
             uin = cand;
@@ -661,8 +661,8 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
     STRLCPY(destid, id);
     check_water_init();
 
-    bool is_interactive = (flag == WATERBALL_GENERAL ||
-                           (IS_ENABLED(CONFIG_ANGEL) && (flag == WATERBALL_ANGEL || flag == WATERBALL_ANSWER)));
+    bool is_interactive = (flag == WMSG_GENERAL ||
+                           (IS_ENABLED(CONFIG_ANGEL) && (flag == WMSG_ANGEL || flag == WMSG_ANSWER)));
 
     if (is_interactive &&
         !ipc_is_connected() && ipc_check_reconnect() < 0) {
@@ -728,14 +728,14 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         return 0;
     }
 
-    if (flag != WATERBALL_ALOHA) {
+    if (flag != WMSG_ALOHA) {
         if (!my_write_log_to_file(destid, msg)) {
             my_write_restore_state(c0, mode0, currstat0);
             return 0;
         }
     }
 
-    if (flag == WATERBALL_SYSOP && uin->msgcount) {
+    if (flag == WMSG_SYSOP && uin->msgcount) {
         uin->destuslot = get_utmp_slot(currutmp);
         uin->sig = 2;
         int sent_ipc = 0;
@@ -845,7 +845,7 @@ call_in(const userinfo_t * uentp, int fri_stat)
 {
     if (iswritable_stat(uentp, fri_stat)) {
         my_write(uentp->pid, TEMPFORMAT(STRLEN, PROMPT_STD, uentp->userid),
-                 uentp->userid, WATERBALL_GENERAL, NULL);
+                 uentp->userid, WMSG_GENERAL, NULL);
         return 1;
     }
     return 0;
@@ -949,17 +949,17 @@ wmsg_handle_ctrl_r_default(int ch)
 
         watermode = 0;
         const char *prompt = NULL;
-        int flag = WATERBALL_GENERAL;
+        int flag = WMSG_GENERAL;
 
         if (IS_ENABLED(CONFIG_ANGEL)) {
             switch (msgmode) {
             case MSGMODE_FROMANGEL:
                 prompt = PROMPT_ANGEL_AGAIN;
-                flag = WATERBALL_ANGEL;
+                flag = WMSG_ANGEL;
                 break;
             case MSGMODE_TOANGEL:
                 prompt = PROMPT_ANGEL_ANSWER;
-                flag = WATERBALL_ANSWER;
+                flag = WMSG_ANSWER;
                 break;
             }
         }

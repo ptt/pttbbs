@@ -178,15 +178,15 @@ _Static_assert(RET_READ_AUTHOR_PREV <= RET_READ_MAX, "RET_READ_* overflow");
 #define SIG_CONN6	8
 
 /* talk.c ¤¤ªº¼Ò¦¡ */
-#define WATERBALL_GENERAL 0
-#define WATERBALL_PREEDIT 1
-#define WATERBALL_ALOHA   2
-#define WATERBALL_SYSOP   3
-#define WATERBALL_CONFIRM 4
-#define WATERBALL_ANGEL   5
-#define WATERBALL_ANSWER  6
-#define WATERBALL_CONFIRM_ANGEL 7
-#define WATERBALL_CONFIRM_ANSWER 8
+#define WMSG_GENERAL        0
+#define WMSG_PREEDIT        1
+#define WMSG_ALOHA          2
+#define WMSG_SYSOP          3
+#define WMSG_CONFIRM        4
+#define WMSG_ANGEL          5
+#define WMSG_ANSWER         6
+#define WMSG_CONFIRM_ANGEL  7
+#define WMSG_CONFIRM_ANSWER 8
 
 /* wmsg.c, talk.c: water ball (pager) modes */
 #define WMSG_OFF	(0)

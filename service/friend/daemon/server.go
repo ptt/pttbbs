@@ -151,10 +151,10 @@ type Service struct {
 	// alohaCache caches parsed home/<c>/<userid>/alohaed by mtime/size to avoid disk open/read on rapid reconnects
 	alohaCache map[string]AlohaCacheEntry
 
-	// lastAlohaNotify tracks the last time an Aloha waterball notification was sent for a login userID (lowercase)
+	// lastAlohaNotify tracks the last time an Aloha wmsg notification was sent for a login userID (lowercase)
 	lastAlohaNotify map[string]time.Time
 
-	// alohaCooldown suppresses duplicate Aloha waterball notifications when the same user rapidly reconnects (default 60s)
+	// alohaCooldown suppresses duplicate Aloha wmsg notifications when the same user rapidly reconnects (default 60s)
 	alohaCooldown time.Duration
 
 	// userPIDs maps userID (lowercase) -> pid -> true

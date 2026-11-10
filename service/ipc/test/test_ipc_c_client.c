@@ -73,12 +73,12 @@ int main(void) {
     assert(ack_payload.code == 0);
     printf("[test_ipc] Bob registered\n");
 
-    /* Test 1: Waterball Alice -> Bob */
-    printf("[test_ipc] Test 1: Alice sends waterball to Bob...\n");
-    r = ipc_wmsg_send("bob", "alice", 11111, 10, 0, "Hello Bob! This is waterball from Alice!");
+    /* Test 1: wmsg Alice -> Bob */
+    printf("[test_ipc] Test 1: Alice sends wmsg to Bob...\n");
+    r = ipc_wmsg_send("bob", "alice", 11111, 10, 0, "Hello Bob! This is wmsg from Alice!");
     assert(r == 0);
 
-    /* Bob receives waterball */
+    /* Bob receives wmsg */
     assert(wait_readable(fd_bob, 1000));
     char buf[1024];
     int n = ipc_read_packet(fd_bob, &hdr, buf, sizeof(buf));
@@ -88,8 +88,8 @@ int main(void) {
     printf("[test_ipc] Bob received wmsg from %s (pid=%d): '%s'\n", w->from_userid, w->from_pid, w->text);
     assert(strcmp(w->from_userid, "alice") == 0);
     assert(w->from_pid == 11111);
-    assert(strcmp(w->text, "Hello Bob! This is waterball from Alice!") == 0);
-    printf("[test_ipc] Test 1 PASS: Waterball routed successfully!\n");
+    assert(strcmp(w->text, "Hello Bob! This is wmsg from Alice!") == 0);
+    printf("[test_ipc] Test 1 PASS: wmsg routed successfully!\n");
 
     /* Test 2: Live Post PubSub */
     printf("[test_ipc] Test 2: PubSub Live post target...\n");

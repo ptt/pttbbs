@@ -82,7 +82,7 @@
  *  - (2009) Customizable key and help handler [done]
  *  - (2009) Customizable footer bar floating prompts [done]
  *  - (2010) Auto Decompression [done]
- *  - Reject waterball (instant message) when playing movie
+ *  - Reject wmsg (instant message) when playing movie
  *  - Support Anti-anti-idle (ex, PCMan sends up-down)
  *  - Deal or disable Ctrl-U (invokes userlist then waiting one more key)
  *  - Virtual Contatenate [pending]

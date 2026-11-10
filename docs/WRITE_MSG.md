@@ -70,7 +70,7 @@ typedef struct msgque_t {
 5. **寫入發送端紀錄 (`my_write_log_to_file`)**：
    將發送的水球內容追加寫入發送者的 `water.log`。
 6. **判斷接收者是否拒收 (`my_write_is_rejected`)**：
-   - `WATERBALL_ALOHA`: 永遠不拒收。
+   - `WMSG_ALOHA`: 永遠不拒收。
    - 站務員 (SYSOP) / 小天使訊息: 繞過拒收限制。
    - 接收者為 `WMSG_ANTIWB` 或 `WMSG_DISABLE`: 拒收。
    - 接收者為 `WMSG_FRIENDONLY` 且發送者不在對方好友名單: 拒收。

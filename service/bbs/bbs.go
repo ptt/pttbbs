@@ -169,7 +169,7 @@ func (c *SHMClient) IsAlohaSvcEnabled() bool {
 	return C.is_aloha_svc_enabled() != 0
 }
 
-// SendAlohaMessage sends an Aloha notification waterball to a target online session in SHM
+// SendAlohaMessage sends an Aloha notification wmsg to a target online session in SHM
 func (c *SHMClient) SendAlohaMessage(sid int, toPID int, fromPID int, fromID string) error {
 	if c == nil {
 		return errors.New("null SHM client")

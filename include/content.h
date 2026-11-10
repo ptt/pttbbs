@@ -52,7 +52,7 @@
 // (header, body and signature), so users can fix them and save again.
 enum {
     CONTENT_KIND_COMMENT = 1,  // text: the comment
-    CONTENT_KIND_WMSG,         // text: the message (waterball); target
+    CONTENT_KIND_WMSG,         // text: the message (wmsg); target
     CONTENT_KIND_TITLE,        // title: the title of a new post, before editing
     CONTENT_KIND_POST,         // path: a new or edited post; title
     CONTENT_KIND_MAIL,         // path: the mail; title; target (first); extra
