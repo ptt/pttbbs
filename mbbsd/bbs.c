@@ -3639,6 +3639,15 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             // a exploit by race condition.
         }
 
+	// Delete the post and settle its money in one go: a kick from another
+	// login (SIGHUP) or a shutdown (SIGTERM) between delete_fileheader() and
+	// the pay()/numposts update below would drop the post yet skip taking its
+	// money back. The copy for the author is made inside too, so a kick can't
+	// leave it behind. (No tty read runs until the restore, which
+	// block_abort_signals() requires.)
+	sigset_t old_set;
+	block_abort_signals(&old_set);
+
         // The post to mail to the author, copied before deleting adds who
         // removed it.
         char mailpath[PATHLEN] = "";
@@ -3669,8 +3678,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                                  STR_SAFEREMOVE_TITLE : NULL)) ||
 #endif
             !delete_fileheader(direct, fhdr, ent)) {
-            // do this immediately after .DIR change in case connection
-            // was closed.
+            // Right after the .DIR change.
 	    setbtotal(currbid);
 
             del_ret = cancelpost(direct, fhdr, not_owned,
@@ -3768,11 +3776,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             }
             if (*mailpath)
                 unlink(mailpath);
+            restore_abort_signals(&old_set);
             pressanykey();
 	    return DIRCHANGED;
 	} else { // delete_fileheader
             if (*mailpath)
                 unlink(mailpath);
+            restore_abort_signals(&old_set);
             vmsg(as_badpost ? "無法刪除檔案記錄，也未退文。請稍候再試。" :
                  "無法刪除檔案記錄。請稍候再試。");
             return DIRCHANGED;
