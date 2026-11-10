@@ -805,83 +805,96 @@ setforward(void) {
 
     }
     chomp(ip);
+    bool enabled = dashf(buf);
     prints("目前設定自動轉寄為: %s",
-           dashf(buf) ? ip : ANSI_COLOR(1;31)"(關閉)" ANSI_RESET);
-    getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email: ",
+           enabled ? ip : ANSI_COLOR(1;31)"(關閉)" ANSI_RESET);
+    getdata_buf(b_lines - 1, 0, "請輸入自動轉寄的Email (清空為停用): ",
 		ip, sizeof(ip), DOECHO);
     strip_blank(ip, ip);
 
-    if (*ip) {
-        if (strcasestr(ip, str_mail_address) ||
-            strchr(ip, '@') == NULL) {
-            vmsg("禁止自動轉寄給站內其它使用者");
-            return FULLUPDATE;
-        }
-
-        if (invalidaddr(ip)) {
-            vmsg("Email 輸入錯誤");
-            return FULLUPDATE;
-        }
-
-        getdata(b_lines, 0,
-                "確定要使用自動轉信? "
-                "(y)開始驗證 (n)停用 [Q]不修改設定 [y/n/Q]: ",
-                yn, sizeof(yn), LCECHO);
-        if (*yn == 'y') {
-            char authtemp[PATHLEN];
-            setuserfile(buf, FN_FORWARD);
-            unlink(buf);
-            setuserfile(buf, fn_forward_auth_dir);
-            Mkdir(buf);
-            setuserfile(buf, fn_forward_auth);
-            fp = fopen(buf, "wt");
-            if (!fp) {
-                vmsg("系統錯誤 - 無法設定自動轉信。");
-                return FULLUPDATE;
-            }
-            gen_auth_code(prefix, auth_code, sizeof(auth_code));
-            STRLCPY(authtemp, buf);
-            STRLCAT(authtemp, ".tmp");
-            fprintf(fp, "%s\n%s\n", ip, auth_code);
-            fclose(fp);
-            fp = fopen(authtemp, "wt");
-            if (!fp) {
-                unlink(buf);
-                vmsg("系統錯誤 - 無法送出確認信。");
-                return FULLUPDATE;
-            }
-            SNPRINTF(buf, BBSNAME " 自動轉寄確認 (%s)",
-                     cuser.userid);
-            fprintf(fp,
-                    BBSNAME " 自動轉寄確認\n\n"
-                    "使用者 %s 要求自動轉寄至此信箱 %s\n"
-                    "若這不是您的帳號，請直接刪除此信件。\n"
-                    "若確定要開啟自動轉寄，"
-                    "請輸入下行 %s 開頭的驗證碼到自動轉寄設定:\n"
-                    " %s\n", cuser.userid, ip, prefix, auth_code);
-            fclose(fp);
-            if (bsmtp(authtemp, buf, ip, cuser.userid) < 0) {
-                unlink(authtemp);
-                vmsg("系統錯誤 - 無法送出確認信。");
-                return FULLUPDATE;
-            }
-            unlink(authtemp);
-            vs_hdr("確認信件已寄出");
-            prints("\n\n"
-                 ANSI_COLOR(1;33)
-                 "為確認 Email 的正確性，系統已寄出一份含驗證碼的確認信，\n"
-                 "標題為: %s\n"
-                 "自動轉寄在完成確認前不會啟用。\n" ANSI_RESET
-                 "請在收到該信件後再次進入設定轉寄信箱並輸入驗證碼。\n", buf);
-            pressanykey();
-            return FULLUPDATE;
-        } else if (*yn != 'n') {
+    if (!*ip) {
+        if (!enabled) {
             vmsg("設定未變更!");
             return FULLUPDATE;
         }
+        getdata(b_lines, 0, "確定要停用自動轉寄嗎? [y/N]: ",
+                yn, sizeof(yn), LCECHO);
+        if (*yn != 'y') {
+            vmsg("設定未變更!");
+            return FULLUPDATE;
+        }
+        unlink(buf);
+        vmsg("已停用自動轉寄!");
+        return FULLUPDATE;
     }
-    unlink(buf);
-    vmsg("取消自動轉信!");
+
+    if (strcasestr(ip, str_mail_address) ||
+        strchr(ip, '@') == NULL) {
+        vmsg("禁止自動轉寄給站內其它使用者");
+        return FULLUPDATE;
+    }
+
+    if (invalidaddr(ip)) {
+        vmsg("Email 輸入錯誤");
+        return FULLUPDATE;
+    }
+
+    getdata(b_lines, 0, "要寄出驗證信到此信箱嗎? [y/N]: ",
+            yn, sizeof(yn), LCECHO);
+    if (*yn != 'y') {
+        vmsg("設定未變更!");
+        return FULLUPDATE;
+    }
+
+    // The current setting is kept until the new address is verified.
+    char authtemp[PATHLEN];
+    setuserfile(buf, fn_forward_auth_dir);
+    Mkdir(buf);
+    setuserfile(buf, fn_forward_auth);
+    fp = fopen(buf, "wt");
+    if (!fp) {
+        vmsg("系統錯誤 - 無法設定自動轉信。");
+        return FULLUPDATE;
+    }
+    gen_auth_code(prefix, auth_code, sizeof(auth_code));
+    STRLCPY(authtemp, buf);
+    STRLCAT(authtemp, ".tmp");
+    fprintf(fp, "%s\n%s\n", ip, auth_code);
+    fclose(fp);
+    fp = fopen(authtemp, "wt");
+    if (!fp) {
+        unlink(buf);
+        vmsg("系統錯誤 - 無法送出確認信。");
+        return FULLUPDATE;
+    }
+    SNPRINTF(buf, BBSNAME " 自動轉寄確認 (%s)",
+             cuser.userid);
+    fprintf(fp,
+            BBSNAME " 自動轉寄確認\n\n"
+            "使用者 %s 要求自動轉寄至此信箱 %s\n"
+            "若這不是您的帳號，請直接刪除此信件。\n"
+            "若確定要開啟自動轉寄，"
+            "請輸入下行 %s 開頭的驗證碼到自動轉寄設定:\n"
+            " %s\n", cuser.userid, ip, prefix, auth_code);
+    fclose(fp);
+    if (bsmtp(authtemp, buf, ip, cuser.userid) < 0) {
+        unlink(authtemp);
+        // Not sent, so there is nothing to verify.
+        setuserfile(authtemp, fn_forward_auth);
+        unlink(authtemp);
+        vmsg("系統錯誤 - 無法送出確認信。");
+        return FULLUPDATE;
+    }
+    unlink(authtemp);
+    vs_hdr("確認信件已寄出");
+    prints("\n\n"
+         ANSI_COLOR(1;33)
+         "為確認 Email 的正確性，系統已寄出一份含驗證碼的確認信，\n"
+         "標題為: %s\n"
+         "新的轉寄信箱在完成確認前不會啟用%s。\n" ANSI_RESET
+         "請在收到該信件後再次進入設定轉寄信箱並輸入驗證碼。\n", buf,
+         enabled ? "，目前的設定維持不變" : "");
+    pressanykey();
     return FULLUPDATE;
 }
 
@@ -899,7 +912,7 @@ built_mail_index(void)
     char            genbuf[128];
     char homepath[PATHLEN];
 
-    move(b_lines - 4, 0);
+    move(b_lines - 4, 0); clrtobot();
     outs("本功能只在信箱檔毀損時使用，" ANSI_COLOR(1;33) "無法" ANSI_RESET "救回被刪除的信件。\n"
 	 "除非您清楚這個功能的作用，否則" ANSI_COLOR(1;33) "請不要使用" ANSI_RESET "。\n"
 	 "警告：任意的使用將導致" ANSI_COLOR(1;33) "不可預期的結果" ANSI_RESET "！\n");
@@ -911,9 +924,11 @@ built_mail_index(void)
 
     sethomepath(homepath, cuser.userid);
     AUTO_STR(command, "bin/buildir '%s' > /dev/null", homepath);
-    mvouts(b_lines - 1, 0, ANSI_COLOR(1;31) "已經處理完畢!! 諸多不便 敬請原諒~" ANSI_RESET);
+    move(b_lines - 1, 0); clrtobot();
+    outs("重建中，請稍候...");
+    refresh();
     system(command);
-    pressanykey();
+    vmsg("處理完畢");
     return FULLUPDATE;
 }
 
@@ -949,15 +964,16 @@ chkmailbox_tidy_limit() {
     return 0;
 }
 
-int
-hold_mail(const char *fpath, const char *receiver, const char *title)
+// Asks whether to keep a copy of the mail sent, telling first how it was
+// sent.
+static int
+hold_mail_prompt(const char *fpath, const char *receiver, const char *title,
+                 const char *sent)
 {
     char            buf[4];
 
-    getdata(b_lines - 1, 0,
-	    (HasUserFlag(UF_DEFBACKUP)) ?
-	    "已順利寄出，是否自存底稿(Y/N)？[Y] " :
-	    "已順利寄出，是否自存底稿(Y/N)？[N] ",
+    getdata(b_lines - 1, 0, TEMPFORMAT(STRLEN, "%s，是否自存底稿(Y/N)？[%c] ",
+	    sent, HasUserFlag(UF_DEFBACKUP) ? 'Y' : 'N'),
 	    buf, sizeof(buf), LCECHO);
 
     if (TOBACKUP(buf[0])) {
@@ -965,6 +981,12 @@ hold_mail(const char *fpath, const char *receiver, const char *title)
 	return 1;
     }
     return 0;
+}
+
+int
+hold_mail(const char *fpath, const char *receiver, const char *title)
+{
+    return hold_mail_prompt(fpath, receiver, title, "已順利寄出");
 }
 
 int
@@ -986,6 +1008,9 @@ mail_ui_send(const char *userid, const char *title)
     default:
 	return -3;
     }
+    // Before paying and the title: the recipient may reject the sender.
+    if (is_rejected(userid))
+	return -5;
     if (strcasecmp(userid, cuser.userid) != 0 && !mail_precheck_quota(1))
 	return -2;
 
@@ -1008,24 +1033,41 @@ mail_ui_send(const char *userid, const char *title)
     return ret;
 }
 
+// Shows the result of mail_ui_send() to userid at the bottom, where it is
+// not overwritten by the prompt to continue.
+static void
+mail_ui_send_result(int ret, const char *userid)
+{
+    switch (ret) {
+    case 0:
+    case 1:
+	vmsg("信件已寄出");
+	break;
+    case -1:
+	vmsg(ERR_UID);
+	break;
+    case -2:
+	vmsg(MSG_CANCEL);
+	break;
+    case -3:
+	vmsgf("使用者 [%s] 無法收信", userid);
+	break;
+    case -5:
+	vmsgf("使用者 [%s] 拒收您的信件", userid);
+	break;
+    case MAILSEND_ERR_QUOTA:
+	vmsgf("使用者 [%s] 信箱已滿，無法收信", userid);
+	break;
+    default:
+	pressanykey();
+	break;
+    }
+}
+
 void
 my_send(const char *uident)
 {
-    switch (mail_ui_send(uident, NULL)) {
-	case -1:
-	outs(ERR_UID);
-	break;
-    case -2:
-	outs(MSG_CANCEL);
-	break;
-    case -3:
-	prints("使用者 [%s] 無法收信", uident);
-	break;
-    case MAILSEND_ERR_QUOTA:
-	prints("使用者 [%s] 信箱已滿，無法收信", uident);
-	break;
-    }
-    pressanykey();
+    mail_ui_send_result(mail_ui_send(uident, NULL), uident);
 }
 
 int
@@ -1040,21 +1082,7 @@ m_send(void)
     if (uident[0])
     {
 	int ret = mail_ui_send(uident, NULL);
-	switch (ret) {
-	case -1:
-	    outs(ERR_UID);
-	    break;
-	case -2:
-	    outs(MSG_CANCEL);
-	    break;
-	case -3:
-	    prints("使用者 [%s] 無法收信", uident);
-	    break;
-	case MAILSEND_ERR_QUOTA:
-	    prints("使用者 [%s] 信箱已滿，無法收信", uident);
-	    break;
-	}
-	pressanykey();
+	mail_ui_send_result(ret, uident);
 	if (ret == 1 || strcasecmp(uident, cuser.userid) == 0)
 	    return DIRCHANGED;
 	return FULLUPDATE;
@@ -1199,17 +1227,22 @@ multi_send(const char *title)
 	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD | MAILSEND_FLAG_CHECK_RECV_LIMIT, NULL) != MAILSEND_OK)
 		Vector_add(&failed, p);
 	}
-	if (Vector_length(&failed)) {
+	int nfailed = Vector_length(&failed);
+	if (nfailed) {
 	    // One screen for all of them, not one key press each.
 	    char msg[STRLEN];
-	    snprintf(msg, sizeof(msg), "下列 %d 人無法收信，未寄出：",
-		     Vector_length(&failed));
+	    snprintf(msg, sizeof(msg), "下列 %d 人無法收信，未寄出：", nfailed);
 	    clear();
 	    ShowVector(&failed, 1, 0, msg, 0);
 	    pressanykey();
 	}
 	Vector_delete(&failed);
-	hold_mail(fpath, NULL, save_title);
+	if (!nfailed)
+	    hold_mail(fpath, NULL, save_title);
+	else if (nfailed < Vector_length(&namelist))
+	    hold_mail_prompt(fpath, NULL, save_title, "已寄出 (部分失敗)");
+	else
+	    vmsg("信件全部未寄出");
 	unlink(fpath);
 	sigprocmask(SIG_SETMASK, &old_set, NULL);
 	Vector_delete(&namelist);
@@ -1363,19 +1396,31 @@ mail_account_sysop(void)
         return DIRCHANGED;
     }
 
+    int nfailed = 0, nsent;
     for (i = 0; i < Vector_length(&namelist); i++) {
         const char *userid = Vector_get(&namelist, i);
         if (save_mailbox(cuser.userid, userid, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_ALLOW_FORWARD, NULL) != MAILSEND_OK)
-            vmsg(ERR_UID);
+            nfailed++;
     }
+    nsent = Vector_length(&namelist) - nfailed;
     Vector_delete(&namelist);
 
-    int memo_saved = hold_mail(fpath, NULL, save_title);
+    // One message for all failures, not one key press each.
+    int memo_saved = 0;
+    if (!nsent) {
+        vmsg("信件無法寄出，請向 " BN_BUGREPORT " 回報");
+    } else {
+        if (nfailed)
+            vmsgf("有 %d 位帳號站長無法收信，已寄給其他 %d 位",
+                  nfailed, nsent);
+        memo_saved = hold_mail_prompt(fpath, NULL, save_title,
+                                      nfailed ? "已寄出 (部分失敗)" :
+                                      "已順利寄出");
+    }
     unlink(fpath);
 
     setutmpmode(oldstat);
 
-    pressanykey();
     if (memo_saved)
         return DIRCHANGED;
     return FULLUPDATE;
@@ -1444,8 +1489,15 @@ mail_mbox(void)
 
     sethomepath(hpath, cuser.userid);
     SNPRINTF(fhdr.title, "%s 私人資料", cuser.userid);
-    if (doforward(hpath, &fhdr, 'Z') == 0)
+    switch (doforward(hpath, &fhdr, 'Z')) {
+    case 0:
         vmsg("已排入打包，完成後會寄給您；若無法寄出會以站內信通知。");
+        break;
+    case -2:
+        if (!IS_ENABLED(CONFIG_DEBUG_FWDADDRERR))
+            vmsg(MSG_FWD_ERR2);
+        break;
+    }
     return 0;
 }
 
@@ -1476,21 +1528,7 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     showplans(uid);
 
     int mail_ret = mail_ui_send(uid, save_title);
-    switch (mail_ret) {
-    case -1:
-	outs(ERR_UID);
-	break;
-    case -2:
-	outs(MSG_CANCEL);
-	break;
-    case -3:
-	prints("使用者 [%s] 無法收信", uid);
-	break;
-    case MAILSEND_ERR_QUOTA:
-	prints("使用者 [%s] 信箱已滿，無法收信", uid);
-	break;
-    }
-    pressanykey();
+    mail_ui_send_result(mail_ret, uid);
     quote_user[0]='\0';
     quote_file[0]='\0';
     if (mail_ret == 1 || strcasecmp(uid, cuser.userid) == 0)
@@ -1556,18 +1594,25 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 
     // if user has address and not the default 'x' (no-email)...
     if (address[0]) {
-	getdata(b_lines, 0, TEMPFORMAT(STRLEN, "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] ", address),
+	// Only the registered address is the default: the one used last time
+	// may be someone else's.
+	bool is_own = strcasecmp(address, cuser.email) == 0;
+	getdata(b_lines, 0, TEMPFORMAT(STRLEN, is_own ?
+		    "確定轉寄給 [%s] 嗎(Y/N/Q)？[Y] " :
+		    "確定轉寄給 [%s] 嗎(y/N/q)？[N] ", address),
 		fname, 3, LCECHO);
 
 	if (fname[0] == 'q') {
-	    outmsg("取消轉寄");
+	    vmsg("取消轉寄");
 	    return 1;
 	}
-	if (fname[0] == 'n')
+	if (fname[0] == 'n' || (!is_own && fname[0] != 'y')) {
 	    address[0] = '\0';
+	    move(b_lines, 0); clrtoeol();
+	}
     }
     if (!address[0]) {
-	do {
+	for (;;) {
 	    getdata(b_lines - 1, 0, "請輸入轉寄地址：", fname, 60, DOECHO);
 	    if (fname[0]) {
 		if (strchr(fname, '.'))
@@ -1578,7 +1623,10 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 		vmsg("取消轉寄");
 		return 1;
 	    }
-	} while (mode == 'Z' && strstr(address, MYHOSTNAME));
+	    if (mode != 'Z' || !strstr(address, MYHOSTNAME))
+		break;
+	    vmsg("不可使用 BBS 信箱，請重新輸入");
+	}
     }
     if (mode == 'Z') {
         if (strstr(address, MYHOSTNAME) ||
@@ -1599,9 +1647,6 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     hostaddr = strchr(address, '@');
     if (hostaddr && strcasecmp(hostaddr + 1, MYHOSTNAME) == 0)
         hostaddr = NULL;
-
-    outmsg("轉寄中請稍候...");
-    refresh();
 
     if (hostaddr && is_rejected_forward(address))
 	return 0;
@@ -1676,8 +1721,10 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	dot = strchr(xid, '.');
 	if (dot) *dot = 0;
 	int charge = !(hostaddr == NULL && strcasecmp(xid, cuser.userid) == 0);
-	if (charge && !mail_precheck_quota(1))
+	if (charge && !mail_precheck_quota(1)) {
+	    vmsg("取消轉寄");
 	    return 1;
+	}
 	// Check the weekly limit again (another session may have passed the
 	// checks too), and record the backup before mail.svc gets it.
 	if (mode == 'Z') {
@@ -1692,13 +1739,13 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 		return 1;
 	    }
 	}
-	if (charge) {
-	    if (mail_charge_quota(1, "超額轉寄手續費") < 0)
-		return 1;
-	    outmsg("轉寄中請稍候...");
-	    refresh();
-	}
+	if (charge && mail_charge_quota(1, "超額轉寄手續費") < 0)
+	    return 1;
     }
+
+    // Everything is confirmed.
+    outmsg("轉寄中請稍候...");
+    refresh();
 
     if (mode == 'Z') {
 	// mail.svc packs and mails it later
@@ -2061,32 +2108,14 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
 
     /* edit, then send the mail */
     int mail_ret = mail_ui_send(uid, save_title);
-    switch (mail_ret) {
-    case -1:
-	outs(ERR_UID);
-	break;
-    case -2:
-	outs(MSG_CANCEL);
-	break;
-    case -3:
-	prints("使用者 [%s] 無法收信", uid);
-	break;
-    case MAILSEND_ERR_QUOTA:
-	prints("使用者 [%s] 信箱已滿，無法收信", uid);
-	break;
-
-    case 0:
-    case 1:
-	/* success */
-	if (direct &&	/* for board, no direct */
-            !(fhdr->filemode & FILE_REPLIED))
-	{
-	    fhdr->filemode |= FILE_REPLIED;
-	    substitute_fileheader(direct, fhdr, fhdr, oent);
-	}
-	break;
+    if ((mail_ret == 0 || mail_ret == 1) &&
+	direct &&	/* for board, no direct */
+	!(fhdr->filemode & FILE_REPLIED))
+    {
+	fhdr->filemode |= FILE_REPLIED;
+	substitute_fileheader(direct, fhdr, fhdr, oent);
     }
-    pressanykey();
+    mail_ui_send_result(mail_ret, uid);
     quote_user[0]='\0';
     quote_file[0]='\0';
     if (mail_ret == 1 || strcasecmp(uid, cuser.userid) == 0)
@@ -2135,8 +2164,9 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     if (!can_forward(fhdr->title))
 	return DONOTHING;
 
+    move(1, 0);
+    clrtobot();
     move(2, 0);
-    clrtoeol();
 
     if (1)
     {
@@ -2169,7 +2199,10 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
     do_reply_title(2, fhdr->title, str_forward, xtitle, sizeof(xtitle));
     strip_control_sequence(xtitle, xtitle);
 
-    getdata(2, 0, "(S/L)發文 (Q)取消？[Q] ", genbuf, 3, LCECHO);
+    // What is going to be posted, with the confirmation.
+    move(2, 0); clrtobot();
+    prints("轉錄到: %s\n標  題: %s\n", xboard, xtitle);
+    getdata(4, 0, "(S/L)發文 (Q)取消？[Q] ", genbuf, 3, LCECHO);
     if (genbuf[0] == 'l' || genbuf[0] == 's') {
 	int             currmode0 = currmode;
 
@@ -2226,9 +2259,6 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	setbtotal(xbid);
 
         log_crosspost_in_allpost(xboard, &xfile);
-
-	// cross-post does not add numpost.
-	outs("轉錄信件不增加文章數，敬請包涵。");
 
 	vmsg("文章轉錄完成");
 	currmode = currmode0;
@@ -2289,6 +2319,8 @@ mail_cite(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
 		buf);
 	if (*buf)
 	    STRLCPY(xboard, buf);
+	else if (HasUserPerm(PERM_MAILLIMIT))
+	    xboard[0] = '\0';	// Enter is for the mail folder, as told.
 	if (*xboard && ((bid = getbnum(xboard)) > 0) &&
 	    HasBoardPerm(getbcache(bid))){ /* XXXbid */
             char backup_path[PATHLEN];
@@ -2400,7 +2432,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 	getdata(b_lines - 5, 0, TEMPFORMAT(STRLEN, "寄往 [%s] 嗎[Y/n/q]？ ", address),
 		fname, 3, LCECHO);
 	if (fname[0] == 'q') {
-	    outmsg("取消處理");
+	    vmsg("取消處理");
 	    return 1;
 	}
 	if (fname[0] == 'n')
@@ -2420,8 +2452,11 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 	}
     }
     trim(address);
-    if (invalidaddr(address))
+    if (invalidaddr(address)) {
+	if (!IS_ENABLED(CONFIG_DEBUG_FWDADDRERR))
+	    vmsg(MSG_FWD_ERR2);
 	return -2;
+    }
     move(b_lines-4, 0); clrtobot();
 
     if( strstr(address, ".bbs") && REJECT_OUTTAMAIL(cuser) ){
@@ -2438,7 +2473,7 @@ mail_waterball(int ent GCC_UNUSED, fileheader_t * fhdr,
 	 "模式 1: 華麗模式, 包含顏色控制碼等, 方便在 bbs上直接編輯收藏\n");
     getdata(b_lines - 1, 0, "使用模式(0/1/Q)? [1]", fname, 3, LCECHO);
     if (fname[0] == 'q') {
-	outmsg("取消處理");
+	vmsg("取消處理");
 	return FULLUPDATE;
     }
     cmode = (fname[0] != '0' && fname[0] != '1') ? 1 : fname[0] - '0';
