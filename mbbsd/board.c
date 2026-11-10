@@ -597,6 +597,15 @@ typedef struct {
     int touched;
     bool readonly;
     bool can_edit;
+    // Set while getting values for the modlog, which must not
+    // include the personal parts (e.g. the user's own login count).
+    bool for_log;
+    // Some settings were saved.
+    bool saved;
+    // Reason of the change, if the setter asked for one.
+    char reason[MODLOG_REASON_LEN];
+    // The change is also recorded in BN_POLICELOG, see modlog_police().
+    bool police;
 } bconfig_ctx_t;
 
 typedef struct BConfigItem {
@@ -609,6 +618,10 @@ typedef struct BConfigItem {
     const char *(*getter)(const bconfig_ctx_t *cx, const struct BConfigItem *item,
                           char *buf, size_t sz);
     cmd_cb_t setter;
+    // The board file the setter edits, to tell if it changed.
+    const char *bfile;
+    // What Enter does in read only mode.
+    cmd_cb_t viewer;
 } BConfigItem;
 
 static const char *
@@ -680,6 +693,8 @@ bcfg_get_post_logins(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED
     int limit = (int)bp->post_limit_logins * 10;
     if (limit == 0) {
         strlcpy(buf, "無限制", sz);
+    } else if (cx->for_log) {
+        snprintf(buf, sz, "%d 次以上", limit);
     } else {
         int my_logins = (int)cuser.numlogindays;
         if (my_logins < limit) {
@@ -698,6 +713,8 @@ bcfg_get_post_badpost(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSE
     const boardheader_t *bp = cx->bp;
     if (bp->post_limit_badpost == 0) {
         strlcpy(buf, "無限制", sz);
+    } else if (cx->for_log) {
+        snprintf(buf, sz, "%d 篇以下", 255 - (int)bp->post_limit_badpost);
     } else {
         int limit = 255 - (int)bp->post_limit_badpost;
         int my_bad = (int)cuser.badpost;
@@ -970,14 +987,27 @@ static int
 bcfg_set_cooldown(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
-    char ans[50];
+    char ans[MODLOG_REASON_LEN], yn[3];
+    // What bconfig_cmd_select() will record, from bconfig_items[].
+    const char *on = "已設為冷靜模式", *off = "未設定";
+    bool is_on = (cx->bp->brdattr & BRD_COOLDOWN) != 0;
     ctx->reload = true;
-    getdata(b_lines - 1, 0, "請輸入理由(空白放棄設定):", ans, sizeof(ans), DOECHO);
-    if (!*ans) {
-        vmsg("未輸入理由，放棄設定。");
+    int y = modlog_form(cx->bp->brdname, "冷靜模式");
+    mvprints(y, 0, "冷靜模式: %s => %s", is_on ? on : off, is_on ? off : on);
+    if ((y = modlog_police_ask_reason(cx->bp->brdname, y + 2, ans,
+                                      sizeof(ans))) < 0)
         return 0;
-    }
+    y = modlog_police_preview(y, cx->bp->brdname, ans,
+                              "修改看板設定「%s」: %s => %s", "冷靜模式",
+                              is_on ? on : off, is_on ? off : on) + 1;
+    getdata(y, 0, is_on ? "確定要解除冷靜模式嗎? [y/N]: " :
+                          "確定要設定冷靜模式嗎? [y/N]: ",
+            yn, sizeof(yn), LCECHO);
+    if (yn[0] != 'y')
+        return 0;
     cx->bp->brdattr ^= BRD_COOLDOWN;
+    strlcpy(cx->reason, ans, sizeof(cx->reason));
+    cx->police = true;
     post_policelog(cx->bp->brdname, NULL, "冷靜", ans, (cx->bp->brdattr & BRD_COOLDOWN));
     cx->touched = 1;
     return 0;
@@ -1174,7 +1204,67 @@ bcfg_set_notes_edit(cmd_ctx_t *ctx)
     return 0;
 }
 
+#define PERM_MODLOG_AUDIT (PERM_BM | PERM_POLICEOP | PERM_BOARDS | PERM_GROUP_OP)
+
+static const char *
+bcfg_get_modlog(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                  char *buf, size_t sz)
+{
+    if (!cx->readonly)
+        strlcpy(buf, "[進入編輯]", sz);
+    else if (dashf(TEMP_BFILE(cx->bp->brdname, FN_MODLOG)))
+        strlcpy(buf, "[閱讀]", sz);
+    else
+        strlcpy(buf, "(尚無記錄)", sz);
+    return buf;
+}
+
+static const char *
+bcfg_get_modlog_audit(const bconfig_ctx_t *cx GCC_UNUSED,
+                         const BConfigItem *item GCC_UNUSED,
+                         char *buf, size_t sz)
+{
+    strlcpy(buf, psb_check_perm(PERM_MODLOG_AUDIT) ?
+            "[唯讀檢視]" : "(限管理人員)", sz);
+    return buf;
+}
+
+static int
+bcfg_view_modlog(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    modlog_view(currboard, 0);
+    clear();
+    return 0;
+}
+
+static int
+bcfg_view_modlog_audit(cmd_ctx_t *ctx)
+{
+    if (!psb_check_perm(PERM_MODLOG_AUDIT)) {
+        vmsg("僅供管理人員檢視。");
+        return 0;
+    }
+    ctx->reload = true;
+    clear();
+    modlog_view(currboard, 1);
+    clear();
+    return 0;
+}
+
+static int
+bcfg_set_modlog(cmd_ctx_t *ctx)
+{
+    ctx->reload = true;
+    clear();
+    modlog_edit(currboard);
+    clear();
+    return 0;
+}
+
 static const BConfigItem bconfig_items[] = {
+    { 'l', "看板管理紀錄(自動公告)", NULL, NULL, 0, PERM_BM, bcfg_get_modlog, bcfg_set_modlog, NULL, bcfg_view_modlog },
     { 'b', "中文敘述", NULL, NULL, 0, PERM_BM, bcfg_get_title, bcfg_set_title },
     { 0,   "公開狀態 (是否隱形)", ANSI_COLOR(1;31) "隱形" ANSI_RESET, "公開", BRD_HIDE, PERM_BM, NULL, bcfg_set_hide },
     { 'g', "隱板時進入十大排行榜", ANSI_COLOR(1) "可以" ANSI_RESET, "不可", BRD_BMCOUNT, PERM_BM, NULL, bcfg_set_bmcount },
@@ -1196,26 +1286,134 @@ static const BConfigItem bconfig_items[] = {
     { 0,   "[發文條件] 退文篇數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_badpost, bcfg_set_post_badpost },
     { 0,   "個人發文推文權限", NULL, NULL, 0, 0, bcfg_get_post_perm, bcfg_show_post_perm },
     { 0,   "預設連署限制 (登入/退文)", NULL, NULL, 0, PERM_BM, bcfg_get_petition_limits, bcfg_set_petition_limits },
+    // Changes are put in the modlog by edit_muted_list_for_board().
     { 'w', "[名單] 設定禁言名單(水桶)", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_muted },
-    { 'v', "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible },
-    { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_poll_voters },
+    { 'v', "[名單] 可見會員名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_visible, FN_VISABLE },
+    { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_poll_voters, FN_POLL_VOTERS },
+    // Changes are put in the modlog by poll_maintain().
     { 'm', "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_poll_maintain },
-    { 'c', "[管理] 文章類別設定", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_posttype },
-    { 'n', "[管理] 發文注意事項", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_postnote },
-    { 'p', "[管理] 編輯進板畫面", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_notes_edit },
+    { 'c', "[管理] 文章類別設定", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_posttype, FN_POSTTYPE },
+    { 'n', "[管理] 發文注意事項", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_postnote, FN_POST_NOTE },
+    { 'p', "[管理] 編輯進板畫面", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_notes_edit, "notes" },
+    { 0,   "[紀錄] 看板管理稽核紀錄", NULL, NULL, 0, PERM_MODLOG_AUDIT, bcfg_get_modlog_audit, bcfg_view_modlog_audit, NULL, bcfg_view_modlog_audit },
 };
+
+static void
+bcfg_get_plain(bconfig_ctx_t *cx, const BConfigItem *item, char *buf, size_t sz)
+{
+    cx->for_log = true;
+    (item->getter ? item->getter : bcfg_get_flag)(cx, item, buf, sz);
+    cx->for_log = false;
+    strip_control_sequence(buf, buf);
+}
+
+typedef struct {
+    bool exists;
+    ino_t ino;
+    off_t size;
+    time_t mtime;
+} bcfg_fstat_t;
+
+static void
+bcfg_stat_file(const char *bname, const char *fn, bcfg_fstat_t *fs)
+{
+    struct stat st;
+    memset(fs, 0, sizeof(*fs));
+    if (stat(TEMP_BFILE(bname, fn), &st) != 0)
+        return;
+    fs->exists = true;
+    fs->ino = st.st_ino;
+    fs->size = st.st_size;
+    fs->mtime = st.st_mtime;
+}
+
+// Saves the changes made so far, so what was put in the modlog is
+// what the board has even if the connection drops before leaving.
+static void
+bconfig_commit(bconfig_ctx_t *cx)
+{
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    if (!cx->touched) {
+        // Others (e.g. the polls) may have changed the board meanwhile.
+        get_boardheader(cx->bp, currbid);
+        return;
+    }
+    // The bottom posts are not edited here, keep the latest ones.
+    boardheader_t cur;
+    if (get_boardheader(&cur, currbid) > 0)
+        memcpy(cx->bp->bottom, cur.bottom, sizeof(cx->bp->bottom));
+    modify_boardheader(cx->bp, currbid);
+    log_usies("SetBoard", cx->bp->brdname);
+    cx->touched = 0;
+    cx->saved = true;
+}
 
 static int
 bconfig_cmd_select(cmd_ctx_t *ctx) {
     assert(ctx->curr >= 0 && ctx->curr < (int)ARRAY_SIZE(bconfig_items));
     const BConfigItem *item = &bconfig_items[ctx->curr];
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     if (!psb_check_perm(item->perm)) {
         vmsg("您沒有修改此項設定的權限");
         return 0;
     }
-    if (item->setter)
+    if (!item->setter)
+        return 0;
+    // Viewers are not settings.
+    if (item->viewer)
         return item->setter(ctx);
+
+    char before[SZ_COLS(128)], after[SZ_COLS(128)];
+    bcfg_fstat_t fs0, fs1;
+    bcfg_get_plain(cx, item, before, sizeof(before));
+    if (item->bfile)
+        bcfg_stat_file(cx->bp->brdname, item->bfile, &fs0);
+    cx->reason[0] = '\0';
+    cx->police = false;
+
+    int ret = item->setter(ctx);
+    void (*record)(const char *, const char *, const char *, ...) =
+        cx->police ? modlog_police : modlog;
+
+    // Put what was changed in the modlog.
+    if (item->bfile) {
+        bcfg_stat_file(cx->bp->brdname, item->bfile, &fs1);
+        if (fs0.exists != fs1.exists ||
+            (fs1.exists && (fs0.ino != fs1.ino || fs0.size != fs1.size ||
+                            fs0.mtime != fs1.mtime)))
+            record(cx->bp->brdname, cx->reason,
+                   fs1.exists ? "編輯看板設定「%s」" :
+                                "刪除看板設定「%s」", item->desc);
+    } else {
+        bcfg_get_plain(cx, item, after, sizeof(after));
+        if (strcmp(before, after) != 0)
+            record(cx->bp->brdname, cx->reason,
+                   "修改看板設定「%s」: %s => %s",
+                   item->desc, before, after);
+    }
+    bconfig_commit(cx);
+    return ret;
+}
+
+static int
+bconfig_cmd_view(cmd_ctx_t *ctx) {
+    assert(ctx->curr >= 0 && ctx->curr < (int)ARRAY_SIZE(bconfig_items));
+    const BConfigItem *item = &bconfig_items[ctx->curr];
+    if (item->viewer)
+        return item->viewer(ctx);
     return 0;
+}
+
+static int
+bconfig_cmd_view_modlog(cmd_ctx_t *ctx) {
+    for (size_t i = 0; i < ARRAY_SIZE(bconfig_items); i++) {
+        if (bconfig_items[i].viewer == bcfg_view_modlog) {
+            ctx->curr = (int)i;
+            ctx->redraw = true;
+            break;
+        }
+    }
+    return bcfg_view_modlog(ctx);
 }
 
 static int
@@ -1265,6 +1463,9 @@ bconfig_cmd_toggle_edit(cmd_ctx_t *ctx) {
 
 static const cmd_t bconfig_readonly_cmds[] = {
     { Ctrl('P'), "開啟編輯", "開啟看板設定修改與管理模式", bconfig_cmd_toggle_edit, PERM_BM | PERM_POLICEOP, CMD_PRIO_MAX },
+    { 'l', "管理紀錄", "閱讀看板管理紀錄", bconfig_cmd_view_modlog, 0, CMD_PRIO_HIGH },
+    { KEY_ENTER, NULL, "閱讀選取的公告或記錄", bconfig_cmd_view, 0, CMD_PRIO_NONE, true },
+    { KEY_RIGHT, NULL, NULL, bconfig_cmd_view, 0, CMD_PRIO_NONE, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -1295,6 +1496,7 @@ static const cmd_t bconfig_edit_cmds[] = {
     { 'j', NULL, "切換冷靜模式", bconfig_cmd_hotkey, PERM_POLICEOP, CMD_PRIO_NONE, true },
     { 'p', NULL, "編輯進板畫面", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
     { 'n', NULL, "編輯發文注意事項", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'l', "管理紀錄", "編輯管理紀錄", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -1428,10 +1630,14 @@ b_config(void)
 
     psb_main(&ctx);
 
+    // Changes are saved as they are made, see bconfig_commit().
     if (cx.touched) {
         assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
         modify_boardheader(bp, currbid);
         log_usies("SetBoard", bp->brdname);
+        cx.saved = true;
+    }
+    if (cx.saved) {
         vmsg("已儲存新設定");
     } else if (!cx.readonly) {
         vmsg("未改變任何設定");
