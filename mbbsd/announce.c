@@ -131,12 +131,21 @@ int copyqueue_toggle(CopyQueue *pcq)
     return 1;
 }
 
-CopyQueue *copyqueue_gethead()
+// Returns the head of the queue without removing it.
+static CopyQueue *copyqueue_peekhead()
 {
     if(	used_copyqueue <= 0 ||
 	head_copyqueue >= used_copyqueue)
 	return NULL;
-    return &(copyqueue[head_copyqueue++]);
+    return &(copyqueue[head_copyqueue]);
+}
+
+CopyQueue *copyqueue_gethead()
+{
+    CopyQueue *cq = copyqueue_peekhead();
+    if (cq)
+	head_copyqueue++;
+    return cq;
 }
 
 int copyqueue_querysize()
@@ -498,13 +507,81 @@ a_pasteitem(menu_t * pm, int mode)
     }
 }
 
+// Appends the copied file cq to the current item. Returns 1 if appended.
+static int
+a_appendcopied(const menu_t * pm, CopyQueue *cq, int isask)
+{
+    char            buf[ANSILINELEN];
+    char            ans[2] = "y", sig[2] = "y";
+    FILE           *fp, *fin;
+    off_t sz;
+
+    if (!dashf(cq->copyfile)) {
+	vmsg("目錄不得附加於檔案後！");
+	return 0;
+    }
+
+    AUTO_STR(fname, "%s/%s", pm->path,
+	    pm->header[pm->now - pm->page].filename);
+
+    // if same file, abort.
+    if (!dashf(fname) || strcmp(fname, cq->copyfile) == 0) {
+	vmsg("檔案不得附加於此！");
+	return 0;
+    }
+
+    // fname = destination
+    sz = dashs(fname);
+    if (sz >= MAX_FILE_SIZE)
+    {
+	vmsg("檔案已超過最大限制，無法再附加");
+	return 0;
+    }
+
+    // Ask everything before changing the file.
+    if (isask) {
+	move(b_lines - 2, 0); clrtobot();
+	getdata(b_lines - 2, 1, TEMPFORMAT(STRLEN, "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle),
+		ans, sizeof(ans), LCECHO);
+	if (ans[0] != 'y')
+	    return 0;
+	getdata(b_lines - 1, 1,
+		"是否收錄簽名檔部份(Y/N)？[Y] ",
+		sig, sizeof(sig), LCECHO);
+    }
+
+    if (!(fp = fopen(fname, "a+")))
+	return 0;
+
+    if (!(fin = fopen(cq->copyfile, "r"))) {
+	fclose(fp);
+	return 0;
+    }
+    // cq->copyfile = input
+    sz = dashs(cq->copyfile);
+
+    memset(buf, '-', 74);
+    buf[74] = '\0';
+    fprintf(fp, "\n> %s <\n\n", buf);
+
+    // XXX reported by Kinra, appending same file may cause endless loop here.
+    // we check file name at prior steps and do file size check here.
+    while (sz > 0 && fgets(buf, sizeof(buf), fin)) {
+	sz -= strlen(buf);
+	if ((sig[0] == 'n') &&
+		!strcmp(buf, "--\n"))
+	    break;
+	fputs(buf, fp);
+    }
+    fclose(fin);
+    fclose(fp);
+    cq->copyfile[0] = '\0';
+    return 1;
+}
+
 static void
 a_appenditem(const menu_t * pm, int isask)
 {
-    char            buf[ANSILINELEN];
-    char            ans[2] = "y";
-    FILE           *fp, *fin;
-
     move(b_lines - 1, 0);
     if(copyqueue_querysize() <= 0)
     {
@@ -512,69 +589,11 @@ a_appenditem(const menu_t * pm, int isask)
 	copyqueue_reset();
 	return;
     }
-    else
-    {
-	CopyQueue *cq = copyqueue_gethead();
-	off_t sz;
 
-	if (!dashf(cq->copyfile)) {
-	    vmsg("目錄不得附加於檔案後！");
-	    return;
-	}
-
-	AUTO_STR(fname, "%s/%s", pm->path,
-		pm->header[pm->now - pm->page].filename);
-
-	// if same file, abort.
-	if (!dashf(fname) || strcmp(fname, cq->copyfile) == 0) {
-	    vmsg("檔案不得附加於此！");
-	    return;
-	}
-
-	// fname = destination
-	sz = dashs(fname);
-	if (sz >= MAX_FILE_SIZE)
-	{
-	    vmsg("檔案已超過最大限制，無法再附加");
-	    return;
-	}
-
-	if (isask) {
-	    getdata(b_lines - 2, 1, TEMPFORMAT(STRLEN, "確定要將[%s]附加於此嗎(Y/N)？[N] ", cq->copytitle),
-		    ans, sizeof(ans), LCECHO);
-	}
-
-	if (ans[0] != 'y' || !(fp = fopen(fname, "a+")))
-	    return;
-
-	if (!(fin = fopen(cq->copyfile, "r"))) {
-	    fclose(fp);
-	    return;
-	}
-	// cq->copyfile = input
-	sz = dashs(cq->copyfile);
-
-	memset(buf, '-', 74);
-	buf[74] = '\0';
-	fprintf(fp, "\n> %s <\n\n", buf);
-	if (isask)
-	    getdata(b_lines - 1, 1,
-		    "是否收錄簽名檔部份(Y/N)？[Y] ",
-		    ans, sizeof(ans), LCECHO);
-
-	// XXX reported by Kinra, appending same file may cause endless loop here.
-	// we check file name at prior steps and do file size check here.
-	while (sz > 0 && fgets(buf, sizeof(buf), fin)) {
-	    sz -= strlen(buf);
-	    if ((ans[0] == 'n') &&
-		    !strcmp(buf, "--\n"))
-		break;
-	    fputs(buf, fp);
-	}
-	fclose(fin);
-	fclose(fp);
-	cq->copyfile[0] = '\0';
-    }
+    // Keep the copied item if not appended when asked, e.g. answering no
+    // to append it somewhere else.
+    if (a_appendcopied(pm, copyqueue_peekhead(), isask) || !isask)
+	copyqueue_gethead();
 }
 
 typedef struct _iter_paste_tag_param {
@@ -648,7 +667,18 @@ a_pastetagpost(menu_t * pm, int mode)
         param.bh = bh;
     }
 
-    if (IsEmptyTagList())
+    if (IsEmptyTagList()) {
+	vmsg("請先在看板或信箱用 t 標記文章");
+	return 0;
+    }
+
+    // mode > 0 merges the tagged posts into one new item.
+    char ans[3];
+    getdata(b_lines - 1, 0, mode > 0 ?
+	    "確定要將標記的文章合併成一篇貼入此目錄嗎(y/N)？[N] " :
+	    "確定要將標記的文章貼入此目錄嗎(y/N)？[N] ",
+	    ans, sizeof(ans), LCECHO);
+    if (ans[0] != 'y')
 	return 0;
 
     /* since we use different tag features,
@@ -657,6 +687,7 @@ a_pastetagpost(menu_t * pm, int mode)
     apply_fileheader(dirname, _iter_paste_tag, &param);
     ClearTagList();
 
+    vmsgf("已處理 %d 篇標記文章", param.copied);
     return param.copied;
 }
 
