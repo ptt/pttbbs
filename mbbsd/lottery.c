@@ -770,6 +770,22 @@ static const vform_def_t lottery_form_def = {
     .submit_prompt = "確定設定並開始編輯樂透內容嗎？[Y/n] ",
 };
 
+/* A lottery is open, closed and awaiting its draw, or being drawn. */
+static int
+lottery_in_progress(const char *brdname)
+{
+    char fn[PATHLEN];
+
+    setbfile(fn, brdname, FN_TICKET);
+    if (dashf(fn))
+	return 1;
+    setbfile(fn, brdname, FN_TICKET_END);
+    if (dashf(fn))
+	return 1;
+    setbfile(fn, brdname, FN_TICKET_LOCK);
+    return dashf(fn);
+}
+
 int
 hold_gamble(void)
 {
@@ -831,20 +847,36 @@ hold_gamble(void)
 	vmsg(" 目前系統正在處理開獎事宜, 請結果出爐後再舉辦.......");
 	return FULLUPDATE;
     }
-    lottery_form_t form = { .price = 100 };
-    if (vform_run(&lottery_form_def, &form, NULL) <= 0)
-	return FULLUPDATE;
-
-    // Another moderator may have started meanwhile.
-    if (dashf(fn_ticket) || dashf(fn_ticket_end) || dashf(genbuf)) {
-	vmsg("其他板主已在處理樂透，請稍後再試");
+    // One setup per board, under the setup lock until the lottery is live.
+    // Not the lottery lock (lock_ticket()), which bets and closes wait for:
+    // that one is held only to go live. Every failure goes through give_up.
+    const char *why = NULL;
+    char lkpath[PATHLEN];
+    int lkfd;
+    setbfile(lkpath, currboard, FN_TICKET_SETUP_LOCK);
+    lkfd = open(lkpath, O_RDONLY | O_CREAT | O_CLOEXEC, 0644);
+    if (lkfd < 0) {
+	vmsg("系統錯誤，無法舉辦樂透");
 	return FULLUPDATE;
     }
-    if (veditfile(fn_ticket_end) < 0) {
-        // 如果有人 race condition 就... 很該死。
-        unlink(fn_ticket_end);
-	vmsg("取消舉辦樂透");
+    if (flock(lkfd, LOCK_EX | LOCK_NB) < 0) {
+	int busy = (errno == EWOULDBLOCK);
+	close(lkfd);
+	vmsg(busy ? "其他板主已在處理樂透，請稍後再試"
+	          : "系統錯誤，無法舉辦樂透");
 	return FULLUPDATE;
+    }
+    if (lottery_in_progress(currboard)) {
+	why = "其他板主已在處理樂透，請稍後再試";
+	goto give_up;
+    }
+    lottery_form_t form = { .price = 100 };
+    if (vform_run(&lottery_form_def, &form, NULL) <= 0)
+	goto give_up;
+    if (veditfile(fn_ticket_end) < 0) {
+	unlink(fn_ticket_end);
+	why = "取消舉辦樂透";
+	goto give_up;
     }
 
     // Saved to the board once everything is set: the lottery stops
@@ -852,15 +884,15 @@ hold_gamble(void)
     time4_t endgamble = lottery_end_time(&form);
     if (endgamble && !time4_gt(endgamble, now)) {
 	unlink(fn_ticket_end);
-	vmsg("截止時間已過，請重新舉辦");
-	return FULLUPDATE;
+	why = "截止時間已過，請重新舉辦";
+	goto give_up;
     }
 
     setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
     if (!(fp = fopen(tmp, "w"))) {
 	unlink(fn_ticket_end);
-	vmsg("系統錯誤，無法舉辦樂透");
-	return FULLUPDATE;
+	why = "系統錯誤，無法舉辦樂透";
+	goto give_up;
     }
     unsigned gen = arc4random();
     if (!gen)
@@ -895,9 +927,9 @@ hold_gamble(void)
     // carries a new generation id, so a purchase still bound to the old
     // lottery is refused once this one opens.
     char tkpath[PATHLEN];
-    int lkfd;
+    int tkfd;
     setbpath(tkpath, currboard);
-    lkfd = lock_ticket(tkpath);
+    tkfd = lock_ticket(tkpath);
     setbfile(genbuf, currboard, FN_TICKET_ITEMS);
     setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
     if (!dashf(fn_ticket)) {
@@ -907,7 +939,7 @@ hold_gamble(void)
 	setbfile(genbuf, currboard, FN_TICKET_USER);
 	unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
     }
-    unlock_ticket(lkfd);
+    unlock_ticket(tkfd);
 
     SNPRINTF(genbuf, TN_ANNOUNCE " %s 板 開始舉辦樂透!", currboard);
     post_msg(currboard, genbuf, msg, cuser.userid);
@@ -915,10 +947,17 @@ hold_gamble(void)
     /* Tim 控制CS, 以免正在玩的user把資料已經寫進來 */
     rename(fn_ticket_end, fn_ticket);
     /* 設定完才把檔名改過來 */
+    close(lkfd);
 
     modlog_t log;
     modlog(currboard, NULL, modlog_init(&log, "舉辦樂透"));
     vmsg("樂透彩券設定完成");
+    return FULLUPDATE;
+
+give_up:
+    close(lkfd);
+    if (why)
+	vmsg(why);
     return FULLUPDATE;
 }
 
