@@ -589,9 +589,17 @@ get_daily_free_mail_limit(void)
     return user_get_daily_free_mail_limit(&cuser);
 }
 
+/* Before count mails go out: asks when some are past the day's free quota
+ * and checks the money. Returns 0 to stop. *quoted gets the fee asked for
+ * and *quoted_n how many mails it covers, both 0 when nothing was asked;
+ * either may be NULL. */
 static int
-mail_precheck_quota(int count)
+mail_precheck_quota(int count, int *quoted, int *quoted_n)
 {
+    if (quoted)
+        *quoted = 0;
+    if (quoted_n)
+        *quoted_n = 0;
     if (count <= 0 || is_mail_quota_exempt())
         return 1;
 
@@ -631,7 +639,49 @@ mail_precheck_quota(int count)
     if (ans[0] != 'y')
         return 0;
 
+    // Again after the prompt, as the money may have gone while it waited. (A
+    // forward is charged the fee quoted here after delivery, with
+    // mail_take_quota(), which then takes what is left.)
+    reload_money();
+    if (cuser.money < cost) {
+        vmsgf("現金不足 (需 %d Ptt幣)，無法寄出信件！", cost);
+        return 0;
+    }
+    if (quoted)
+        *quoted = cost;
+    if (quoted_n)
+        *quoted_n = chargeable;
     return 1;
+}
+
+/* What count more mails today cost; *chargeable gets how many of them are
+ * past the day's free quota. */
+static int
+mail_quota_cost(int count, int *chargeable)
+{
+    *chargeable = 0;
+    if (is_mail_quota_exempt())
+        return 0;
+    int free_limit = get_daily_free_mail_limit();
+    int sent_today = StatGetDailyMail();
+    int free_left = (sent_today < free_limit) ? (free_limit - sent_today) : 0;
+    *chargeable = (count > free_left) ? (count - free_left) : 0;
+    return *chargeable * EXTRA_MAIL_COST;
+}
+
+/* Takes cost for count mails, chargeable of them past the day's free quota,
+ * and adds them to the day's count, together under block_abort_signals() so
+ * a kick can't split them. Should the money have gone meanwhile, pay() takes
+ * what is left. */
+static void
+mail_take_quota(int count, int cost, int chargeable, const char *desc)
+{
+    sigset_t old_set;
+    block_abort_signals(&old_set);
+    if (cost > 0)
+        pay(cost, "%s (超額 %d 封)", desc, chargeable);
+    StatAddDailyMail(count);
+    restore_abort_signals(&old_set);
 }
 
 static int
@@ -640,24 +690,16 @@ mail_charge_quota(int count, const char *desc)
     if (count <= 0)
         return 0;
 
-    if (!is_mail_quota_exempt()) {
-        int free_limit = get_daily_free_mail_limit();
-        int sent_today = StatGetDailyMail();
-        int free_left = (sent_today < free_limit) ? (free_limit - sent_today) : 0;
-        int chargeable = (count > free_left) ? (count - free_left) : 0;
-        int cost = chargeable * EXTRA_MAIL_COST;
-
-        if (cost > 0) {
-            reload_money();
-            if (cuser.money < cost) {
-                vmsgf("現金不足 (需 %d Ptt幣)，無法寄出信件！", cost);
-                return -1;
-            }
-            pay(cost, "%s (超額 %d 封)", desc, chargeable);
+    int chargeable, cost = mail_quota_cost(count, &chargeable);
+    if (cost > 0) {
+        reload_money();
+        if (cuser.money < cost) {
+            vmsgf("現金不足 (需 %d Ptt幣)，無法寄出信件！", cost);
+            return -1;
         }
     }
-
-    StatAddDailyMail(count);
+    // Exactly what was checked.
+    mail_take_quota(count, cost, chargeable, desc);
     return 0;
 }
 
@@ -1047,7 +1089,7 @@ mail_ui_send(const char *userid, const char *title)
     // Before paying and the title: the recipient may reject the sender.
     if (is_rejected(userid))
 	return -5;
-    if (strcasecmp(userid, cuser.userid) != 0 && !mail_precheck_quota(1))
+    if (strcasecmp(userid, cuser.userid) != 0 && !mail_precheck_quota(1, NULL, NULL))
 	return -2;
 
     /* process title */
@@ -1183,7 +1225,7 @@ multi_send(const char *title)
     clrtobot();
 
     if (recipient) {
-	if (!mail_precheck_quota(Vector_length(&namelist))) {
+	if (!mail_precheck_quota(Vector_length(&namelist), NULL, NULL)) {
 	    Vector_delete(&namelist);
 	    vmsg(MSG_CANCEL);
 	    return;
@@ -1750,16 +1792,22 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	}
     }
 
+    int charge, fee = 0, fee_n = 0;
     {
 	char xid[IDLEN+1], *dot;
 	STRLCPY(xid, address);
 	dot = strchr(xid, '.');
 	if (dot) *dot = 0;
-	int charge = !(hostaddr == NULL && strcasecmp(xid, cuser.userid) == 0);
-	if (charge && !mail_precheck_quota(1)) {
+	charge = !(hostaddr == NULL && strcasecmp(xid, cuser.userid) == 0);
+	if (charge && !mail_precheck_quota(1, &fee, &fee_n)) {
 	    vmsg("取消轉寄");
 	    return 1;
 	}
+	// Say it is under way before anything is queued: refresh() is the
+	// first flush since the prompts, and on a dead socket it ends the
+	// session here. (The 'Z' weekly limit below can still refuse.)
+	outmsg("轉寄中請稍候...");
+	refresh();
 	// Check the weekly limit again (another session may have passed the
 	// checks too), and record the backup before mail.svc gets it.
 	if (mode == 'Z') {
@@ -1774,16 +1822,15 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 		return 1;
 	    }
 	}
-	if (charge && mail_charge_quota(1, "超額轉寄手續費") < 0)
-	    return 1;
     }
 
-    // Everything is confirmed.
-    outmsg("轉寄中請稍候...");
-    refresh();
-
+    // Charge only once the mail has left our hands -- delivered, or for 'Z'
+    // queued with mail.svc -- so a disconnect or a failed delivery here costs
+    // the sender nothing.
     if (mode == 'Z') {
-	// mail.svc packs and mails it later
+	// mail.svc packs and mails it later; the backup is queued.
+	if (charge)
+	    mail_take_quota(1, fee, fee_n, "超額轉寄手續費");
 	return 0;
     } else if (mode == 'F') {
 	SNPRINTF(fname, "/tmp/bbs.f%05d", (int)currpid);
@@ -1811,6 +1858,8 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
         return_no = bsmtp(fname, fh->title, address, NULL);
     }
     unlink(fname);
+    if (charge && return_no >= 0)
+	mail_take_quota(1, fee, fee_n, "超額轉寄手續費");
     return (return_no);
 }
 
