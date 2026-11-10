@@ -60,6 +60,11 @@ vform_format_field(const vform_field_t *field, const void *data,
 
     buf[0] = '\0';
 
+    if (field->format_fn) {
+        field->format_fn(field, data, buf, bufsz);
+        return strlen(buf);
+    }
+
     switch (field->type) {
         case VFORM_TEXT: {
             const char *src = (const char *)vform_field_cptr(field, data);

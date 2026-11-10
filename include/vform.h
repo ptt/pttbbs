@@ -62,6 +62,13 @@ typedef int (*vform_custom_input_t)(
 typedef bool (*vform_visible_t)(
     const struct vform_field *field, const void *data, void *priv);
 
+// Field display callback: formats the value of field in data into buf (bufsz
+// bytes) for showing it, e.g. with what it means. Input still edits the
+// value itself.
+typedef void (*vform_format_t)(
+    const struct vform_field *field, const void *data, char *buf,
+    size_t bufsz);
+
 // Form validator callback (cross-field validation before submission)
 typedef const char *(*vform_form_validator_t)(
     const struct vform_def *def, const void *data, void *priv);
@@ -90,6 +97,7 @@ typedef struct vform_field {
     vform_validator_t   validator;      // Field value validator
     vform_visible_t     is_visible;     // Dynamic visibility predicate
     vform_custom_input_t custom_fn;     // Custom input callback (for VFORM_CUSTOM)
+    vform_format_t      format_fn;      // Optional display formatter
 } vform_field_t;
 
 // -----------------------------------------------------------------------------
