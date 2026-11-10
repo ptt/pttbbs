@@ -432,6 +432,168 @@ join_gamble(int eng GCC_UNUSED, const fileheader_t * fhdr GCC_UNUSED,
     return FULLUPDATE;
 }
 
+// The form to hold a lottery.
+typedef struct {
+    char title[20];
+    int  price;
+    int  days;          // Stops in days.
+    char at[6];         // At HHMM or HH:MM; empty for the time now.
+    char items[MAX_ITEM][MAX_ITEM_INPUT_LEN];
+} lottery_form_t;
+
+static const char *
+lottery_price_class(int price)
+{
+    return price < 100 ? "迷你級" : price < 500 ? "平民級" :
+           price < 1000 ? "貴族級" : price < 5000 ? "富豪級" : "傾家蕩產";
+}
+
+// Parses HHMM or HH:MM into minutes of the day, or -1.
+static int
+lottery_parse_at(const char *at)
+{
+    int h, m;
+    char c;
+    if (sscanf(at, "%d:%d%c", &h, &m, &c) != 2) {
+        int v;
+        if (strlen(at) < 3 || strspn(at, "0123456789") != strlen(at) ||
+            sscanf(at, "%d", &v) != 1)
+            return -1;
+        h = v / 100;
+        m = v % 100;
+    }
+    if (h < 0 || h > 23 || m < 0 || m > 59)
+        return -1;
+    return h * 60 + m;
+}
+
+// When the lottery of form stops, at second 0, or 0 for not stopping by
+// itself (no days and no time).
+static time4_t
+lottery_end_time(const lottery_form_t *form)
+{
+    if (!form->days && !form->at[0])
+        return 0;
+
+    struct tm tm;
+    localtime4_r(&now, &tm);
+    tm.tm_mday += form->days;
+    int at = form->at[0] ? lottery_parse_at(form->at) : -1;
+    if (at >= 0) {
+        tm.tm_hour = at / 60;
+        tm.tm_min = at % 60;
+    }
+    tm.tm_sec = 0;
+    tm.tm_isdst = -1;
+    time_t t = mktime(&tm);
+    return t > 0 ? (time4_t)t : 0;
+}
+
+static void
+lottery_format_price(const vform_field_t *field GCC_UNUSED, const void *data,
+                     char *buf, size_t bufsz)
+{
+    const lottery_form_t *form = data;
+    snprintf(buf, bufsz, "%d (%s)", form->price,
+             lottery_price_class(form->price));
+}
+
+// Shows when it stops, once the days are entered.
+static void
+lottery_format_days(const vform_field_t *field GCC_UNUSED, const void *data,
+                    char *buf, size_t bufsz)
+{
+    const lottery_form_t *form = data;
+    time4_t t = lottery_end_time(form);
+    if (!t)
+        strlcpy(buf, "0 (不自動截止)", bufsz);
+    else if (form->days)
+        snprintf(buf, bufsz, "%d 天後 (%s)", form->days, CdateHM(&t));
+    else
+        snprintf(buf, bufsz, "今天 (%s)", CdateHM(&t));
+}
+
+static void
+lottery_format_at(const vform_field_t *field GCC_UNUSED, const void *data,
+                  char *buf, size_t bufsz)
+{
+    const lottery_form_t *form = data;
+    int at = form->at[0] ? lottery_parse_at(form->at) : -1;
+    if (at >= 0)
+        snprintf(buf, bufsz, "%02d:%02d", at / 60, at % 60);
+    else
+        strlcpy(buf, form->at, bufsz);
+}
+
+static const char *
+lottery_at_validator(const vform_field_t *field GCC_UNUSED,
+                     const void *val_ptr, void *priv GCC_UNUSED)
+{
+    const char *val = val_ptr;
+    if (!val || !*val || lottery_parse_at(val) >= 0)
+        return NULL;
+    return "請輸入 HHMM 或 HH:MM，例如 2200";
+}
+
+static const char *
+lottery_title_validator(const vform_field_t *field GCC_UNUSED,
+                        const void *val_ptr, void *priv GCC_UNUSED)
+{
+    const char *val = val_ptr;
+    return (val && *val) ? NULL : "請輸入樂透主題";
+}
+
+static const char *
+lottery_form_validator(const vform_def_t *def GCC_UNUSED, const void *data,
+                       void *priv GCC_UNUSED)
+{
+    const lottery_form_t *form = data;
+    int n = 0;
+    for (int i = 0; i < MAX_ITEM; i++)
+        if (form->items[i][0])
+            n++;
+    if (n < 2)
+        return "至少需要 2 個彩券項目";
+    time4_t t = lottery_end_time(form);
+    if (t && !time4_gt(t, now))
+        return "截止時間必須晚於現在";
+    return NULL;
+}
+
+#define LOTTERY_ITEM_FIELD(n) \
+    VFORM_FIELD_TEXT("項目 " #n, "彩券項目名稱 (需提供 2~8 項，可留空)", \
+                     NULL, lottery_form_t, items[n - 1], 0, NULL)
+
+static const vform_field_t lottery_fields[] = {
+    VFORM_FIELD_TEXT("主題", "樂透的主題 (確定後再編輯內容)", NULL,
+                     lottery_form_t, title, 0, lottery_title_validator),
+    { .label = "彩券價格", .hint = "一張彩券的價格 (10~10000)",
+      .type = VFORM_INT, .offset = offsetof(lottery_form_t, price),
+      .size = MEMBER_SIZE(lottery_form_t, price),
+      .min_val = 10, .max_val = 10000, .format_fn = lottery_format_price },
+    { .label = "幾天後截止", .hint = "幾天後自動截止投注 (0 且不設時刻為不自動截止)",
+      .type = VFORM_INT, .offset = offsetof(lottery_form_t, days),
+      .size = MEMBER_SIZE(lottery_form_t, days),
+      .min_val = 0, .max_val = 365, .format_fn = lottery_format_days },
+    { .label = "截止時刻", .hint = "HHMM 或 HH:MM，例如 2200 (留空為現在的時刻)",
+      .type = VFORM_TEXT, .offset = offsetof(lottery_form_t, at),
+      .size = MEMBER_SIZE(lottery_form_t, at),
+      .validator = lottery_at_validator, .format_fn = lottery_format_at },
+    LOTTERY_ITEM_FIELD(1), LOTTERY_ITEM_FIELD(2), LOTTERY_ITEM_FIELD(3),
+    LOTTERY_ITEM_FIELD(4), LOTTERY_ITEM_FIELD(5), LOTTERY_ITEM_FIELD(6),
+    LOTTERY_ITEM_FIELD(7), LOTTERY_ITEM_FIELD(8),
+};
+
+static const vform_def_t lottery_form_def = {
+    .title = "舉辦樂透",
+    .subtitle = "設定主題項目後按 ^X, 儲存後再編輯說明內容, ^C q 放棄跳出。",
+    .mode = VFORM_MODE_INPLACE,
+    .fields = lottery_fields,
+    .num_fields = ARRAY_SIZE(lottery_fields),
+    .form_validator = lottery_form_validator,
+    .submit_prompt = "確定設定並開始編輯樂透內容嗎？[Y/n] ",
+};
+
 int
 hold_gamble(void)
 {
@@ -486,54 +648,58 @@ hold_gamble(void)
 	vmsg(" 目前系統正在處理開獎事宜, 請結果出爐後再舉辦.......");
 	return FULLUPDATE;
     }
-    getdata(b_lines - 2, 0, "要舉辦樂透 (N/y):", yn, 3, LCECHO);
-    if (yn[0] != 'y')
+    lottery_form_t form = { .price = 100 };
+    if (vform_run(&lottery_form_def, &form, NULL) <= 0)
 	return FULLUPDATE;
-    getdata(b_lines - 1, 0, "請輸入主題 (輸入後編輯內容):",
-	    msg, 20, DOECHO);
-    if (msg[0] == 0 || veditfile(fn_ticket_end) < 0) {
+
+    // Another moderator may have started meanwhile.
+    if (dashf(fn_ticket) || dashf(fn_ticket_end) || dashf(genbuf)) {
+	vmsg("其他板主已在處理樂透，請稍後再試");
+	return FULLUPDATE;
+    }
+    if (veditfile(fn_ticket_end) < 0) {
         // 如果有人 race condition 就... 很該死。
         unlink(fn_ticket_end);
+	vmsg("取消舉辦樂透");
 	return FULLUPDATE;
     }
 
-    vs_hdr2("舉辦樂透", currboard);
+    // Saved to the board once everything is set: the lottery stops
+    // when it is due. Checked again after editing.
+    time4_t endgamble = lottery_end_time(&form);
+    if (endgamble && !time4_gt(endgamble, now)) {
+	unlink(fn_ticket_end);
+	vmsg("截止時間已過，請重新舉辦");
+	return FULLUPDATE;
+    }
+
     setbfile(tmp, currboard, FN_TICKET_ITEMS ".tmp");
-
-    //sprintf(genbuf, "%s/" FN_TICKET_ITEMS, direct);
-
-    if (!(fp = fopen(tmp, "w")))
+    if (!(fp = fopen(tmp, "w"))) {
+	unlink(fn_ticket_end);
+	vmsg("系統錯誤，無法舉辦樂透");
 	return FULLUPDATE;
-    do {
-	getdata(2, 0, "輸入彩券價格 (價格:10-10000):", yn, 6, NUMECHO);
-	i = atoi(yn);
-    } while (i < 10 || i > 10000);
-    fprintf(fp, "%d\n", i);
-    if (!getdata(3, 0, "設定自動截止時間?(Y/n)", yn, 3, LCECHO) || yn[0] != 'n') {
-	bp->endgamble = gettime(4, now, "截止於");
-	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     }
-    time4_t endgamble = bp->endgamble;
-    move(6, 0);
+    fprintf(fp, "%d\n", form.price);
+    for (i = 0; i < MAX_ITEM; i++) {
+	if (form.items[i][0])
+	    fprintf(fp, "%s\n", form.items[i]);
+    }
+    fclose(fp);
+
+    STRLCPY(msg, form.title);
     SNPRINTF(genbuf, "\n請到 %s 板 按'f'參與樂透!\n\n"
 	     "一張 %d " MONEYNAME " (%s)\n%s%s\n",
-	     currboard,
-	     i, i < 100 ? "迷你級" : i < 500 ? "平民級" :
-	     i < 1000 ? "貴族級" : i < 5000 ? "富豪級" : "傾家蕩產",
-	     bp->endgamble ? "樂透結束時間: " : "",
+	     currboard, form.price, lottery_price_class(form.price),
+	     endgamble ? "樂透結束時間: " : "",
 	     endgamble ? Cdate(&endgamble) : ""
 	     );
     strcat(msg, genbuf);
-    outs("請依次輸入彩券名稱, 需提供2~8項. (未滿八項, 輸入直接按Enter)\n");
-    //outs(ANSI_COLOR(1;33) "注意輸入後無法修改！\n");
-    for( i = 0 ; i < 8 ; ++i ){
-	getdata(7 + i, 0, TEMPFORMAT(16, " %d)", i + 1), genbuf, MAX_ITEM_INPUT_LEN, DOECHO);
-	if (!genbuf[0] && i > 1)
-	    break;
-	fprintf(fp, "%s\n", genbuf);
+
+    if (bp->endgamble != endgamble) {
+	bp->endgamble = endgamble;
+	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
+	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
     }
-    fclose(fp);
 
     setbfile(genbuf, currboard, FN_TICKET_RECORD);
     unlink(genbuf); // Ptt: 防堵利用不同id同時舉辦樂透
