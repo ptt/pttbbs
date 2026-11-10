@@ -163,9 +163,10 @@ append_ticket_record(const char *direct, int ch, int n, int count)
     return 0;
 }
 
-void
-buy_ticket_ui(int money, const char *picture, int *item,
-              int type, const char *title)
+/* Asks how many tickets to buy at price each: the number, or 0 if none, or
+ * if the money isn't there. ticket() charges for them. */
+static int
+buy_ticket_ui(int price)
 {
     int             num = 0;
     char            buf[5];
@@ -175,21 +176,14 @@ buy_ticket_ui(int money, const char *picture, int *item,
 		buf, sizeof(buf), NUMECHO, "1");
     num = atoi(buf);
     if (num < 1)
-	return;
+	return 0;
 
     reload_money();
-    if (cuser.money/money < num) {
+    if (cuser.money/price < num) {
 	vmsg("現金不夠 !!!");
-	return;
+	return 0;
     }
-
-    *item += num;
-    pay(money * num, "%s彩券[種類%d,張數%d]", title, type+1, num);
-
-    // XXX magic numbers 5, 14...
-    show_file(picture, 5, 14, SHOWFILE_ALLOW_ALL);
-    pressanykey();
-    usleep(100000); // sleep 0.1s
+    return num;
 }
 
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
@@ -242,16 +236,29 @@ ticket(int bid)
 	ch -= '1';
 	if (end || ch >= count || ch < 0)
 	    continue;
-	n = 0;
+	n = buy_ticket_ui(price);
 
-	buy_ticket_ui(price, "etc/buyticket", &n, ch, bh->brdname);
-
+	// Closed meanwhile: nothing is charged yet.
 	if (!dashf(fn_ticket))
 	    goto doesnt_catch_up;
 
 	if (n > 0) {
-	    if (append_ticket_record(path, ch, n, count) < 0)
+	    // Charge and record together, refunding if the record fails: a
+	    // kick (SIGHUP) or a shutdown (SIGTERM) between them would leave
+	    // the buyer charged without a bet. The receipt waits for a key,
+	    // so it comes after.
+	    sigset_t old_set;
+	    block_abort_signals(&old_set);
+	    pay(price * n, "%s彩券[種類%d,張數%d]", bh->brdname, ch + 1, n);
+	    int recorded = append_ticket_record(path, ch, n, count) >= 0;
+	    if (!recorded)
+		pay(-price * n, "投注失敗退費");
+	    restore_abort_signals(&old_set);
+	    if (!recorded)
 		goto doesnt_catch_up;
+	    show_file("etc/buyticket", 5, 14, SHOWFILE_ALLOW_ALL);
+	    pressanykey();
+	    usleep(100000); // sleep 0.1s
 	}
         usleep(GAMBLE_ACTION_DELAY_US);
     }
@@ -259,12 +266,7 @@ ticket(int bid)
     return 0;
 
 doesnt_catch_up:
-
-    price = price * n;
-    // XXX 這是因為截止投注所以退錢？ 感覺好危險+race condition
-    if (price > 0) {
-        pay_as_uid(currutmp->uid, -price, "投注失敗退費");
-    }
+    // Closed before the charge, or refunded above when the record failed.
     vmsg("板主已經截止投注了");
     unlockutmpmode();
     return -1;
