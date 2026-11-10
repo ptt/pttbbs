@@ -2384,6 +2384,8 @@ psb_recycle_bin(const char *base, const char *title) {
 #ifdef USE_COMMENTD
 typedef struct {
     void *cmctx;
+    // The post, for the modlog.
+    const fileheader_t *fh;
 } pvcm_ctx;
 
 static int
@@ -2436,21 +2438,26 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
     mbs_sanitize(msg, sizeof(msg));
     int y = modlog_form(key->board, "移除推文");
     mvprints(y, 0, "%-12.12s %s", resp->userid, msg);
-    if ((y = modlog_ask_reason(key->board, y + 2, reason,
-                               sizeof(reason))) < 0)
+    // The reason is also put in the post.
+    y = MODLOG_FOR_POSTS() ?
+        modlog_ask_reason(key->board, y + 2, reason, sizeof(reason)) :
+        modlog_ask_reason_unlogged(y + 2, reason, sizeof(reason));
+    if (y < 0)
         return 0;
-    y = modlog_preview(y, key->board, reason, "移除 %s 的推文 (%s)",
-                       resp->userid, key->file) + 1;
+    modlog_t log;
+    modlog_init(&log, "移除推文 (%s)", resp->userid);
+    modlog_add_post(&log, cx->fh);
+    // What was removed, for the audit record.
+    modlog_add_audit(&log, "推文", "%s", msg);
+    if (MODLOG_FOR_POSTS())
+        y = modlog_preview(y, key->board, reason, &log) + 1;
     char ans[3];
     getdata(y, 0, "確定要移除嗎？ (y/N) ", ans, sizeof(ans), LCECHO);
     if (ans[0] == 'y') {
-        char owner[IDLEN + 1];
-        STRLCPY(owner, resp->userid);
         if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason) != 0)
             vmsg("刪除失敗。可能原文已被修改。");
-        else
-            modlog(key->board, reason, "移除 %s 的推文 (%s)",
-                   owner, key->file);
+        else if (MODLOG_FOR_POSTS())
+            modlog(key->board, reason, &log);
     }
     return 0;
 }
@@ -2503,9 +2510,10 @@ pvcm_welcome() {
 }
 
 int
-psb_comment_manager(const char *board, const char *file) {
+psb_comment_manager(const char *board, const fileheader_t *fh) {
     pvcm_ctx pvcmctx = {
         NULL,
+        fh,
     };
     PSB_CTX ctx = {
         .cmd = {
@@ -2521,7 +2529,7 @@ psb_comment_manager(const char *board, const char *file) {
         .renderer = pvcm_renderer,
         .cmds = pvcm_cmds,
     };
-    pvcmctx.cmctx = CommentsOpen(board, file);
+    pvcmctx.cmctx = CommentsOpen(board, fh->filename);
     if (!pvcmctx.cmctx) {
         vmsg("系統錯誤，請至 " BN_BUGREPORT " 報告。");
         return FULLUPDATE;

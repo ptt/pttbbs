@@ -580,8 +580,10 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
 	if ((y = modlog_ask_reason(bname, y + 2, log_reason,
 				   sizeof(log_reason))) < 0)
 	    return FULLUPDATE;
-	y = modlog_preview(y, bname, log_reason, "щ布 (Τ %d 布): %s",
-			   total, ptitle) + 1;
+	modlog_t log;
+	modlog_init(&log, "щ布");
+	modlog_add(&log, "щ布", "%s (%d 布)", ptitle, total);
+	y = modlog_preview(y, bname, log_reason, &log) + 1;
 	getdata(y, 0, "叫Ω絋粄щ布 (Y/N) [N] ", genbuf, 4, LCECHO);
 	if (genbuf[0] != 'y')
 	    return FULLUPDATE;
@@ -594,15 +596,16 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	    outs(ERR_BOARD_UPDATE);
 	reset_board(pos);
-	modlog(bname, log_reason, "щ布 (Τ %d 布): %s",
-	       total, ptitle);
+	modlog(bname, log_reason, &log);
     } else if (genbuf[0] == 'b') {
 	getdata(b_lines - 1, 0, "絋﹚璶矗Ν秨布盾秨布礚猭確 (Y/N) [N] ",
 		genbuf, 4, LCECHO);
 	if (genbuf[0] != 'y')
 	    return FULLUPDATE;
 
-	modlog(bname, NULL, "矗Ν秨布: %s", ptitle);
+	modlog_t log;
+	modlog_set_field(modlog_init(&log, "矗Ν秨布"), "щ布", "%s", ptitle);
+	modlog(bname, NULL, &log);
 	b_result_one(vbuf, fhp, &total);
 	fhp->npolls = poll_count(bname);
 	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
@@ -804,13 +807,15 @@ poll_maintain(const char *bname)
             if ((y = modlog_ask_reason(bname, y + 2, log_reason,
                                        sizeof(log_reason))) < 0)
                 return FULLUPDATE;
-            y = modlog_preview(y, bname, log_reason, "┮Τщ布 (%d )",
-                               (int)fhp->npolls) + 1;
+            modlog_t log;
+            modlog_init(&log, "┮Τщ布 (%d )", (int)fhp->npolls);
+            y = modlog_preview(y, bname, log_reason, &log) + 1;
             getdata(y, 0, "叫Ω絋粄┮Τщ布 (Y/N) [N] ", genbuf, 4,
                     LCECHO);
             if (genbuf[0] != 'y')
                 return FULLUPDATE;
-            int nold = fhp->npolls;
+            // What was there when it was done.
+            modlog_init(&log, "┮Τщ布 (%d )", (int)fhp->npolls);
 
 	    for (i = 0; i < MAX_POLL_NR; i++) {
 		pollbuf_init(&vbuf, i);
@@ -822,7 +827,7 @@ poll_maintain(const char *bname)
 	    fhp->npolls = poll_count(bname);
 	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 		outs(ERR_BOARD_UPDATE);
-	    modlog(bname, log_reason, "┮Τщ布 (%d )", nold);
+	    modlog(bname, log_reason, &log);
 
 	    return FULLUPDATE;
 	} else if (genbuf[0] != 'm') {
@@ -1036,7 +1041,9 @@ poll_maintain(const char *bname)
     if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	outs(ERR_BOARD_UPDATE);
     reset_board(pos);
-    modlog(bname, NULL, "羭快щ布: %s", ptitle);
+    modlog_t log;
+    modlog_set_field(modlog_init(&log, "羭快щ布"), "щ布", "%s", ptitle);
+    modlog(bname, NULL, &log);
     vmsg("秨﹍щ布");
 
     return FULLUPDATE;

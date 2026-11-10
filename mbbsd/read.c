@@ -58,6 +58,15 @@ typedef struct {
     int n, max, recno;
 } tag_prune_list_t;
 
+// What removing the tagged posts puts in the modlog, also previewed before
+// confirming. Returns log.
+static modlog_t *
+tag_prune_modlog(modlog_t *log, int n)
+{
+    modlog_init(log, "移除標記文章 (%d 篇)", n);
+    return log;
+}
+
 static int
 _iter_collect_tagged(void *ptr, void *opt) {
     const fileheader_t *fh = (const fileheader_t *)ptr;
@@ -130,10 +139,12 @@ TagPruner(int bid)
                     list.n <= TAG_PRUNE_MAIL_MAX;
     }
 
-    // Moderators must say why, for the modlog, in a full screen form.
+    // Moderators must say why, for the modlog, in a full screen form (not in
+    // the digest, see MODLOG_FOR_POSTS()).
+    bool log_it = bp && MODLOG_FOR_POSTS();
     char log_reason[MODLOG_REASON_LEN] = "";
     int y = b_lines;
-    if (bp) {
+    if (log_it) {
         y = modlog_form(bp->brdname, "移除標記文章");
         mvprints(y, 0, "共標記 %d 篇%s。", ntagged, kind);
         if (mail_back)
@@ -147,8 +158,9 @@ TagPruner(int bid)
             free(list.items);
             return FULLUPDATE;
         }
-        y = modlog_preview(y, bp->brdname, log_reason, "移除標記的 %d 篇%s",
-                           ntagged, kind) + 1;
+        modlog_t log;
+        y = modlog_preview(y, bp->brdname, log_reason,
+                           tag_prune_modlog(&log, ntagged)) + 1;
     }
     char ans[3];
     getdata(y, 0, bp ? "移除所有標記的文章[N]?" : "刪除所有標記[N]?", ans,
@@ -189,21 +201,24 @@ TagPruner(int bid)
 
     ClearTagList();
     if (bp) {
-        modlog(bp->brdname, log_reason, "移除標記的 %d 篇%s", ntagged, kind);
-        // Which ones, in the audit record only.
-        for (int i = 0; i < list.n; i++) {
-            const fileheader_t *fh = &list.items[i].fh;
-            const char *author = list.items[i].uid > 0 ?
-                getuserid(list.items[i].uid) : NULL;
-            modlog_audit_detail(bp->brdname, "#%d %s%s%s%s %s (%s)",
-                                list.items[i].recno, fh->owner,
-                                (fh->filemode & FILE_ANONYMOUS) && author ?
-                                    " [" : "",
-                                (fh->filemode & FILE_ANONYMOUS) && author ?
-                                    author : "",
-                                (fh->filemode & FILE_ANONYMOUS) && author ?
-                                    "]" : "",
-                                fh->title, fh->filename);
+        if (log_it) {
+            modlog_t log;
+            tag_prune_modlog(&log, ntagged);
+            // Which ones, in the audit record only.
+            char *posts = list.n > 0 ?
+                malloc((size_t)list.n * ANSILINELEN) : NULL;
+            if (posts) {
+                char *p = posts;
+                *p = '\0';
+                for (int i = 0; i < list.n; i++) {
+                    char post[ANSILINELEN - 16];
+                    modlog_format_post(post, sizeof(post), &list.items[i].fh);
+                    p += snprintf(p, ANSILINELEN, "  文章: %s\n", post);
+                }
+                log.audit_fields = posts;
+            }
+            modlog(bp->brdname, log_reason, &log);
+            free(posts);
         }
         free(list.items);
         if (mailed)

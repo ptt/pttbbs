@@ -137,8 +137,8 @@ static const cmd_t pager_common_cmds[] = {
     { 'H', NULL, NULL, pager_cmd_help, 0, CMD_PRIO_NONE },
     { '?', NULL, NULL, pager_cmd_help, 0, CMD_PRIO_NONE },
 #endif
-    { Ctrl('T'), "存入暫存檔", "將目前文章存入個人暫存檔", pager_cmd_copy2tmp, PERM_BASIC, CMD_PRIO_LOW },
-    { Ctrl('K'), NULL, NULL, pager_cmd_copy2tmp, PERM_BASIC, CMD_PRIO_NONE },
+    { Ctrl('K'), "存入暫存檔", "將目前文章存入個人暫存檔", pager_cmd_copy2tmp, PERM_BASIC, CMD_PRIO_LOW },
+    { Ctrl('T'), NULL, NULL, pager_cmd_copy2tmp, PERM_BASIC, CMD_PRIO_NONE },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 

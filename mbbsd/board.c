@@ -997,9 +997,10 @@ bcfg_set_cooldown(cmd_ctx_t *ctx)
     if ((y = modlog_police_ask_reason(cx->bp->brdname, y + 2, ans,
                                       sizeof(ans))) < 0)
         return 0;
-    y = modlog_police_preview(y, cx->bp->brdname, ans,
-                              "修改看板設定「%s」: %s => %s", "冷靜模式",
-                              is_on ? on : off, is_on ? off : on) + 1;
+    modlog_t log;
+    modlog_set_change(modlog_init(&log, "修改看板設定"), "冷靜模式",
+                      is_on ? on : off, is_on ? off : on);
+    y = modlog_police_preview(y, cx->bp->brdname, ans, &log) + 1;
     getdata(y, 0, is_on ? "確定要解除冷靜模式嗎? [y/N]: " :
                           "確定要設定冷靜模式嗎? [y/N]: ",
             yn, sizeof(yn), LCECHO);
@@ -1372,24 +1373,27 @@ bconfig_cmd_select(cmd_ctx_t *ctx) {
     cx->police = false;
 
     int ret = item->setter(ctx);
-    void (*record)(const char *, const char *, const char *, ...) =
+    void (*record)(const char *, const char *, const modlog_t *) =
         cx->police ? modlog_police : modlog;
+    modlog_t log;
 
     // Put what was changed in the modlog.
     if (item->bfile) {
         bcfg_stat_file(cx->bp->brdname, item->bfile, &fs1);
         if (fs0.exists != fs1.exists ||
             (fs1.exists && (fs0.ino != fs1.ino || fs0.size != fs1.size ||
-                            fs0.mtime != fs1.mtime)))
-            record(cx->bp->brdname, cx->reason,
-                   fs1.exists ? "編輯看板設定「%s」" :
-                                "刪除看板設定「%s」", item->desc);
+                            fs0.mtime != fs1.mtime))) {
+            modlog_init(&log, fs1.exists ? "編輯看板設定" : "刪除看板設定");
+            modlog_set_field(&log, "項目", "%s", item->desc);
+            record(cx->bp->brdname, cx->reason, &log);
+        }
     } else {
         bcfg_get_plain(cx, item, after, sizeof(after));
-        if (strcmp(before, after) != 0)
-            record(cx->bp->brdname, cx->reason,
-                   "修改看板設定「%s」: %s => %s",
-                   item->desc, before, after);
+        if (strcmp(before, after) != 0) {
+            modlog_set_change(modlog_init(&log, "修改看板設定"), item->desc,
+                              before, after);
+            record(cx->bp->brdname, cx->reason, &log);
+        }
     }
     bconfig_commit(cx);
     return ret;

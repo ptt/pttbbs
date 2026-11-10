@@ -59,21 +59,51 @@ int edit_muted_list_for_board(const char *board);
 int edit_user_acl_for_board(const char *uid, const char *board);
 /* Modlog (ºÞ²z¬ö¿ý): see docs/modlog.md */
 #define MODLOG_REASON_LEN (50)
-void modlog(const char *bname, const char *reason, const char *fmt, ...)
+// A record: the action (a short name) and the fields, a line each.
+typedef struct {
+    char action[STRLEN];
+    char fields[ANSILINELEN * 2];
+    // Fields only in the audit record, added by modlog_add_audit().
+    char audit_lines[ANSILINELEN];
+    // More lines only in the audit record, after those (e.g. which posts).
+    const char *audit_fields;
+    // Set by modlog_set_*(): put after the action on the first line if it
+    // fits there (and there is no reason), or else first_lines as the first
+    // fields.
+    char first[ANSILINELEN];
+    char first_lines[ANSILINELEN * 2];
+} modlog_t;
+modlog_t *modlog_init(modlog_t *m, const char *fmt, ...) GCC_CHECK_FORMAT(2, 3);
+void modlog_add(modlog_t *m, const char *label, const char *fmt, ...)
     GCC_CHECK_FORMAT(3, 4);
-void modlog_police(const char *bname, const char *reason, const char *fmt, ...)
+void modlog_add_change(modlog_t *m, const char *label, const char *from,
+                       const char *to);
+void modlog_set_field(modlog_t *m, const char *label, const char *fmt, ...)
     GCC_CHECK_FORMAT(3, 4);
+void modlog_set_change(modlog_t *m, const char *label, const char *from,
+                       const char *to);
+void modlog_set_flags(modlog_t *m, const char *label, uint32_t from,
+                      uint32_t to, const char * const *names, int nnames);
+void modlog_add_flags(modlog_t *m, const char *label, uint32_t from,
+                      uint32_t to, const char * const *names, int nnames);
+void modlog_add_audit(modlog_t *m, const char *label, const char *fmt, ...)
+    GCC_CHECK_FORMAT(3, 4);
+void modlog_add_post(modlog_t *m, const fileheader_t *fh);
+void modlog_format_post(char *buf, size_t sz, const fileheader_t *fh);
+void modlog(const char *bname, const char *reason, const modlog_t *m);
+void modlog_police(const char *bname, const char *reason, const modlog_t *m);
+// Posts in the digest (g) are copies: changes to them are not recorded.
+#define MODLOG_FOR_POSTS() (!(currmode & MODE_DIGEST))
 int modlog_ask_reason(const char *bname, int y, char *reason, size_t sz);
+int modlog_ask_reason_unlogged(int y, char *reason, size_t sz);
 int modlog_police_ask_reason(const char *bname, int y, char *reason, size_t sz);
 int modlog_ask_reason_choice(const char *bname, int y, char *reason, size_t sz,
                              const char * const *choices, int nchoices);
 int modlog_preview(int y, const char *bname, const char *reason,
-                   const char *fmt, ...) GCC_CHECK_FORMAT(4, 5);
+                   const modlog_t *m);
 int modlog_police_preview(int y, const char *bname, const char *reason,
-                          const char *fmt, ...) GCC_CHECK_FORMAT(4, 5);
+                          const modlog_t *m);
 int modlog_form(const char *bname, const char *title);
-void modlog_audit_detail(const char *bname, const char *fmt, ...)
-    GCC_CHECK_FORMAT(2, 3);
 int modlog_view(const char *bname, int secure);
 int modlog_edit(const char *bname);
 
@@ -240,7 +270,7 @@ int psb_view_edit_history(const char *base, const char *subject,
                           int maxrev, int current_as_base);
 int psb_recycle_bin(const char *base, const char *title);
 int psb_admin_edit();
-int psb_comment_manager(const char *board, const char *file);
+int psb_comment_manager(const char *board, const fileheader_t *fh);
 
 /* chc */
 void chc(int s, ChessGameMode mode);

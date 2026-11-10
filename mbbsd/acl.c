@@ -242,10 +242,9 @@ ui_mute_user_for_board(const char *uid, const char *board) {
            ANSI_COLOR(1;32) "會寄信通知使用者" ANSI_RESET "\n",
            uid, datebuf,
            reason);
-    char action[STRLEN];
-    snprintf(action, sizeof(action), "將 %s 加入禁言名單，期限 %s",
-             uid, datebuf);
-    int yc = modlog_preview(y + 5, board, reason, "%s", action);
+    modlog_t log;
+    modlog_init(&log, "暫停發言: %s %d天", uid, days);
+    int yc = modlog_preview(y + 5, board, reason, &log);
     // Shown with the confirmation, as asking the reason clears below it.
     if (days > KEEP_DAYS_REGGED) {
         mvprints(yc, 0, ANSI_COLOR(1;31)
@@ -274,7 +273,7 @@ ui_mute_user_for_board(const char *uid, const char *board) {
     if (result) {
         mkuserdir(uid);
         log_filef(user_history_log, "%s%s", msg_board, msg_tail);
-        modlog(board, reason, "%s", action);
+        modlog(board, reason, &log);
     }
     if (result) {
         char anti_pettifogger[] =
@@ -336,10 +335,10 @@ ui_unmute_user_for_board(const char *uid, const char *board) {
     int yr = modlog_ask_reason(board, y+1, reason, BAKUMAN_REASON_LEN);
     if (yr < 0)
         return -1;
-    char action[STRLEN];
-    snprintf(action, sizeof(action), "提前解除 %s 的禁言 (距原期限尚有 %d 天)",
-             uid, time4_days_remaining(expire, now));
-    int yc = modlog_preview(yr, board, reason, "%s", action);
+    modlog_t log;
+    modlog_init(&log, "開放發言: %s 原剩%d天", uid,
+                time4_days_remaining(expire, now));
+    int yc = modlog_preview(yr, board, reason, &log);
     mvouts(yc + 1, 0, ANSI_COLOR(1;32) "會寄信通知使用者" ANSI_RESET);
 
     // last chance
@@ -359,7 +358,7 @@ ui_unmute_user_for_board(const char *uid, const char *board) {
               uid, time4_days_remaining(expire, now), reason);
     mkuserdir(uid);
     log_filef(user_history_log, "%s%s", msg_board, msg_tail);
-    modlog(board, reason, "%s", action);
+    modlog(board, reason, &log);
     AUTO_STR(xtitle, "%s 看板提前解除禁言通知", board);
     AUTO_STR(xmsg, "%s 看板已提前解除對您的禁言限制。\n"
              "解除時間: %s (距原期限尚有 %d 天)\n"
@@ -584,45 +583,298 @@ modlog_as_police(const char *bname)
            !is_board_moderator(getbnum(bname));
 }
 
-// The role shown in the public modlog.
+// The role shown in the modlog: the one closest to the board, as who
+// would be asked about it first.
 static const char *
 modlog_role(const char *bname, bool anonymous)
 {
+    int bid = getbnum(bname);
+
     if (anonymous)
         return MODLOG_POLICE_NAME;
-    if (is_board_moderator(getbnum(bname)))
+    if (is_board_moderator(bid))
         return "板主";
-    if (HasUserPerm(PERM_SYSOP))
-        return "站長";
+    // Sysops and board admins get the group modes in any group, so they are
+    // shown as themselves. Group leads have both modes.
+    if (!HasUserPerm(PERM_SYSOP | PERM_BOARDS)) {
+        if (currmode & MODE_GROUP_LEAD)
+            return "群組長";
+        if (currmode & MODE_GROUP_OP)
+            return "小組長";
+    }
     if (HasUserPerm(PERM_BOARDS))
         return "看板總管";
-    if (currmode & MODE_GROUP_LEAD)
-        return "群組長";
-    if (currmode & MODE_GROUP_OP)
-        return "小組長";
+    if (HasUserPerm(PERM_SYSOP))
+        return "站長";
     if (HasUserPerm(PERM_POLICE))
         return MODLOG_POLICE_NAME;
     return "管理人員";
 }
 
-#define MODLOG_RECORD_LEN (ANSILINELEN * 2)
+// The columns that the lines of a record should fit in (Big5: one per byte).
+// Longer lines are left for pmore to wrap.
+#define MODLOG_COLS (79)
+#define MODLOG_INDENT "  "
 
-static void modlog_formatv(const char *bname, bool anonymous, bool police,
-                           const char *reason, char *msg, char *amsg,
-                           const char *fmt, va_list ap) GCC_CHECK_FORMAT(7, 0);
-
-// Formats the records for the public modlog (msg) and the audit record
-// (amsg), each MODLOG_RECORD_LEN. For police actions (also recorded in
-// BN_POLICELOG) the reason is only in the audit record.
-static void
-modlog_formatv(const char *bname, bool anonymous, bool police,
-               const char *reason, char *msg, char *amsg, const char *fmt,
-               va_list ap)
+// Starts a record of the action, a short name (maybe with a short number,
+// e.g. "禁言 7 天"); the fields are added by modlog_add*() and
+// modlog_set_*(). Returns m.
+modlog_t *
+modlog_init(modlog_t *m, const char *fmt, ...)
 {
-    char action[ANSILINELEN], why[ANSILINELEN] = "";
+    va_list ap;
 
-    vsnprintf(action, sizeof(action), fmt, ap);
-    modlog_strip(action);
+    va_start(ap, fmt);
+    vsnprintf(m->action, sizeof(m->action), fmt, ap);
+    va_end(ap);
+    modlog_strip(m->action);
+    m->fields[0] = '\0';
+    m->audit_lines[0] = '\0';
+    m->audit_fields = NULL;
+    m->first[0] = '\0';
+    m->first_lines[0] = '\0';
+    return m;
+}
+
+static void
+modlog_add_line(modlog_t *m, const char *line)
+{
+    strlcat(m->fields, MODLOG_INDENT, sizeof(m->fields));
+    strlcat(m->fields, line, sizeof(m->fields));
+    strlcat(m->fields, "\n", sizeof(m->fields));
+}
+
+// Adds the field "label: value" as a line.
+void
+modlog_add(modlog_t *m, const char *label, const char *fmt, ...)
+{
+    char value[ANSILINELEN], line[ANSILINELEN + STRLEN];
+    va_list ap;
+
+    va_start(ap, fmt);
+    vsnprintf(value, sizeof(value), fmt, ap);
+    va_end(ap);
+    modlog_strip(value);
+    snprintf(line, sizeof(line), "%s: %s", label, value);
+    modlog_add_line(m, line);
+}
+
+// Appends to buf the field "label: from => to" (already stripped). If that
+// is too long, to is put on the next line, below from.
+static void
+modlog_change_lines(char *buf, size_t sz, const char *label, const char *a,
+                    const char *b)
+{
+    size_t indent = strlen(MODLOG_INDENT) + strlen(label) + strlen(": ");
+    size_t len = strlen(buf);
+
+    if (len >= sz)
+        return;
+    if (indent + strlen(a) + strlen(" => ") + strlen(b) <= MODLOG_COLS)
+        snprintf(buf + len, sz - len, MODLOG_INDENT "%s: %s => %s\n",
+                 label, a, b);
+    else
+        snprintf(buf + len, sz - len, MODLOG_INDENT "%s: %s =>\n%*s%s\n",
+                 label, a, (int)indent, "", b);
+}
+
+// Adds the field "label: from => to". If that is too long, to is put on the
+// next line, below from.
+void
+modlog_add_change(modlog_t *m, const char *label, const char *from,
+                  const char *to)
+{
+    char a[ANSILINELEN], b[ANSILINELEN];
+
+    strlcpy(a, from, sizeof(a));
+    modlog_strip(a);
+    strlcpy(b, to, sizeof(b));
+    modlog_strip(b);
+    modlog_change_lines(m->fields, sizeof(m->fields), label, a, b);
+}
+
+// Sets the field that the record is about: "「value」" after the action on
+// the first line if it fits there (and there is no reason), or else
+// "label: value" as the first field.
+void
+modlog_set_field(modlog_t *m, const char *label, const char *fmt, ...)
+{
+    char value[ANSILINELEN];
+    va_list ap;
+
+    va_start(ap, fmt);
+    vsnprintf(value, sizeof(value), fmt, ap);
+    va_end(ap);
+    modlog_strip(value);
+    snprintf(m->first, sizeof(m->first), "「%s」", value);
+    snprintf(m->first_lines, sizeof(m->first_lines), MODLOG_INDENT "%s: %s\n",
+             label, value);
+}
+
+// Sets the change that the record is about: "「label」from => to" after the
+// action on the first line if it fits there (and there is no reason), or
+// else the field as by modlog_add_change().
+void
+modlog_set_change(modlog_t *m, const char *label, const char *from,
+                  const char *to)
+{
+    char a[ANSILINELEN], b[ANSILINELEN];
+
+    strlcpy(a, from, sizeof(a));
+    modlog_strip(a);
+    strlcpy(b, to, sizeof(b));
+    modlog_strip(b);
+    snprintf(m->first, sizeof(m->first), "「%s」%s => %s", label, a, b);
+    m->first_lines[0] = '\0';
+    modlog_change_lines(m->first_lines, sizeof(m->first_lines), label, a, b);
+}
+
+// Formats the bits changed from from to to as "+name -name", by their names
+// (names[i] for bit i). Empty if none changed.
+static void
+modlog_format_flags(char *value, size_t sz, uint32_t from, uint32_t to,
+                    const char * const *names, int nnames)
+{
+    char item[STRLEN];
+    uint32_t changed = from ^ to;
+
+    value[0] = '\0';
+    for (int i = 0; i < 32; i++) {
+        uint32_t bit = (uint32_t)1 << i;
+        if (!(changed & bit))
+            continue;
+        if (i < nnames && names[i])
+            snprintf(item, sizeof(item), "%s%c%s", value[0] ? " " : "",
+                     (to & bit) ? '+' : '-', names[i]);
+        else
+            snprintf(item, sizeof(item), "%s%c0x%08x", value[0] ? " " : "",
+                     (to & bit) ? '+' : '-', bit);
+        strlcat(value, item, sz);
+    }
+}
+
+// Adds the field "label: +name -name" for the bits changed from from to to,
+// by their names (names[i] for bit i). Nothing if none changed.
+void
+modlog_add_flags(modlog_t *m, const char *label, uint32_t from, uint32_t to,
+                 const char * const *names, int nnames)
+{
+    char value[ANSILINELEN];
+
+    modlog_format_flags(value, sizeof(value), from, to, names, nnames);
+    if (value[0])
+        modlog_add(m, label, "%s", value);
+}
+
+// modlog_add_flags() as modlog_set_field().
+void
+modlog_set_flags(modlog_t *m, const char *label, uint32_t from, uint32_t to,
+                 const char * const *names, int nnames)
+{
+    char value[ANSILINELEN];
+
+    modlog_format_flags(value, sizeof(value), from, to, names, nnames);
+    if (value[0])
+        modlog_set_field(m, label, "%s", value);
+}
+
+// Adds the field "label: value" only to the audit record, e.g. what was
+// removed.
+void
+modlog_add_audit(modlog_t *m, const char *label, const char *fmt, ...)
+{
+    char value[ANSILINELEN];
+    size_t len = strlen(m->audit_lines);
+    va_list ap;
+
+    va_start(ap, fmt);
+    vsnprintf(value, sizeof(value), fmt, ap);
+    va_end(ap);
+    modlog_strip(value);
+    if (len < sizeof(m->audit_lines))
+        snprintf(m->audit_lines + len, sizeof(m->audit_lines) - len,
+                 MODLOG_INDENT "%s: %s\n", label, value);
+}
+
+// Formats a post as "date author title", like in the post list.
+void
+modlog_format_post(char *buf, size_t sz, const fileheader_t *fh)
+{
+    const char *date = fh->date;
+
+    while (*date == ' ')
+        date++;
+    snprintf(buf, sz, "%.5s %s %s", date, fh->owner, fh->title);
+    modlog_strip(buf);
+}
+
+// Adds the field "文章: date author title".
+void
+modlog_add_post(modlog_t *m, const fileheader_t *fh)
+{
+    char post[ANSILINELEN];
+
+    modlog_format_post(post, sizeof(post), fh);
+    modlog_add(m, "文章", "%s", post);
+}
+
+// Formats a record: the line "date role action: reason", the fields, those
+// only for the audit record (if audit) and "執行: by" if by is not NULL.
+// What is set by modlog_set_*() and the reason (if not empty) are on the
+// first line if they fit there, else as fields: the reason as the last of
+// the fields for both records. Returns a buffer to free(), or NULL.
+static char *
+modlog_record(const char *role, const modlog_t *m, const char *why,
+              bool audit, const char *by)
+{
+    const char *by_label = MODLOG_INDENT "執行: ";
+    const char *why_label = MODLOG_INDENT "理由: ";
+    const char *alines = audit ? m->audit_lines : "";
+    const char *extra = audit && m->audit_fields ? m->audit_fields : "";
+    char date[32];
+    size_t len;
+    char *s;
+
+    strlcpy(date, CdateHM(&now), sizeof(date));
+    // The first line takes what fits: both, the reason, or the change.
+    size_t head = strlen(date) + strlen(role) + strlen(m->action) + 2;
+    size_t wlen = why[0] ? strlen(": ") + strlen(why) : 0;
+    size_t flen = strlen(m->first);
+    bool first_in = false, why_in = false;
+    if (flen && head + flen + wlen <= MODLOG_COLS)
+        first_in = why_in = true;
+    else if (head + wlen <= MODLOG_COLS)
+        why_in = true;
+    else if (flen && head + flen <= MODLOG_COLS)
+        first_in = true;
+    const char *change = first_in ? m->first : "";
+    const char *lines = (flen && !first_in) ? m->first_lines : "";
+    bool why_line = why[0] && !why_in;
+
+    len = strlen(date) + strlen(role) + strlen(m->action) + strlen(change) +
+          strlen(why_label) + strlen(why) + strlen(lines) + strlen(m->fields) +
+          strlen(alines) + strlen(extra) + strlen(by_label) +
+          (by ? strlen(by) : 0) + 8;
+    if (!(s = malloc(len)))
+        return NULL;
+    snprintf(s, len, "%s %s %s%s%s%s\n%s%s%s%s%s%s%s%s%s%s", date, role,
+             m->action, change, why[0] && why_in ? ": " : "",
+             why_in ? why : "", lines, m->fields,
+             why_line ? why_label : "", why_line ? why : "",
+             why_line ? "\n" : "", alines, extra, by ? by_label : "",
+             by ? by : "", by ? "\n" : "");
+    return s;
+}
+
+// Formats the records for the public modlog (*msg) and the audit record
+// (*amsg), to free(). For police actions (also recorded in BN_POLICELOG)
+// the reason is only in the audit record. Returns -1 if out of memory.
+static int
+modlog_format(const char *bname, bool anonymous, bool police,
+              const char *reason, const modlog_t *m, char **msg, char **amsg)
+{
+    char why[ANSILINELEN] = "", by[IDLEN + STRLEN + 4];
+
     if (reason && *reason) {
         strlcpy(why, reason, sizeof(why));
         modlog_strip(why);
@@ -630,57 +882,88 @@ modlog_formatv(const char *bname, bool anonymous, bool police,
 
     syncnow();
     const char *role = modlog_role(bname, anonymous);
-    bool pub_why = why[0] && !police;
-    snprintf(msg, MODLOG_RECORD_LEN, "%s %s %s\n%s%s%s",
-             Cdatelite(&now), role, action, pub_why ? "    理由: " : "",
-             pub_why ? why : "", pub_why ? "\n" : "");
-
-    // The audit record keeps the account and where it was done from, but
-    // not for anonymous police.
-    if (anonymous)
-        snprintf(amsg, MODLOG_RECORD_LEN, "%s %s %s\n%s%s%s",
-                 Cdatelite(&now), role, action,
-                 why[0] ? "    理由: " : "", why, why[0] ? "\n" : "");
-    else
-        snprintf(amsg, MODLOG_RECORD_LEN, "%s %s (%s) %s\n%s%s%s",
-                 Cdatelite(&now), cuser.userid, fromhost, action,
-                 why[0] ? "    理由: " : "", why, why[0] ? "\n" : "");
+    // The audit record also has who did it and where it was done from,
+    // but not for anonymous police.
+    snprintf(by, sizeof(by), "%s (%s)", cuser.userid, fromhost);
+    *msg = modlog_record(role, m, police ? "" : why, false, NULL);
+    *amsg = modlog_record(role, m, why, true, anonymous ? NULL : by);
+    if (!*msg || !*amsg) {
+        free(*msg);
+        free(*amsg);
+        *msg = *amsg = NULL;
+        return -1;
+    }
+    return 0;
 }
 
-static void modlogv(const char *bname, bool anonymous, bool police,
-                    const char *reason, const char *fmt, va_list ap)
-    GCC_CHECK_FORMAT(5, 0);
-
 static void
-modlogv(const char *bname, bool anonymous, bool police, const char *reason,
-        const char *fmt, va_list ap)
+modlog_write(const char *bname, bool anonymous, bool police,
+             const char *reason, const modlog_t *m)
 {
-    char msg[MODLOG_RECORD_LEN], amsg[MODLOG_RECORD_LEN];
+    char *msg, *amsg;
 
     if (!bname || !*bname)
         return;
-
-    modlog_formatv(bname, anonymous, police, reason, msg, amsg, fmt, ap);
+    if (modlog_format(bname, anonymous, police, reason, m, &msg, &amsg) < 0)
+        return;
     file_append(TEMP_BFILE(bname, FN_MODLOG), msg);
     file_append(TEMP_BFILE(bname, FN_MODLOG_AUDIT), amsg);
+    free(msg);
+    free(amsg);
 }
 
-// Prints the lines of a record from line y, one screen line each.
-static int
-modlog_print_record(int y, const char *title, const char *record)
+// Whether the n bytes at line are one of the lines in lines.
+static bool
+modlog_has_line(const char *lines, const char *line, size_t n)
 {
-    char buf[MODLOG_RECORD_LEN];
-    char *line, *save = NULL;
+    while (lines && *lines) {
+        const char *e = strchrnul(lines, '\n');
+        if ((size_t)(e - lines) == n && memcmp(lines, line, n) == 0)
+            return true;
+        lines = *e ? e + 1 : e;
+    }
+    return false;
+}
+
+// Prints the lines of a record from line y, one screen line each. Lines
+// also in skip (if not NULL) are left out. Returns the line below them.
+static int
+modlog_print_record(int y, const char *title, const char *record,
+                    const char *skip)
+{
+    char line[ANSILINELEN];
 
     mvouts(y++, 0, title);
     clrtoeol();
-    strlcpy(buf, record, sizeof(buf));
-    for (line = strtok_r(buf, "\n", &save); line;
-         line = strtok_r(NULL, "\n", &save)) {
-        line[stream_col_offset(t_columns - 1, line, NULL)] = '\0';
-        move(y++, 0); clrtoeol();
-        outs(line);
+    for (const char *p = record; *p;) {
+        const char *e = strchrnul(p, '\n');
+        size_t n = e - p;
+        if (!modlog_has_line(skip, p, n)) {
+            snprintf(line, sizeof(line), "%.*s", (int)n, p);
+            line[stream_col_offset(t_columns - 1, line, NULL)] = '\0';
+            move(y++, 0); clrtoeol();
+            outs(line);
+        }
+        p = *e ? e + 1 : e;
     }
+    return y;
+}
+
+static int
+modlog_preview_as(int y, const char *bname, bool anonymous, bool police,
+                  const char *reason, const modlog_t *m)
+{
+    char *msg, *amsg;
+
+    if (modlog_format(bname, anonymous, police, reason, m, &msg, &amsg) < 0)
+        return y;
+    y = modlog_print_record(y, ANSI_COLOR(1) "預計記入看板管理紀錄(自動公告)："
+                            ANSI_RESET, msg, NULL);
+    // Only what is different, to save lines.
+    y = modlog_print_record(y, ANSI_COLOR(1) "預計記入看板管理稽核紀錄"
+                            "(相同內容省略)：" ANSI_RESET, amsg, msg);
+    free(msg);
+    free(amsg);
     return y;
 }
 
@@ -688,36 +971,18 @@ modlog_print_record(int y, const char *title, const char *record)
 // doing it. Returns the line below it.
 int
 modlog_preview(int y, const char *bname, const char *reason,
-               const char *fmt, ...)
+               const modlog_t *m)
 {
-    char msg[MODLOG_RECORD_LEN], amsg[MODLOG_RECORD_LEN];
-    va_list ap;
-
-    va_start(ap, fmt);
-    modlog_formatv(bname, false, false, reason, msg, amsg, fmt, ap);
-    va_end(ap);
-    y = modlog_print_record(y, ANSI_COLOR(1) "預計記入看板管理紀錄(自動公告)："
-                            ANSI_RESET, msg);
-    return modlog_print_record(y, ANSI_COLOR(1) "預計記入看板管理稽核紀錄："
-                               ANSI_RESET, amsg);
+    return modlog_preview_as(y, bname, false, false, reason, m);
 }
 
 // modlog_preview() for what modlog_police() would record.
 int
 modlog_police_preview(int y, const char *bname, const char *reason,
-                      const char *fmt, ...)
+                      const modlog_t *m)
 {
-    char msg[MODLOG_RECORD_LEN], amsg[MODLOG_RECORD_LEN];
-    va_list ap;
-
-    va_start(ap, fmt);
-    modlog_formatv(bname, modlog_as_police(bname), true, reason, msg, amsg,
-                   fmt, ap);
-    va_end(ap);
-    y = modlog_print_record(y, ANSI_COLOR(1) "預計記入看板管理紀錄(自動公告)："
-                            ANSI_RESET, msg);
-    return modlog_print_record(y, ANSI_COLOR(1) "預計記入看板管理稽核紀錄："
-                               ANSI_RESET, amsg);
+    return modlog_preview_as(y, bname, modlog_as_police(bname), true, reason,
+                             m);
 }
 
 // Starts a full screen form for a moderation action on the board, so that
@@ -731,42 +996,19 @@ modlog_form(const char *bname, const char *title)
     return 2;
 }
 
-// Appends a detail line of the record just made (e.g. which posts) to the
-// audit record only.
 void
-modlog_audit_detail(const char *bname, const char *fmt, ...)
+modlog(const char *bname, const char *reason, const modlog_t *m)
 {
-    char line[ANSILINELEN];
-    va_list ap;
-
-    if (!bname || !*bname)
-        return;
-    va_start(ap, fmt);
-    vsnprintf(line, sizeof(line), fmt, ap);
-    va_end(ap);
-    modlog_strip(line);
-    file_appendf(TEMP_BFILE(bname, FN_MODLOG_AUDIT), "    %s\n", line);
-}
-
-void
-modlog(const char *bname, const char *reason, const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    modlogv(bname, false, false, reason, fmt, ap);
-    va_end(ap);
+    modlog_write(bname, false, false, reason, m);
 }
 
 // For actions also recorded in BN_POLICELOG: the reason is only in the
 // audit record, and police are recorded as MODLOG_POLICE_NAME, without their
 // account or where it was done from.
 void
-modlog_police(const char *bname, const char *reason, const char *fmt, ...)
+modlog_police(const char *bname, const char *reason, const modlog_t *m)
 {
-    va_list ap;
-    va_start(ap, fmt);
-    modlogv(bname, modlog_as_police(bname), true, reason, fmt, ap);
-    va_end(ap);
+    modlog_write(bname, modlog_as_police(bname), true, reason, m);
 }
 
 #define MODLOG_ASK_LINES (7)
@@ -812,8 +1054,12 @@ modlog_ask_reason_as(const char *bname, int y, char *reason, size_t sz,
            "- 看板管理紀錄(自動公告，可編輯)不寫理由，您的身份會顯示為 [%s]" :
            "- 在看板管理紀錄(自動公告，可編輯)您的身份會顯示為 [%s]", role);
     move(yp + 4, 0);
-    prints("- 在看板管理稽核紀錄(管理者才可看，不可編輯)顯示為 [%s]",
-           anonymous ? role : cuser.userid);
+    if (anonymous)
+        prints("- 看板管理稽核紀錄(管理者才可看，不可編輯)一樣顯示為 [%s]",
+               role);
+    else
+        prints("- 看板管理稽核紀錄(管理者才可看，不可編輯)另記錄執行者 [%s]"
+               " 與來源 IP", cuser.userid);
 
     reason[0] = '\0';
     if (choices) {
@@ -856,6 +1102,22 @@ int
 modlog_ask_reason(const char *bname, int y, char *reason, size_t sz)
 {
     return modlog_ask_reason_as(bname, y, reason, sz, false, false, NULL, 0);
+}
+
+// Asks at line y for a reason that is not put in the modlog, e.g. for posts
+// in the digest, where it is still used elsewhere. Returns the line below
+// it, or -1 if no reason was given.
+int
+modlog_ask_reason_unlogged(int y, char *reason, size_t sz)
+{
+    move(y, 0); clrtobot();
+    getdata(y + 1, 0, "請輸入理由(空白取消): ", reason, sz, DOECHO);
+    trim(reason);
+    if (!*reason) {
+        vmsg("未輸入理由，取消操作。");
+        return -1;
+    }
+    return y + 3;
 }
 
 // modlog_ask_reason() picking one of the choices (or typing one).
@@ -904,7 +1166,8 @@ modlog_edit(const char *bname)
 
     syncnow();
     file_appendf(TEMP_BFILE(bname, FN_MODLOG_AUDIT),
-                 "%s %s (%s) 編輯管理紀錄\n",
-                 Cdatelite(&now), cuser.userid, fromhost);
+                 "%s %s 編輯管理紀錄\n" MODLOG_INDENT "執行: %s (%s)\n",
+                 CdateHM(&now), modlog_role(bname, false), cuser.userid,
+                 fromhost);
     return 1;
 }

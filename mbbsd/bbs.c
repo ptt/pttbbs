@@ -2676,6 +2676,28 @@ editLimits(unsigned char *plogins,
     *pbadpost = badpost;
 }
 
+// Puts the changed limits in log, as editLimits() keeps them: the logins in
+// tens and the bad posts as 255 - the limit.
+static void
+limits_modlog(modlog_t *log, uint8_t ol, uint8_t nl, uint8_t ob, uint8_t nb)
+{
+    char a[16], b[16];
+    // One change may fit on the first line.
+    void (*change)(modlog_t *, const char *, const char *, const char *) =
+        (ol != nl && ob != nb) ? modlog_add_change : modlog_set_change;
+
+    if (ol != nl) {
+        snprintf(a, sizeof(a), "%d", ol * 10);
+        snprintf(b, sizeof(b), "%d", nl * 10);
+        change(log, "登入次數", a, b);
+    }
+    if (ob != nb) {
+        snprintf(a, sizeof(a), "%d 篇", 255 - ob);
+        snprintf(b, sizeof(b), "%d 篇", 255 - nb);
+        change(log, "退文上限", a, b);
+    }
+}
+
 int
 do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *direct GCC_UNUSED)
 {
@@ -2698,11 +2720,12 @@ do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *dir
 	editLimits(
 		&bp->post_limit_logins,
 		&bp->post_limit_badpost, NULL);
-	if (ol != bp->post_limit_logins || ob != bp->post_limit_badpost)
-	    modlog(bp->brdname, NULL,
-		   "修改發文限制: 登入 %d => %d 次, 退文上限 %d => %d 篇",
-		   ol * 10, bp->post_limit_logins * 10,
-		   255 - ob, 255 - bp->post_limit_badpost);
+	if (ol != bp->post_limit_logins || ob != bp->post_limit_badpost) {
+	    modlog_t log;
+	    modlog_init(&log, "修改發文限制");
+	    limits_modlog(&log, ol, bp->post_limit_logins, ob, bp->post_limit_badpost);
+	    modlog(bp->brdname, NULL, &log);
+	}
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
@@ -2717,11 +2740,12 @@ do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *dir
 		&bp->petition_limit_logins,
 		&bp->petition_limit_badpost,
 		PETITION_LIMITS_NOTICE);
-	if (ol != bp->petition_limit_logins || ob != bp->petition_limit_badpost)
-	    modlog(bp->brdname, NULL,
-		   "修改連署限制: 登入 %d => %d 次, 退文上限 %d => %d 篇",
-		   ol * 10, bp->petition_limit_logins * 10,
-		   255 - ob, 255 - bp->petition_limit_badpost);
+	if (ol != bp->petition_limit_logins || ob != bp->petition_limit_badpost) {
+	    modlog_t log;
+	    modlog_init(&log, "修改連署限制");
+	    limits_modlog(&log, ol, bp->petition_limit_logins, ob, bp->petition_limit_badpost);
+	    modlog(bp->brdname, NULL, &log);
+	}
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
@@ -2867,24 +2891,30 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 
     // Moderators changing posts of others are recorded in the modlog, shown
     // in a full screen form.
-    char log_action[ANSILINELEN] = "";
-    bool by_mod = currbid > 0 &&
+    modlog_t log;
+    bool by_mod = currbid > 0 && MODLOG_FOR_POSTS() &&
                   (allow >= 2 || !is_file_owner(fhdr, &cuser));
     int y_confirm = b_lines - 1;
     if (by_mod) {
-        char extra[STRLEN] = "";
+        // "修改文章標題 (date author)", with the new date and author too if
+        // they changed, then the titles.
+        const char *d0 = fhdr->date, *d1 = tmpfhdr.date;
+        while (*d0 == ' ')
+            d0++;
+        while (*d1 == ' ')
+            d1++;
         if (strcmp(fhdr->owner, tmpfhdr.owner) != 0 ||
             strncmp(fhdr->date, tmpfhdr.date, 5) != 0)
-            snprintf(extra, sizeof(extra), " (作者 %s => %s, 日期 %.5s => %.5s)",
-                     fhdr->owner, tmpfhdr.owner, fhdr->date, tmpfhdr.date);
-        snprintf(log_action, sizeof(log_action),
-                 "修改 %s 的文章標題: %s => %s%s",
-                 fhdr->owner, fhdr->title, tmpfhdr.title, extra);
+            modlog_init(&log, "修改文章標題 (%.5s %s => %.5s %s)", d0,
+                        fhdr->owner, d1, tmpfhdr.owner);
+        else
+            modlog_init(&log, "修改文章標題 (%.5s %s)", d0, fhdr->owner);
+        modlog_add_change(&log, "標題", fhdr->title, tmpfhdr.title);
 
         int y = modlog_form(currboard, "修改文章標題");
         y = show_post_line(y, "原本: ", ent, fhdr);
         y = show_post_line(y, "改為: ", ent, &tmpfhdr) + 1;
-        y_confirm = modlog_preview(y, currboard, NULL, "%s", log_action) + 1;
+        y_confirm = modlog_preview(y, currboard, NULL, &log) + 1;
     }
 
     if (fee > 0) {
@@ -2915,7 +2945,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
     }
     if (by_mod)
-        modlog(currboard, NULL, "%s", log_action);
+        modlog(currboard, NULL, &log);
     LOG_IF(LOG_CONF_EDIT_TITLE,
            log_filef("log/edit_title.log",
                      "%s(%d) %s %s=>%s %s=>%s %s => %s\n",
@@ -3296,6 +3326,14 @@ del_range_count(const fileheader_t *recs, int num, const char *direct,
     return n;
 }
 
+// What del_range() puts in the modlog, also previewed before confirming.
+static void
+del_range_modlog(modlog_t *log, int num1, int num2, int count)
+{
+    modlog_init(log, "範圍移除文章");
+    modlog_add(log, "範圍", "#%d - #%d (%d 篇)", num1, num2, count);
+}
+
 int
 del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
           const char *direct, const char *backup_direct,
@@ -3391,11 +3429,11 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
             free(recs);
             return FULLUPDATE;
         }
-        y = modlog_preview(y, modlog_board, log_reason,
-                           "移除範圍 #%d - #%d 內的 %d 篇%s", num1, num2,
-                           del_range_count(recs, num, direct, check_mark,
-                                           check_digest, is_board),
-                           (currmode & MODE_DIGEST) ? "文摘" : "文章") + 1;
+        modlog_t log;
+        del_range_modlog(&log, num1, num2,
+                         del_range_count(recs, num, direct, check_mark,
+                                         check_digest, is_board));
+        y = modlog_preview(y, modlog_board, log_reason, &log) + 1;
     }
     getdata(y, 0, MSG_SURE_NY, numstr, 3, LCECHO);
     if (*numstr != 'y') {
@@ -3452,11 +3490,11 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     // clean up
     free(recs);
     fixkeep(direct, num1);
-    if (modlog_board && cdeleted > 0)
-        modlog(modlog_board, log_reason,
-               "移除範圍 #%d - #%d 內的 %d 篇%s",
-               num1, num2, cdeleted,
-               (currmode & MODE_DIGEST) ? "文摘" : "文章");
+    if (modlog_board && cdeleted > 0) {
+        modlog_t log;
+        del_range_modlog(&log, num1, num2, cdeleted);
+        modlog(modlog_board, log_reason, &log);
+    }
 
     if (ret < 0) {
         clear();
@@ -3485,7 +3523,8 @@ del_range_post(int ent, fileheader_t * fhdr, char *direct)
             return DONOTHING;
     }
 
-    ret = del_range(ent, fhdr, direct, direct, currboard);
+    ret = del_range(ent, fhdr, direct, direct,
+                    MODLOG_FOR_POSTS() ? currboard : NULL);
     if (ret == DIRCHANGED) {
         setbtotal(currbid);
         if (currbid > 0) {
@@ -3532,10 +3571,12 @@ mail_removed_post(const char *author, const char *bname, const char *title,
 }
 
 // What del_post() puts in the modlog, also previewed before confirming.
-#define MODLOG_DEL_POST_FMT "%s %s 的%s: %s"
-#define MODLOG_DEL_POST_ARGS \
-    as_badpost ? "退回" : "移除", log_owner, \
-    (currmode & MODE_DIGEST) ? "文摘" : "文章", log_title
+static void
+del_post_modlog(modlog_t *log, int as_badpost, const fileheader_t *fh)
+{
+    modlog_init(log, as_badpost ? "退回文章" : "移除文章");
+    modlog_add_post(log, fh);
+}
 
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
@@ -3602,12 +3643,16 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     show_post_line(modlog_form(currboard, not_owned ? "移除文章" : "刪除文章"),
                    NULL, ent, fhdr);
 
-    // Moderators deleting posts of others must say why, for the modlog.
+    // Moderators deleting posts of others must say why, for the modlog, but
+    // not in the digest: those are copies, so the authors are not mailed
+    // either.
+    int by_mod = not_owned && MODLOG_FOR_POSTS();
     // Copied as deleting may change the header.
     char log_reason[MODLOG_REASON_LEN] = "";
-    char log_title[TTLEN + 1], log_owner[IDLEN + 2];
+    char log_title[TTLEN + 1];
     STRLCPY(log_title, fhdr->title);
-    STRLCPY(log_owner, fhdr->owner);
+    fileheader_t log_fh = *fhdr;
+    modlog_t log;
     int y = 4;
 
     // Ask about the bad post before deleting anything: moderators may
@@ -3625,7 +3670,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         as_badpost = (genbuf[0] == 'y');
     }
 
-    if (not_owned) {
+    if (by_mod) {
         // The reason of a bad post is the reason of deleting it.
         if (as_badpost) {
             const char * const *choices;
@@ -3639,8 +3684,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         if (y < 0)
             return FULLUPDATE;
         // What will be recorded, before confirming.
-        y = modlog_preview(y, bp->brdname, log_reason, MODLOG_DEL_POST_FMT,
-                           MODLOG_DEL_POST_ARGS) + 1;
+        del_post_modlog(&log, as_badpost, &log_fh);
+        y = modlog_preview(y, bp->brdname, log_reason, &log) + 1;
         // The author gets the post by mail (by apply_badpost() for bad
         // posts), as it is not shown on the board anymore.
         mvouts(y, 0, tusernum > 0 ?
@@ -3769,12 +3814,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             if (*newpath && *reason) {
                 file_appendf(newpath, STR_POST_MARK "Delete Reason: %s\n", reason);
             }
-            if (not_owned)
-                modlog(bp->brdname, log_reason, MODLOG_DEL_POST_FMT,
-                       MODLOG_DEL_POST_ARGS);
+            if (by_mod) {
+                del_post_modlog(&log, as_badpost, &log_fh);
+                modlog(bp->brdname, log_reason, &log);
+            }
             // Mail the post to the author, as it is not shown on the board
             // anymore. apply_badpost() mails bad posts already.
-            if (not_owned && tusernum > 0 && !as_badpost && *newpath &&
+            if (by_mod && tusernum > 0 && !as_badpost && *newpath &&
                 IS_DELETE_FILE_CONTENT_OK(del_ret)) {
                 if (mail_removed_post(getuserid(tusernum), bp->brdname,
                                       log_title, log_reason, newpath) == 0) {
@@ -3879,11 +3925,15 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	int y = show_post_line(modlog_form(currboard, "鎖定文章"), NULL, ent,
 			       fhdr) + 1;
-	if ((y = modlog_police_ask_reason(currboard, y, genbuf,
-					  MODLOG_REASON_LEN)) < 0)
+	y = MODLOG_FOR_POSTS() ?
+	    modlog_police_ask_reason(currboard, y, genbuf, MODLOG_REASON_LEN) :
+	    modlog_ask_reason_unlogged(y, genbuf, MODLOG_REASON_LEN);
+	if (y < 0)
 	    return FULLUPDATE;
-	y = modlog_police_preview(y, currboard, genbuf, "鎖定文章: %s",
-				  fhdr->title) + 1;
+	modlog_t log;
+	modlog_add_post(modlog_init(&log, "鎖定文章"), fhdr);
+	if (MODLOG_FOR_POSTS())
+	    y = modlog_police_preview(y, currboard, genbuf, &log) + 1;
 	char ans[3];
 	getdata(y, 0, "要將文章鎖定嗎(y/N)?", ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
@@ -3901,7 +3951,8 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         }
 
         post_policelog2(currboard, fhdr->title, "鎖文", genbuf, 1, fn1);
-        modlog_police(currboard, genbuf, "鎖定文章: %s", fhdr->title);
+        if (MODLOG_FOR_POSTS())
+            modlog_police(currboard, genbuf, &log);
 
         // Rename the file to be secure, introducing new X-dot file here.
         // We can not use L-dot prefix since there may be some code that
@@ -3913,8 +3964,10 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     } else if (fhdr->filename[0]=='L') {
 	int y = show_post_line(modlog_form(currboard, "解除鎖定文章"), NULL,
 			       ent, fhdr) + 1;
-	y = modlog_police_preview(y, currboard, NULL, "解除鎖定文章: %s",
-				  fhdr->title) + 1;
+	modlog_t log;
+	modlog_add_post(modlog_init(&log, "解除鎖定文章"), fhdr);
+	if (MODLOG_FOR_POSTS())
+	    y = modlog_police_preview(y, currboard, NULL, &log) + 1;
 	char ans[3];
 	getdata(y, 0, "要將文章鎖定解除嗎(y/N)?", ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
@@ -3928,7 +3981,8 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         if (access(fnx, 0) == 0)
             Rename(fnx, fn1);
         post_policelog(currboard, fhdr->title, "鎖文", genbuf, 0);
-        modlog_police(currboard, NULL, "解除鎖定文章: %s", fhdr->title);
+        if (MODLOG_FOR_POSTS())
+            modlog_police(currboard, NULL, &log);
     } else {
         vmsg("無法進行鎖定或解除。");
         return FULLUPDATE;
@@ -4000,15 +4054,17 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     char log_reason[MODLOG_REASON_LEN];
-    char log_action[ANSILINELEN];
-    snprintf(log_action, sizeof(log_action), "將文章推薦值 (%d) 歸零: %s",
-             (int)fhdr->score, fhdr->title);
+    modlog_t log;
+    modlog_init(&log, "推薦值 (%d) 歸零", (int)fhdr->score);
+    modlog_add_post(&log, fhdr);
     int y = show_post_line(modlog_form(currboard, "推薦值歸零"), NULL, ent,
                            fhdr) + 1;
-    if ((y = modlog_ask_reason(currboard, y, log_reason,
-                               sizeof(log_reason))) < 0)
-	return FULLUPDATE;
-    y = modlog_preview(y, currboard, log_reason, "%s", log_action) + 1;
+    if (MODLOG_FOR_POSTS()) {
+        if ((y = modlog_ask_reason(currboard, y, log_reason,
+                                   sizeof(log_reason))) < 0)
+            return FULLUPDATE;
+        y = modlog_preview(y, currboard, log_reason, &log) + 1;
+    }
     getdata(y, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
@@ -4026,7 +4082,8 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     if (dashf(fn))
         file_appendf(fn, STR_REF_MARK "%s 於 %s 將推薦值歸零\n", cuser.userid,
                   Cdatelite(&now));
-    modlog(currboard, log_reason, "%s", log_action);
+    if (MODLOG_FOR_POSTS())
+        modlog(currboard, log_reason, &log);
     return FULLUPDATE;
 }
 
@@ -4558,11 +4615,18 @@ mask_post_content(int ent, fileheader_t * fhdr,
     y = show_post_line(modlog_form(currboard, "刪除特定文字"), NULL, ent,
                        fhdr);
     mvprints(y, 0, "刪除文字: %s (共 %d 行)", pattern, found);
-    if ((y = modlog_ask_reason(currboard, y + 1, reason,
-                               sizeof(reason))) < 0)
+    // The reason is also put in the post.
+    y = MODLOG_FOR_POSTS() ?
+        modlog_ask_reason(currboard, y + 1, reason, sizeof(reason)) :
+        modlog_ask_reason_unlogged(y + 1, reason, sizeof(reason));
+    if (y < 0)
         return FULLUPDATE;
-    y = modlog_preview(y, currboard, reason, "刪除文章部份違規文字: %s",
-                       fhdr->title) + 1;
+    modlog_t log;
+    modlog_add_post(modlog_init(&log, "刪除文章特定文字"), fhdr);
+    // What was removed, for the audit record.
+    modlog_add_audit(&log, "樣式", "%s", pattern);
+    if (MODLOG_FOR_POSTS())
+        y = modlog_preview(y, currboard, reason, &log) + 1;
 
     /* XXX race condition here... */
     getdata(y, 0, "確定要刪除這些內容嗎? [y/N]: ", ans, sizeof(ans), LCECHO);
@@ -4622,7 +4686,8 @@ mask_post_content(int ent, fileheader_t * fhdr,
               STR_POST_MARK "違規文字樣式: %s\n",
               cuser.userid, Cdatelite(&now), reason, pattern);
 
-    modlog(currboard, reason, "刪除文章部份違規文字: %s", fhdr->title);
+    if (MODLOG_FOR_POSTS())
+        modlog(currboard, reason, &log);
     // 理論上要改 fhdr->modified, 不過在目前一團亂的同步機制下，多作多錯。
     vmsg("違規文字已刪除。");
     return FULLUPDATE;
@@ -4669,7 +4734,7 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
             if (currbrdattr & (BRD_ANGELANONYMOUS | BRD_ANONYMOUS)) {
                 vmsg("抱歉，暫時不支援匿名板。");
             } else  {
-                psb_comment_manager(currboard, fhdr->filename);
+                psb_comment_manager(currboard, fhdr);
             }
             break;
 #endif
