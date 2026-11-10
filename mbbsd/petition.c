@@ -90,7 +90,15 @@ do_petition_reply(const fileheader_t * fhdr)
             else
                 yes++;
            }
-        if (yes>3) outs(genbuf);
+        // The petition, above the prompts from line 16.
+        if (yes>3) {
+            int y = vgety();
+            if (y < 15)
+                outs(genbuf);
+            else if (y == 15) {
+                outs("...\n");
+            }
+        }
 
 	if (!strncmp(genbuf, "連署結束時間", 12)) {
 	    ptr = strchr(genbuf, '(');
@@ -115,9 +123,8 @@ do_petition_reply(const fileheader_t * fhdr)
 	space = strpbrk(uid, " \n");
 	if(space) *space='\0';
 	if (!strncasecmp(uid, cuser.userid, IDLEN)) {
-	    move(5, 10);
-	    outs("您已經連署過本篇了");
-	    getdata(17, 0, "要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
+	    move(16, 0); clrtobot();
+	    getdata(17, 0, "您已經連署過本篇了，要修改您之前的連署嗎？(Y/N) [N]", opnion, 3, LCECHO);
             if (*opnion == 'y')
                 break;
             fclose(fi);
@@ -125,6 +132,7 @@ do_petition_reply(const fileheader_t * fhdr)
 	}
     }
     fclose(fi);
+    move(16, 0); clrtobot();
     do {
 	if (!getdata(19, 0, "請問您 (Y)支持 (N)反對 這個議題：", opnion, 3, LCECHO)) {
 	    return;
@@ -252,9 +260,9 @@ do_petition(int type)
 	    if (!getdata(7, 0, "請輸入看板英文名稱：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
 	    else if (!is_valid_brdname(topic))
-		outs("不是正確的看板名稱");
+		vmsg("不是正確的看板名稱");
 	    else if (getbnum(topic) > 0)
-		outs("本名稱已經存在");
+		vmsg("本名稱已經存在");
 	    else
 		break;
 	} while (temp > 0);
@@ -325,11 +333,9 @@ do_petition(int type)
 		 topic, "板主 ID : ");
         temp=getbnum(topic);
 	assert(0<=temp-1 && temp-1<MAX_BOARD);
-	do {
+	for (int is_bm = 0; !is_bm;) {
 	    if (!getdata(7, 0, "請輸入板主ID：", topic, IDLEN + 1, DOECHO))
 		return FULLUPDATE;
-        } while (!({
-            int is_bm = 0;
             int unum = searchuser(topic, NULL);
             const boardheader_t *bp = &bcache[temp - 1];
             for (int m = 0; m < MAX_BMs; m++) {
@@ -338,8 +344,9 @@ do_petition(int type)
                     break;
                 }
             }
-            is_bm;
-        }));
+            if (!is_bm)
+                vmsg("此 ID 不是該看板的板主");
+        }
 	strcat(genbuf, topic);
 	strcat(genbuf, "\n罷免原因: \n");
 	break;
@@ -373,6 +380,7 @@ do_petition(int type)
     default:
 	return FULLUPDATE;
     }
+    move(11, 0); clrtobot();
     outs("請輸入簡介或政見(至多五行)，要清楚填寫");
     for (temp = 12; temp < 17; temp++) {
 	    if (!getdata(temp, 0, "：", topic, 60, DOECHO))
@@ -384,8 +392,16 @@ do_petition(int type)
 	    strcat(genbuf, topic);
 	    strcat(genbuf, "\n");
 	}
-    if (temp == 11)
-	    return FULLUPDATE;
+    if (temp == 12) {
+	vmsg("未填寫簡介，取消連署");
+	return FULLUPDATE;
+    }
+    // Petitions are public and abusing them is punished.
+    getdata(b_lines - 1, 0, "確定要發起此連署嗎？(y/N) [N] ", topic, 3, LCECHO);
+    if (topic[0] != 'y') {
+	vmsg("取消連署");
+	return FULLUPDATE;
+    }
     strcat(genbuf, "連署結束時間: ");
     time4_t end4 = time4_add(now, 14 * DAY_SECONDS);
     SNPRINTF(topic, "(%d)", end4);
@@ -394,12 +410,11 @@ do_petition(int type)
     strcat(genbuf, "\n\n");
     strcat(genbuf, PETITION_DIVIDER "支持" PETITION_DIVIDER "\n");
     strcat(genbuf, PETITION_DIVIDER "反對" PETITION_DIVIDER "\n");
-    outs("開始連署嘍");
     setbpath(fpath, currboard);
     stampfile(fpath, &petitionfile);
 
     if (!(fp = fopen(fpath, "w"))) {
-	outs("開檔失敗，請稍候重來一次");
+	vmsg("開檔失敗，請稍候重來一次");
 	return FULLUPDATE;
     }
     fprintf(fp, "%s%s %s%s\n%s%s\n%s%s\n", "作者: ", cuser.userid,
