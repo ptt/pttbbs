@@ -42,7 +42,7 @@ void CallAngel(void);
 void angel_toggle_pause();
 void angel_load_my_fullnick(char *buf, int szbuf); // full nick!
 const char *angel_get_nick();
-void pressanykey_or_callangel(void);
+void pressanykey_or_callangel(void) EXCLUDES_ABORT_BLOCK;
 #define PRESSANYKEY() pressanykey_or_callangel()
 
 /* announce */
@@ -94,11 +94,11 @@ void modlog(const char *bname, const char *reason, const modlog_t *m);
 void modlog_police(const char *bname, const char *reason, const modlog_t *m);
 // Posts in the digest (g) are copies: changes to them are not recorded.
 #define MODLOG_FOR_POSTS() (!(currmode & MODE_DIGEST))
-int modlog_ask_reason(const char *bname, int y, char *reason, size_t sz);
-int modlog_ask_reason_unlogged(int y, char *reason, size_t sz);
-int modlog_police_ask_reason(const char *bname, int y, char *reason, size_t sz);
+int modlog_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
+int modlog_ask_reason_unlogged(int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
+int modlog_police_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
 int modlog_ask_reason_choice(const char *bname, int y, char *reason, size_t sz,
-                             const char * const *choices, int nchoices);
+                             const char * const *choices, int nchoices) EXCLUDES_ABORT_BLOCK;
 int modlog_preview(int y, const char *bname, const char *reason,
                    const modlog_t *m);
 int modlog_police_preview(int y, const char *bname, const char *reason,
@@ -125,7 +125,7 @@ int Read(void);
 int CheckPostPerm(void);
 void check_new_perm(void);
 int CheckPostRestriction(int);
-void do_reply_title(int row, const char *title, const char *prefix, char *result, int len);
+void do_reply_title(int row, const char *title, const char *prefix, char *result, int len) EXCLUDES_ABORT_BLOCK;
 void outgo_post(const fileheader_t *fh, const char *board, const char *userid, const char *username);
 int edit_title(int ent, fileheader_t *fhdr, const char *direct);
 int whereami(void);
@@ -204,7 +204,7 @@ const char *muted_msg(const char *bname);
 const char* money_level(int money);
 int pay(int money, const char *item, ...) GCC_CHECK_FORMAT(2,3); 
 int pay_as_uid(int uid, int money, const char *item,...)GCC_CHECK_FORMAT(3,4);
-int lockutmpmode(int unmode, int state);
+int lockutmpmode(int unmode, int state) EXCLUDES_ABORT_BLOCK;
 int unlockutmpmode(void);
 int x_file(void);
 int give_money(void);
@@ -285,16 +285,16 @@ void chicken_toggle_death(const char *uid);
 int dice_main(void);
 
 /* edit */
-int vedit(const char *fpath, int saveheader, char save_title[STRLEN]);
-int vedit2(const char *fpath, int saveheader, char save_title[STRLEN], int flags);
-int veditfile(const char *fpath);
-void write_header(FILE *fp, const char *mytitle, bool allow_anon);
-void addsignature(FILE *fp, bool ifuseanony);
+int vedit(const char *fpath, int saveheader, char save_title[STRLEN]) EXCLUDES_ABORT_BLOCK;
+int vedit2(const char *fpath, int saveheader, char save_title[STRLEN], int flags) EXCLUDES_ABORT_BLOCK;
+int veditfile(const char *fpath) EXCLUDES_ABORT_BLOCK;
+void write_header(FILE *fp, const char *mytitle, bool allow_anon) EXCLUDES_ABORT_BLOCK;
+void addsignature(FILE *fp, bool ifuseanony) EXCLUDES_ABORT_BLOCK;
 void addsimplesignature(FILE *fp, const char *fromhost);
 void addforwardsignature(FILE *fp, const char *fromhost);
 void auto_backup(void);
 void restore_backup(void);
-const char *ask_tmpbuf(int y);
+const char *ask_tmpbuf(int y) EXCLUDES_ABORT_BLOCK;
 
 /* emaildb */
 #ifdef USE_EMAILDB
@@ -438,8 +438,8 @@ VKEY_CTX *vkey_get_context(void);
 // initialization
 void vkey_init(void);	     // initialize virtual key system
 // key value retrieval
-int  vkey(void);	     // receive next key (KEY_*, ASCII, or decoded wchar)
-int  vkey_any(void);         // like vkey() but only returns real keys (for "press any key")
+int  vkey(void) EXCLUDES_ABORT_BLOCK;	     // receive next key (KEY_*, ASCII, or decoded wchar)
+int  vkey_any(void) EXCLUDES_ABORT_BLOCK;         // like vkey() but only returns real keys (for "press any key")
 
 // vkey events: asynchronous notifications (posted by IPC handlers after they
 // consumed and stored their data) that are delivered as an I_EV_* key code
@@ -451,16 +451,16 @@ int  vkey_any(void);         // like vkey() but only returns real keys (for "pre
 void vkey_post_event(int ev);       // mark event(s) pending
 int  vkey_has_event(void);          // pending & wanted by current caller?
 int  vkey_take_event(void);         // pop a wanted event as I_EV_* or 0
-int  vkey_ex(int events);           // vkey() that may also return I_EV_* for events
-int  vkey_poll_ex(int timeout, int events); // vkey_poll() that also wakes up for events
-int  vk_byte(void);	     // receive next key in raw byte mode (KEY_*, ASCII, or raw byte)
+int  vkey_ex(int events) EXCLUDES_ABORT_BLOCK;           // vkey() that may also return I_EV_* for events
+int  vkey_poll_ex(int timeout, int events) EXCLUDES_ABORT_BLOCK; // vkey_poll() that also wakes up for events
+int  vk_byte(void) EXCLUDES_ABORT_BLOCK;	     // receive next key in raw byte mode (KEY_*, ASCII, or raw byte)
 void vk_ungetc(int c);       // push back a key into peek buffer
 int  vkey_peek(void);	     // peek one key from queue (KEY_INCOMPLETE if empty)
 const vtkbd_mouse_t *vkey_get_mouse(void); // get latest mouse event
 int  vkey_get_mouse_pos(int *x, int *y);   // get latest mouse coordinates
 // status
-int  vkey_poll(int timeout); // poll for timeout milliseconds. return 1 for ready oterwise 0
-int  vkey_is_ready(void);    // determine if input buffer is ready for a key input
+int  vkey_poll(int timeout) EXCLUDES_ABORT_BLOCK; // poll for timeout milliseconds. return 1 for ready oterwise 0
+int  vkey_is_ready(void) EXCLUDES_ABORT_BLOCK;    // determine if input buffer is ready for a key input
 int  vkey_is_typeahead(void);// check if input buffer has data arrived (maybe not ready yet)
 // additional fd to listen
 int  vkey_attach(int fd);    // attach (and replace) additional fd to vkey API, returning previous attached fd
@@ -472,8 +472,8 @@ void vkey_set_ipc_handler(vkey_ipc_handler_t handler); // set IPC packet handler
 int  vkey_process_ipc(void);  // read and dispatch pending IPC packet(s)
 // input buffer management
 int  vkey_is_full(void);     // test if input buffer is full
-void vkey_purge(void);		// discard clear all data in input buffer
-int  vkey_prefetch(int timeout);// try to fetch data from fd to buffer unless timeout
+void vkey_purge(void) EXCLUDES_ABORT_BLOCK;		// discard clear all data in input buffer
+int  vkey_prefetch(int timeout) EXCLUDES_ABORT_BLOCK;// try to fetch data from fd to buffer unless timeout
 int  vkey_is_prefetched(char c);// check if c (in raw data form) is already in prefetched buffer
 int  vkey_decode(VBUF *inbuf, int raw_ch); // decode raw byte into virtual key
 ssize_t vbuf_from_tty(VBUF *v);
@@ -517,15 +517,15 @@ int mail_muser(const userec_t muser, const char *title, const char *filename);
 int mail_send_file(const char *recipient, const char *title, const char *src_file, const char *sender);
 int mail_send_text(const char *recipient, const char *title, const char *message, const char *sender);
 int m_read(void);
-int doforward(const char *direct, const fileheader_t *fh, int mode);
-int mail_reply(int ent, fileheader_t *fhdr, const char *direct);
+int doforward(const char *direct, const fileheader_t *fh, int mode) EXCLUDES_ABORT_BLOCK;
+int mail_reply(int ent, fileheader_t *fhdr, const char *direct) EXCLUDES_ABORT_BLOCK;
 int bsmtp(const char *fpath, const char *title, const char *rcpt, const char *from);
 int notify_password_change(const char *userid, const char *email);
-int hold_mail(const char *fpath, const char *receiver, const char *title);
+int hold_mail(const char *fpath, const char *receiver, const char *title) EXCLUDES_ABORT_BLOCK;
 int user_is_mail_quota_exempt(const userec_t *u);
 int user_get_daily_free_mail_limit(const userec_t *u);
-int chkmailbox(void);
-int chkmailbox_tidy_limit(void);
+int chkmailbox(void) EXCLUDES_ABORT_BLOCK;
+int chkmailbox_tidy_limit(void) EXCLUDES_ABORT_BLOCK;
 int mail_man(void);
 int m_new(void);
 int m_send(void);
@@ -556,10 +556,10 @@ typedef enum {
     MAILSEND_FLAG_FORWARD_CHECKED  = (1 << 4),
 } MailSendFlag;
 
-int mail_ui_send(const char *userid, const char *title);
+int mail_ui_send(const char *userid, const char *title) EXCLUDES_ABORT_BLOCK;
 int mail_check_recipient(const char *userid);
-int do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle);
-void my_send(const char *uident);
+int do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle) EXCLUDES_ABORT_BLOCK;
+void my_send(const char *uident) EXCLUDES_ABORT_BLOCK;
 void setupmailusage(void);
 MailSendResult save_mailbox(const char *sender, const char *recipient, const char *title,
                             const char *message, const char *src_file, int filemode,
@@ -587,8 +587,8 @@ void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
 void abort_bbs(int sig) GCC_NORETURN;
-void block_abort_signals(sigset_t *oldset);
-void restore_abort_signals(const sigset_t *oldset);
+void block_abort_signals(sigset_t *oldset) TSA_ACQUIRE(abort_block);
+void restore_abort_signals(const sigset_t *oldset) TSA_RELEASE(abort_block);
 /* No key may be read, or waited for, inside a block_abort_signals() region
  * (see there). Placed where the input backends read or wait for input. */
 void abort_block_violation(const char *what, const char *file, int line);
@@ -622,7 +622,7 @@ void m_sob_brd(char *bname,char *fromdir);
 #endif
 
 /* pager (more) */
-int more(const char *fpath, int promptend);
+int more(const char *fpath, int promptend) EXCLUDES_ABORT_BLOCK;
 /* Readers (posts, mails, the announce) use more_ex() with these. */
 struct live_ctx;
 typedef struct more_hooks {
@@ -631,8 +631,8 @@ typedef struct more_hooks {
     struct live_ctx *live;      // live mode of a post (livepost.h), or NULL
     void *ctx;
 } more_hooks_t;
-int more_ex(const char *fpath, int promptend, const more_hooks_t *hooks);
-int more_inmemory(void *content, int size, int promptend);
+int more_ex(const char *fpath, int promptend, const more_hooks_t *hooks) EXCLUDES_ABORT_BLOCK;
+int more_inmemory(void *content, int size, int promptend) EXCLUDES_ABORT_BLOCK;
 /* For the key bindings of more_ex(). */
 void more_leave(cmd_ctx_t *ctx, int retval);
 int more_at_top(cmd_ctx_t *ctx);        // the first page is shown
@@ -687,8 +687,8 @@ typedef int (*gnc_comp_func)(int, const char*, int);
 typedef int (*gnc_perm_func)(int);
 typedef char* (*gnc_getname_func)(int);
 
-void namecomplete2(const struct Vector *namelist, const char *prompt, char *data);
-void namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval);
+void namecomplete2(const struct Vector *namelist, const char *prompt, char *data) EXCLUDES_ABORT_BLOCK;
+void namecomplete3(const struct Vector *namelist, const char *prompt, char *data, const char *defval) EXCLUDES_ABORT_BLOCK;
 int ShowVector(struct Vector *self, int row, int column, const char *prompt, int idx);
 void ToggleVector(struct Vector *list, int *recipient, const char *listfile, const char *msg);
 #define MAX_MULTILIST           (1500)
@@ -696,7 +696,7 @@ void ToggleVector(struct Vector *list, int *recipient, const char *listfile, con
 #define MULTILIST_EXCLUDE_SELF  (0x02)
 #define MULTILIST_CHECK_MAILBOX (0x04)  /* Recipients must be able to receive mail */
 void multi_user_list(struct Vector *namelist, int *recipient,
-                     const char *title, const char *msg_prefix, int flags);
+                     const char *title, const char *msg_prefix, int flags) EXCLUDES_ABORT_BLOCK;
 
 typedef struct complete_hooks {
     VGET_FCALLBACK peek;      /* called before complete_engine processes key */
@@ -704,16 +704,16 @@ typedef struct complete_hooks {
     void *ctx;                /* user context passed as instance to callbacks */
 } complete_hooks_t;
 
-void usercomplete(const char *prompt, char *data);
-void usercomplete2(const char *prompt, char *data, const char *defval);
+void usercomplete(const char *prompt, char *data) EXCLUDES_ABORT_BLOCK;
+void usercomplete2(const char *prompt, char *data, const char *defval) EXCLUDES_ABORT_BLOCK;
 int usercomplete_hooks(const char *prompt, char *data, const char *defval,
-		       const complete_hooks_t *hooks, int *out_exit_key);
+		       const complete_hooks_t *hooks, int *out_exit_key) EXCLUDES_ABORT_BLOCK;
 int usercomplete_ex(const char *prompt, char *data, const char *defval,
-		    int (*check_exit_key)(int key));
-int usercomplete_vform(const char *prompt, char *data, const char *defval);
+		    int (*check_exit_key)(int key)) EXCLUDES_ABORT_BLOCK;
+int usercomplete_vform(const char *prompt, char *data, const char *defval) EXCLUDES_ABORT_BLOCK;
 int generalnamecomplete(const char *prompt, char *data, int len, size_t nmemb,
 		       gnc_comp_func compar, gnc_perm_func permission,
-		       gnc_getname_func getname);
+		       gnc_getname_func getname) EXCLUDES_ABORT_BLOCK;
 int completeboard_compar(int where, const char *str, int len);
 int completeboard_permission(int where);
 int complete_board_and_group_permission(int where);
@@ -754,10 +754,10 @@ int read_exec_noitem(read_noitem_func_t func, cmd_ctx_t *ctx);
         return read_exec_noitem((read_noitem_func_t)(void *)(fn), ctx); \
     }
 struct PSB_CTX;
-void i_read(int cmdmode, const char *direct, void (*dotitle)(struct PSB_CTX *), void (*doentry)(int, fileheader_t *, struct PSB_CTX *), const cmd_t *rcmdlist, int bidcache);
+void i_read(int cmdmode, const char *direct, void (*dotitle)(struct PSB_CTX *), void (*doentry)(int, fileheader_t *, struct PSB_CTX *), const cmd_t *rcmdlist, int bidcache) EXCLUDES_ABORT_BLOCK;
 void fixkeep(const char *s, int first);
 keeploc_t *getkeep(const char *s, int def_topline, int def_cursline);
-void forward_file(const fileheader_t * fhdr, const char *direct);
+void forward_file(const fileheader_t * fhdr, const char *direct) EXCLUDES_ABORT_BLOCK;
 
 /* record */
 int stampfile_u(char *fpath, fileheader_t *fh);
@@ -867,12 +867,12 @@ void on_crosspost(const char *board, const char *fname,
 // `status` in the header, `reason` (lines) highlighted, `shown` (may be NULL)
 // below, then the site notes in `notes` (a file, may be NULL).
 void alert_screen(const char *title, const char *status, const char *reason,
-                  const char *shown, const char *notes);
+                  const char *shown, const char *notes) EXCLUDES_ABORT_BLOCK;
 // The alert of a denial by activity.svc (`msg`: what, why and until when).
-void activity_alert(const char *msg, const char *status);
+void activity_alert(const char *msg, const char *status) EXCLUDES_ABORT_BLOCK;
 // Tells the user the account is slowed down (on_delay of activity_read_post()
 // and activity_nav_track()).
-void activity_slow_alert(const char *msg);
+void activity_slow_alert(const char *msg) EXCLUDES_ABORT_BLOCK;
 
 /* stuff */
 #define isprint2(ch) (((ch) & 0x80) || isprint((unsigned char)(ch)))
@@ -885,30 +885,30 @@ void setaidfile(char *buf, const char *bn, aidu_t aidu);
 void setcalfile(char *buf, char *userid);
 int  log_user(const char *fmt, ...) GCC_CHECK_FORMAT(1,2);
 void syncnow(void);
-void wait_penalty(int sec);
+void wait_penalty(int sec) EXCLUDES_ABORT_BLOCK;
 bool cursor_clear(int row, int column);
 void cursor_show(int row, int column);
-int  cursor_key(int row, int column);
+int  cursor_key(int row, int column) EXCLUDES_ABORT_BLOCK;
 void printdash(const char *mesg, int msglen);
 int  show_file(const char *filename, int y, int lines, int mode);
 int  show_80x24_screen(const char *filename);
-void show_helpfile(const char * helpfile);
-int  search_num(int ch, int max);
+void show_helpfile(const char * helpfile) EXCLUDES_ABORT_BLOCK;
+int  search_num(int ch, int max) EXCLUDES_ABORT_BLOCK;
 const char* subject(const char *title);
 const char* subject_ex(const char *title, int *ptype);
 int  str_checksum(const char *str);
 int  userid_is_BM(const char *userid, const char *list);
 int  is_uBM(const char *list, const char *id);
-time4_t  gettime(int line, time4_t dt, const char* head);
+time4_t  gettime(int line, time4_t dt, const char* head) EXCLUDES_ABORT_BLOCK;
 // vgets/getdata utilities
-int  getdata_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo);
-int  getdata_str_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo, const char *defaultstr);
-int  getdata_buf_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo);
-int  getdata(int line, int col, const char *prompt, char *buf, int len, int echo);
-int  get_new_passwd(int y, const char *userid, char *out_passwd, size_t out_size);
-int  set_user_new_passwd(int y, userec_t *u);
-int  getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr);
-int  getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo);
+int  getdata_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo) EXCLUDES_ABORT_BLOCK;
+int  getdata_str_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo, const char *defaultstr) EXCLUDES_ABORT_BLOCK;
+int  getdata_buf_sz(int line, int col, const char *prompt, char *buf, size_t bufsz, int len, int echo) EXCLUDES_ABORT_BLOCK;
+int  getdata(int line, int col, const char *prompt, char *buf, int len, int echo) EXCLUDES_ABORT_BLOCK;
+int  get_new_passwd(int y, const char *userid, char *out_passwd, size_t out_size) EXCLUDES_ABORT_BLOCK;
+int  set_user_new_passwd(int y, userec_t *u) EXCLUDES_ABORT_BLOCK;
+int  getdata_str(int line, int col, const char *prompt, char *buf, int len, int echo, const char *defaultstr) EXCLUDES_ABORT_BLOCK;
+int  getdata_buf(int line, int col, const char *prompt, char *buf, int len, int echo) EXCLUDES_ABORT_BLOCK;
 #define getdata(line, col, prompt, buf, len, echo) \
     getdata_sz((line), (col), (prompt), (buf), __builtin_object_size((buf), 1), (len), (echo))
 #define getdata_str(line, col, prompt, buf, len, echo, defaultstr) \
@@ -967,7 +967,7 @@ void ofo_my_write(void);
 void check_water_init(void);
 const char *modestring(const userinfo_t * uentp, int simple);
 int t_users(void);
-int my_write(pid_t pid, const char *hint, const char *id, int flag, userinfo_t *);
+int my_write(pid_t pid, const char *hint, const char *id, int flag, userinfo_t *) EXCLUDES_ABORT_BLOCK;
 void talkreply(void);
 int wmsg_toggle_mode(void);
 int t_query(void);
@@ -1145,7 +1145,7 @@ int pwcuDeMoney		(int money);
 void pwcuInitZero	(void);
 int  pwcuInitAdminPerm	(void);
 
-int verify_captcha(const char *reason);
+int verify_captcha(const char *reason) EXCLUDES_ABORT_BLOCK;
 const char *remote_captcha();
 
 int u_setup_2fa(void);

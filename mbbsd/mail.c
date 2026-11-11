@@ -1002,7 +1002,7 @@ chkmailbox_tidy_limit() {
 
 // Asks whether to keep a copy of the mail sent, telling first how it was
 // sent.
-static int
+static int EXCLUDES_ABORT_BLOCK
 hold_mail_prompt(const char *fpath, const char *receiver, const char *title,
                  const char *sent)
 {
