@@ -239,12 +239,19 @@ abort_bbs(int sig GCC_UNUSED)
     exit(0);
 }
 
-/* Block the signals that reach abort_bbs() -- SIGHUP (hangup), SIGPIPE (a
- * flush to a dead socket), SIGTERM, SIGXCPU -- so a money/record critical
- * section completes instead of being torn by a client disconnect, which
- * exit()s with no unwinding. Pair with restore_abort_signals(). The guarded
- * region must contain no tty read: a synchronous abort_bbs() from input EOF
- * is not a signal and bypasses the mask. */
+/* Block the signals that kill a session mid-way -- SIGHUP (hangup, or being
+ * kicked by another login), SIGPIPE (a flush to a dead socket) and SIGTERM,
+ * which run abort_bbs(), and SIGXCPU (the CPU limit) -- so a money/record
+ * critical section completes instead of being torn: the session exit()s
+ * with no unwinding. Pair with restore_abort_signals(). SIGALRM is left
+ * alone; it only aborts during login, so don't use this there. The region
+ * must contain no tty read: input EOF calls abort_bbs() directly, which no
+ * mask stops, and a prompt on a half-open connection would wait with SIGHUP
+ * masked. Both input backends check this wherever they read or wait for
+ * input (CHECK_NOT_IN_ABORT_BLOCK in vk_byte(), vkey_poll_ex(),
+ * vkey_prefetch(), vkey_is_ready() and vkey_purge(), through which every
+ * tty read passes; pmore's movie playback, under more(), also waits on the
+ * tty with a select() of its own); see abort_block_violation(). */
 void
 block_abort_signals(sigset_t *oldset)
 {
@@ -257,12 +264,37 @@ block_abort_signals(sigset_t *oldset)
     sigaddset(&set, SIGXCPU);
 #endif
     sigprocmask(SIG_BLOCK, &set, oldset);
+    abort_block_depth++;
 }
 
 void
 restore_abort_signals(const sigset_t *oldset)
 {
+    if (abort_block_depth <= 0) {
+	// No block_abort_signals() filled oldset: leave the mask as it is.
+	abort_block_violation("restore without a block", __FILE__, __LINE__);
+	return;
+    }
+    abort_block_depth--;
     sigprocmask(SIG_SETMASK, oldset, NULL);
+}
+
+/* The block_abort_signals() rules were broken. Log it, once per session. A
+ * test build (DEBUG_ABORT_BLOCK) then aborts, so the bug can't be missed;
+ * production carries on rather than abort half-way through the very region
+ * the rules protect (on a healthy connection the read just works). */
+void
+abort_block_violation(const char *what, const char *file, int line)
+{
+    static int logged;
+    if (!logged) {
+	logged = 1;
+	log_filef("log/abort_block.log", "%s: %s at %s:%d (depth %d)\n",
+		  cuser.userid, what, file, line, abort_block_depth);
+    }
+#ifdef DEBUG_ABORT_BLOCK
+    abort();
+#endif
 }
 
 #ifdef GCC_NORETURN

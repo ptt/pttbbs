@@ -257,6 +257,7 @@ wait_input(float f, int bIgnoreBuf)
 inline int
 vkey_is_ready(void)
 {
+    CHECK_NOT_IN_ABORT_BLOCK();
     return (vkctx.peek_ch != KEY_INCOMPLETE) || (num_in_buf() > 0);
 }
 
@@ -275,6 +276,7 @@ vkey_is_full(void)
 inline void
 vkey_purge(void)
 {
+    CHECK_NOT_IN_ABORT_BLOCK();
     int max_try = 64;
     drop_input();
     vkctx.peek_ch = KEY_INCOMPLETE;
@@ -296,6 +298,7 @@ vkey_init() {
 inline int
 vk_byte(void)
 {
+    CHECK_NOT_IN_ABORT_BLOCK();
     if (vkctx.peek_ch != KEY_INCOMPLETE) {
         int c = vkctx.peek_ch;
         vkctx.peek_ch = KEY_INCOMPLETE;
@@ -313,6 +316,7 @@ vk_ungetc(int c)
 int
 vkey_poll_ex(int ms, int events)
 {
+    CHECK_NOT_IN_ABORT_BLOCK();
     if (vkctx.peek_ch != KEY_INCOMPLETE)
         return 1;
     if (vkctx.ev_pending & events)
@@ -332,6 +336,7 @@ vkey_poll(int ms)
 
 int
 vkey_prefetch(int timeout) {
+    CHECK_NOT_IN_ABORT_BLOCK();
     if (wait_input(timeout / (double)MILLISECONDS, 1) && !vbuf_is_full(pvin))
         read_vin();
     return num_in_buf() > 0;

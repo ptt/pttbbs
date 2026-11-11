@@ -1258,6 +1258,8 @@ multi_send(const char *title)
 	    if (save_mailbox(cuser.userid, p, save_title, NULL, fpath, FILE_MULTI, MAILSEND_FLAG_USER_CONTENT | MAILSEND_FLAG_ALLOW_FORWARD | MAILSEND_FLAG_CHECK_RECV_LIMIT, NULL) != MAILSEND_OK)
 		Vector_add(&failed, p);
 	}
+	// Sent; the failure report below waits on keys, outside the region.
+	restore_abort_signals(&old_set);
 	int nfailed = Vector_length(&failed);
 	if (nfailed) {
 	    // One screen for all of them, not one key press each.
@@ -1275,7 +1277,6 @@ multi_send(const char *title)
 	else
 	    vmsg("信件全部未寄出");
 	unlink(fpath);
-	restore_abort_signals(&old_set);
 	Vector_delete(&namelist);
     } else {
 	Vector_delete(&namelist);
@@ -1416,6 +1417,9 @@ mail_account_sysop(void)
     setutmpmode(SMAIL);
 
     setuserfile(fpath, fn_notes);
+    // multi_send() leaves its copy of the same file behind if the session
+    // ends at its prompts; start from an empty one.
+    unlink(fpath);
 
     if (vedit2(fpath, YEA, save_title,
                 EDITFLAG_ALLOWTITLE | EDITFLAG_KIND_SENDMAIL) == EDIT_ABORTED)

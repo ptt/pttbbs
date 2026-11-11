@@ -460,6 +460,7 @@ VKEY_PROTO int
 vkey_is_ready()
 {
     VKEYDBGLOG("vkey_is_ready()");
+    CHECK_NOT_IN_ABORT_BLOCK();
     if (!VKEY_HAS_PEEK() && cin_is_buffer_empty() && !cin_is_fd_empty(CIN_DEFAULT_FD))
         cin_fetch_fd(CIN_DEFAULT_FD);
     vkey_process();
@@ -575,6 +576,7 @@ vkey_poll(int timeout)
 VKEY_PROTO int
 vkey_poll_ex(int timeout, int events)
 {
+    CHECK_NOT_IN_ABORT_BLOCK();
     int saved = vkctx.ev_want;
     vkctx.ev_want = events;
     int r = vkey_poll_impl(timeout);
@@ -602,6 +604,7 @@ VKEY_PROTO int
 vkey_prefetch(int timeout)
 {
     VKEYDBGLOG("vkey_prefetch(%d)", timeout);
+    CHECK_NOT_IN_ABORT_BLOCK();
 
     // always only prefetch cin_fd
     if (cin_poll_fds(CIN_DEFAULT_FD, -1, -1, timeout) == 0)  // timeout
@@ -637,6 +640,7 @@ VKEY_PROTO int
 vk_byte()
 {
     VKEYDBGLOG("vk_byte()");
+    CHECK_NOT_IN_ABORT_BLOCK();
 
     while (1) {
         /* impl: keep the caller's ev_want (see vkey_ex). */
@@ -672,6 +676,7 @@ VKEY_PROTO void
 vkey_purge()
 {
     VKEYDBGLOG("vkey_purge()");
+    CHECK_NOT_IN_ABORT_BLOCK();
 
     // ok, now let's try our best to purge all remaining data
     // (cin_clear_fd uses vbuf_from_tty for cin_fd so telnet protocol is handled)
