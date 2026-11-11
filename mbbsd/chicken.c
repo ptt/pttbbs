@@ -173,13 +173,11 @@ new_chicken(void)
     mychicken.hp = delta[WEIGHT];
     mychicken.hp_max = delta[WEIGHT];
 
-    reload_money();
-    if (cuser.money < price)
+    if (pay_if_enough(price, "寵物蛋") < 0)
     {
 	vmsg("錢不夠了。");
 	return 0;
     }
-    pay(price, "寵物蛋");
 
     // flush it
     AUTO_USERFILE(fn, FN_CHICKEN);
@@ -431,9 +429,12 @@ ch_buyitem(int money, const char *picture, int *item, chicken_t *mychicken GCC_U
     if (num < 1)
 	return;
     reload_money();
-    if (cuser.money/money >= num) {
+    // Debit before handing over the items: deumoney() clamps a short debit
+    // to 0 but still grants them, so two racing buys could both pass the
+    // check and get items while only one payment went through.
+    if (cuser.money/money >= num &&
+        pay_if_enough(money * num, "寵物商店") >= 0) {
 	*item += num;
-        pay(money * num, "寵物商店");
 	show_chicken_picture(picture);
         pressanykey();
     } else {
@@ -896,7 +897,10 @@ recover_chicken(chicken_t * thechicken)
         return 0;
     }
 
-    pay(money, "靈界守衛");
+    if (pay_if_enough(money, "靈界守衛") < 0) {
+        vmsg("錢不夠喔，請籌錢後再來");
+        return 0;
+    }
     revive_chicken(thechicken, 0);
     move(12, 0);
     prints("寵物已復活。 請記得加以餵食避免再度死亡。\n"
