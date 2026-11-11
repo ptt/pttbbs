@@ -778,7 +778,7 @@ static size_t screen_backupsize(int len, const screenline_t *bp)
 // XXX TODO FIXME
 // scrolling is not well-supported ...
 
-void scr_dump(screen_backup_t *old)
+void TSA_NO_ANALYSIS scr_dump(screen_backup_t *old)
 {
     int i;
     size_t offset = 0;
@@ -803,7 +803,7 @@ void scr_dump(screen_backup_t *old)
     }
 }
 
-void scr_restore(const screen_backup_t *old)
+void TSA_NO_ANALYSIS scr_restore(const screen_backup_t *old)
 {
     int i;
     size_t offset=0;

@@ -3219,7 +3219,7 @@ grayout(int y, int end, int level)
 
 #ifndef _PFTERM_TEST_MAIN
 
-void
+void TSA_NO_ANALYSIS
 scr_dump(screen_backup_t *psb)
 {
     int y = 0;
@@ -3243,7 +3243,7 @@ scr_dump(screen_backup_t *psb)
     }
 }
 
-void
+void TSA_NO_ANALYSIS
 scr_restore(const screen_backup_t *psb)
 {
     int y = 0;

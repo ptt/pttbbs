@@ -845,8 +845,8 @@ void scroll	(void);
 void rscroll	(void);
 int  instr	(char *str);
 int  innstr	(char *str, int n);
-void scr_dump	(screen_backup_t *buf);
-void scr_restore(const screen_backup_t *buf);
+void scr_dump	(screen_backup_t *buf) TSA_ACQUIRE(*buf);
+void scr_restore(const screen_backup_t *buf) TSA_RELEASE(*buf);
 // non-curses
 void outc(unsigned char ch);
 void outs(const char *s);

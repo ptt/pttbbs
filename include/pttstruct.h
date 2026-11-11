@@ -8,6 +8,7 @@
 #include "statistic.h"	// for MAX_STATS
 #include "cmsys.h"      // for time4_t
 #include "common.h"
+#include "thread_safety_analysis.h"
 
 // warning: because some other places is using #IDLEN to convert as string,
 // so don't quote it - otherwise those code will fail.
@@ -483,7 +484,10 @@ typedef struct water_t {
     userinfo_t      *uin;     // Ptt:這可以取代alive
 } water_t;
 
-typedef struct {
+/* What scr_dump() saved and scr_restore() puts back and frees. A capability
+ * for the analysis (thread_safety_analysis.h), so a backup restored twice
+ * (a double free) or not at all (a leak) on some path doesn't compile. */
+typedef struct TSA_CAPABILITY("screen backup") {
     int row, col;
     int y, x;
     int roll;	// for scrolling

@@ -68,7 +68,9 @@ fillns(int n, const char *s)
 /**
  * vscr_save(): 傳回目前畫面的備份物件。
  */
-VREFSCR
+/* vscr_save() and vscr_restore() hand the backup over in the handle, which
+ * the analysis can't follow. */
+VREFSCR TSA_NO_ANALYSIS
 vscr_save(void)
 {
     // TODO optimize memory allocation someday.
@@ -81,7 +83,7 @@ vscr_save(void)
 /**
  * vscr_restore(obj): 使用並刪除畫面的備份物件。
  */
-void
+void TSA_NO_ANALYSIS
 vscr_restore(VREFSCR obj)
 {
     screen_backup_t *o = (screen_backup_t*)obj;
