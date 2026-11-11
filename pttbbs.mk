@@ -77,6 +77,12 @@ PTT_LDFLAGS+=	-L/opt/local/lib
 PTT_LDLIBS+=	-liconv
 endif
 
+# Full RELRO: resolve all symbols at startup and make the GOT read-only, so
+# children forked from mbbsd share it instead of copying it on lazy binding.
+ifneq ($(filter Linux FreeBSD,$(OSTYPE)),)
+PTT_LDFLAGS+=	-Wl,-z,relro,-z,now
+endif
+
 ifeq (${OSTYPE},Linux)
 PTT_LDLIBS+=    -lrt -pthread
 endif
