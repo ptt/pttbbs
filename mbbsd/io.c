@@ -12,7 +12,7 @@
 // bytes into buffer for one character input. Currently the number is 3 (UTF8).
 # define OBUFMINSPACE (3)
 
-#ifdef DEBUG
+#if IS_ENABLED(CONFIG_DEBUG)
 #define register
 #define inline
 // #define DBG_OUTRPT
@@ -41,7 +41,7 @@ static int  oframe_state = OFRAME_NONE;
 /* ----------------------------------------------------- */
 /* debug reporting                                       */
 /* ----------------------------------------------------- */
-#if defined(DEBUG) || defined(DBG_OUTRPT)
+#if IS_ENABLED(CONFIG_DEBUG) || defined(DBG_OUTRPT)
 // output counter
 static unsigned long szTotalOutput = 0, szLastOutput = 0;
 unsigned char fakeEscape = 0;
@@ -86,7 +86,7 @@ debug_print_input_buffer(void *buf, ssize_t len)
         return len;
 
     getyx(&y, &x);
-    move(0, 0); clrtocol();
+    move(0, 0); clrtoeol();
     prints(ANSI_RESET "Input Buffer (%d): [ ", (int)len);
     for (i = 0; i < len; i++, s++)
     {
@@ -293,7 +293,7 @@ system_key_hook(int ch)
         return KEY_INCOMPLETE;
 
     case Ctrl('Q'):
-        if (IS_DEBUG) {
+        if (IS_ENABLED(CONFIG_DEBUG)) {
             char usage[STRLEN];
             get_memusage(sizeof(usage), usage);
             vmsg(usage);

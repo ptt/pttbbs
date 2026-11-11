@@ -197,9 +197,8 @@ do_order_song(void)
 	unlockutmpmode();
 	return 0;
     }
-#ifdef DEBUG
-    vmsg(trans_buffer);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        vmsg(trans_buffer);
     STRLCPY(filename, OSONGPATH);
     stampfile(filename, &mail);
     unlink(filename);

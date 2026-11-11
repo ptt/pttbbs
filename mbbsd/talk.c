@@ -37,7 +37,7 @@ typedef struct {
     int         nfriend, myfriend, friendme, bfriend, badfriend;
     char       *show_mode;
     char       *show_uid;
-#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && IS_ENABLED(CONFIG_DEBUG)
     char       *show_board;
 #endif
     char       *show_pid;
@@ -985,7 +985,7 @@ userlist_header(PSB_CTX *ctx)
 
     cx->vcols[1].label = *cx->show_uid ? "UID " : "編號 ";
     cx->vcols[5].label = MODE_STRING[(int)*cx->show_mode];
-#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && IS_ENABLED(CONFIG_DEBUG)
     cx->vcols[6].label = *cx->show_board ? "看板" : "動態";
 #else
     cx->vcols[6].label = "動態";
@@ -1071,7 +1071,7 @@ userlist_renderer(int idx, PSB_CTX *ctx)
                    uentp->nickname,
                    descript(*cx->show_mode, uentp, uentp->wmsg & !(friend & HRM),
                             description, sizeof(description)),
-#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && IS_ENABLED(CONFIG_DEBUG)
                    *cx->show_board ? (uentp->brc_id == 0 ? "" :
                        getbcache(uentp->brc_id)->brdname) :
 #endif
@@ -1405,7 +1405,7 @@ userlist_cmd_showuid(cmd_ctx_t *ctx) {
 }
 #endif
 
-#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && IS_ENABLED(CONFIG_DEBUG)
 static int
 userlist_cmd_showboard(cmd_ctx_t *ctx) {
     userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
@@ -1678,7 +1678,7 @@ static const cmd_t userlist_cmds[] = {
 #if IS_ENABLED(CONFIG_SHOWUID)
     { 'U', NULL, "顯示使用者 UID", userlist_cmd_showuid, PERM_SYSOP, CMD_PRIO_NONE },
 #endif
-#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && IS_ENABLED(CONFIG_DEBUG)
     { 'Y', NULL, "顯示使用者所在看板", userlist_cmd_showboard, PERM_SYSOP, CMD_PRIO_NONE },
 #endif
 #if IS_ENABLED(CONFIG_SHOWPID)
@@ -1822,7 +1822,7 @@ userlist(void)
 {
     static char     show_mode = 0;
     static char     show_uid = 0;
-#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && IS_ENABLED(CONFIG_DEBUG)
     static char     show_board = 0;
 #endif
     static char     show_pid = 0;
@@ -1841,7 +1841,7 @@ userlist(void)
     cx.nfriend = cx.myfriend = cx.friendme = cx.bfriend = cx.badfriend = 0;
     cx.show_mode = &show_mode;
     cx.show_uid = &show_uid;
-#if IS_ENABLED(CONFIG_SHOWBOARD) && defined(DEBUG)
+#if IS_ENABLED(CONFIG_SHOWBOARD) && IS_ENABLED(CONFIG_DEBUG)
     cx.show_board = &show_board;
 #endif
     cx.show_pid = &show_pid;

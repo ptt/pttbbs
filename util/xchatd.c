@@ -5,9 +5,9 @@
 
 #define SERVER_USAGE
 #undef  MONITOR                 /* 監督 chatroom 活動以解決糾紛 */
-#undef  DEBUG                   /* 程式除錯之用 */
+#undef  CONFIG_DEBUG            /* 程式除錯之用 */
 
-#ifdef  DEBUG
+#if IS_ENABLED(CONFIG_DEBUG)
 #define MONITOR
 #endif
 
@@ -255,7 +255,7 @@ log_close()
 }
 
 
-#ifdef  DEBUG
+#if IS_ENABLED(CONFIG_DEBUG)
 static void
 debug_user()
 {
@@ -907,9 +907,8 @@ chat_do_user_list(ChatUser *cu, char *msg, ChatRoom *theroom)
 
     myroom = cu->room;
 
-#ifdef DEBUG
-    logit(cu->chatid, "do user list");
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        logit(cu->chatid, "do user list");
 
     if (common_client_command)
 	send_to_user(cu, "", 0, MSG_USERLISTSTART);
@@ -958,9 +957,8 @@ chat_do_user_list(ChatUser *cu, char *msg, ChatRoom *theroom)
 		strcat(chatbuf, " [Op]");
 	}
 
-#ifdef  DEBUG
-	logit("list_U", chatbuf);
-#endif
+	if (IS_ENABLED(CONFIG_DEBUG))
+	    logit("list_U", chatbuf);
 
 	send_to_user(cu, chatbuf, 0, common_client_command ? MSG_USERLIST : MSG_MESSAGE);
     }
@@ -1365,10 +1363,10 @@ logout_user(ChatUser *cuser)
 	} while (xuser);
     }
 
-#ifdef DEBUG
-    SNPRINTF(chatbuf, "%p", cuser);
-    logit("free cuser", chatbuf);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG)) {
+        SNPRINTF(chatbuf, "%p", cuser);
+        logit("free cuser", chatbuf);
+    }
 
     free(cuser);
 
@@ -1441,16 +1439,14 @@ login_user(ChatUser *cu, char *msg)
 
     chat_safe_trim(chatid, sizeof(cu->chatid));
 
-#ifdef  DEBUG
-    logit("ENTER", userid);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        logit("ENTER", userid);
     /* Thor.0729: load acct */
     if (!*userid || (acct_load(&acct, userid) < 0))
     {
 
-#ifdef  DEBUG
-	logit("noexist", chatid);
-#endif
+	if (IS_ENABLED(CONFIG_DEBUG))
+	    logit("noexist", chatid);
 
 	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 
@@ -1458,9 +1454,8 @@ login_user(ChatUser *cu, char *msg)
     }
     else if (*token && get_fhdr_stamp_ts(token) != acct.firstlogin)
     {
-#ifdef  DEBUG
-	logit("renewed", chatid);
-#endif
+	if (IS_ENABLED(CONFIG_DEBUG))
+	    logit("renewed", chatid);
 
 	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 	return -1;
@@ -1478,9 +1473,8 @@ login_user(ChatUser *cu, char *msg)
 
     if (!valid_chatid(chatid))
     {
-#ifdef  DEBUG
-	logit("enter", chatid);
-#endif
+	if (IS_ENABLED(CONFIG_DEBUG))
+	    logit("enter", chatid);
 
 	send_to_user(cu, CHAT_LOGIN_INVALID, 0, 0);
 	return 0;
@@ -1490,9 +1484,8 @@ login_user(ChatUser *cu, char *msg)
     {
 	/* chatid in use */
 
-#ifdef  DEBUG
-	logit("enter", "duplicate");
-#endif
+	if (IS_ENABLED(CONFIG_DEBUG))
+	    logit("enter", "duplicate");
 
 	send_to_user(cu, CHAT_LOGIN_EXISTS, 0, 0);
 	return 0;
@@ -1516,9 +1509,8 @@ login_user(ChatUser *cu, char *msg)
     print_user_counts(cu);
     send_to_user(cu, "", 0, MSG_MOTDEND);
 
-#ifdef  DEBUG
-    logit("enter", "OK");
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        logit("enter", "OK");
 
     return 0;
 }
@@ -3069,9 +3061,8 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 		    if (csock >= maxfds)
 			maxfds = csock + 1;
 
-#ifdef  DEBUG
-		    logit("accept", "OK");
-#endif
+		    if (IS_ENABLED(CONFIG_DEBUG))
+			logit("accept", "OK");
 		}
 	    }
 	}

@@ -97,7 +97,7 @@ typedef struct CCW_CTX {
 ///////////////////////////////////////////////////////////////////////////
 // CCW helpers
 
-#ifndef DEBUG
+#if !IS_ENABLED(CONFIG_DEBUG)
 # define CCW_PROTO  static
 #else
 # define CCW_PROTO
@@ -398,11 +398,10 @@ ccw_process(CCW_CTX *ctx)
     ccw_init_session(ctx);
     ccw_reset_scr(ctx);
 
-#ifdef DEBUG
-    ccw_print_line(ctx, ANSI_COLOR(1;30)
-            "¡» Powered by piaip's Common Chat Window" ANSI_RESET,
-            CCW_LOCAL_MSG);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        ccw_print_line(ctx, ANSI_COLOR(1;30)
+                "¡» Powered by piaip's Common Chat Window" ANSI_RESET,
+                CCW_LOCAL_MSG);
 #ifdef EXP_CCW_MOTD
     ccw_print_line(ctx, EXP_CCW_MOTD, CCW_LOCAL_MSG);
 #endif
@@ -973,9 +972,8 @@ ccw_chat_recv(CCW_CTX *ctx)
 
             default:
                 // unknown command... ignore.
-#ifdef DEBUG
-                assert(!"unknown xchatd response.");
-#endif
+                if (IS_ENABLED(CONFIG_DEBUG))
+                    assert(!"unknown xchatd response.");
                 break;
         }
 

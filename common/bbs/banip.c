@@ -175,10 +175,9 @@ add_banip_list_message(IPv4List *list, const char *msg) {
     char *p;
     // Add more space for '\n\r\0'
     while (list->szmsg + len + 3 >= list->allocmsg) {
-#ifdef DEBUG
-        fprintf(stderr, "(banip) Allocate more msg buffer: %lu->%lu\n",
-                list->allocmsg, list->allocmsg + BANIP_ALLOCMSG);
-#endif
+        if (IS_ENABLED(CONFIG_DEBUG))
+            fprintf(stderr, "(banip) Allocate more msg buffer: %lu->%lu\n",
+                    list->allocmsg, list->allocmsg + BANIP_ALLOCMSG);
         list->allocmsg += BANIP_ALLOCMSG;
         list->msg = (char*)realloc(list->msg, list->allocmsg);
         assert(list->msg);
@@ -194,9 +193,8 @@ add_banip_list_message(IPv4List *list, const char *msg) {
     p[len++] = '\n';
     p[len++] = '\r';
     p[len++] = 0;
-#ifdef DEBUG
-    fprintf(stderr, "(banip) Add new message: %s", p);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        fprintf(stderr, "(banip) Add new message: %s", p);
     list->szmsg += len;
 }
 
@@ -424,9 +422,8 @@ cached_banip_list(const char *basefile, const char *cachefile) {
             if (fread(&rsz, sizeof(size_t), 1, fp) == 1 &&
                 fread(&rszmsg, sizeof(size_t), 1, fp) == 1 &&
                 sz == sizeof(size_t) * 2 + rsz * sizeof(BanRecord) + rszmsg) {
-#ifdef DEBUG
-                fprintf(stderr, "Loaded cached banip config from: %s\n", cachefile);
-#endif
+                if (IS_ENABLED(CONFIG_DEBUG))
+                    fprintf(stderr, "Loaded cached banip config from: %s\n", cachefile);
                 list = (IPv4List*) malloc(sizeof(IPv4List));
                 assert(list);
                 memset(list, 0, sizeof(*list));
@@ -469,9 +466,8 @@ cached_banip_list(const char *basefile, const char *cachefile) {
         }
         fclose(fp);
         Rename(tmpfn, cachefile);
-#ifdef DEBUG
-        fprintf(stderr, "Updated cached banip config to: %s\n", cachefile);
-#endif
+        if (IS_ENABLED(CONFIG_DEBUG))
+            fprintf(stderr, "Updated cached banip config to: %s\n", cachefile);
     }
     return (BanIpList*)list;
 }

@@ -7,7 +7,7 @@
 #    ifdef __GLIBC__
 #        include <malloc.h>
 #    endif
-#    ifdef DEBUG
+#    if IS_ENABLED(CONFIG_DEBUG)
 #        include <mcheck.h>
 #    endif
 #endif
@@ -589,12 +589,12 @@ login_query(char *ruid)
 
     resolve_garbage();
 
-#ifdef DEBUG
-    move(1, 0);
-    prints("debugging mode\ncurrent pid: %d\n", getpid());
-#else
-    show_file("etc/Welcome", 1, -1, SHOWFILE_ALLOW_ALL);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG)) {
+        move(1, 0);
+        prints("debugging mode\ncurrent pid: %d\n", getpid());
+    } else {
+        show_file("etc/Welcome", 1, -1, SHOWFILE_ALLOW_ALL);
+    }
 
     attempts = 0;
     while (1) {
@@ -606,10 +606,10 @@ login_query(char *ruid)
 	}
 	pwcuInitZero();
 
-#ifdef DEBUG
-	move(19, 0);
-	prints("current pid: %d ", getpid());
-#endif
+	if (IS_ENABLED(CONFIG_DEBUG)) {
+	    move(19, 0);
+	    prints("current pid: %d ", getpid());
+	}
 
 	if (getdata(20, 0, "請輸入代號，或以 new 註冊: ",
 		uid, sizeof(uid), DOECHO) < 1)
@@ -1506,7 +1506,7 @@ shell_login(char *argv0, struct ProgramOption *option)
     setuid(BBSUID);
     chdir(BBSHOME);
 
-#if defined(linux) && defined(DEBUG)
+#if defined(linux) && IS_ENABLED(CONFIG_DEBUG)
 //    mtrace();
 #endif
 

@@ -35,11 +35,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 // configuration
-#ifdef DEBUG
-static int debug = 1;
-#else
-static int debug = 0;
-#endif
+static int debug = IS_ENABLED(CONFIG_DEBUG);
 
 // Decide default algorithm
 #if !(defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY) || \

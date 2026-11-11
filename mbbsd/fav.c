@@ -34,7 +34,7 @@
  * (FAVH_ADM_TAG == 1, FAVH_FAV == 0)¡C
  */
 
-#ifdef DEBUG
+#if IS_ENABLED(CONFIG_DEBUG)
 #define inline
 #endif
 

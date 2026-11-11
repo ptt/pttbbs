@@ -748,10 +748,8 @@
 #define GUEST_URL ""
 #endif
 
-#ifdef DEBUG
-#define IS_DEBUG 1
-#else
-#define IS_DEBUG 0
+#if defined(DEBUG) && !defined(CONFIG_DEBUG)
+#define CONFIG_DEBUG 1
 #endif
 
 #ifdef __cplusplus

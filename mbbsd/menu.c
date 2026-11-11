@@ -105,27 +105,27 @@ redraw_title(const char *title, const char *mid)
     bool has_new_mail = false;
 
     /* prepare mid */
-#ifdef DEBUG
-    snprintf(mid_buf, sizeof(mid_buf), "%s  current pid: %6d  ",
-	     high_attr, getpid());
-    mid = mid_buf;
-#else
-    if (ISNEWMAIL(currutmp)) {
-	snprintf(mid_buf, sizeof(mid_buf), "%s    你有新信件    ", high_attr);
+    if (IS_ENABLED(CONFIG_DEBUG)) {
+	snprintf(mid_buf, sizeof(mid_buf), "%s  current pid: %6d  ",
+		 high_attr, getpid());
 	mid = mid_buf;
-	has_new_mail = true;
-    } else if ( HasUserPerm(PERM_ACCTREG) ) {
-	// TODO cache this value?
-	int nreg = regform_estimate_queuesize();
-	if(nreg > 100)
-	{
-	    nreg -= (nreg % 10);
-	    snprintf(mid_buf, sizeof(mid_buf), "%s  超過 %03d 篇未審核  ",
-		     high_attr, nreg);
+    } else {
+	if (ISNEWMAIL(currutmp)) {
+	    snprintf(mid_buf, sizeof(mid_buf), "%s    你有新信件    ", high_attr);
 	    mid = mid_buf;
+	    has_new_mail = true;
+	} else if ( HasUserPerm(PERM_ACCTREG) ) {
+	    // TODO cache this value?
+	    int nreg = regform_estimate_queuesize();
+	    if(nreg > 100)
+	    {
+		nreg -= (nreg % 10);
+		snprintf(mid_buf, sizeof(mid_buf), "%s  超過 %03d 篇未審核  ",
+			 high_attr, nreg);
+		mid = mid_buf;
+	    }
 	}
     }
-#endif
 
     /* prepare tail */
     if (currmode & MODE_SELECT)
@@ -428,10 +428,10 @@ adbanner(int menu_index)
     out_lines(SHM->notes[i], 11, 0);	/* 只印11行就好 */
 #endif
     outs(ANSI_RESET);
-#ifdef DEBUG
-    // XXX piaip test
-    move(FILMROW, 0); prints(" [ %d ] ", i);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG)) {
+        // XXX piaip test
+        move(FILMROW, 0); prints(" [ %d ] ", i);
+    }
 }
 
 static void domenu(const menuitem_t *menu);
@@ -1183,16 +1183,16 @@ x_sys_updates(void)
 }
 #endif
 
-#ifdef DEBUG
+#if IS_ENABLED(CONFIG_DEBUG)
 int _debug_reportstruct()
 {
     clear();
-    prints("boardheader_t:\t%d\n", sizeof(boardheader_t));
-    prints("fileheader_t:\t%d\n", sizeof(fileheader_t));
-    prints("userinfo_t:\t%d\n", sizeof(userinfo_t));
-    prints("screenline_t:\t%d\n", sizeof(screenline_t));
-    prints("SHM_t:\t%d\n", sizeof(SHM_t));
-    prints("userec_t:\t%d\n", sizeof(userec_t));
+    prints("boardheader_t:\t%zu\n", sizeof(boardheader_t));
+    prints("fileheader_t:\t%zu\n", sizeof(fileheader_t));
+    prints("userinfo_t:\t%zu\n", sizeof(userinfo_t));
+    prints("screenline_t:\t%zu\n", sizeof(screenline_t));
+    prints("SHM_t:\t%zu\n", sizeof(SHM_t));
+    prints("userec_t:\t%zu\n", sizeof(userec_t));
     pressanykey();
     return 0;
 }
@@ -1236,7 +1236,7 @@ static const menuitem_t xyzlist[] = {
 	.title = "使用者統計資訊",
 	.default_enter = 'U',
     },
-#ifndef DEBUG
+#if !IS_ENABLED(CONFIG_DEBUG)
     /* All these are useless in debug mode. */
 #ifdef HAVE_USERAGREEMENT
     {x_agreement,0,  "Agreement     《本站使用者條款》"},
@@ -1253,10 +1253,10 @@ static const menuitem_t xyzlist[] = {
     {x_sys_updates,0,"LUpdates      《本站系統程式更新紀錄》"},
 #endif
 
-#else // !DEBUG
+#else // !CONFIG_DEBUG
     {_debug_reportstruct, 0,
 	    	     "ReportStruct  報告各種結構的大小"},
-#endif // !DEBUG
+#endif // !CONFIG_DEBUG
 
     {p_sysinfo, 0,   "Xinfo         《查看系統資訊》"},
     {NULL, 0, NULL}

@@ -3,8 +3,8 @@
  *
  * 目前每一行都只 allocate 需要的記憶體，只有編輯中的行有獨立的 buffer,
  * 移到別行時看 dirty flag 決定是否要寫回。
- * 另外若定義 DEBUG, 在 textline_t 結構中將加入 mlength, 表示該行實際佔的
- * 記憶體大小. 以方便測試結果.
+ * 另外 textline_t 結構中的 mlength 表示該行實際佔的記憶體大小,
+ * 啟用 CONFIG_DEBUG 時會用來檢查, 以方便測試結果.
  *
  * XXX 由於各種操作都不會 maintain 區塊標記模式的 pointer/state,
  * 因此對於會造成增刪 line 的功能, 都得自動取消標記模式(call block_cancel()).
@@ -33,7 +33,7 @@
 #define EDIT_SIZE_LIMIT (32768*1024)
 #define EDIT_LINE_LIMIT (65530) // (1048576)
 
-// #define DEBUG
+// #define CONFIG_DEBUG 1
 
 /**
  * data 欄位的用法:
@@ -45,9 +45,7 @@ typedef struct textline_t {
     struct textline_t *next;
     short           len;
     short           alloc_len;
-#ifdef DEBUG
     short           mlength;
-#endif
     char            data[1];
 }               textline_t;
 
@@ -600,9 +598,8 @@ edit_buffer_check_healthy(textline_t *line)
 	assert(line->prev->next == line);
     assert(0 <= line->len);
     assert(line->len <= WRAPMARGIN);
-#ifdef DEBUG
-    assert(line->len <= line->mlength);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        assert(line->len <= line->mlength);
 #ifdef SLOW_CHECK_DETAIL
     assert(strlen(line->data) == line->len);
 #endif
@@ -904,9 +901,8 @@ alloc_line(short length)
 	p->len = 0;
 	p->alloc_len = length;
 	p->data[0] = '\0';
-#ifdef DEBUG
-	p->mlength = length;
-#endif
+	if (IS_ENABLED(CONFIG_DEBUG))
+	    p->mlength = length;
 	return p;
     }
     assert(p);
@@ -980,9 +976,8 @@ delete_line(textline_t * line, int saved)
 	    line = (textline_t *) realloc(line, line->len + sizeof(textline_t));
 	    assert(line);
 	    line->alloc_len = line->len;
-#ifdef DEBUG
-	    line->mlength = line->len;
-#endif
+	    if (IS_ENABLED(CONFIG_DEBUG))
+		line->mlength = line->len;
 	}
 	curr_buf->deleted_line = line;
 	curr_buf->deleted_line->next = NULL;
@@ -1042,9 +1037,8 @@ adjustline(textline_t *oldp, short len)
     }
     newp->alloc_len = len;
     newp->data[newp->len] = '\0';
-#ifdef DEBUG
-    newp->mlength = len;
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        newp->mlength = len;
     if (oldp != newp) {
 	if (oldp == curr_buf->firstline)   curr_buf->firstline   = newp;
 	if (oldp == curr_buf->lastline)    curr_buf->lastline    = newp;
@@ -1186,10 +1180,10 @@ raw_insert_char(int ch)
     p = curr_buf->currline;
 
     assert(curr_buf->currpnt <= p->len);
-#ifdef DEBUG
-    assert(curr_buf->currline->mlength == WRAPMARGIN);
-    assert(p->len < p->mlength);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG)) {
+        assert(curr_buf->currline->mlength == WRAPMARGIN);
+        assert(p->len < p->mlength);
+    }
 
     block_cancel();
     raw_shift_right(p->data + curr_buf->currpnt, p->len - curr_buf->currpnt + 1);
@@ -1217,9 +1211,8 @@ raw_insert_char(int ch)
 	!(curr_buf->currline == p && curr_buf->currpnt == p->len)) {
 	if (p->alloc_len < p->len + 1)
 	    p = adjustline(p, p->len + 1);
-#ifdef DEBUG
-	assert(p->len < p->mlength);
-#endif
+	if (IS_ENABLED(CONFIG_DEBUG))
+	    assert(p->len < p->mlength);
 	if (p->data[p->len - 1] != ' ') {
 	    p->data[p->len] = ' ';
 	    p->data[p->len + 1] = '\0';

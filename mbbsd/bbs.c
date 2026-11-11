@@ -423,11 +423,10 @@ check_new_perm(void)
 {
     if (!ISNEWPERM(currutmp))
 	return;
-#ifdef DEBUG
-    file_appendf("log/newperm.log",
-	    "%-13s: reloaded perm %s\n",
-	    cuser.userid, Cdate(&now));
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+	file_appendf("log/newperm.log",
+		"%-13s: reloaded perm %s\n",
+		cuser.userid, Cdate(&now));
     currmode &= ~MODE_POSTCHECKED;
     pwcuReload();
     CLEAR_ALERT_NEWPERM(currutmp);
@@ -451,11 +450,10 @@ CheckModifyPerm(const char **preason)
     {
         // if board is different, rebuild cache
         if (currbid != last_board_index) {
-#ifdef DEBUG
-            log_filef("log/reload_board_perm.log",
-                      "%-13s: reload board perm (curr=%d, last=%d)\n",
-                      cuser.userid, currbid, last_board_index);
-#endif
+            if (IS_ENABLED(CONFIG_DEBUG))
+                log_filef("log/reload_board_perm.log",
+                          "%-13s: reload board perm (curr=%d, last=%d)\n",
+                          cuser.userid, currbid, last_board_index);
             currmode &= ~MODE_POSTCHECKED;
             last_board_index = 0;
         }
@@ -2535,9 +2533,8 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
         // Comments go to (and are published for) the original board.
         live_bid = getbnum(bnbuf);
 
-#ifdef DEBUG
-        vmsgf("redirect: %s", genbuf);
-#endif
+        if (IS_ENABLED(CONFIG_DEBUG))
+            vmsgf("redirect: %s", genbuf);
     } while (0);
 
     // Report the read; the activity service may ask to slow down.
@@ -3004,13 +3001,12 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
-#ifndef DEBUG
-    if (get_board_restriction_reason(currbid, sizeof(msg), msg))
+    if (!IS_ENABLED(CONFIG_DEBUG) &&
+        get_board_restriction_reason(currbid, sizeof(msg), msg))
     {
 	vmsgf("未達看板發文限制: %s", msg);
 	return FULLUPDATE;
     }
-#endif
 
     aligncmt = (bp->brdattr & BRD_ALIGNEDCMT) ? 1 : 0;
     if(CBRD_IS_BM() || HasUserPerm(PERM_SYSOP))
@@ -3092,15 +3088,13 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 #endif
 
     }
-#ifndef DEBUG
-    else if (!CBRD_IS_BM() &&
+    else if (!IS_ENABLED(CONFIG_DEBUG) && !CBRD_IS_BM() &&
 	    time4_diff(now, lastcomment) < 90) {
 	// too close
 	type = RECTYPE_ARROW;
 	move(ymsg--, 0); clrtoeol();
 	outs("時間太近, 使用 → 加註方式\n");
     }
-#endif
 
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     else

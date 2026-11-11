@@ -363,8 +363,8 @@
  *    So if user complained about output truncated or blanked, increase buffer.
  */
 
-#ifdef DEBUG
 static int debug = 0;
+#if IS_ENABLED(CONFIG_DEBUG)
 # define MFPROTO
 # define MFFPROTO
 #else
@@ -2420,26 +2420,24 @@ mf_display_footer(
     int progress  =
         (int)((unsigned long)(mf.dispe-mf.start) * 100 / mf.len);
 
-#ifdef DEBUG
-    if (debug)
+    if (IS_ENABLED(CONFIG_DEBUG) && debug)
     {
         /* in debug mode don't print ANSI codes
          * because themselves are buggy.
          */
-        prints("L#%ld(w%ld,lp%ld) Dsp:%08X/%08X/%08X, "
-                "F:%08X/%08X(%d) tScr(%dx%d)",
+        prints("L#%ld(w%ld,lp%ld) Dsp:%p/%p/%p, "
+                "F:%p/%p(%d) tScr(%dx%d)",
                 mf.lineno, mf.wraplines, mf.lastpagelines,
-                (unsigned int)mf.disps,
-                (unsigned int)mf.maxdisps,
-                (unsigned int)mf.dispe,
-                (unsigned int)mf.start, (unsigned int)mf.end,
+                (void *)mf.disps,
+                (void *)mf.maxdisps,
+                (void *)mf.dispe,
+                (void *)mf.start, (void *)mf.end,
                 (int)mf.len,
                 t_columns,
                 t_lines
               );
         return;
     }
-#endif
 
     // determine pges
     if (mf.maxlinenoS >= 0)
@@ -3582,7 +3580,7 @@ static const char
     "  色彩顯示模式", "\\",
     "  實況模式    ", "v",
     "  說明        ", "h ? F1",
-#ifdef DEBUG
+#if IS_ENABLED(CONFIG_DEBUG)
     "  DBG 除錯模式", "d",
 #endif
     NULL,
@@ -4065,9 +4063,8 @@ mf_movieExecuteOffsetCmd(unsigned char *s)
             // by page
             curr = (mf.lineno / MFDISP_PAGE) + 1;
             newno = mf_parseOffsetCmd(s + 1, curr);
-#ifdef DEBUG
-            vmsgf("page: %d -> %d\n", curr, newno);
-#endif // DEBUG
+            if (IS_ENABLED(CONFIG_DEBUG))
+                vmsgf("page: %d -> %d\n", curr, newno);
             // prevent endless loop
             if (newno == curr)
                 return 0;
@@ -4078,9 +4075,8 @@ mf_movieExecuteOffsetCmd(unsigned char *s)
             // by lines
             curr = mf.lineno + 1;
             newno = mf_parseOffsetCmd(s + 1, curr);
-#ifdef DEBUG
-            vmsgf("line: %d -> %d\n", curr, newno);
-#endif // DEBUG
+            if (IS_ENABLED(CONFIG_DEBUG))
+                vmsgf("line: %d -> %d\n", curr, newno);
             // prevent endless loop
             if (newno == curr)
                 return 0;
@@ -4364,10 +4360,10 @@ mf_movieOptionHandler(unsigned char *opt)
     if (!maxsel)
         return -1;
 
-#ifdef DEBUG
-    prints("selection: %d\n", isel);
-    vkey();
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG)) {
+        prints("selection: %d\n", isel);
+        vkey();
+    }
 
     // Execute Selection
     if (!cmd || !szCmd)

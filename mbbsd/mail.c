@@ -1899,10 +1899,9 @@ mail_del(int ent, const fileheader_t * fhdr, const char *direct)
 	    loadmailusage();
             if (del_ret == DELETE_FILE_CONTENT_BACKUP_FAILED)
                 vmsg("信件已刪除但不會進入" RECYCLE_BIN_NAME);
-#ifdef DEBUG
-            else if (!IS_DELETE_FILE_CONTENT_OK(del_ret))
+            else if (IS_ENABLED(CONFIG_DEBUG) &&
+                !IS_DELETE_FILE_CONTENT_OK(del_ret))
                 vmsg("檔案已不存在，請至" BN_BUGREPORT "報告，謝謝");
-#endif
 	    return DIRCHANGED;
 	} else {
             vmsg("刪除失敗，請確定未多重登入後再重試。");

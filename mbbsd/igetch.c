@@ -2,7 +2,7 @@
 
 #define IBUFSIZE  128
 
-#ifdef DEBUG
+#if IS_ENABLED(CONFIG_DEBUG)
 #define inline
 #endif
 

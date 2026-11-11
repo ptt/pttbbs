@@ -161,9 +161,8 @@ brc_enlarge_buf(void)
     brc_buf = (char*)realloc(brc_buf, brc_alloc);
     assert(brc_buf);
 
-#ifdef DEBUG
-    vmsgf("brc enlarged to %d bytes", brc_alloc);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        vmsgf("brc enlarged to %d bytes", brc_alloc);
 
     return 1;
 }

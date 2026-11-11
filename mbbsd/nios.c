@@ -37,12 +37,12 @@
 // features
 #define VKEY_USE_CIN
 
-#ifdef DEBUG
+#if IS_ENABLED(CONFIG_DEBUG)
 #define CIN_DEBUG
 #define VKEY_DEBUG
 #endif
 
-#ifndef DEBUG
+#if !IS_ENABLED(CONFIG_DEBUG)
 #define CIN_PROTO  static
 #define VKEY_PROTO inline
 #else

@@ -207,13 +207,12 @@ poststat(
     {
 	for (pp = bucket[i]; pp; pp = pp->next)
 	{
-#ifdef  DEBUG
-	    printf("Title : %s, Board: %s\nPostNo : %d, Author: %s\n"
-		   ,pp->title
-		   ,pp->board
-		   ,pp->number
-		   ,pp->author);
-#endif
+	    if (IS_ENABLED(CONFIG_DEBUG))
+		printf("Title : %s, Board: %s\nPostNo : %d, Author: %s\n"
+		       ,pp->title
+		       ,pp->board
+		       ,pp->number
+		       ,pp->author);
 
 	    j = sort(pp, j);
 	}

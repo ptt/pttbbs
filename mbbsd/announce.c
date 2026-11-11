@@ -1263,9 +1263,8 @@ announce_cmd_select(cmd_ctx_t *ctx)
 
     if (!isvisible_man(cx->me))
         return 0;
-#ifdef DEBUG
-    vmsgf("%s/%s", &cx->path[11], fhdr->filename);
-#endif
+    if (IS_ENABLED(CONFIG_DEBUG))
+        vmsgf("%s/%s", &cx->path[11], fhdr->filename);
     SNPRINTF(fname, "%s/%s", cx->path, fhdr->filename);
     if (dashf(fname)) {
         // Reading through the list, and the readers of the files kept here
