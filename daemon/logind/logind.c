@@ -1439,6 +1439,17 @@ static const char *auth_is_free_userid(const char *userid);
 
 static void login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec);
 
+// How the login came in: wsproxy sets CONN_FLAG_WEBSOCKET in its conn_data,
+// bbs-sshd sends conn_data without it, telnet none.
+static int
+login_ctx_transport(login_ctx *ctx)
+{
+    if (!login_ctx_has_conn_data(ctx))
+        return ACTIVITY_TRANSPORT_TELNET;
+    return (ctx->cdata.flags & CONN_FLAG_WEBSOCKET) ? ACTIVITY_TRANSPORT_WS :
+                                                      ACTIVITY_TRANSPORT_SSH;
+}
+
 static int
 is_activity_check_paused(void)
 {
@@ -1660,7 +1671,7 @@ activity_start_query(login_conn_ctx *conn, int fd)
         return 0;
     activity_unwatch();
     reqid = activity_login_query(conn->ctx.userid, conn->ctx.hostip,
-                            conn->ctx.is_exempt);
+                            conn->ctx.is_exempt, login_ctx_transport(&conn->ctx));
     activity_watch();
     if (!reqid)
         return 0;

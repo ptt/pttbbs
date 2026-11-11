@@ -17,7 +17,10 @@
 //
 // Client -> service:
 //   fail <userid> <ip>                          wrong password
-//   login <reqid> <userid> <ip> <exempt>        authenticated; expects verdict
+//   login <reqid> <userid> <ip> <exempt> [<transport>]
+//                                               authenticated; expects verdict;
+//                                               transport: ws, ssh or telnet
+//                                               (ACTIVITY_TRANSPORT_*), absent if unknown
 //   read <userid> <firstlogin> <client_hex> <bid> <filename>
 //                                               a post read
 //   nav <userid> <firstlogin> <ip> <client_hex> <type> <bid> [<value>]
@@ -92,10 +95,20 @@ enum {
 // logind: a password was wrong.
 void activity_login_failed(const char *userid, const char *hostip);
 
-// logind: asks for a verdict on an authenticated login. Returns a request id
-// (> 0) whose verdict arrives through activity_client_dispatch(), or 0 if the
-// login should be accepted right away (service unavailable).
-uint32_t activity_login_query(const char *userid, const char *hostip, int is_exempt);
+// How a login came in (activity_login_query).
+enum {
+    ACTIVITY_TRANSPORT_UNKNOWN = 0,
+    ACTIVITY_TRANSPORT_TELNET,      // A direct TCP connection
+    ACTIVITY_TRANSPORT_SSH,         // bbs-sshd (conn_data without CONN_FLAG_WEBSOCKET)
+    ACTIVITY_TRANSPORT_WS,          // wsproxy (CONN_FLAG_WEBSOCKET)
+};
+
+// logind: asks for a verdict on an authenticated login that came in over
+// transport (ACTIVITY_TRANSPORT_*). Returns a request id (> 0) whose verdict
+// arrives through activity_client_dispatch(), or 0 if the login should be
+// accepted right away (service unavailable).
+uint32_t activity_login_query(const char *userid, const char *hostip, int is_exempt,
+                              int transport);
 
 // logind: socket to watch for readability, or -1.
 int activity_client_fd(void);

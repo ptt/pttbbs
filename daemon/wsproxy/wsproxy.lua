@@ -97,7 +97,7 @@ local conn_data_size = 40
 -- request, and each cdef of the struct allocated new ctypes until LuaJIT
 -- failed with "table overflow" after a few thousand connections per worker.
 local function build_conn_data()
-    local flags = 0
+    local flags = 2 -- CONN_FLAG_WEBSOCKET
     local bbs_lport = tonumber(ngx.var.bbs_lport)
     local bbs_secure = tonumber(ngx.var.bbs_secure)
     if bbs_secure == 1 then

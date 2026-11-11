@@ -55,6 +55,12 @@ include/daemons.h), which logind takes for clients that send no telnet
 negotiation. Upgrade logind before wsproxy: an older logind accepts only the
 36-byte `conn_data` without `client_code`.
 
+- Transport
+
+wsproxy sets `CONN_FLAG_WEBSOCKET` in `conn_data` (include/daemons.h), so
+logind can tell the activity service how each login came in (`ws`, `ssh` or
+`telnet`); the activity service can restrict an account to WebSocket logins.
+
 - Configure logind (etc/bindports.conf)
 
 ```

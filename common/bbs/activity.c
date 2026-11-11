@@ -352,19 +352,30 @@ activity_login_failed(const char *userid, const char *hostip)
 }
 
 uint32_t
-activity_login_query(const char *userid, const char *hostip, int is_exempt)
+activity_login_query(const char *userid, const char *hostip, int is_exempt,
+                     int transport)
 {
     if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
         return 0;
 
+    static const char * const transports[] = {
+        [ACTIVITY_TRANSPORT_TELNET] = "telnet",
+        [ACTIVITY_TRANSPORT_SSH]    = "ssh",
+        [ACTIVITY_TRANSPORT_WS]     = "ws",
+    };
+    const char *via = "";
     char ip[64];
 
     if (!act_field_ok(userid))
         return 0;
+    if (transport > 0 && transport < (int) (sizeof(transports) / sizeof(transports[0])) &&
+        transports[transport])
+        via = transports[transport];
     if (++g_reqid == 0)
         g_reqid = 1;
-    if (act_send("login %u %s %s %d", g_reqid, userid,
-                 act_norm_ip(hostip, ip, sizeof(ip)), is_exempt ? 1 : 0) < 0)
+    if (act_send("login %u %s %s %d%s%s", g_reqid, userid,
+                 act_norm_ip(hostip, ip, sizeof(ip)), is_exempt ? 1 : 0,
+                 *via ? " " : "", via) < 0)
         return 0;
     return g_reqid;
 }

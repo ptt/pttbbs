@@ -101,7 +101,8 @@ typedef struct conn_data
 
 #define CONN_DATA_V1_SIZE offsetof(conn_data, client_code)
 
-#define CONN_FLAG_SECURE (1 << 0)
+#define CONN_FLAG_SECURE    (1 << 0)
+#define CONN_FLAG_WEBSOCKET (1 << 1)  // From wsproxy
 
 #ifndef GET_SVC_SOCKET
 #define GET_SVC_SOCKET(name) (BBSHOME "/run/" #name ".svc.sock")
