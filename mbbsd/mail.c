@@ -671,17 +671,27 @@ mail_quota_cost(int count, int *chargeable)
 
 /* Takes cost for count mails, chargeable of them past the day's free quota,
  * and adds them to the day's count, together under block_abort_signals() so
- * a kick can't split them. Should the money have gone meanwhile, pay() takes
- * what is left. */
-static void
-mail_take_quota(int count, int cost, int chargeable, const char *desc)
+ * a kick can't split them. With require_funds the fee is taken only if it
+ * is all there (pay_if_enough()), returning -1 and taking nothing
+ * otherwise; without, pay() takes what is left should the money have gone
+ * meanwhile. */
+static int
+mail_take_quota(int count, int cost, int chargeable, const char *desc,
+                bool require_funds)
 {
     sigset_t old_set;
     block_abort_signals(&old_set);
-    if (cost > 0)
-        pay(cost, "%s (超額 %d 封)", desc, chargeable);
-    StatAddDailyMail(count);
+    int r = 0;
+    if (cost > 0) {
+        if (require_funds)
+            r = pay_if_enough(cost, "%s (超額 %d 封)", desc, chargeable);
+        else
+            pay(cost, "%s (超額 %d 封)", desc, chargeable);
+    }
+    if (r >= 0)
+        StatAddDailyMail(count);
     restore_abort_signals(&old_set);
+    return r < 0 ? -1 : 0;
 }
 
 static int
@@ -691,15 +701,13 @@ mail_charge_quota(int count, const char *desc)
         return 0;
 
     int chargeable, cost = mail_quota_cost(count, &chargeable);
-    if (cost > 0) {
-        reload_money();
-        if (cuser.money < cost) {
-            vmsgf("現金不足 (需 %d Ptt幣)，無法寄出信件！", cost);
-            return -1;
-        }
+    // Only if it is all there, checked and taken in one atomic step: with
+    // a check and then pay(), racing sessions could both pass on one
+    // balance and send for a single fee.
+    if (mail_take_quota(count, cost, chargeable, desc, true) < 0) {
+        vmsgf("現金不足 (需 %d Ptt幣)，無法寄出信件！", cost);
+        return -1;
     }
-    // Exactly what was checked.
-    mail_take_quota(count, cost, chargeable, desc);
     return 0;
 }
 
@@ -1826,11 +1834,12 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 
     // Charge only once the mail has left our hands -- delivered, or for 'Z'
     // queued with mail.svc -- so a disconnect or a failed delivery here costs
-    // the sender nothing.
+    // the sender nothing. Gone out, it can't be refused: pay() takes what
+    // is left should a racing session have spent the money (false below).
     if (mode == 'Z') {
 	// mail.svc packs and mails it later; the backup is queued.
 	if (charge)
-	    mail_take_quota(1, fee, fee_n, "超額轉寄手續費");
+	    mail_take_quota(1, fee, fee_n, "超額轉寄手續費", false);
 	return 0;
     } else if (mode == 'F') {
 	SNPRINTF(fname, "/tmp/bbs.f%05d", (int)currpid);
@@ -1859,7 +1868,7 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     }
     unlink(fname);
     if (charge && return_no >= 0)
-	mail_take_quota(1, fee, fee_n, "超額轉寄手續費");
+	mail_take_quota(1, fee, fee_n, "超額轉寄手續費", false);
     return (return_no);
 }
 
