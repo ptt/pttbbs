@@ -685,6 +685,13 @@
 #if defined(SAFE_ARTICLE_DELETE) && !defined(CONFIG_SAFE_ARTICLE_DELETE)
 #define CONFIG_SAFE_ARTICLE_DELETE 1
 #endif
+#ifndef CONFIG_LIVE_ALLPOST
+# ifdef USE_LIVE_ALLPOST
+#  define CONFIG_LIVE_ALLPOST 1
+# else
+#  define CONFIG_LIVE_ALLPOST 0
+# endif
+#endif
 #ifndef CONFIG_ASSESS
 # ifdef ASSESS
 #  define CONFIG_ASSESS 1

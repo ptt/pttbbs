@@ -995,10 +995,9 @@ deleteCrossPost(const fileheader_t *fhdr, char *bname)
     } else {
         // Always delete file content in ALLPOST and keep the header
         // because that will be reset by cron jobs
-        // Note in USE_LIVE_ALLPOST, there should be no files.
-#ifndef USE_LIVE_ALLPOST
-        unlink(TEMP_BFILE(BN_ALLPOST, fhdr->filename));
-#endif
+        // Note with CONFIG_LIVE_ALLPOST, there should be no files.
+        if (!IS_ENABLED(CONFIG_LIVE_ALLPOST))
+            unlink(TEMP_BFILE(BN_ALLPOST, fhdr->filename));
     }
 }
 
@@ -1151,9 +1150,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
                   currboard, brd, fh.filename, fh.title);
     }
 
-#ifdef USE_LIVE_ALLPOST
-    if (strcmp(brd, BN_ALLPOST) != 0)
-#endif
+    if (!IS_ENABLED(CONFIG_LIVE_ALLPOST) || strcmp(brd, BN_ALLPOST) != 0)
     {
         Copy(fpath, dest_file);
     }
@@ -2516,40 +2513,24 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
     STATINC(STAT_READPOST);
     setdirpath(genbuf, direct, fhdr->filename);
 
-#ifdef USE_LIVE_ALLPOST
-    do {
-        static char allpost_base[PATHLEN] = "";
-        static int allpost_base_len = 0;
-        char bnbuf[IDLEN + 1] = "";
-        const char *bn;
-        int bnlen;
+    if (IS_ENABLED(CONFIG_LIVE_ALLPOST)) do {
+        char allpost_dir[PATHLEN];
+        char bnbuf[BRDNAME_SIZE] = "";
 
-        if (!*allpost_base) {
-            setbpath(allpost_base, BN_ALLPOST);
-            STRLCAT(allpost_base, "/");
-            allpost_base_len = strlen(allpost_base);
-        }
-
-        if (!allpost_base_len)
+        setbdir(allpost_dir, BN_ALLPOST);
+        if (strcmp(direct, allpost_dir))
             break;
-        if (strncmp(allpost_base, genbuf, allpost_base_len) != 0)
+        const char *t = fhdr->title;
+        if (!*t || t[strlen(t) - 1] != ')')
             break;
-
-        if (*fhdr->title && fhdr->title[strlen(fhdr->title) - 1] == ')') {
-            // new format:  (BOARD)
-            bn = strrchr(fhdr->title, '(');
-            if (!bn)
-                break;
-            bnlen = strlen(++bn) - 1;
-            SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
-        } else {
-            // old format:  .BOARD版, which may conflict with board names.
-            bn = strrchr(fhdr->title, '.');
-            if (!bn)
-                break;
-            bnlen = strlen(++bn) - 2;
-            SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
-        }
+        const char *bn = strrchr(t, '(');
+        if (!bn)
+            break;
+        bn++;
+        size_t bn_len = strlen(bn);
+        if (bn_len <= 1 || bn_len > BRDNAME_SIZE)
+            break;
+        strncpy(bnbuf, bn, bn_len - 1);
         setbfile(genbuf, bnbuf, fhdr->filename);
         // Comments go to (and are published for) the original board.
         live_bid = getbnum(bnbuf);
@@ -2558,14 +2539,11 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
         vmsgf("redirect: %s", genbuf);
 #endif
     } while (0);
-#endif
 
-    {
-        // Report the read; the activity service may ask to slow down.
-        activity_read_post(cuser.userid, cuser.firstlogin, get_client_code(),
-                           HasUserPerm(ACTIVITY_EXEMPT_PERMS), currbid,
-                           fhdr->filename, activity_slow_alert);
-    }
+    // Report the read; the activity service may ask to slow down.
+    activity_read_post(cuser.userid, cuser.firstlogin, get_client_code(),
+            HasUserPerm(ACTIVITY_EXEMPT_PERMS), currbid,
+            fhdr->filename, activity_slow_alert);
 
     // Real read.
     read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
@@ -3909,13 +3887,12 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
     /* On-disk identity before the M/L rename below. */
     fileheader_t orig = *fhdr;
 
-#ifdef USE_LIVE_ALLPOST
     // In case idiots do this in ALLPOST...
-    if (strcmp(bp->brdname, BN_ALLPOST) == 0) {
+    if (IS_ENABLED(CONFIG_LIVE_ALLPOST) &&
+        strcmp(bp->brdname, BN_ALLPOST) == 0) {
         vmsgf("請至原看板鎖定。%s 會自動更新。", BN_ALLPOST);
         return FULLUPDATE;
     }
-#endif
 
     if (fhdr->filename[0]=='M') {
 	if (!HasUserPerm(PERM_SYSOP | PERM_POLICE)) {
