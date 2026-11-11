@@ -247,18 +247,26 @@ ticket(int bid)
 	    // kick (SIGHUP) or a shutdown (SIGTERM) between them would leave
 	    // the buyer charged without a bet. The receipt waits for a key,
 	    // so it comes after.
+	    // The debit is taken only if it is all there: pay() stops at zero,
+	    // so two racing buys could both pass buy_ticket_ui()'s check and
+	    // get tickets for one payment.
 	    sigset_t old_set;
 	    block_abort_signals(&old_set);
-	    pay(price * n, "%s彩券[種類%d,張數%d]", bh->brdname, ch + 1, n);
-	    int recorded = append_ticket_record(path, ch, n, count) >= 0;
-	    if (!recorded)
+	    int paid = pay_if_enough(price * n, "%s彩券[種類%d,張數%d]",
+				     bh->brdname, ch + 1, n) >= 0;
+	    int recorded = paid && append_ticket_record(path, ch, n, count) >= 0;
+	    if (paid && !recorded)
 		pay(-price * n, "投注失敗退費");
 	    restore_abort_signals(&old_set);
-	    if (!recorded)
+	    if (!paid) {
+		vmsg("現金不夠 !!!");
+	    } else if (!recorded) {
 		goto doesnt_catch_up;
-	    show_file("etc/buyticket", 5, 14, SHOWFILE_ALLOW_ALL);
-	    pressanykey();
-	    usleep(100000); // sleep 0.1s
+	    } else {
+		show_file("etc/buyticket", 5, 14, SHOWFILE_ALLOW_ALL);
+		pressanykey();
+		usleep(100000); // sleep 0.1s
+	    }
 	}
         usleep(GAMBLE_ACTION_DELAY_US);
     }
