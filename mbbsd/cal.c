@@ -444,15 +444,8 @@ give_money_ui_list(struct Vector *namelist)
         return -1;
     }
 
-    sigset_t block_set, old_set;
-    sigemptyset(&block_set);
-    sigaddset(&block_set, SIGHUP);
-    sigaddset(&block_set, SIGPIPE);
-    sigaddset(&block_set, SIGTERM);
-#ifdef SIGXCPU
-    sigaddset(&block_set, SIGXCPU);
-#endif
-    sigprocmask(SIG_BLOCK, &block_set, &old_set);
+    sigset_t old_set;
+    block_abort_signals(&old_set);
 
     FILE *fp_money = fopen(FN_MONEY, "a");
     FILE *fp_receipt = NULL;
@@ -507,7 +500,7 @@ give_money_ui_list(struct Vector *namelist)
                 if (fp_money)
                     fclose(fp_money);
                 free(uids);
-                sigprocmask(SIG_SETMASK, &old_set, NULL);
+                restore_abort_signals(&old_set);
                 outs(ANSI_COLOR(1;31) "交易失敗！" ANSI_RESET "\n");
                 vmsg("交易失敗。");
                 return -1;
@@ -565,7 +558,7 @@ give_money_ui_list(struct Vector *namelist)
         sendalert(cuser.userid, ALERT_NEW_MAIL);
     }
 
-    sigprocmask(SIG_SETMASK, &old_set, NULL);
+    restore_abort_signals(&old_set);
 
     free(uids);
 
