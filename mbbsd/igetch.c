@@ -2,10 +2,6 @@
 
 #define IBUFSIZE  128
 
-#if IS_ENABLED(CONFIG_DEBUG)
-#define inline
-#endif
-
 static char vin_buf[IBUFSIZE];
 static VBUF vin = {
     .head     = vin_buf,

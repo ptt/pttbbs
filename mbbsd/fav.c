@@ -34,10 +34,6 @@
  * (FAVH_ADM_TAG == 1, FAVH_FAV == 0)。
  */
 
-#if IS_ENABLED(CONFIG_DEBUG)
-#define inline
-#endif
-
 /* the total number of items, every level. */
 static int 	fav_number;
 
@@ -252,7 +248,7 @@ inline fav_t *get_fav_root(void){
 /**
  * 是否為有效的 entry
  */
-inline int valid_item(fav_type_t *ft){
+static inline int valid_item(fav_type_t *ft){
     return ft->attr & FAVH_FAV;
 }
 

@@ -12,11 +12,7 @@
 // bytes into buffer for one character input. Currently the number is 3 (UTF8).
 # define OBUFMINSPACE (3)
 
-#if IS_ENABLED(CONFIG_DEBUG)
-#define register
-#define inline
 // #define DBG_OUTRPT
-#endif
 
 // Synchronized output (DEC Private Mode 2026: BSU / ESU)
 #define DEC2026_BSU       ESC_STR "[?2026h"

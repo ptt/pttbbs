@@ -39,10 +39,6 @@
 // ---- DEFINITION ---------------------------------------------------
 #define VBUFLEN		(ANSILINELEN)
 
-#if IS_ENABLED(CONFIG_DEBUG)
-#define inline
-#endif
-
 // ---- UTILITIES ----------------------------------------------------
 static void
 outnc(int n, unsigned char c)
