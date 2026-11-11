@@ -13,6 +13,8 @@
 #define GCC_WEAK
 #endif
 
+#include "thread_safety_analysis.h"
+
 /* os dependant include file, define */
 #ifdef __linux__
 

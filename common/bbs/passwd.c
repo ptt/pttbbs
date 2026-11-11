@@ -63,7 +63,12 @@ passwd_init_pthread(void)
     return 0;
 }
 
-static void
+/* passwd_lock_pthread() returns holding the mutex and passwd_unlock_pthread()
+ * releases it, for passwd_lock()'s and passwd_unlock()'s callers. The
+ * analysis checks one function at a time and would report both, where the
+ * system marks the mutex functions (FreeBSD's pthread.h does), so they are
+ * left out. */
+static void TSA_NO_ANALYSIS
 passwd_lock_pthread(void)
 {
     int rc = pthread_mutex_lock(&SHM->GV3.e.passwd_mutex);
@@ -75,7 +80,7 @@ passwd_lock_pthread(void)
     }
 }
 
-static void
+static void TSA_NO_ANALYSIS
 passwd_unlock_pthread(void)
 {
     int rc = pthread_mutex_unlock(&SHM->GV3.e.passwd_mutex);
