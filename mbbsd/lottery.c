@@ -317,6 +317,8 @@ buy_ticket_ui(int price)
     return num;
 }
 
+static int stop_gamble(void);
+
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 int
 ticket(int bid)
@@ -369,8 +371,12 @@ ticket(int bid)
 	    continue;
 	n = buy_ticket_ui(price);
 
-	// Closed meanwhile: nothing is charged yet.
-	if (!dashf(fn_ticket))
+	// Closed meanwhile, or past its deadline -- stop_gamble() closes it
+	// then, as join_gamble() does on the way in: a buyer who waited at
+	// the prompt can't bet once the result may be known. Nothing is
+	// charged yet.
+	syncnow();
+	if (stop_gamble() || !dashf(fn_ticket))
 	    goto doesnt_catch_up;
 
 	if (n > 0) {
@@ -563,7 +569,7 @@ openticket(int bid)
     return 0;
 }
 
-int
+static int
 stop_gamble(void)
 {
     boardheader_t  *bp = getbcache(currbid);
