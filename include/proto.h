@@ -587,8 +587,15 @@ void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
 void abort_bbs(int sig) GCC_NORETURN;
-void block_abort_signals(sigset_t *oldset) TSA_ACQUIRE(abort_block);
-void restore_abort_signals(const sigset_t *oldset) TSA_RELEASE(abort_block);
+void block_abort_signals_at(sigset_t *oldset, const char *file, int line)
+    TSA_ACQUIRE(abort_block);
+void restore_abort_signals_at(const sigset_t *oldset, const char *file, int line)
+    TSA_RELEASE(abort_block);
+/* The caller's file and line go into the abort_block log. */
+#define block_abort_signals(oldset) \
+    block_abort_signals_at((oldset), __FILE__, __LINE__)
+#define restore_abort_signals(oldset) \
+    restore_abort_signals_at((oldset), __FILE__, __LINE__)
 /* No key may be read, or waited for, inside a block_abort_signals() region
  * (see there). Placed where the input backends read or wait for input. */
 void abort_block_violation(const char *what, const char *file, int line);

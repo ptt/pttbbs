@@ -239,6 +239,10 @@ abort_bbs(int sig GCC_UNUSED)
     exit(0);
 }
 
+static const char *abort_block_file;	/* where the outermost region began */
+static int abort_block_line;
+static int abort_block_logged;		/* its violation is in the log */
+
 /* Block the signals that kill a session mid-way -- SIGHUP (hangup, or being
  * kicked by another login), SIGPIPE (a flush to a dead socket) and SIGTERM,
  * which run abort_bbs(), and SIGXCPU (the CPU limit) -- so a money/record
@@ -253,7 +257,7 @@ abort_bbs(int sig GCC_UNUSED)
  * tty read passes; pmore's movie playback, under more(), also waits on the
  * tty with a select() of its own); see abort_block_violation(). */
 void TSA_NO_ANALYSIS
-block_abort_signals(sigset_t *oldset)
+block_abort_signals_at(sigset_t *oldset, const char *file, int line)
 {
     sigset_t set;
     sigemptyset(&set);
@@ -264,33 +268,50 @@ block_abort_signals(sigset_t *oldset)
     sigaddset(&set, SIGXCPU);
 #endif
     sigprocmask(SIG_BLOCK, &set, oldset);
-    abort_block_depth++;
+    if (abort_block_depth++ == 0) {
+	abort_block_file = file;
+	abort_block_line = line;
+	abort_block_logged = 0;
+    }
 }
 
 void TSA_NO_ANALYSIS
-restore_abort_signals(const sigset_t *oldset)
+restore_abort_signals_at(const sigset_t *oldset, const char *file, int line)
 {
     if (abort_block_depth <= 0) {
 	// No block_abort_signals() filled oldset: leave the mask as it is.
-	abort_block_violation("restore without a block", __FILE__, __LINE__);
+	abort_block_violation("restore without a block", file, line);
 	return;
     }
-    abort_block_depth--;
+    if (--abort_block_depth == 0)
+	abort_block_file = NULL;
     sigprocmask(SIG_SETMASK, oldset, NULL);
 }
 
-/* The block_abort_signals() rules were broken. Log it, once per session. A
- * test build (DEBUG_ABORT_BLOCK) then aborts, so the bug can't be missed;
- * production carries on rather than abort half-way through the very region
- * the rules protect (on a healthy connection the read just works). */
+/* The block_abort_signals() rules were broken. Log where, and where the
+ * region began -- once per region and a few times per session, so one doesn't
+ * hide the next. A test build (DEBUG_ABORT_BLOCK) then aborts, so the bug
+ * can't be missed; production carries on rather than abort half-way through
+ * the very region the rules protect (on a healthy connection the read just
+ * works). */
 void
 abort_block_violation(const char *what, const char *file, int line)
 {
     static int logged;
-    if (!logged) {
-	logged = 1;
-	log_filef("log/abort_block.log", "%s: %s at %s:%d (depth %d)\n",
-		  cuser.userid, what, file, line, abort_block_depth);
+    // A prompt read in a region is checked at every byte typed.
+    if (logged < 5 && !(abort_block_depth > 0 && abort_block_logged)) {
+	logged++;
+	if (abort_block_depth > 0)
+	    abort_block_logged = 1;
+	if (abort_block_file)
+	    log_filef("log/abort_block.log",
+		      "%s: %s at %s:%d, in the region begun at %s:%d (depth %d)\n",
+		      cuser.userid, what, file, line,
+		      abort_block_file, abort_block_line, abort_block_depth);
+	else
+	    log_filef("log/abort_block.log",
+		      "%s: %s at %s:%d, with no region open\n",
+		      cuser.userid, what, file, line);
     }
 #ifdef DEBUG_ABORT_BLOCK
     abort();
