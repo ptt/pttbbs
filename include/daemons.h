@@ -1,6 +1,7 @@
 #ifndef BBS_DAEMONS_H
 #define BBS_DAEMONS_H
 
+#include <stddef.h>
 #include "fnv_hash.h"
 #include "pttstruct.h"
 
@@ -91,7 +92,14 @@ typedef struct conn_data
     uint16_t rport;
     uint16_t lport;
     uint32_t flags;
+    // Added later: senders that predate it (bbs-sshd, older wsproxy) send
+    // only the fields above, with cb = CONN_DATA_V1_SIZE.
+    uint32_t client_code;   // Client known to the sender (e.g. wsproxy from
+                            // the User-Agent), taken when the client sends no
+                            // telnet negotiation; 0: none
 } PACKSTRUCT conn_data;
+
+#define CONN_DATA_V1_SIZE offsetof(conn_data, client_code)
 
 #define CONN_FLAG_SECURE (1 << 0)
 

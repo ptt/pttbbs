@@ -283,7 +283,8 @@ login_ctx_init(login_ctx *ctx)
 static int
 login_ctx_has_conn_data(login_ctx *ctx)
 {
-    return ctx->cdata_len == sizeof(ctx->cdata) ? 1 : 0;
+    return ctx->cdata_len >= (int) CONN_DATA_V1_SIZE &&
+           ctx->cdata_len == (int) ctx->cdata.cb ? 1 : 0;
 }
 
 int
@@ -1961,6 +1962,11 @@ start_service(int fd, login_conn_ctx *conn)
     STRLCPY(ld.port, ctx->port);
     ld.encoding = ctx->encoding;
     ld.client_code = ctx->client_code;
+    // No telnet negotiation at all (most apps): the client the sender knows
+    // (wsproxy: from the User-Agent), if any.
+    if (ld.client_code == FNV1_32_INIT && login_ctx_has_conn_data(ctx) &&
+        ctx->cdata.cb == sizeof(ctx->cdata) && ctx->cdata.client_code)
+        ld.client_code = ctx->cdata.client_code;
     ld.t_lines  = 24;   // default size
     ld.t_cols   = 80;
     if (ctx->t_lines > ld.t_lines)
@@ -2514,7 +2520,19 @@ login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int
 
     login_ctx *ctx = &conn->ctx;
     uint8_t *p = (uint8_t *) &ctx->cdata;
-    int to_copy = sizeof(ctx->cdata) - ctx->cdata_len;
+    // cb first: it tells how long the rest is (CONN_DATA_V1_SIZE from
+    // senders that predate client_code, or the whole struct).
+    int want = sizeof(ctx->cdata.cb);
+    if (ctx->cdata_len >= want)
+    {
+        want = ctx->cdata.cb;
+        if (want != (int) CONN_DATA_V1_SIZE && want != (int) sizeof(ctx->cdata))
+        {
+            login_conn_remove(conn, fd, 0);
+            return -1;
+        }
+    }
+    int to_copy = want - ctx->cdata_len;
     if (to_copy > len)
         to_copy = len;
     memcpy(p + ctx->cdata_len, buf, to_copy);
@@ -2523,16 +2541,16 @@ login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int
     if (g_verbose >= VERBOSE_DEBUG)
     {
         fprintf(stderr, LOG_PREFIX "conn_data recv %d/%d\n",
-                ctx->cdata_len, (int) sizeof(ctx->cdata));
+                ctx->cdata_len, want);
     }
 
     assert((unsigned long) ctx->cdata_len <= sizeof(ctx->cdata));
 
-    if (ctx->cdata_len == sizeof(ctx->cdata))
+    if (login_ctx_has_conn_data(ctx))
     {
         login_ctx *ctx = &conn->ctx;
 
-        if (ctx->cdata.cb != sizeof(ctx->cdata) || ctx->cdata.raddr_len != 4)
+        if (ctx->cdata.raddr_len != 4)
         {
             login_conn_remove(conn, fd, 0);
             return -1;
@@ -2553,9 +2571,11 @@ login_conn_handle_conndata(login_conn_ctx *conn, int fd, unsigned char *buf, int
         if (g_verbose >= VERBOSE_DEBUG)
         {
             fprintf(stderr, LOG_PREFIX "conn activate: "
-                    "encoding=%d hostip=%s rport=%u lport=%u flags=%08x\n",
+                    "encoding=%d hostip=%s rport=%u lport=%u flags=%08x "
+                    "client_code=%08X\n",
                     ctx->cdata.encoding, ctx->hostip, ctx->cdata.rport,
-                    ctx->cdata.lport, ctx->cdata.flags);
+                    ctx->cdata.lport, ctx->cdata.flags,
+                    (unsigned int) ctx->cdata.client_code);
         }
 
         conn->state = LOGIN_CONN_STATE_TERMINAL;

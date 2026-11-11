@@ -76,10 +76,22 @@ local function u32(n)
     return u16(bit.band(n, 0xffff)) .. u16(bit.band(bit.rshift(n, 16), 0xffff))
 end
 
-local conn_data_size = 36
+-- The client, from the program name of the User-Agent. 0: no User-Agent.
+local function client_code()
+    local ua = ngx.var.http_user_agent
+    local name = ua and ua:match("^[^/%s(]+")
+    if not name or name == "-" then
+        return 0
+    end
+    return ngx.crc32_long(name:sub(1, 32))
+end
+
+local conn_data_size = 40
 
 -- Serializes the packed `conn_data` struct (include/daemons.h) that logind
 -- expects as the first message; the byte layout must match it exactly.
+-- logind before client_code takes only the first 36 bytes (cb = 36):
+-- upgrade logind first.
 --
 -- Do not use ffi.cdef here: content_by_lua_file re-runs this chunk on every
 -- request, and each cdef of the struct allocated new ctypes until LuaJIT
@@ -100,6 +112,7 @@ local function build_conn_data()
         .. u16(tonumber(ngx.var.remote_port) or 0)      -- rport
         .. u16(lport)                                   -- lport
         .. u32(flags)                                   -- flags
+        .. u32(client_code())                           -- client_code
     assert(#data == conn_data_size)
     return data
 end

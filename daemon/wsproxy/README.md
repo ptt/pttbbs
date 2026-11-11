@@ -46,6 +46,15 @@ Clients may ask for no subprotocol or for `telnet` (`new WebSocket(url, "telnet"
 each message carries a chunk of the raw telnet byte stream. Requests that only
 offer other subprotocols are rejected with 400 before the upgrade.
 
+- Client code
+
+Apps that send no telnet negotiation all look the same to logind (client code
+`0x02000023`). wsproxy sends logind the CRC-32 of the program name of the
+User-Agent, up to the first `/`, space or `(`) in `conn_data` (`client_code`,
+include/daemons.h), which logind takes for clients that send no telnet
+negotiation. Upgrade logind before wsproxy: an older logind accepts only the
+36-byte `conn_data` without `client_code`.
+
 - Configure logind (etc/bindports.conf)
 
 ```
