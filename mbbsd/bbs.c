@@ -3635,18 +3635,31 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                       MONEYNAME, del_fee);
                 return FULLUPDATE;
             }
-            // after this, we cannot delay in !not_owned mode otherwise we'll get
-            // a exploit by race condition.
+            // Only a first check: the fee is taken below, before the delete,
+            // and only if it is still all there.
         }
 
 	// Delete the post and settle its money in one go: a kick from another
-	// login (SIGHUP) or a shutdown (SIGTERM) between delete_fileheader() and
-	// the pay()/numposts update below would drop the post yet skip taking its
-	// money back. The copy for the author is made inside too, so a kick can't
-	// leave it behind. (No tty read runs until the restore, which
-	// block_abort_signals() requires.)
+	// login (SIGHUP) or a shutdown (SIGTERM) anywhere between the author's
+	// fee, delete_fileheader() and the pay/numposts updates below would
+	// leave them apart: a post gone with its money kept, or a fee taken for
+	// a post still there. The copy for the author is made inside too, so a
+	// kick can't leave it behind. (No tty read runs until the restore,
+	// which block_abort_signals() requires.)
 	sigset_t old_set;
 	block_abort_signals(&old_set);
+
+        // The author's fee first, and only if it is all there: taken after
+        // the delete with pay(), which stops at zero, it would let a second
+        // login spend the money meanwhile and keep the post's reward.
+        if (!not_owned && del_fee > 0 &&
+            pay_if_enough(del_fee, "%s 看板 文章自刪清潔費: %s",
+                          currboard, fhdr->title) < 0) {
+            restore_abort_signals(&old_set);
+            vmsgf("您身上的" MONEYNAME "不夠，刪除此文要 %d "
+                  MONEYNAME, del_fee);
+            return FULLUPDATE;
+        }
 
         // The post to mail to the author, copied before deleting adds who
         // removed it.
@@ -3764,8 +3777,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	    {
 		// owner case
 		pwcuDecNumPost();
-                pay(del_fee, "%s 看板 文章自刪清潔費: %s",
-                        currboard, fhdr->title);
 		sendalert(cuser.userid, ALERT_PWD_PERM);
 		prints("您的文章減為 %d 篇，支付清潔費 %d " MONEYNAME "\n",
                         cuser.numposts, del_fee);
@@ -3780,6 +3791,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             pressanykey();
 	    return DIRCHANGED;
 	} else { // delete_fileheader
+            if (!not_owned && del_fee > 0)
+                pay(-del_fee, "%s 看板 文章自刪失敗，退還清潔費: %s",
+                    currboard, fhdr->title);
             if (*mailpath)
                 unlink(mailpath);
             restore_abort_signals(&old_set);
