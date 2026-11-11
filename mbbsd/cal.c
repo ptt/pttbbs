@@ -84,7 +84,7 @@ unlockutmpmode(void)
 }
 
 static int
-do_pay(int uid, int money, const char *item GCC_UNUSED, const char *reason)
+do_pay(int uid, int money, int require_funds, const char *reason)
 {
     int oldm, newm;
     const char *userid;
@@ -98,10 +98,26 @@ do_pay(int uid, int money, const char *item GCC_UNUSED, const char *reason)
     if (!userid)
         return -1;
 
-    oldm = moneyof(uid);
-    newm = deumoney(uid, -money);
+    // require_funds: debit atomically only if the balance covers it, and
+    // fail (changing nothing, logging nothing) otherwise. Plain deumoney()
+    // instead clamps a short debit to 0 and still reports success, which
+    // lets two racing sessions both pass an earlier balance check and
+    // double-spend the same coins.
+    if (require_funds) {
+        newm = deumoney_if_enough(uid, -money);
+        // The balance it started from, even if a racing session changed
+        // it a moment before. (A clamped deumoney() can't tell.)
+        oldm = newm + money;
+    } else {
+        oldm = moneyof(uid);
+        newm = deumoney(uid, -money);
+    }
+    // Reloaded on failure too: cuser.money still holds what the caller
+    // checked, before the other session spent it.
     if (uid == usernum)
         reload_money();
+    if (require_funds && newm < 0)
+        return -1;
 
     {
         char buf[PATHLEN];
@@ -114,40 +130,60 @@ do_pay(int uid, int money, const char *item GCC_UNUSED, const char *reason)
     return newm;
 }
 
-int
-pay_as_uid(int uid, int money, const char *item, ...)
+static int pay_vfmt(int uid, int money, int require_funds, const char *item,
+                    va_list ap) GCC_CHECK_FORMAT(4, 0);
+
+// Shared body of pay()/pay_as_uid()/pay_if_enough(): format the reason and
+// hand off to do_pay(). require_funds selects an atomic fail-on-short-balance
+// debit (pay_if_enough) over the clamping default.
+static int
+pay_vfmt(int uid, int money, int require_funds, const char *item, va_list ap)
 {
-    va_list ap;
     char reason[STRLEN*3] ="";
 
     if (!money)
         return 0;
 
-    if (item) {
-        va_start(ap, item);
+    if (item)
         vsnprintf(reason, sizeof(reason)-1, item, ap);
-        va_end(ap);
-    }
 
-    return do_pay(uid, money, item, reason);
+    return do_pay(uid, money, require_funds, reason);
+}
+
+int
+pay_as_uid(int uid, int money, const char *item, ...)
+{
+    va_list ap;
+    int r;
+
+    va_start(ap, item);
+    r = pay_vfmt(uid, money, 0, item, ap);
+    va_end(ap);
+    return r;
 }
 
 int
 pay(int money, const char *item, ...)
 {
     va_list ap;
-    char reason[STRLEN*3] ="";
+    int r;
 
-    if (!money)
-        return 0;
+    va_start(ap, item);
+    r = pay_vfmt(usernum, money, 0, item, ap);
+    va_end(ap);
+    return r;
+}
 
-    if (item) {
-        va_start(ap, item);
-        vsnprintf(reason, sizeof(reason)-1, item, ap);
-        va_end(ap);
-    }
+int
+pay_if_enough(int money, const char *item, ...)
+{
+    va_list ap;
+    int r;
 
-    return do_pay(usernum, money, item, reason);
+    va_start(ap, item);
+    r = pay_vfmt(usernum, money, 1, item, ap);
+    va_end(ap);
+    return r;
 }
 
 int

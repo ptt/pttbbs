@@ -448,26 +448,49 @@ setumoney(int uid, int money)
     return money;
 }
 
-int
-deumoney(int uid, int money)
+// Adds money to uid's balance in one atomic step. A debit (money < 0)
+// larger than the balance clamps it to 0 with clamp set, or otherwise
+// changes nothing and returns -1.
+static int
+deumoney_cas(int uid, int money, int clamp, const char *fn)
 {
     if (uid <= 0 || uid > MAX_USERS) {
-	fprintf(stderr, "internal error: deumoney(%d, %d)\r\n", uid, money);
+	fprintf(stderr, "internal error: %s(%d, %d)\r\n", fn, uid, money);
 	return -1;
     }
 
     int old_m, new_m;
     do {
         old_m = __atomic_load_n(&SHM->money[uid - 1], __ATOMIC_ACQUIRE);
-        if (money < 0 && old_m < -money)
+        if (money < 0 && old_m < -money) {
+            if (!clamp)
+                return -1;
             new_m = 0;
-        else
+        } else
             new_m = old_m + money;
     } while (!__atomic_compare_exchange_n(&SHM->money[uid - 1], &old_m, new_m,
                                           false, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE));
 
     passwd_update_money(uid);
     return new_m;
+}
+
+int
+deumoney(int uid, int money)
+{
+    return deumoney_cas(uid, money, 1, "deumoney");
+}
+
+// Like deumoney(), but when a debit (money < 0) is larger than the balance
+// it makes no change and returns -1, instead of clamping the balance to 0
+// and reporting success. Callers that must not hand out value on a short
+// balance (money transfers, ticket and item purchases) debit through this
+// and abort when it fails; that also closes the double-spend race that two
+// deumoney() debits allow after a separate, non-atomic balance check.
+int
+deumoney_if_enough(int uid, int money)
+{
+    return deumoney_cas(uid, money, 0, "deumoney_if_enough");
 }
 
 /*

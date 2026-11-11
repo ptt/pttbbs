@@ -105,6 +105,7 @@ userinfo_t *search_ulistn(int uid, int unum);
 userinfo_t *search_ulist_userid(const char *userid);
 int  setumoney(int uid, int money);
 int  deumoney(int uid, int money);
+int  deumoney_if_enough(int uid, int money);
 void touchbtotal(int bid);
 void sort_bcache(void);
 void reload_bcache(void);

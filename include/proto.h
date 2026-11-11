@@ -203,6 +203,7 @@ const char *muted_msg(const char *bname);
 /* cal */
 const char* money_level(int money);
 int pay(int money, const char *item, ...) GCC_CHECK_FORMAT(2,3); 
+int pay_if_enough(int money, const char *item, ...) GCC_CHECK_FORMAT(2,3);
 int pay_as_uid(int uid, int money, const char *item,...)GCC_CHECK_FORMAT(3,4);
 /* The mode lock (currutmp->lockmode), which keeps a game, the lottery or a
  * song order from being entered twice at once, as a capability for the
