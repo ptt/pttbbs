@@ -269,18 +269,15 @@ save_violatelaw(void)
 	return 0;
     }
 
-    //Ptt:check one more time
-    reload_money();
-    if (cuser.money < (int)cuser.vl_count * 1000)
-    {
+    // Ptt: check one more time -- atomically, so another login can't spend
+    // the money between the check and the debit.
+    if (pay_if_enough(1000 * (int)cuser.vl_count, "繳付罰單 (#%d)", cuser.vl_count) < 0) {
 	log_filef("log/violation",
 		"%s pay-violation error: race-conditionn hack?\n",
 		cuser.userid);
 	vmsg(MONEYNAME "怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
 	return 0;
     }
-
-    pay(1000 * (int)cuser.vl_count, "繳付罰單 (#%d)", cuser.vl_count);
     pwcuSaveViolateLaw();
     log_filef("log/violation",
 	    "%s pay-violation: $%d complete.\n",
