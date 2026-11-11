@@ -485,7 +485,9 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     return sock;
 }
 
-void
+/* Not analyzed: it takes the mode lock on some paths only (for a game),
+ * which `locked` tracks and the analysis can't follow. */
+void TSA_NO_ANALYSIS
 my_talk(userinfo_t * uin, int fri_stat, char defact)
 {
     int             sock, msgsock, ch;

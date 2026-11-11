@@ -17,12 +17,14 @@
 #ifdef TSA_SUPPORTED
 #define TSA_CAPABILITY(x)	__attribute__ ((capability(x)))
 #define TSA_ACQUIRE(...)	__attribute__ ((acquire_capability(__VA_ARGS__)))
+#define TSA_TRY_ACQUIRE(...)	__attribute__ ((try_acquire_capability(__VA_ARGS__)))
 #define TSA_RELEASE(...)	__attribute__ ((release_capability(__VA_ARGS__)))
 #define TSA_EXCLUDES(...)	__attribute__ ((locks_excluded(__VA_ARGS__)))
 #define TSA_NO_ANALYSIS		__attribute__ ((no_thread_safety_analysis))
 #else
 #define TSA_CAPABILITY(x)
 #define TSA_ACQUIRE(...)
+#define TSA_TRY_ACQUIRE(...)
 #define TSA_RELEASE(...)
 #define TSA_EXCLUDES(...)
 #define TSA_NO_ANALYSIS

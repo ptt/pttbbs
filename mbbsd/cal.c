@@ -48,7 +48,7 @@ is_playing(int unmode)
     return 0;
 }
 
-int
+int TSA_NO_ANALYSIS
 lockutmpmode(int unmode, int state)
 {
     int             errorno = 0;
@@ -76,7 +76,7 @@ lockutmpmode(int unmode, int state)
     return 0;
 }
 
-int
+int TSA_NO_ANALYSIS
 unlockutmpmode(void)
 {
     currutmp->lockmode = 0;

@@ -204,8 +204,17 @@ const char *muted_msg(const char *bname);
 const char* money_level(int money);
 int pay(int money, const char *item, ...) GCC_CHECK_FORMAT(2,3); 
 int pay_as_uid(int uid, int money, const char *item,...)GCC_CHECK_FORMAT(3,4);
-int lockutmpmode(int unmode, int state) EXCLUDES_ABORT_BLOCK;
-int unlockutmpmode(void);
+/* The mode lock (currutmp->lockmode), which keeps a game, the lottery or a
+ * song order from being entered twice at once, as a capability for the
+ * analysis (thread_safety_analysis.h): lockutmpmode() takes it when it
+ * returns 0 and unlockutmpmode() releases it, so a way out that keeps it,
+ * or a release of one not taken (perhaps a caller's), doesn't compile.
+ * Nothing refers to the object at run time. */
+struct TSA_CAPABILITY("mode lock") utmp_mode_lock_cap { int unused; };
+extern struct utmp_mode_lock_cap utmp_mode_lock;
+int lockutmpmode(int unmode, int state) TSA_TRY_ACQUIRE(0, utmp_mode_lock)
+    EXCLUDES_ABORT_BLOCK;
+int unlockutmpmode(void) TSA_RELEASE(utmp_mode_lock);
 int x_file(void);
 int give_money(void);
 int p_sysinfo(void);
