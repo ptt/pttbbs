@@ -589,6 +589,13 @@ void system_abort(void);
 void abort_bbs(int sig) GCC_NORETURN;
 void block_abort_signals(sigset_t *oldset);
 void restore_abort_signals(const sigset_t *oldset);
+/* No key may be read, or waited for, inside a block_abort_signals() region
+ * (see there). Placed where the input backends read or wait for input. */
+void abort_block_violation(const char *what, const char *file, int line);
+#define CHECK_NOT_IN_ABORT_BLOCK() do { \
+	if (abort_block_depth) \
+	    abort_block_violation("input", __FILE__, __LINE__); \
+    } while (0)
 void u_exit(const char *mode);
 void talk_request(int sig);
 int establish_talk_connection(const userinfo_t *uip);

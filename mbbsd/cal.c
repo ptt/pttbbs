@@ -446,6 +446,10 @@ give_money_ui_list(struct Vector *namelist)
 
     sigset_t old_set;
     block_abort_signals(&old_set);
+    // A lone recipient's red envelope may be edited, but only after the
+    // region below, as the prompt reads the tty. Its notice must follow the
+    // edit, so it can't be edited out; the alert is sent in the region.
+    char edit_fpath[PATHLEN] = "";
 
     FILE *fp_money = fopen(FN_MONEY, "a");
     FILE *fp_receipt = NULL;
@@ -532,14 +536,14 @@ give_money_ui_list(struct Vector *namelist)
                 }
             } else {
                 if (count == 1) {
-                    if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
-                        veditfile(fpath);
-                } else if (custom_msg[0]) {
-                    file_appendf(fpath, "\n" ANSI_COLOR(1;36)
-                                 "    【紅包附言】：%s" ANSI_RESET "\n", custom_msg);
+                    STRLCPY(edit_fpath, fpath);
+                } else {
+                    if (custom_msg[0])
+                        file_appendf(fpath, "\n" ANSI_COLOR(1;36)
+                                     "    【紅包附言】：%s" ANSI_RESET "\n", custom_msg);
+                    if (dashf(fpath))
+                        file_append(fpath, alert_trade);
                 }
-                if (dashf(fpath))
-                    file_append(fpath, alert_trade);
                 sendalert(id, ALERT_NEW_MAIL);
                 if (fp_receipt) {
                     fprintf(fp_receipt, "%-12s: 收到稅後 %d (紅包袋寄送成功)\n", id, m - mtax);
@@ -559,6 +563,13 @@ give_money_ui_list(struct Vector *namelist)
     }
 
     restore_abort_signals(&old_set);
+
+    if (*edit_fpath) {
+        if (vans("交易已完成，要修改紅包袋嗎？[y/N] ") == 'y')
+            veditfile(edit_fpath);
+        if (dashf(edit_fpath))
+            file_append(edit_fpath, alert_trade);
+    }
 
     free(uids);
 

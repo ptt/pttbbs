@@ -119,6 +119,7 @@ const char * const str_pager_modes[WMSG_MODES] =
 
 int             usernum;
 int             currmode = 0;
+int             abort_block_depth = 0;
 int             currsrmode = 0;
 int             currbid;
 char            quote_file[80] = "\0";
