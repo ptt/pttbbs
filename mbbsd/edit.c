@@ -195,7 +195,7 @@ static const char * const BIG_mode[13] = {
   "¼Æ¦r"
 };
 
-static const char *table[8] = {
+static const char * const table[8] = {
   "¢x¢w¢|¢r¢}¢u¢q¢t¢z¢s¢{",
   "ùø¢¤ùãùäùåùàùáùâùİùŞùß",
   "ùø¢wùõùöù÷ùòùóùôùïùğùñ",
@@ -206,7 +206,7 @@ static const char *table[8] = {
   "¢x¢¤ùìùíùî¢¥¢¦¢§ùæùçùè"
 };
 
-static const char *table_mode[6] = {
+static const char * const table_mode[6] = {
   "ª½¨¤",
   "Ås©·",
   "¢q",
