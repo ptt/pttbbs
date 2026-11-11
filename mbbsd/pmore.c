@@ -3687,7 +3687,20 @@ mf_movieWaitKey(struct timeval *ptv, int dorefresh)
 #ifdef STATINC
         STATINC(STAT_SYSSELECT);
 #endif
+#ifdef ABORT_BLOCK_WAIT_BEGIN
+        // mbbsd: this waits for input as the backends do, so it is checked
+        // like them, and a region that broke the rules lets a kick through
+        // while the movie waits (abort_block_wait_begin()).
+        CHECK_NOT_IN_ABORT_BLOCK();
+        sigset_t wait_mask;
+        int unblocked = (!ptv || ptv->tv_sec || ptv->tv_usec) &&
+                        ABORT_BLOCK_WAIT_BEGIN(&wait_mask);
         sel = select(1, &readfds, NULL, NULL, ptv);
+        if (unblocked)
+            abort_block_wait_end(&wait_mask);
+#else
+        sel = select(1, &readfds, NULL, NULL, ptv);
+#endif
 
         // if select() stopped by other interrupt,
         // do it again.

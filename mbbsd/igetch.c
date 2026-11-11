@@ -111,10 +111,14 @@ dogetch(void)
 	}
 
 	STATINC(STAT_SYSSELECT);
+	sigset_t wait_mask;
+	int unblocked = ABORT_BLOCK_WAIT_BEGIN(&wait_mask);
 	while ((len = select(maxfd + 1, &readfds, NULL, NULL, ptv)) < 0) {
 	    if (errno != EINTR)
 		abort_bbs(0);
 	}
+	if (unblocked)
+	    abort_block_wait_end(&wait_mask);
 
 	if (len == 0) {
 	    /* Timeout during idle: reconnect is retried at the top of the loop */
@@ -135,9 +139,14 @@ dogetch(void)
 
 	if (FD_ISSET(0, &readfds)) {
 	    STATINC(STAT_SYSREADSOCKET);
+	    // read_vin() reads again, and can block, when the telnet filter
+	    // takes every byte.
+	    unblocked = ABORT_BLOCK_WAIT_BEGIN(&wait_mask);
 	    do {
 		len = read_vin();
 	    } while (len <= 0);
+	    if (unblocked)
+		abort_block_wait_end(&wait_mask);
 	}
     }
 
@@ -231,10 +240,15 @@ wait_input(float f, int bIgnoreBuf)
     STATINC(STAT_SYSSELECT);
 #endif
 
+    sigset_t wait_mask;
+    int unblocked = (!ptv || ptv->tv_sec || ptv->tv_usec) &&
+                    ABORT_BLOCK_WAIT_BEGIN(&wait_mask);
     do {
 	sel = select(maxfd + 1, &readfds, NULL, NULL, ptv);
 
     } while (sel < 0 && errno == EINTR);
+    if (unblocked)
+	abort_block_wait_end(&wait_mask);
     /* EINTR, interrupted. I don't care! */
 
     // XXX should we abort? (from dogetch)
