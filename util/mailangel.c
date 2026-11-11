@@ -36,14 +36,6 @@ int main(int argc, char* argv[]){
     return 0;
 }
 
-int mailalertuser(char* userid)
-{
-    userinfo_t *uentp=NULL;
-    if (userid[0] && (uentp = search_ulist_userid(userid)))
-	uentp->alerts|=ALERT_NEW_MAIL;
-    return 0;
-}      
-
 void readData(){
     int i, j;
     userec_t user;
@@ -86,9 +78,7 @@ void mailUser(char *userid)
     int count;
     FILE *fp, *fp2;
     time4_t t;
-    fileheader_t header;
-    struct stat st;
-    char filename[PATHLEN];
+    home_mail_t hm;
     char buf[512];
 
     fp2 = fopen(mailfile, "r");
@@ -97,24 +87,9 @@ void mailUser(char *userid)
 	return;
     }
 
-    sethomepath(filename, userid);
-    if (stat(filename, &st) == -1) {
-	if (Mkdir(filename) == -1) {
-	    fprintf(stderr, "mail box create error %s \n", filename);
-	    fclose(fp2);
-	    return;
-	}
-    }
-    else if (!(st.st_mode & S_IFDIR)) {
-	fprintf(stderr, "mail box error\n");
-	fclose(fp2);
-	return;
-    }
-
-    stampfile(filename, &header);
-    fp = fopen(filename, "w");
+    fp = home_mail_begin(&hm, userid);
     if (fp == NULL) {
-	fprintf(stderr, "Cannot open file %s\n", filename);
+	fprintf(stderr, "Cannot mail to %s\n", userid);
 	fclose(fp2);
 	return;
     }
@@ -128,13 +103,10 @@ void mailUser(char *userid)
     while ((count = fread(buf, 1, sizeof(buf), fp2))) {
 	fwrite(buf, 1, count, fp);
     }
-    fclose(fp);
     fclose(fp2);
-
-    STRLCPY(header.title, "給小天使的一封信");
-    STRLCPY(header.owner, "小天使系統");
-    sethomedir(filename, userid);
-    append_fileheader(filename, &header);
-    mailalertuser(userid);
+    if (home_mail_end(&hm, "小天使系統", "給小天使的一封信", 0) < 0) {
+	fprintf(stderr, "Cannot mail to %s\n", userid);
+	return;
+    }
     printf("%s\n", userid);
 }

@@ -405,22 +405,13 @@ is_local_mail_address(const char *addr)
     return parse_mail_address(addr, NULL, 0);
 }
 
-/*
- * save_mailbox: Single unified internal mail delivery function.
- * All internal mail sending, forwarding, syspost, and group mail delivery paths
- * in mbbsd MUST call this function.
- *
- * Returns MAILSEND_OK on success, otherwise error status.
- */
+// Starts a mail to recipient for save_mailbox_end(), after the checks of
+// send_flags: the content is written to hm->fp. For content written as it
+// is made; save_mailbox() takes a message or a file.
 MailSendResult
-save_mailbox(const char *sender, const char *recipient, const char *title,
-             const char *message, const char *src_file, int filemode,
-             int send_flags, char *out_dst_fpath)
+save_mailbox_begin(home_mail_t *hm, const char *recipient, int send_flags)
 {
     char rightid[IDLEN + 1];
-    char dst_fpath[PATHLEN];
-    char dir_fpath[PATHLEN];
-    fileheader_t mhdr;
 
     if (!recipient || !*recipient)
         return MAILSEND_ERR_PARAM;
@@ -448,74 +439,119 @@ save_mailbox(const char *sender, const char *recipient, const char *title,
         strcmp(rightid, cuser.userid) != 0 && mailbox_over_recv_limit(rightid))
         return MAILSEND_ERR_QUOTA;
 
-    sethomepath(dst_fpath, rightid);
-    if (stampfile(dst_fpath, &mhdr) < 0)
+    if (!home_mail_begin(hm, rightid))
         return MAILSEND_ERR_PARAM;
+    return MAILSEND_OK;
+}
 
-    if (message && *message) {
-        if (file_append(dst_fpath, message) < 0)
-            return MAILSEND_ERR_PARAM;
-    }
+// Finishes the mail started by save_mailbox_begin(), from sender (the
+// current user if NULL) with title: lists it (maybe forwarded), tracks it
+// and alerts the recipient.
+MailSendResult
+save_mailbox_end(home_mail_t *hm, const char *sender, const char *title,
+                 int filemode, int send_flags, char *out_dst_fpath)
+{
+    char dir_fpath[PATHLEN];
+    fileheader_t *mhdr = &hm->fh;
+    const char *rightid = hm->userid;
 
-    if (src_file && *src_file) {
-        if (message && *message) {
-            if (AppendTail(src_file, dst_fpath, 0) < 0)
-                return MAILSEND_ERR_PARAM;
-        } else {
-            unlink(dst_fpath);
-            if (Copy(src_file, dst_fpath) < 0)
-                return MAILSEND_ERR_PARAM;
-        }
-    }
-
-    if ((!message || !*message) && (!src_file || !*src_file)) {
+    if (home_mail_close(hm) < 0)
         return MAILSEND_ERR_PARAM;
-    }
 
     const char *effective_sender = (sender && *sender) ? sender : cuser.userid;
     if (!(send_flags & MAILSEND_FLAG_USER_CONTENT) && strcasecmp(rightid, effective_sender) == 0) {
         // Self-mail / memo (only for non-user-generated content)
-        STRLCPY(mhdr.owner, STR_INNER);
-        mhdr.filemode |= FILE_READ;
+        STRLCPY(mhdr->owner, STR_INNER);
+        mhdr->filemode |= FILE_READ;
     } else {
-        STRLCPY(mhdr.owner, effective_sender);
+        STRLCPY(mhdr->owner, effective_sender);
     }
 
     if (title && *title) {
-        STRLCPY(mhdr.title, title);
+        STRLCPY(mhdr->title, title);
     }
 
     if (filemode) {
-        mhdr.filemode |= filemode;
+        mhdr->filemode |= filemode;
     }
 
     sethomedir(dir_fpath, rightid);
     if (send_flags & MAILSEND_FLAG_ALLOW_FORWARD) {
-        if (append_record_forward(dir_fpath, &mhdr, sizeof(mhdr), rightid,
+        if (append_record_forward(dir_fpath, mhdr, sizeof(*mhdr), rightid,
                                   send_flags & MAILSEND_FLAG_FORWARD_CHECKED) == -1)
             return MAILSEND_ERR_PARAM;
     } else {
-        if (append_fileheader(dir_fpath, &mhdr) == -1)
+        if (append_fileheader(dir_fpath, mhdr) == -1)
             return MAILSEND_ERR_PARAM;
     }
 
     /* Track mail ONLY if MAILSEND_FLAG_USER_CONTENT is set */
     if (send_flags & MAILSEND_FLAG_USER_CONTENT) {
 #ifdef USE_TRACKMAIL_SVC
-        trackmail_notify_send(mhdr.owner, rightid, mhdr.title, mhdr.filename, dst_fpath, mhdr.modified);
+        trackmail_notify_send(mhdr->owner, rightid, mhdr->title, mhdr->filename, hm->fpath, mhdr->modified);
 #elif defined(TRACKMAIL)
         log_filef("log/trackmail.log",
-                  "%s %s %s %s\n", mhdr.owner, rightid, mhdr.filename, mhdr.title);
+                  "%s %s %s %s\n", mhdr->owner, rightid, mhdr->filename, mhdr->title);
 #endif
     }
-    if (!(mhdr.filemode & FILE_READ)) {
+    if (!(mhdr->filemode & FILE_READ)) {
         sendalert(rightid, ALERT_NEW_MAIL);
     }
 
     if (out_dst_fpath) {
-        strlcpy(out_dst_fpath, dst_fpath, PATHLEN);
+        strlcpy(out_dst_fpath, hm->fpath, PATHLEN);
     }
     return MAILSEND_OK;
+}
+
+// Appends the file src to fp. Returns 0, or -1 if it failed.
+static int
+mail_append_file(FILE *fp, const char *src)
+{
+    char buf[8192];
+    size_t n;
+    FILE *in = fopen(src, "r");
+
+    if (!in)
+        return -1;
+    while ((n = fread(buf, 1, sizeof(buf), in)) > 0)
+        if (fwrite(buf, 1, n, fp) != n)
+            break;
+    if (ferror(in) || n > 0) {
+        fclose(in);
+        return -1;
+    }
+    fclose(in);
+    return 0;
+}
+
+/*
+ * save_mailbox: Single unified internal mail delivery function.
+ * All internal mail sending, forwarding, syspost, and group mail delivery paths
+ * in mbbsd MUST call this function.
+ *
+ * Returns MAILSEND_OK on success, otherwise error status.
+ */
+MailSendResult
+save_mailbox(const char *sender, const char *recipient, const char *title,
+             const char *message, const char *src_file, int filemode,
+             int send_flags, char *out_dst_fpath)
+{
+    home_mail_t hm;
+    MailSendResult r;
+
+    if ((!message || !*message) && (!src_file || !*src_file))
+        return MAILSEND_ERR_PARAM;
+    if ((r = save_mailbox_begin(&hm, recipient, send_flags)) != MAILSEND_OK)
+        return r;
+    if ((message && *message && fputs(message, hm.fp) == EOF) ||
+        (src_file && *src_file && mail_append_file(hm.fp, src_file) < 0)) {
+        fclose(hm.fp);
+        unlink(hm.fpath);
+        return MAILSEND_ERR_PARAM;
+    }
+    return save_mailbox_end(&hm, sender, title, filemode, send_flags,
+                            out_dst_fpath);
 }
 
 #ifndef FN_MAIL_QUOTA_EXEMPT

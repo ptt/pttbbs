@@ -168,42 +168,36 @@ p_from(void)
     return 0;
 }
 
+// Where to find the recent payments, if they are kept.
+#if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
+#define REDENVELOP_RECENTPAY \
+            "\n  您可於下列位置找到最近的交易記錄:\n" \
+            "  主選單 => (U)ser個人設定 => (L)MyLogs個人記錄 =>" \
+            " (P)RecentPay最近交易記錄\n"
+#else
+#define REDENVELOP_RECENTPAY ""
+#endif
+
 int
 mail_redenvelop(const char *from, const char *to, int money, char *fpath)
 {
-    char            _fpath[PATHLEN], dirent[PATHLEN];
-    fileheader_t    fhdr;
-    FILE           *fp;
+    char            title[TTLEN + 1];
 
-    if (!fpath) fpath = _fpath;
-
-    sethomepath(fpath, to);
-    stampfile(fpath, &fhdr);
-
-    if (!(fp = fopen(fpath, "w")))
-	return -1;
-
-    fprintf(fp, "作者: %s\n"
-	    "標題: 招財進寶\n"
+    // colorize topic to make sure this is issued by system.
+    SNPRINTF(title, ANSI_COLOR(1;37;41) "[紅包]" ANSI_RESET " $%d", money);
+    // The usual header (ctime4() ends with a new line), with the title as
+    // listed. No quota checks, as the money is given already.
+    syncnow();
+    AUTO_STR(msg, "作者: %s\n"
+	    "標題: [紅包] $%d\n"
 	    "時間: %s\n"
 	    ANSI_COLOR(1;33) "親愛的 %s ：\n\n" ANSI_RESET
 	    ANSI_COLOR(1;31) "    我包給你一個 %d " MONEYNAME
                                  "的大紅包喔 ^_^\n\n"
 	    "    禮輕情意重，請笑納...... ^_^" ANSI_RESET "\n"
-#if defined(USE_RECENTPAY) || defined(LOG_RECENTPAY)
-            "\n  您可於下列位置找到最近的交易記錄:\n"
-            "  主選單 => (U)ser個人設定 => (L)MyLogs個人記錄 =>"
-            " (P)RecentPay最近交易記錄\n"
-#endif
-            , from, ctime4(&now), to, money);
-    fclose(fp);
-
-    // colorize topic to make sure this is issued by system.
-    SNPRINTF(fhdr.title, ANSI_COLOR(1;37;41) "[紅包]" ANSI_RESET " $%d", money);
-    STRLCPY(fhdr.owner, from);
-    sethomedir(dirent, to);
-    append_fileheader(dirent, &fhdr);
-    return 0;
+            REDENVELOP_RECENTPAY, from, money, ctime4(&now), to, money);
+    return save_mailbox(from, to, title, msg, NULL, 0, MAILSEND_FLAG_NONE,
+                        fpath) == MAILSEND_OK ? 0 : -1;
 }
 
 /* 給錢與贈與稅 */

@@ -1503,18 +1503,11 @@ do_post_article(int edflags)
 	    // now, genbuf[0] = "if user exists".
 	    if (genbuf[0])
 	    {
-                fileheader_t mailfile;
-                stampfile(genbuf, &mailfile);
-		unlink(genbuf);
-		Copy(fpath, genbuf);
-
-		STRLCPY(mailfile.owner, cuser.userid);
-		STRLCPY(mailfile.title, save_title);
                 msg = "回應至作者信箱";
-		if (append_fileheader(TEMP_HOMEDIR(quote_user), &mailfile) == -1)
+                if (save_mailbox(cuser.userid, quote_user, save_title, NULL,
+                                 fpath, 0, MAILSEND_FLAG_USER_CONTENT,
+                                 NULL) != MAILSEND_OK)
 		    msg = ERR_UID;
-		else
-		    sendalert(quote_user, ALERT_NEW_MAIL);
 	    } else if ((str = strchr(quote_user, '.'))) {
                 LOG_IF(LOG_CONF_INTERNETMAIL,
                        log_filef("log/internet_mail.log",

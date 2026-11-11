@@ -814,32 +814,22 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 static void
 ChessGenLogUser(ChessInfo* info, ChessGameResult result)
 {
-    fileheader_t log_header;
-    FILE        *fp;
-    char         fname[PATHLEN];
+    home_mail_t  hm;
+    char         owner[IDLEN + 2], title[TTLEN + 1];
+    const int    flags = MAILSEND_FLAG_ALLOW_FORWARD;
 
-    sethomepath(fname, cuser.userid);
-    stampfile(fname, &log_header);
+    if (save_mailbox_begin(&hm, cuser.userid, flags) != MAILSEND_OK)
+	return;
+    info->actions->genlog(info, hm.fp, result);
 
-    fp = fopen(fname, "w");
-    if (fp != NULL) {
-	info->actions->genlog(info, fp, result);
-	fclose(fp);
-
-	SNPRINTF(log_header.owner, "[%s]",
-		info->constants->chess_name);
-	if(info->myturn == 0)
-	    sprintf(log_header.title, "%s V.S. %s",
-		    info->user1.userid, info->user2.userid);
-	else
-	    sprintf(log_header.title, "%s V.S. %s",
-		    info->user2.userid, info->user1.userid);
-	log_header.filemode = 0;
-
-	sethomedir(fname, cuser.userid);
-	append_record_forward(fname, &log_header, sizeof(log_header),
-		cuser.userid, 0);
-    }
+    snprintf(owner, sizeof(owner), "[%s]", info->constants->chess_name);
+    if(info->myturn == 0)
+	snprintf(title, sizeof(title), "%s V.S. %s",
+		 info->user1.userid, info->user2.userid);
+    else
+	snprintf(title, sizeof(title), "%s V.S. %s",
+		 info->user2.userid, info->user1.userid);
+    save_mailbox_end(&hm, owner, title, 0, flags, NULL);
 }
 
 static void

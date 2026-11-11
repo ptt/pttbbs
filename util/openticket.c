@@ -57,34 +57,17 @@ static int post_result_file(const char *bname, const char *title, const char *fi
 
 static int send_winner_mail(const char *userid, const char *title, const char *body_text)
 {
-    char dirfn[PATHLEN], fpath[PATHLEN];
-    fileheader_t mymail;
-    FILE *out;
+    home_mail_t hm;
+    FILE *out = home_mail_begin(&hm, userid);
+    time4_t now = (time4_t)time(NULL);
 
-    sethomepath(fpath, userid);
-    stampfile(fpath, &mymail);
-
-    out = fopen(fpath, "w");
-    if (out) {
-        time4_t now = (time4_t)time(NULL);
-        fprintf(out, "作者: %s 看板: %s\n標題: %s\n時間: %s\n\n", BBSMNAME "彩券", "Mail", title, ctime4(&now));
-        if (body_text)
-            fputs(body_text, out);
-        fputc('\n', out);
-        fclose(out);
-    }
-
-    STRLCPY(mymail.owner, BBSMNAME "彩券");
-    STRLCPY(mymail.title, title);
-    mymail.filemode = FILE_READ;
-
-    sethomedir(dirfn, userid);
-    append_fileheader(dirfn, &mymail);
-
-    int uid = searchuser(userid, NULL);
-    if (uid > 0)
-        sendalert_uid(uid, ALERT_NEW_MAIL);
-    return 0;
+    if (!out)
+        return -1;
+    fprintf(out, "作者: %s 看板: %s\n標題: %s\n時間: %s\n\n", BBSMNAME "彩券", "Mail", title, ctime4(&now));
+    if (body_text)
+        fputs(body_text, out);
+    fputc('\n', out);
+    return home_mail_end(&hm, BBSMNAME "彩券", title, FILE_READ);
 }
 
 static int load_ticket_items_data(const char *direct, char betname[MAX_ITEM][MAX_ITEM_LEN], int *pPrice)

@@ -244,8 +244,7 @@ int main(void)
 
     //mail to the users
     for (i=0; i<j; i++) {
-	fileheader_t mymail;
-	char	genbuf[200];
+	char	title[TTLEN + 1];
 	int	lostdays;
 
 	lostdays = lostbms[i].lostdays;
@@ -253,27 +252,18 @@ int main(void)
         if (need_alert(lostdays) < ALERT_WARN)
             continue;
 
-	sethomepath(genbuf, lostbms[i].bmname);
-	stampfile(genbuf, &mymail);
-
-	STRLCPY(mymail.owner, "[" BBSMNAME "警察局]");
 	if (lostdays <= LAZY_BM_LIMIT_DAYS)
-	    SNPRINTF(mymail.title,
+	    SNPRINTF(title,
 		    ANSI_COLOR(32) "版主通知" ANSI_RESET " %s版版主%s",
 		    lostbms[i].title, lostbms[i].bmname);
 	else
-	    SNPRINTF(mymail.title,
+	    SNPRINTF(title,
 		    ANSI_COLOR(32) "版主自動免職通知" ANSI_RESET " %s 版主 %s",
 		    lostbms[i].title, lostbms[i].bmname);
 
-	unlink(genbuf);
-	if (lostdays <= LAZY_BM_LIMIT_DAYS)
-	    Link(OUTFILE, genbuf);
-	else
-	    Link(FIREFILE, genbuf);
-
-	sethomedir(genbuf, lostbms[i].bmname);
-	append_fileheader(genbuf, &mymail); 	
+	deliver_home_mail_file(lostbms[i].bmname, "[" BBSMNAME "警察局]", title,
+			       lostdays <= LAZY_BM_LIMIT_DAYS ? OUTFILE : FIREFILE,
+			       0);
     }
     return 0;
 }

@@ -367,9 +367,6 @@ int get_mb_is_big5(void);
 const char *get_myhostname(void);
 const char *get_relay_server(void);
 const char *get_bbsname(void);
-int get_mail_user(const char *userid, char *out_userid, int *out_rejects);
-int deliver_home_mail(const char *userid, const char *owner, const char *title,
-                      const char *content, size_t len);
 
 /* utmp / cgo */
 typedef struct {
@@ -412,6 +409,22 @@ int user_verify_2fa_or_backup(const char *userid, const char *input_code);
 int mail_internet(const char *fpath, const char *title, const char *rcpt,
                   const char *from);
 int mail_ziphome(const char *userid, const char *rcpt);
+int get_mail_user(const char *userid, char *out_userid, int *out_rejects);
+int deliver_home_mail(const char *userid, const char *owner, const char *title,
+                      const char *content, size_t len);
+int deliver_home_mail_file(const char *userid, const char *owner,
+                           const char *title, const char *src, int filemode);
+/* A mail being written to a mailbox, see home_mail_begin(). */
+typedef struct {
+    char userid[IDLEN + 1];
+    char fpath[PATHLEN];
+    fileheader_t fh;
+    FILE *fp;
+} home_mail_t;
+FILE *home_mail_begin(home_mail_t *hm, const char *userid);
+int home_mail_close(home_mail_t *hm);
+int home_mail_end(home_mail_t *hm, const char *owner, const char *title,
+                  int filemode);
 
 /* svc.c */
 #define SVC_CONNECT_TIMEOUT_US  10000  /* 10ms */

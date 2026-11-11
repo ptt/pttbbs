@@ -164,13 +164,14 @@ int main(int argc, char *argv[]){
         return 0;
     AngelRecord *rec, *angels;
     int count, i, iangel;
-    int uid, bid;
+    int bid;
     const char *myname = argv[0];
     const char *target = NULL;
     int target_is_user = 0;
     char target_name[PATHLEN];
     char output_path[PATHLEN] = "", output_dir[PATHLEN] = "";
     struct fileheader_t fhdr;
+    home_mail_t hm;
     FILE *fp = stdout;
 
     chdir(BBSHOME);
@@ -181,11 +182,9 @@ int main(int argc, char *argv[]){
             target = argv[2];
             target_is_user = 1;
             argc -= 2, argv += 2;
-            if ((uid = searchuser(target, target_name)) < 1)
+            if (searchuser(target, target_name) < 1)
                 die("Invalid user: %s\n", target);
             target = target_name;
-            sethomepath(output_path, target);
-            sethomedir(output_dir, target);
         } else if (strcmp(argv[1], "-b") == 0) {
             boardheader_t *bp;
             target = argv[2];
@@ -205,7 +204,10 @@ int main(int argc, char *argv[]){
     if (argc != 1)
         usage(myname);
 
-    if (target) {
+    if (target && target_is_user) {
+        if (!(fp = home_mail_begin(&hm, target)))
+            die("Failed to mail to: %s\n", target);
+    } else if (target) {
         stampfile(output_path, &fhdr);
         fp = fopen(output_path, "wt");
         if (!fp)
@@ -228,19 +230,15 @@ int main(int argc, char *argv[]){
     qsort(angels, count, sizeof(AngelRecord), sortAngelRecord);
     generateReport(fp, angels, count, target ? 1 : 0);
 
-    if (target) {
+    if (target && target_is_user) {
+        if (home_mail_end(&hm, REPORT_AUTHOR, REPORT_SUBJECT, 0) < 0)
+            die("Failed to mail to: %s\n", target);
+    } else if (target) {
         fclose(fp);
         STRLCPY(fhdr.title, REPORT_SUBJECT);
         STRLCPY(fhdr.owner, REPORT_AUTHOR);
         append_fileheader(output_dir, &fhdr);
-
-        if (target_is_user) {
-            userinfo_t *uentp = search_ulistn(uid, 1);
-            if (uentp)
-                uentp->alerts |= ALERT_NEW_MAIL;
-        } else {
-            touchbtotal(bid);
-        }
+        touchbtotal(bid);
     }
     return 0;
 }

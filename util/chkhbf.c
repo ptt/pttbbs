@@ -31,14 +31,6 @@ void usage(void)
 	    "usage: chkhbf [-a] [board name [board name]]\n");
 }
 
-int mailalertuid(int tuid)
-{
-    userinfo_t *uentp=NULL;
-    if(tuid>0 && (uentp = (userinfo_t *)search_ulist(tuid)) )
-	    uentp->alerts |=ALERT_NEW_MAIL;
-    return 0;
-}      
-
 char *CTIMEx(char *buf, time_t t)
 {
     strlcpy(buf, ctime(&t), 32);
@@ -48,15 +40,13 @@ char *CTIMEx(char *buf, time_t t)
 
 void informBM(const char *userid, boardheader_t *bptr, int nEXP)
 {
-    int     uid, i;
-    char    filename[PATHLEN], buf[64];
-    fileheader_t mymail;
+    int     i;
+    char    buf[64];
+    home_mail_t hm;
     FILE    *fp;
-    if( !(uid = searchuser(userid, NULL)) )
+    if( !searchuser(userid, NULL) )
 	return;
-    sethomepath(filename, userid);
-    stampfile(filename, &mymail);
-    if( (fp = fopen(filename, "w")) == NULL )
+    if( (fp = home_mail_begin(&hm, userid)) == NULL )
 	return;
 
     printf("brdname: %s, BM: %s\n", bptr->brdname, userid);
@@ -87,13 +77,7 @@ void informBM(const char *userid, boardheader_t *bptr, int nEXP)
 	    "\n"
 	    BBSNAME "站長群敬上"
 	    );
-    fclose(fp);
-
-    STRLCPY(mymail.title, "警告: 貴板板友即將過期/已經過期");
-    STRLCPY(mymail.owner, "系統通知.");
-    sethomedir(filename, userid);
-    mailalertuid(uid);
-    append_fileheader(filename, &mymail);
+    home_mail_end(&hm, "系統通知.", "警告: 貴板板友即將過期/已經過期", 0);
 }
 
 void chkhbf(boardheader_t *bptr)

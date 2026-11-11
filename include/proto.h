@@ -564,6 +564,11 @@ void setupmailusage(void);
 MailSendResult save_mailbox(const char *sender, const char *recipient, const char *title,
                             const char *message, const char *src_file, int filemode,
                             int send_flags, char *out_dst_fpath);
+MailSendResult save_mailbox_begin(home_mail_t *hm, const char *recipient,
+                                  int send_flags);
+MailSendResult save_mailbox_end(home_mail_t *hm, const char *sender,
+                                const char *title, int filemode,
+                                int send_flags, char *out_dst_fpath);
 bool is_local_mail_address(const char *addr);
 bool parse_mail_address(const char *addr, char *out_userid, size_t out_userid_len);
 
