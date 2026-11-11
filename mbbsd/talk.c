@@ -374,6 +374,8 @@ my_query(const char *uident)
 
 #define lockreturn(unmode, state) if(lockutmpmode(unmode, state)) return
 
+/* Pages uin and waits for the answer: the socket, or -1 if it failed or was
+ * cancelled. The caller releases any lockutmpmode() it took, see my_talk(). */
 int make_connection_to_somebody(userinfo_t *uin, int timeout){
     int sock = -1, ch;
 
@@ -389,7 +391,6 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	}
     }
     if (sock < 0) {
-	unlockutmpmode();
 	vmsg(MSG_IPC_ERR);
 	return -1;
     }
@@ -406,7 +407,6 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
     }
     if (!sent_ipc) {
 	close(sock);
-	unlockutmpmode();
 	vmsg(MSG_IPC_ERR);
 	return -1;
     }
@@ -434,7 +434,6 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		close(sock);
 		currutmp->sockactive = currutmp->destunum = 0;
 		vmsg("¤H®a¦b¦£°Õ");
-		unlockutmpmode();
 		return -1;
 	    } else {
 		// change to longer timeout
@@ -454,7 +453,6 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 		    currutmp->sockactive = currutmp->destunum = 0;
 		    vkey_detach();
 		    vmsg(MSG_IPC_ERR);
-		    unlockutmpmode();
 		    return -1;
 		}
 		continue;
@@ -467,7 +465,6 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	    vkey_detach();
 	    close(sock);
 	    currutmp->sockactive = currutmp->destunum = 0;
-	    unlockutmpmode();
 	    return -1;
 	}
     }
@@ -478,7 +475,6 @@ int make_connection_to_somebody(userinfo_t *uin, int timeout){
 	    vkey_detach();
 	    close(sock);
 	    currutmp->sockactive = currutmp->destunum = 0;
-	    unlockutmpmode();
 	    if (!ipc_is_connected())
 		vmsg(MSG_IPC_ERR);
 	    else
@@ -497,6 +493,11 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     char            c;
     char            genbuf[4];
     unsigned char   mode0 = currutmp->mode;
+    // Whether this took the mode lock (for a game). Only that one is
+    // released here: talking doesn't take it, and a lock held by what this
+    // was opened from (Ctrl-U in the lottery, a song order, the chicken
+    // farm or a game) is theirs.
+    bool            locked = false;
 
     genbuf[0] = defact;
     ch = uin->mode;
@@ -538,10 +539,12 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    break;
 	case 'f':
 	    lockreturn(M_FIVE, LOCK_THIS);
+	    locked = true;
 	    uin->sig = SIG_GOMO;
 	    break;
 	case 'c':
 	    lockreturn(CHC, LOCK_THIS);
+	    locked = true;
 	    uin->sig = SIG_CHC;
 	    break;
 	default:
@@ -554,8 +557,11 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	STRLCPY(currutmp->mateid, uin->userid);
 
 	sock = make_connection_to_somebody(uin, 5);
-	if (sock == -1)
+	if (sock == -1) {
+	    if (locked)
+		unlockutmpmode();
 	    return;
+	}
 
 	vkey_detach();
 	msgsock = sock;
@@ -569,7 +575,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    if (ch == Ctrl('D')) {
 		vkey_detach();
 		close(msgsock);
-		unlockutmpmode();
+		if (locked)
+		    unlockutmpmode();
 		return;
 	    }
 	}
@@ -619,7 +626,8 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
     }
     currutmp->mode = mode0;
     currutmp->destunum = 0;
-    unlockutmpmode();
+    if (locked)
+	unlockutmpmode();
     pressanykey();
 }
 
