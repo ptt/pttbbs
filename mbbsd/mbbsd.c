@@ -252,7 +252,7 @@ abort_bbs(int sig GCC_UNUSED)
  * vkey_prefetch(), vkey_is_ready() and vkey_purge(), through which every
  * tty read passes; pmore's movie playback, under more(), also waits on the
  * tty with a select() of its own); see abort_block_violation(). */
-void
+void TSA_NO_ANALYSIS
 block_abort_signals(sigset_t *oldset)
 {
     sigset_t set;
@@ -267,7 +267,7 @@ block_abort_signals(sigset_t *oldset)
     abort_block_depth++;
 }
 
-void
+void TSA_NO_ANALYSIS
 restore_abort_signals(const sigset_t *oldset)
 {
     if (abort_block_depth <= 0) {

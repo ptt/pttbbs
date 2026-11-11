@@ -140,11 +140,14 @@ void psb_sync_cache(PSB_CTX *psbctx);
 int psb_file_loader(PSB_CTX *psbctx);
 bool psb_check_perm(int perm);
 void cmd_set_has_item(bool has_item);
-int cmd_show_help_layers(const char *caption, const cmd_layer_t *layers);
+int cmd_show_help_layers(const char *caption, const cmd_layer_t *layers)
+    EXCLUDES_ABORT_BLOCK;
 void vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers);
 void cmd_render_footer_layers(const char *caption, const cmd_layer_t *layers);
-int  cmd_footer_select(const char *caption, const cmd_layer_t *layers, cmd_ctx_t *ctx);
-int  cmd_footer_select_cmd(const char *caption, const cmd_t *cmds, void *priv);
+int  cmd_footer_select(const char *caption, const cmd_layer_t *layers, cmd_ctx_t *ctx)
+    EXCLUDES_ABORT_BLOCK;
+int  cmd_footer_select_cmd(const char *caption, const cmd_t *cmds, void *priv)
+    EXCLUDES_ABORT_BLOCK;
 int  cmd_bar_cmd_raw_width(const cmd_t *cmd, const char *alt_key_name);
 int  cmd_bar_cmd_width(const cmd_t *cmd, int row_bit, const char *alt_key_name);
 void cmd_bar_draw_cmd(int line, int row_bit, const cmd_t *cmd, const char *alt_key_name);
@@ -161,6 +164,6 @@ void render_columns_v(PSB_CTX *ctx, va_list ap);
 void render_columns(PSB_CTX *ctx, ...);
 #define psb_render_columns render_columns
 
-int psb_main(PSB_CTX *psbctx);
+int psb_main(PSB_CTX *psbctx) EXCLUDES_ABORT_BLOCK;
 
 #endif

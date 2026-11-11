@@ -140,13 +140,16 @@ typedef struct vform_def {
 
 // Main entry point: runs the form according to def->mode (or auto-selects mode).
 // Returns 1 on successful submit, 0 on cancel / abort.
-int vform_run(const vform_def_t *def, void *data, void *priv);
+int vform_run(const vform_def_t *def, void *data, void *priv)
+    EXCLUDES_ABORT_BLOCK;
 
 // Runs the form in step-by-step wizard mode with full backtracking (UP / ESC).
-int vform_run_wizard(const vform_def_t *def, void *data, void *priv);
+int vform_run_wizard(const vform_def_t *def, void *data, void *priv)
+    EXCLUDES_ABORT_BLOCK;
 
 // Runs the form in full-screen interactive table mode.
-int vform_run_inplace(const vform_def_t *def, void *data, void *priv);
+int vform_run_inplace(const vform_def_t *def, void *data, void *priv)
+    EXCLUDES_ABORT_BLOCK;
 
 // Format a single field value into a readable string.
 int vform_format_field(const vform_field_t *field, const void *data,

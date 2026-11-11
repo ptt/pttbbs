@@ -15,6 +15,21 @@
 #include "vtkbd.h"  // we usually use it
 #include <limits.h>
 
+/* A block_abort_signals() region, modelled as a capability for Clang's
+ * thread-safety analysis: block_abort_signals() acquires abort_block,
+ * restore_abort_signals() releases it, and the input entry points and the
+ * usual prompts and screens on them are EXCLUDES_ABORT_BLOCK, so calling
+ * one inside a region, or a path out of one that skips the restore, doesn't
+ * compile. Input read through an unmarked function isn't seen; the run-time
+ * check (CHECK_NOT_IN_ABORT_BLOCK) still catches it when it happens. The
+ * analysis takes abort_block as a lock that can't be taken twice, so a
+ * region nested in another has to be in a function of its own (which the
+ * run-time depth count allows). The object exists only for the analysis;
+ * nothing refers to it at run time. */
+struct TSA_CAPABILITY("abort-signal block") abort_block_cap { int unused; };
+extern struct abort_block_cap abort_block;
+#define EXCLUDES_ABORT_BLOCK	TSA_EXCLUDES(abort_block)
+
 // THEME DEFINITION ----------------------------------------------------
 #ifndef THEME_BG
 #define THEME_BG                46
@@ -173,18 +188,18 @@ void vshowmsg(const char *msg);			    /// draw standard pause/message
 
 // v*: input widgets
 // int  vans(char *prompt);	// prompt at bottom and return y/n in lower case.
- int vmsg   (const char *msg);				    /// draw standard pause/message and return input
- int vmsgf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2);    /// formatted input of vmsg
- int vans   (const char *msg);				    /// prompt and return (lowercase) single byte input
+ int vmsg   (const char *msg) EXCLUDES_ABORT_BLOCK;				    /// draw standard pause/message and return input
+ int vmsgf  (const char *fmt,...) GCC_CHECK_FORMAT(1,2) EXCLUDES_ABORT_BLOCK;    /// formatted input of vmsg
+ int vans   (const char *msg) EXCLUDES_ABORT_BLOCK;				    /// prompt and return (lowercase) single byte input
 
 // vget: (y, x, ...)
-int vgets_sz   (char *buf, size_t bufsz, int len, int flags);
-int vgetstr_sz (char *buf, size_t bufsz, int len, int flags, const char *str);
-int vgetstring_sz(char *_buf, size_t bufsz, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance);
-int vgets   (char *buf, int len, int flags);		    /// input with edit box control
-int vgetstr (char *buf, int len, int flags, const char *str);/// input with default value
-int vget    (int y, int x, const char *prompt, char *buf, int len, int mode);
-int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance);
+int vgets_sz   (char *buf, size_t bufsz, int len, int flags) EXCLUDES_ABORT_BLOCK;
+int vgetstr_sz (char *buf, size_t bufsz, int len, int flags, const char *str) EXCLUDES_ABORT_BLOCK;
+int vgetstring_sz(char *_buf, size_t bufsz, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance) EXCLUDES_ABORT_BLOCK;
+int vgets   (char *buf, int len, int flags) EXCLUDES_ABORT_BLOCK;		    /// input with edit box control
+int vgetstr (char *buf, int len, int flags, const char *str) EXCLUDES_ABORT_BLOCK;/// input with default value
+int vget    (int y, int x, const char *prompt, char *buf, int len, int mode) EXCLUDES_ABORT_BLOCK;
+int vgetstring(char *_buf, int len, int flags, const char *defstr, const VGET_CALLBACKS *pcbs, void *instance) EXCLUDES_ABORT_BLOCK;
 #define vgets(buf, len, flags) \
     vgets_sz((buf), __builtin_object_size((buf), 1), (len), (flags))
 #define vgetstr(buf, len, flags, str) \
@@ -206,7 +221,7 @@ enum {
 
 int v_multiline_text(char *out_buf, size_t out_bufsz, int max_lines, int line_len,
                      const char *prompt, const char *footer_prefix,
-                     const char *line_prefix, int flags);
+                     const char *line_prefix, int flags) EXCLUDES_ABORT_BLOCK;
 #define v_multiline(buf, max_lines, prompt, footer_prefix) \
     v_multiline_text((buf), sizeof(buf), (max_lines), 0, (prompt), (footer_prefix), NULL, VMULTI_DEFAULT)
 
@@ -246,7 +261,7 @@ void nblank(int n);
 void vs_cmd_bar	(int row_type, const char *prompt, const struct cmd_layer *cmd_layers);
 
 int vs_quick_pref(int default_value, const char *title, const char *entry,
-                  const char *options, const char *prompt);
+                  const char *options, const char *prompt) EXCLUDES_ABORT_BLOCK;
 
 void vs_rectangle_simple(int l, int t, int r, int b);	// draw a single line rectangle, not filling inside interior
 void vs_multi_T_table_simple(
