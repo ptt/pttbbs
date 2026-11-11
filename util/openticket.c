@@ -190,7 +190,11 @@ int main(int argc, char **argv)
         int fee = price * 10;
         if (fee > 0 && bm_userid && *bm_userid) {
             int bmuid = searchuser((char *)bm_userid, NULL);
-            if (bmuid <= 0 || moneyof(bmuid) < fee) {
+            // Debit atomically: a check then deumoney(), which stops at zero,
+            // would let another login of the BM spend the money meanwhile
+            // and cancel for free.
+            int newm = bmuid > 0 ? deumoney_if_enough(bmuid, -fee) : -1;
+            if (newm < 0) {
                 fprintf(stderr, "Error: BM '%s' does not have enough money (%d < %d) for refund fee.\n",
                         bm_userid, bmuid > 0 ? moneyof(bmuid) : 0, fee);
                 fclose(fp_lock);
@@ -199,15 +203,11 @@ int main(int argc, char **argv)
                 rename(buf, end_buf);
                 return 1;
             }
-            if (bmuid > 0) {
-                int oldm = moneyof(bmuid);
-                deumoney(bmuid, -fee);
-                int newm = moneyof(bmuid);
-                AUTO_STR(reason, "%s 樂透退費手續費", brdname);
-                char fn_pay[PATHLEN];
-                sethomefile(fn_pay, bm_userid, FN_RECENTPAY);
-                log_payment(fn_pay, fee, oldm, newm, reason, now);
-            }
+            int oldm = newm + fee;
+            AUTO_STR(reason, "%s 樂透退費手續費", brdname);
+            char fn_pay[PATHLEN];
+            sethomefile(fn_pay, bm_userid, FN_RECENTPAY);
+            log_payment(fn_pay, fee, oldm, newm, reason, now);
         }
     }
 
