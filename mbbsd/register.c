@@ -54,11 +54,11 @@ typedef struct email_input {
 
     // Output variables
     char *email;
-    bool is_trusted:1;
+    bool is_trusted;
 
     // Input flags
-    bool allow_untrusted:1;
-    bool warn_untrusted:1;
+    bool allow_untrusted;
+    bool warn_untrusted;
 } email_input_t;
 
 static int

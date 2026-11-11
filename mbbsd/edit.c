@@ -137,14 +137,14 @@ typedef struct editor_internal_t {
     short lastindent;
     char last_phone_mode;
 
-    unsigned char redraw_everything	:1;
-    unsigned char ifuseanony	:1;
+    bool          redraw_everything;
+    bool          ifuseanony;
 
-    unsigned char insert_mode	:1;
-    unsigned char ansimode	:1;
-    unsigned char indent_mode	:1;
-    unsigned char phone_mode	:1;
-    unsigned char raw_mode	:1;
+    bool          insert_mode;
+    bool          ansimode;
+    bool          indent_mode;
+    bool          phone_mode;
+    bool          raw_mode;
     char synparser;		// syntax parser
 
     char *searched_string;
@@ -158,8 +158,19 @@ static editor_internal_t *curr_buf = NULL;
 
 static const char * const fp_bak = "bak";
 
+/* Session variables, TODO: move to editor_internal_t. */
+static bool mbcs_mode		= true;
+/* A key read ahead by vkey_to_mb() that did not belong to the character. */
+static int edit_pending_key = KEY_INCOMPLETE;
+/* Big5 lead byte inserted without its trail byte, e.g. a colored half of a
+ * character ("lead ESC[1;33m trail"). The trail byte should be inserted
+ * alone instead of being paired with the next lead byte. */
+static bool edit_dbcs_half = false;
+/* Inside the ANSI sequence of edit_dbcs_half (after ESC or ^U). */
+static bool edit_dbcs_half_esc = false;
+
 // forward declare
-static int has_block_selection(void);
+static bool has_block_selection(void);
 static textline_t * alloc_line(short length);
 static void block_cancel(void);
 
@@ -215,8 +226,6 @@ static const char * const table_mode[6] = {
   "╪"
 };
 
-static char mbcs_mode		=1;
-
 #define IS_BIG5_HI(x) (0x81 <= (x) && (x) <= 0xfe)
 #define IS_BIG5_LOS(x) (0x40 <= (x) && (x) <= 0x7e)
 #define IS_BIG5_LOE(x) (0x80 <= (x) && (x) <= 0xfe)
@@ -267,8 +276,8 @@ edit_buffer_constructor(editor_internal_t *buf)
 {
     /* all unspecified columns are 0 */
     buf->blockln = -1;
-    buf->insert_mode = 1;
-    buf->redraw_everything = 1;
+    buf->insert_mode = true;
+    buf->redraw_everything = true;
     buf->lastindent = -1;
 
     buf->oldcurrline = buf->currline = buf->top_of_win =
@@ -330,7 +339,7 @@ exit_edit_buffer(void)
  * @return position in the string without escape code.
  */
 static int
-line_col_to_pos(const textline_t *line, int col, int strip_esc)
+line_col_to_pos(const textline_t *line, int col, bool strip_esc)
 {
     const char *data = line->data;
     const char *tmp = data;
@@ -362,7 +371,7 @@ line_col_to_pos(const textline_t *line, int col, int strip_esc)
 }
 
 static short
-line_pos_to_col(const textline_t *line, int nx, int strip_esc)
+line_pos_to_col(const textline_t *line, int nx, bool strip_esc)
 {
     short col = 0;
     const char *tmp = line->data;
@@ -396,7 +405,7 @@ line_pos_to_col(const textline_t *line, int nx, int strip_esc)
 static int
 ansi2n(int ansix, textline_t * line)
 {
-    return line_col_to_pos(line, ansix, 1);
+    return line_col_to_pos(line, ansix, true);
 }
 
 /**
@@ -406,7 +415,7 @@ ansi2n(int ansix, textline_t * line)
 static short
 n2ansi(short nx, textline_t * line)
 {
-    return line_pos_to_col(line, nx, 1);
+    return line_pos_to_col(line, nx, true);
 }
 
 /* 螢幕處理：輔助訊息、顯示編輯內容 */
@@ -558,7 +567,7 @@ edit_msg(void)
 static const char *
 get_edit_kind_prompt(int flags)
 {
-    int has_reply_post = (flags & EDITFLAG_KIND_REPLYPOST),
+    bool has_reply_post = (flags & EDITFLAG_KIND_REPLYPOST),
 	has_reply_mail = (flags & EDITFLAG_KIND_SENDMAIL),
 	has_new_post   = (flags & EDITFLAG_KIND_NEWPOST);
 
@@ -765,7 +774,7 @@ cursor_to_next_line(void)
     }
     else {
 	curr_buf->currpnt = line_col_to_pos(curr_buf->currline,
-					    curr_buf->lastindent, 0);
+					    curr_buf->lastindent, false);
     }
 }
 
@@ -790,7 +799,7 @@ cursor_to_prev_line(void)
     }
     else {
 	curr_buf->currpnt = line_col_to_pos(curr_buf->currline,
-					    curr_buf->lastindent, 0);
+					    curr_buf->lastindent, false);
     }
 }
 
@@ -817,7 +826,7 @@ edit_window_adjust(void)
 	clrtoeol();
 	scroll();
     } else if (offset != 0) {
-	curr_buf->redraw_everything = YEA;
+	curr_buf->redraw_everything = true;
     }
 }
 
@@ -835,7 +844,7 @@ edit_window_adjust_middle(void)
 	    p = p->prev;
 	curr_buf->top_of_win = p;
     }
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
 }
 
 /**
@@ -946,7 +955,7 @@ insert_line(textline_t *line, textline_t *p)
  * @param saved  true if you want to keep the line in deleted_line
  */
 static void
-delete_line(textline_t * line, int saved)
+delete_line(textline_t * line, bool saved)
 {
     textline_t *p = line->prev;
     textline_t *n = line->next;
@@ -1137,7 +1146,7 @@ split(textline_t * line, int pos, int indent)
 	    line->data[pos] = '\0';
 	    insert_line(line, p);
 	}
-	curr_buf->redraw_everything = YEA;
+	curr_buf->redraw_everything = true;
 	edit_buffer_check_healthy(line);
 	edit_buffer_check_healthy(line->next);
     }
@@ -1173,7 +1182,7 @@ raw_insert_char(int ch)
 {
     textline_t *p;
     char  *s;
-    int             wordwrap = YEA;
+    bool            wordwrap = true;
 
     if (curr_buf->currline->alloc_len < WRAPMARGIN)
 	curr_buf->currline = adjustline(curr_buf->currline, WRAPMARGIN);
@@ -1199,7 +1208,7 @@ raw_insert_char(int ch)
 	s--;
     int split_pos = (int)(s - p->data) + 1;
     if (s == p->data || (p->len - split_pos) >= WRAPMARGIN - 1) {
-	wordwrap = NA;
+	wordwrap = false;
 	s = p->data + fix_cursor(p->data, p->len - 1, FC_LEFT) - 1;
 	split_pos = (int)(s - p->data) + 1;
     }
@@ -1271,7 +1280,7 @@ insert_dchar(const char *dchar)
     if (p->len + w >= WRAPMARGIN) {
 	int max_split = (curr_buf->currpnt == p->len) ? p->len : (WRAPMARGIN - 1 - w);
 	char *s = p->data + (max_split - 1);
-	int wordwrap = YEA;
+	bool wordwrap = true;
 	while (s != p->data && *s == ' ')
 	    s--;
 	while (s != p->data && *s != ' ')
@@ -1279,7 +1288,7 @@ insert_dchar(const char *dchar)
 	int split_pos = (int)(s - p->data) + 1;
 	int lower_extra = (curr_buf->currpnt >= split_pos) ? w : 0;
 	if (s == p->data || (p->len - split_pos) + 1 + lower_extra >= WRAPMARGIN) {
-	    wordwrap = NA;
+	    wordwrap = false;
 	    if (curr_buf->currpnt == p->len)
 		s = p->data + p->len - 1;
 	    else
@@ -1314,16 +1323,6 @@ insert_dchar(const char *dchar)
     }
 }
 
-/* A key read ahead by vkey_to_mb() that did not belong to the character. */
-static int edit_pending_key = KEY_INCOMPLETE;
-
-/* Big5 lead byte inserted without its trail byte, e.g. a colored half of a
- * character ("lead ESC[1;33m trail"). The trail byte should be inserted
- * alone instead of being paired with the next lead byte. */
-static int edit_dbcs_half = 0;
-/* Inside the ANSI sequence of edit_dbcs_half (after ESC or ^U). */
-static int edit_dbcs_half_esc = 0;
-
 static int
 edit_vkey(void)
 {
@@ -1336,9 +1335,9 @@ edit_vkey(void)
     }
     if (c == Ctrl('U') || c == ESC_CHR) {
 	if (edit_dbcs_half)
-	    edit_dbcs_half_esc = 1;
+	    edit_dbcs_half_esc = true;
     } else if (!vkey_isprint(c)) {
-	edit_dbcs_half = edit_dbcs_half_esc = 0;
+	edit_dbcs_half = edit_dbcs_half_esc = false;
     }
     return c;
 }
@@ -1350,7 +1349,7 @@ vkey_to_mb(int ch, char mb[5])
 	if (edit_dbcs_half_esc) {
 	    /* ANSI parameters; a final byte (other than '[') ends it. */
 	    if (ch >= 0x40 && ch <= 0x7E && ch != '[')
-		edit_dbcs_half_esc = 0;
+		edit_dbcs_half_esc = false;
 	    else if (ch < 0x20 || ch > 0x3F)
 		edit_dbcs_half_esc = (ch == '[');
 	    if (isascii(ch)) {
@@ -1358,9 +1357,9 @@ vkey_to_mb(int ch, char mb[5])
 		mb[1] = '\0';
 		return 1;
 	    }
-	    edit_dbcs_half_esc = 0;
+	    edit_dbcs_half_esc = false;
 	}
-	edit_dbcs_half = 0;
+	edit_dbcs_half = false;
 	if (mb_is_valid_trail(ch)) {
 	    /* The trail byte of the pending half character. */
 	    mb[0] = (char)ch;
@@ -1435,8 +1434,8 @@ vkey_to_mb(int ch, char mb[5])
     /* Not a valid trail byte: keep the lead byte as-is (like old behavior)
      * and leave the other key (e.g. Enter) for the caller. */
     edit_pending_key = ch2;
-    edit_dbcs_half = 1;
-    edit_dbcs_half_esc = 0;
+    edit_dbcs_half = true;
+    edit_dbcs_half_esc = false;
     mb[0] = (char)ch;
     mb[1] = '\0';
     return 1;
@@ -1520,7 +1519,7 @@ undelete_line(void)
     curr_buf->currline = p;
     curr_buf->currpnt = 0;
 
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
 
     return curr_buf->currline;
 }
@@ -1534,29 +1533,29 @@ undelete_line(void)
  *
  * case B=empty:
  *	delete_line B
- * 	return YEA
+ * 	return true
  *
  * case A+B < WRAPMARGIN:
  * 	line: A1 A2 B1 B2
  * 	next: C1 C2
- * 	return YEA
+ * 	return true
  * 	NOTE It assumes $line has allocated WRAPMARGIN length of data buffer.
  *
  * case A+B1+B2 > WRAPMARGIN, A+B1<WRAPMARGIN
  * 	line: A1 A2 B1
  * 	next: B2
  */
-static int
+static bool
 join(textline_t * line)
 {
     textline_t *n;
     int    ovfl;
 
     if (!(n = line->next))
-	return YEA;
+	return true;
     if (!*next_non_space_char(n->data)) {
-	delete_line(n, 0);
-	return YEA;
+	delete_line(n, false);
+	return true;
     }
 
 
@@ -1566,8 +1565,8 @@ join(textline_t * line)
 	    line = adjustline(line, WRAPMARGIN);
 	strcat(line->data, n->data);
 	line->len += n->len;
-	delete_line(n, 0);
-	return YEA;
+	delete_line(n, false);
+	return true;
     } else {
 	char  *s; /* the split point */
 
@@ -1578,12 +1577,12 @@ join(textline_t * line)
 	    s--;
 	if (s == n->data) {
 	    // TODO don't give up
-	    return YEA;
+	    return true;
 	}
 	split(n, (s - n->data) + 1, 0);
 	assert(line->len + line->next->len < WRAPMARGIN);
 	join(line);
-	return NA;
+	return false;
     }
 }
 
@@ -1625,11 +1624,11 @@ static void
 load_file(FILE * fp, off_t offSig)
 {
     char buf[WRAPMARGIN + 2];
-    int indent_mode0 = curr_buf->indent_mode;
+    bool indent_mode0 = curr_buf->indent_mode;
     size_t szread = 0;
 
     assert(fp);
-    curr_buf->indent_mode = 0;
+    curr_buf->indent_mode = false;
     while (fgets(buf, sizeof(buf), fp))
     {
 	szread += strlen(buf);
@@ -1809,7 +1808,7 @@ restore_backup(void)
 
 /* 引用文章 */
 
-static int
+static bool
 garbage_line(const char *str)
 {
     int             qlevel = 0;
@@ -1818,14 +1817,14 @@ garbage_line(const char *str)
 	if (*(++str) == ' ')
 	    str++;
 	if (qlevel++ >= 1)
-	    return 1;
+	    return true;
     }
     while (*str == ' ' || *str == '\t')
 	str++;
     if (qlevel >= 1) {
 	if (IS_POST_MARK(str) || !strncmp(str, "==>", 3) ||
 	    mbs_strstr(str, ") 提到:\n"))
-	    return 1;
+	    return true;
     }
     return (*str == '\n');
 }
@@ -1871,7 +1870,7 @@ do_quote(void)
 
 	if ((inf = fopen(quote_file, "r"))) {
 	    char           *ptr;
-	    int             indent_mode0 = curr_buf->indent_mode;
+	    bool            indent_mode0 = curr_buf->indent_mode;
 
 	    edit_fgets_line(buf, sizeof(buf), inf);
 	    if ((ptr = strrchr(buf, ')')))
@@ -1901,7 +1900,7 @@ do_quote(void)
 	    } else
 		ptr = quote_user;
 
-	    curr_buf->indent_mode = 0;
+	    curr_buf->indent_mode = false;
 	    insert_string(STR_POST_MARK "引述《");
 	    insert_string(ptr);
 	    insert_string("》之銘言：\n");
@@ -1950,7 +1949,7 @@ do_quote(void)
 /**
  * 審查 user 引言的使用
  */
-static int
+static bool
 check_quote(void)
 {
     textline_t *p = curr_buf->firstline;
@@ -1984,18 +1983,18 @@ check_quote(void)
 	    getdata(12, 12, "(E)繼續編輯 (W)強制寫入？[E] ",
 		    ans, sizeof(ans), LCECHO);
 	    if (ans[0] == 'w')
-		return 0;
+		return false;
 	}
-	return 1;
+	return true;
     }
-    return 0;
+    return false;
 }
 
 /* 檔案處理：讀檔、存檔、標題、簽名檔 */
 off_t loadsitesig(const char *fname);
 
 static int
-read_file(const char *fpath, int splitSig)
+read_file(const char *fpath, bool splitSig)
 {
     FILE  *fp;
     off_t offSig = -1;
@@ -2024,7 +2023,7 @@ read_file(const char *fpath, int splitSig)
 // real ID anyway (and they may run from inside the editor, e.g. mail read
 // from the user list, so curr_buf cannot tell).
 void
-write_header(FILE * fp,  const char *mytitle, int allow_anon)
+write_header(FILE * fp,  const char *mytitle, bool allow_anon)
 {
     assert(mytitle);
     // cross_post may call this without setting curr_buf.
@@ -2050,13 +2049,13 @@ write_header(FILE * fp,  const char *mytitle, int allow_anon)
 	memset(&postlog, 0, sizeof(postlog));
 	STRLCPY(postlog.author, cuser.userid);
 	if (curr_buf)
-	    curr_buf->ifuseanony = 0;
+	    curr_buf->ifuseanony = false;
 	if (IS_ENABLED(CONFIG_ANONYMOUS) && allow_anon &&
 	    (currbrdattr & BRD_ANONYMOUS)) {
 	    int defanony = (currbrdattr & BRD_DEFAULTANONYMOUS);
             char default_name[IDLEN + 1] = "";
             char ans[3];
-            int use_userid = 1;
+            bool use_userid = true;
 
             // dirty hack here... sorry
             if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && (currbrdattr & BRD_ANGELANONYMOUS)) {
@@ -2089,9 +2088,9 @@ write_header(FILE * fp,  const char *mytitle, int allow_anon)
                 }
 
                 if (strcmp("r", real_name) == 0)
-                    use_userid = 1;
+                    use_userid = true;
                 else
-                    use_userid = 0;
+                    use_userid = false;
 
                 mvprints(3, 0, "使用名稱: %s",
                          use_userid ? cuser.userid : real_name);
@@ -2109,7 +2108,7 @@ write_header(FILE * fp,  const char *mytitle, int allow_anon)
                 SNPRINTF(postlog.author, "%s.", real_name);
                 nickname = "猜猜我是誰 ? ^o^";
                 if (curr_buf)
-                    curr_buf->ifuseanony = 1;
+                    curr_buf->ifuseanony = true;
             }
 	}
 	STRLCPY(postlog.board, currboard);
@@ -2209,7 +2208,7 @@ addsimplesignature(FILE *fp, const char *host) {
 }
 
 void
-addsignature(FILE * fp, int ifuseanony)
+addsignature(FILE * fp, bool ifuseanony)
 {
     FILE           *fs;
     int             i;
@@ -2221,7 +2220,7 @@ addsignature(FILE * fp, int ifuseanony)
 
     if (!ifuseanony) {
 
-	int browsing = 0;
+	bool browsing = false;
 	SigInfo	    si;
 	memset(&si, 0, sizeof(si));
 
@@ -2241,7 +2240,7 @@ browse_sigs:
 		si.show_start = si.show_max + 1;
 		if(si.show_start > si.max)
 		    si.show_start = 0;
-		browsing = 1;
+		browsing = true;
 		goto browse_sigs;
 	    }
 
@@ -2449,7 +2448,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
     return 0;
 }
 
-static int
+static bool
 has_block_selection(void)
 {
     return curr_buf->blockln >= 0;
@@ -2468,7 +2467,7 @@ block_cancel(void)
     if (has_block_selection()) {
 	curr_buf->blockln = -1;
 	curr_buf->blockline = NULL;
-	curr_buf->redraw_everything = YEA;
+	curr_buf->redraw_everything = true;
     }
 }
 
@@ -2885,7 +2884,7 @@ void syn_pmore_render(char *os, int len, char *buf)
     // XXX buf should be same length as s.
     char *s = (char *)mf_movieFrameHeader((unsigned char*)os, (unsigned char*)os + len);
     char attr = 1;
-    char prefix = 0;
+    bool prefix = false;
 
     memset(buf, 0, len);
     if (!len || !s) return;
@@ -2945,7 +2944,7 @@ void syn_pmore_render(char *os, int len, char *buf)
 	    case 'I':
 	    case 'G':
 		*buf++ = attr++;
-		prefix = 1;
+		prefix = true;
 		while (len > 0 &&
 			( (isascii(*s) && isalnum(*s)) ||
 			  strchr("+-,:lpf", *s)) )
@@ -2954,13 +2953,13 @@ void syn_pmore_render(char *os, int len, char *buf)
 		    {
 			if (!strchr(":lpf", *s))
 			    break;
-			prefix = 0;
+			prefix = false;
 		    }
 		    *buf++ = attr;
 		    if (*s == ',')
 		    {
 			attr++;
-			prefix = 1;
+			prefix = true;
 		    }
 		    s++; len--;
 		}
@@ -2998,9 +2997,9 @@ static void
 edit_outs_attr_n(const char *text, int n, int attr)
 {
     int    column = 0;
-    unsigned char inAnsi = 0;
+    bool inAnsi = false;
     unsigned char ch;
-    int doReset = 0;
+    bool doReset = false;
     const char *reset = ANSI_RESET;
 
     // syntax attributes
@@ -3021,7 +3020,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	(attr & ~EOATTR_SELECTED))
     {
 	reset = ANSI_COLOR(0;7;36);
-	doReset = 1;
+	doReset = true;
 	outs(reset);
     }
     else
@@ -3029,13 +3028,13 @@ edit_outs_attr_n(const char *text, int n, int attr)
     if (attr & EOATTR_SELECTED)
     {
 	reset = ANSI_COLOR(0;7);
-	doReset = 1;
+	doReset = true;
 	outs(reset);
     }
     else if (attr & EOATTR_MOVIECODE)
     {
 	reset = ANSI_COLOR(0;36);
-	doReset = 1;
+	doReset = true;
 	outs(reset);
 #ifdef ENABLE_PMORE_ASCII_MOVIE_SYNTAX
 	syn_pmore_render((char*)text, n, movie_attrs);
@@ -3044,13 +3043,13 @@ edit_outs_attr_n(const char *text, int n, int attr)
     else if (attr & EOATTR_BBSLUA)
     {
 	reset = ANSI_COLOR(0;1;31);
-	doReset = 1;
+	doReset = true;
 	outs(reset);
     }
     else if (attr & EOATTR_COMMENT)
     {
 	reset = ANSI_COLOR(0;1;34);
-	doReset = 1;
+	doReset = true;
 	outs(reset);
     }
 
@@ -3064,13 +3063,13 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	mattr = *pmattr++;
 #endif
 
-	if(inAnsi == 1)
+	if(inAnsi)
 	{
 	    if(ch == ESC_CHR) {
 		outc('*');
 		ansi_end = skip_control_sequence((const char *)(text - 1));
 		if ((const char *)text >= ansi_end) {
-		    inAnsi = 0;
+		    inAnsi = false;
 		    outs(reset);
 		}
 	    }
@@ -3080,7 +3079,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 
 		if ((const char *)text >= ansi_end)
 		{
-		    inAnsi = 0;
+		    inAnsi = false;
 		    outs(reset);
 		}
 	    }
@@ -3150,7 +3149,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		    if (ch == ']' && n > 0 && *(text) == ']')
 		    {
 			fSquareQuote = 0;
-			doReset = 0;
+			doReset = false;
 			// directly print quotes
 			outc(ch); outc(ch);
 			text++, n--;
@@ -3161,7 +3160,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		    if (ch == '\'')
 		    {
 			fSingleQuote = 0;
-			doReset = 0;
+			doReset = false;
 			// directly print quotes
 			outc(ch);
 			outs(ANSI_RESET);
@@ -3171,7 +3170,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		    if (ch == '"')
 		    {
 			fDoubleQuote = 0;
-			doReset = 0;
+			doReset = false;
 			// directly print quotes
 			outc(ch);
 			outs(ANSI_RESET);
@@ -3179,11 +3178,11 @@ edit_outs_attr_n(const char *text, int n, int attr)
 		    }
 		} else if (ch == '-' && n > 0 && *(text) == '-') {
 		    fComment = 1;
-		    doReset = 1;
+		    doReset = true;
 		    outs(ANSI_COLOR(0;1;34));
 		} else if (ch == '[' && n > 0 && *(text) == '[') {
 		    fSquareQuote = 1;
-		    doReset = 1;
+		    doReset = true;
 		    fWord = 0;
 		    outs(ANSI_COLOR(1;35));
 		} else if (ch == '\'' || ch == '"') {
@@ -3191,7 +3190,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 			fDoubleQuote = 1;
 		    else
 			fSingleQuote = 1;
-		    doReset = 1;
+		    doReset = true;
 		    fWord = 0;
 		    outs(ANSI_COLOR(1;35));
 		} else {
@@ -3201,7 +3200,7 @@ edit_outs_attr_n(const char *text, int n, int attr)
 			// inside a word.
 			if (--fWord <= 0){
 			    fWord = 0;
-			    doReset = 0;
+			    doReset = false;
 			    outc(ch);
 			    outs(ANSI_RESET);
 			    continue;
@@ -3218,13 +3217,13 @@ edit_outs_attr_n(const char *text, int n, int attr)
 			    if (x<0) {  attr[4] = '0'; x= -x; }
 			    attr[7] = '0' + x;
 			    outs(attr);
-			    doReset = 1;
+			    doReset = true;
 			}
 			if (!fWord)
 			{
 			    outc(ch);
 			    outs(ANSI_RESET);
-			    doReset = 0;
+			    doReset = false;
 			    continue;
 			}
 		    }
@@ -3305,7 +3304,7 @@ detect_attr(const char *ps, size_t len)
 	    curr_buf->synparser = 1;
 	    // if you need indent, toggle by hotkey.
 	    // enabling indent by default may cause trouble to copy pasters
-	    // curr_buf->indent_mode = 1;
+	    // curr_buf->indent_mode = true;
 	}
     }
 #endif
@@ -3352,11 +3351,11 @@ display_textline_internal(textline_t *p, int i)
     attr |= detect_attr(p->data, p->len);
 
     if (curr_buf->edit_margin > 0) {
-	int pos = line_col_to_pos(p, curr_buf->edit_margin, 0);
+	int pos = line_col_to_pos(p, curr_buf->edit_margin, false);
 	if (pos >= p->len) {
 	    (*output)("", attr);
 	} else {
-	    int col = line_pos_to_col(p, pos, 0);
+	    int col = line_pos_to_col(p, pos, false);
 	    const char *pdata = p->data + pos;
 	    if (col < curr_buf->edit_margin) {
 		outs(ANSI_COLOR(1) "<" ANSI_RESET);
@@ -3411,7 +3410,7 @@ goto_line(int lino)
 
 	edit_window_adjust_middle();
     }
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
 }
 
 static void
@@ -3491,7 +3490,7 @@ search_str(int mode)
 	}
     }
     if (!mode)
-	curr_buf->redraw_everything = YEA;
+	curr_buf->redraw_everything = true;
 }
 
 /**
@@ -3703,7 +3702,7 @@ static void
 insert_ansi_code(void)
 {
     int ch = curr_buf->insert_mode;
-    curr_buf->insert_mode = curr_buf->redraw_everything = YEA;
+    curr_buf->insert_mode = curr_buf->redraw_everything = true;
     if (!curr_buf->ansimode)
 	insert_string(ANSI_RESET);
     else {
@@ -3754,9 +3753,9 @@ static void
 phone_mode_switch(void)
 {
     if (curr_buf->phone_mode)
-	curr_buf->phone_mode = 0;
+	curr_buf->phone_mode = false;
     else {
-	curr_buf->phone_mode = 1;
+	curr_buf->phone_mode = true;
 	if (!curr_buf->last_phone_mode)
 	    curr_buf->last_phone_mode = 2;
     }
@@ -3817,28 +3816,28 @@ phone_mode_filter(char ch)
 	case '9':
 	    if (curr_buf->last_phone_mode < 20) {
 		curr_buf->last_phone_mode = ch - '0' + 1;
-		curr_buf->redraw_everything = YEA;
+		curr_buf->redraw_everything = true;
 		return ch;
 	    }
 	    break;
 	case '-':
 	    if (curr_buf->last_phone_mode < 20) {
 		curr_buf->last_phone_mode = 11;
-		curr_buf->redraw_everything = YEA;
+		curr_buf->redraw_everything = true;
 		return ch;
 	    }
 	    break;
 	case '=':
 	    if (curr_buf->last_phone_mode < 20) {
 		curr_buf->last_phone_mode = 12;
-		curr_buf->redraw_everything = YEA;
+		curr_buf->redraw_everything = true;
 		return ch;
 	    }
 	    break;
 	case '`':
 	    if (curr_buf->last_phone_mode < 20) {
 		curr_buf->last_phone_mode = 13;
-		curr_buf->redraw_everything = YEA;
+		curr_buf->redraw_everything = true;
 		return ch;
 	    }
 	    break;
@@ -3847,7 +3846,7 @@ phone_mode_filter(char ch)
 		curr_buf->last_phone_mode += 4;
 		if (curr_buf->last_phone_mode > 27)
 		    curr_buf->last_phone_mode -= 8;
-		curr_buf->redraw_everything = YEA;
+		curr_buf->redraw_everything = true;
 		return ch;
 	    }
 	    break;
@@ -3856,7 +3855,7 @@ phone_mode_filter(char ch)
 		curr_buf->last_phone_mode++;
 		if ((curr_buf->last_phone_mode - 21) % 4 == 3)
 		    curr_buf->last_phone_mode -= 4;
-		curr_buf->redraw_everything = YEA;
+		curr_buf->redraw_everything = true;
 		return ch;
 	    }
 	    break;
@@ -3872,7 +3871,7 @@ upload_file(void)
 {
     size_t szdata = 0;
     int c = 1;
-    char promptmsg = 0;
+    bool promptmsg = false;
 
     clear();
     block_cancel();
@@ -3893,7 +3892,7 @@ upload_file(void)
 	    outs(ANSI_COLOR(1)
 		    "◆全部完成後按下 End 或 ^X/^Q/^C 即可回到編輯畫面。"
 		    ANSI_RESET "\n");
-	    promptmsg = 0;
+	    promptmsg = false;
 	}
 
 	c = edit_vkey();
@@ -3923,7 +3922,7 @@ upload_file(void)
 	{
 	    split(curr_buf->currline, curr_buf->currpnt, 0);
 	    szdata ++;
-	    promptmsg = 1;
+	    promptmsg = true;
 	}
 
 	if (!promptmsg)
@@ -3956,7 +3955,7 @@ typedef struct {
     int flags;
     int mode0;
     int destunum0;
-    int finished;
+    bool finished;
     int retval;
     char trans_buffer[256];
 } edit_ctx_t;
@@ -3970,7 +3969,7 @@ edit_cmd_save(cmd_ctx_t *ctx)
     block_cancel();
     tmp = write_file(ec->fpath, ec->saveheader, ec->title, ec->flags);
     if (tmp == KEEP_EDITING) {
-        curr_buf->redraw_everything = YEA;
+        curr_buf->redraw_everything = true;
         return PSB_OK;
     }
 
@@ -3979,7 +3978,7 @@ edit_cmd_save(cmd_ctx_t *ctx)
 
     exit_edit_buffer();
 
-    ec->finished = 1;
+    ec->finished = true;
     ec->retval = tmp;
     return PSB_OK;
 }
@@ -3996,11 +3995,11 @@ edit_cmd_abort(cmd_ctx_t *ctx)
         currutmp->mode = ec->mode0;
         currutmp->destunum = ec->destunum0;
         exit_edit_buffer();
-        ec->finished = 1;
+        ec->finished = true;
         ec->retval = -1;
         return PSB_OK;
     }
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4008,7 +4007,7 @@ static int
 edit_cmd_goto_line(cmd_ctx_t *ctx GCC_UNUSED)
 {
     prompt_goto_line();
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4016,7 +4015,7 @@ static int
 edit_cmd_users(cmd_ctx_t *ctx GCC_UNUSED)
 {
     t_users();
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4066,7 +4065,7 @@ static int
 edit_cmd_read_tmpbuf(cmd_ctx_t *ctx)
 {
     read_tmpbuf(ctx->key - KEY_EDIT_ESC('0'));
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4105,14 +4104,14 @@ static int
 edit_cmd_toggle_raw(cmd_ctx_t *ctx GCC_UNUSED)
 {
     mbcs_mode = !mbcs_mode;
-    curr_buf->raw_mode ^= 1;
+    curr_buf->raw_mode = !curr_buf->raw_mode;
     return PSB_OK;
 }
 
 static int
 edit_cmd_toggle_indent(cmd_ctx_t *ctx GCC_UNUSED)
 {
-    curr_buf->indent_mode ^= 1;
+    curr_buf->indent_mode = !curr_buf->indent_mode;
     return PSB_OK;
 }
 
@@ -4168,11 +4167,11 @@ edit_cmd_esc_char(cmd_ctx_t *ctx GCC_UNUSED)
 static int
 edit_cmd_toggle_ansi(cmd_ctx_t *ctx GCC_UNUSED)
 {
-    curr_buf->ansimode ^= 1;
+    curr_buf->ansimode = !curr_buf->ansimode;
     if (curr_buf->ansimode && has_block_selection())
         block_color();
     clear();
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4226,10 +4225,10 @@ edit_cmd_editexp(cmd_ctx_t *ctx)
     if (ec->trans_buffer[0]) {
         FILE *fp1;
         if ((fp1 = fopen(ec->trans_buffer, "r"))) {
-            int indent_mode0 = curr_buf->indent_mode;
+            bool indent_mode0 = curr_buf->indent_mode;
             char buf[WRAPMARGIN + 2];
 
-            curr_buf->indent_mode = 0;
+            curr_buf->indent_mode = false;
             while (fgets(buf, sizeof(buf), fp1)) {
                 if (!strncmp(buf, "作者:", 5) ||
                     !strncmp(buf, "標題:", 5) ||
@@ -4242,7 +4241,7 @@ edit_cmd_editexp(cmd_ctx_t *ctx)
             edit_window_adjust();
         }
     }
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4250,7 +4249,7 @@ static int
 edit_cmd_phone_mode(cmd_ctx_t *ctx GCC_UNUSED)
 {
     phone_mode_switch();
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4258,7 +4257,7 @@ static int
 edit_cmd_help(cmd_ctx_t *ctx GCC_UNUSED)
 {
     more("etc/ve.hlp", YEA);
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4266,7 +4265,7 @@ static int
 edit_cmd_keys_help(cmd_ctx_t *ctx)
 {
     int sel_key = cmd_show_help_layers(ctx->caption, ctx->active_layers);
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     if (sel_key > 0 && sel_key != ctx->key) {
         ctx->key = sel_key;
         ctx->redispatch = true;
@@ -4278,7 +4277,7 @@ static int
 edit_cmd_redraw(cmd_ctx_t *ctx GCC_UNUSED)
 {
     clear();
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4346,7 +4345,7 @@ edit_cmd_pgup(cmd_ctx_t *ctx GCC_UNUSED)
     curr_buf->currline = back_line(curr_buf->currline, visible_window_height() - 1, true);
     curr_buf->curr_window_line = get_lineno_in_window();
     curr_buf->currpnt = line_col_to_pos(curr_buf->currline, col, curr_buf->ansimode);
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4358,7 +4357,7 @@ edit_cmd_pgdn(cmd_ctx_t *ctx GCC_UNUSED)
     curr_buf->currline = forward_line(curr_buf->currline, visible_window_height() - 1, true);
     curr_buf->curr_window_line = get_lineno_in_window();
     curr_buf->currpnt = line_col_to_pos(curr_buf->currline, col, curr_buf->ansimode);
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4374,7 +4373,7 @@ edit_cmd_bof(cmd_ctx_t *ctx GCC_UNUSED)
 {
     curr_buf->currline = curr_buf->top_of_win = curr_buf->firstline;
     curr_buf->currpnt = curr_buf->currln = curr_buf->curr_window_line = 0;
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4385,7 +4384,7 @@ edit_cmd_eof(cmd_ctx_t *ctx GCC_UNUSED)
     curr_buf->currline = curr_buf->lastline;
     curr_buf->curr_window_line = get_lineno_in_window();
     curr_buf->currln = curr_buf->totaln;
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
     curr_buf->currpnt = 0;
     return PSB_OK;
 }
@@ -4400,7 +4399,7 @@ edit_cmd_home(cmd_ctx_t *ctx GCC_UNUSED)
 static int
 edit_cmd_toggle_insert(cmd_ctx_t *ctx GCC_UNUSED)
 {
-    curr_buf->insert_mode ^= 1;
+    curr_buf->insert_mode = !curr_buf->insert_mode;
     return PSB_OK;
 }
 
@@ -4409,9 +4408,9 @@ edit_cmd_backspace(cmd_ctx_t *ctx GCC_UNUSED)
 {
     block_cancel();
     if (curr_buf->ansimode) {
-        curr_buf->ansimode = 0;
+        curr_buf->ansimode = false;
         clear();
-        curr_buf->redraw_everything = YEA;
+        curr_buf->redraw_everything = true;
     } else {
         if (curr_buf->currpnt == 0) {
             if (!curr_buf->currline->prev)
@@ -4425,7 +4424,7 @@ edit_cmd_backspace(cmd_ctx_t *ctx GCC_UNUSED)
             curr_buf->oldcurrline = curr_buf->currline;
 
             curr_buf->currpnt = curr_buf->currline->len;
-            curr_buf->redraw_everything = YEA;
+            curr_buf->redraw_everything = true;
             if (curr_buf->currline->next == curr_buf->top_of_win) {
                 curr_buf->top_of_win = curr_buf->currline;
                 curr_buf->curr_window_line = 0;
@@ -4455,7 +4454,7 @@ edit_cmd_delete(cmd_ctx_t *ctx GCC_UNUSED)
     block_cancel();
     if (curr_buf->currline->len == curr_buf->currpnt) {
         join(curr_buf->currline);
-        curr_buf->redraw_everything = YEA;
+        curr_buf->redraw_everything = true;
     } else {
         del_currchar();
         if (curr_buf->ansimode)
@@ -4483,9 +4482,9 @@ do_delete_current_line(void)
     if (curr_buf->currline == curr_buf->top_of_win)
         curr_buf->top_of_win = p;
 
-    delete_line(curr_buf->currline, 1);
+    delete_line(curr_buf->currline, true);
     curr_buf->currline = p;
-    curr_buf->redraw_everything = YEA;
+    curr_buf->redraw_everything = true;
 }
 
 static int
@@ -4507,7 +4506,7 @@ edit_cmd_del_eol(cmd_ctx_t *ctx GCC_UNUSED)
     }
     if (curr_buf->currline->len == curr_buf->currpnt) {
         join(curr_buf->currline);
-        curr_buf->redraw_everything = YEA;
+        curr_buf->redraw_everything = true;
         return PSB_OK;
     }
     curr_buf->currline->len = curr_buf->currpnt;
@@ -4613,7 +4612,7 @@ int
 vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 {
     int             ch, tmp;
-    int             quoted = 0;
+    bool            quoted = false;
     edit_ctx_t      ec = {0};
     const cmd_layer_t edit_layers[] = {
         { edit_cmds, &ec },
@@ -4631,13 +4630,13 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
     currutmp->mode = EDITING;
     currutmp->destunum = currstat;
 
-    mbcs_mode = ISDBCSAWARE() ? 1 : 0;
+    mbcs_mode = ISDBCSAWARE();
 
     enter_edit_buffer();
     curr_buf->flags = flags;
 
     if (*fpath) {
-	int tmp = read_file(fpath, (flags & EDITFLAG_TEXTONLY) ? 1 : 0);
+	int tmp = read_file(fpath, (flags & EDITFLAG_TEXTONLY) != 0);
 
 	if (tmp < 0) {
 	    // Undo enter_edit_buffer(), the mode and a pending quote: left
@@ -4653,7 +4652,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
     if (*quote_file) {
 	do_quote();
 	*quote_file = '\0';
-	quoted = 1;
+	quoted = true;
     }
 
     if (curr_buf->oldcurrline != curr_buf->firstline ||
@@ -4681,7 +4680,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 
 	if (curr_buf->redraw_everything || has_block_selection()) {
 	    refresh_window();
-	    curr_buf->redraw_everything = NA;
+	    curr_buf->redraw_everything = false;
 	}
 	if (curr_buf->oldcurrline != curr_buf->currline) {
 	    if (curr_buf->oldcurrline != NULL &&
@@ -4693,7 +4692,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	if (curr_buf->ansimode)
 	    ch = n2ansi(curr_buf->currpnt, curr_buf->currline);
 	else
-	    ch = line_pos_to_col(curr_buf->currline, curr_buf->currpnt, 0) -
+	    ch = line_pos_to_col(curr_buf->currline, curr_buf->currpnt, false) -
 		 curr_buf->edit_margin;
 	move(curr_buf->curr_window_line, ch);
 
@@ -4776,7 +4775,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	if (!curr_buf->redraw_everything) {
 	    if (curr_buf->edit_margin != curr_buf->last_margin) {
 		curr_buf->last_margin = curr_buf->edit_margin;
-		curr_buf->redraw_everything = YEA;
+		curr_buf->redraw_everything = true;
 	    } else {
 		move(curr_buf->curr_window_line, 0);
 		clrtoeol();
@@ -4787,9 +4786,9 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 		    int attr = EOATTR_NORMAL;
 		    attr |= detect_attr(curr_buf->currline->data, curr_buf->currline->len);
 		    if (curr_buf->edit_margin > 0) {
-			int pos = line_col_to_pos(curr_buf->currline, curr_buf->edit_margin, 0);
+			int pos = line_col_to_pos(curr_buf->currline, curr_buf->edit_margin, false);
 			if (pos < curr_buf->currline->len) {
-			    int col = line_pos_to_col(curr_buf->currline, pos, 0);
+			    int col = line_pos_to_col(curr_buf->currline, pos, false);
 			    const char *pdata = curr_buf->currline->data + pos;
 			    if (col < curr_buf->edit_margin) {
 				outs(ANSI_COLOR(1) "<" ANSI_RESET);

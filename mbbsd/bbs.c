@@ -2304,7 +2304,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	save_currboard = currboard;
 	currboard = xboard;
-	write_header(xptr, xfile.title, 0);
+	write_header(xptr, xfile.title, false);
 	currboard = save_currboard;
 
 	if (!IS_OPENBRD(bp))
