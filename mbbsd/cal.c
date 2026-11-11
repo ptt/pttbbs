@@ -487,6 +487,29 @@ give_money_ui_list(struct Vector *namelist)
     // edit, so it can't be edited out; the alert is sent in the region.
     char edit_fpath[PATHLEN] = "";
 
+    // 實際給予金錢：一律先扣發錢者總額，再逐一發給收款人
+    int paid;
+    if (valid_count == 1) {
+        if (strcasecmp(myid, cuser.userid) != 0)
+            paid = pay_if_enough(m, "以 %s 的名義轉帳給 %s (稅後 $%d)", myid, first_valid_id, m - mtax);
+        else
+            paid = pay_if_enough(m, "轉帳給 %s (稅後 $%d)", first_valid_id, m - mtax);
+    } else {
+        paid = pay_if_enough((int)total_cost, "多人紅包給 %s 等 %d 人 (每人稅後 $%d, 詳見信箱明細)",
+            first_valid_id, valid_count, m - mtax);
+    }
+
+    if (paid < 0) {
+        // Lost the race: another session spent the balance first. Abort
+        // before opening the receipt or money log, so nothing is written
+        // (and no receipt is filed) for a transfer that never happened.
+        free(uids);
+        restore_abort_signals(&old_set);
+        outs(ANSI_COLOR(1;31) "錢不夠了，交易失敗！" ANSI_RESET "\n");
+        vmsg("錢不夠了，交易失敗。");
+        return -1;
+    }
+
     FILE *fp_money = fopen(FN_MONEY, "a");
     FILE *fp_receipt = NULL;
     if (count > 1) {
@@ -517,17 +540,6 @@ give_money_ui_list(struct Vector *namelist)
             sethomedir(dirent, cuser.userid);
             append_fileheader(dirent, &receipt_fhdr);
         }
-    }
-
-    // 實際給予金錢：一律先扣發錢者總額，再逐一發給收款人
-    if (valid_count == 1) {
-        if (strcasecmp(myid, cuser.userid) != 0)
-            pay(m, "以 %s 的名義轉帳給 %s (稅後 $%d)", myid, first_valid_id, m - mtax);
-        else
-            pay(m, "轉帳給 %s (稅後 $%d)", first_valid_id, m - mtax);
-    } else {
-        pay((int)total_cost, "多人紅包給 %s 等 %d 人 (每人稅後 $%d, 詳見信箱明細)",
-            first_valid_id, valid_count, m - mtax);
     }
 
     for (i = 0; i < count; i++) {
