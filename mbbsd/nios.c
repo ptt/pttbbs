@@ -237,8 +237,12 @@ cin_poll_fds(int fd1, int fd2, int ipc_fd, int timeout)
     STATINC(STAT_SYSSELECT);
 #endif
     int r;
+    sigset_t wait_mask;
+    int unblocked = timeout != 0 && ABORT_BLOCK_WAIT_BEGIN(&wait_mask);
     while ( 0 > (r = poll(fds, nfds, timeout)) &&
             errno == EINTR);
+    if (unblocked)
+        abort_block_wait_end(&wait_mask);
     assert(r >= 0);
     if (r <= 0)
         return r;

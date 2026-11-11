@@ -242,36 +242,44 @@ abort_bbs(int sig GCC_UNUSED)
 static const char *abort_block_file;	/* where the outermost region began */
 static int abort_block_line;
 static int abort_block_logged;		/* its violation is in the log */
+static sigset_t abort_block_outer_mask;	/* the signal mask before it */
+
+/* What block_abort_signals() blocks: the signals that run abort_bbs() and
+ * SIGXCPU (the CPU limit). */
+static const int abort_signals[] = {
+    SIGHUP, SIGPIPE, SIGTERM,
+#ifdef SIGXCPU
+    SIGXCPU,
+#endif
+};
 
 /* Block the signals that kill a session mid-way -- SIGHUP (hangup, or being
  * kicked by another login), SIGPIPE (a flush to a dead socket) and SIGTERM,
  * which run abort_bbs(), and SIGXCPU (the CPU limit) -- so a money/record
- * critical section completes instead of being torn: the session exit()s
- * with no unwinding. Pair with restore_abort_signals(). SIGALRM is left
- * alone; it only aborts during login, so don't use this there. The region
- * must contain no tty read: input EOF calls abort_bbs() directly, which no
- * mask stops, and a prompt on a half-open connection would wait with SIGHUP
- * masked. Both input backends check this wherever they read or wait for
- * input (CHECK_NOT_IN_ABORT_BLOCK in vk_byte(), vkey_poll_ex(),
- * vkey_prefetch(), vkey_is_ready() and vkey_purge(), through which every
- * tty read passes; pmore's movie playback, under more(), also waits on the
- * tty with a select() of its own); see abort_block_violation(). */
+ * critical section completes instead of being torn: the session exit()s with
+ * no unwinding. Pair with restore_abort_signals(). SIGALRM is left alone; it
+ * only aborts during login, so don't use this there. The region must contain
+ * no tty read: input EOF calls abort_bbs() directly, which no mask stops, and
+ * a prompt that nobody answers (the user logged in elsewhere, a half-open
+ * connection) would wait with SIGHUP masked, so the session couldn't be
+ * kicked. Both input backends check this wherever they read or wait for input
+ * (CHECK_NOT_IN_ABORT_BLOCK in vk_byte(), vkey_poll_ex(), vkey_prefetch(),
+ * vkey_is_ready() and vkey_purge(), through which every tty read passes;
+ * pmore's movie playback, under more(), also waits on the tty with a select()
+ * of its own, checked there too); see abort_block_violation(). */
 void TSA_NO_ANALYSIS
 block_abort_signals_at(sigset_t *oldset, const char *file, int line)
 {
     sigset_t set;
     sigemptyset(&set);
-    sigaddset(&set, SIGHUP);
-    sigaddset(&set, SIGPIPE);
-    sigaddset(&set, SIGTERM);
-#ifdef SIGXCPU
-    sigaddset(&set, SIGXCPU);
-#endif
+    for (size_t i = 0; i < ARRAY_SIZE(abort_signals); i++)
+	sigaddset(&set, abort_signals[i]);
     sigprocmask(SIG_BLOCK, &set, oldset);
     if (abort_block_depth++ == 0) {
 	abort_block_file = file;
 	abort_block_line = line;
 	abort_block_logged = 0;
+	abort_block_outer_mask = *oldset;
     }
 }
 
@@ -291,9 +299,9 @@ restore_abort_signals_at(const sigset_t *oldset, const char *file, int line)
 /* The block_abort_signals() rules were broken. Log where, and where the
  * region began -- once per region and a few times per session, so one doesn't
  * hide the next. A test build (DEBUG_ABORT_BLOCK) then aborts, so the bug
- * can't be missed; production carries on rather than abort half-way through
- * the very region the rules protect (on a healthy connection the read just
- * works). */
+ * can't be missed. Production carries on rather than abort half-way through
+ * the region; should it then wait for input, the backend lets the abort
+ * signals through for the wait (abort_block_wait_begin()). */
 void
 abort_block_violation(const char *what, const char *file, int line)
 {
@@ -316,6 +324,33 @@ abort_block_violation(const char *what, const char *file, int line)
 #ifdef DEBUG_ABORT_BLOCK
     abort();
 #endif
+}
+
+/* A region that broke the rules is about to wait for input (production goes
+ * on, see above): let the abort signals through for the wait, so a kick or
+ * a shutdown can still end the session, if the key never comes. Only the
+ * abort signals, and only those the outermost region found unblocked; any
+ * other signal is left as it is. Returns whether it did, with the mask to
+ * put back after the wait in saved (abort_block_wait_end()), which blocks
+ * them again for the rest of the region. */
+int
+abort_block_wait_begin(sigset_t *saved)
+{
+    if (abort_block_depth <= 0)
+	return 0;
+    sigset_t set;
+    sigemptyset(&set);
+    for (size_t i = 0; i < ARRAY_SIZE(abort_signals); i++)
+	if (!sigismember(&abort_block_outer_mask, abort_signals[i]))
+	    sigaddset(&set, abort_signals[i]);
+    sigprocmask(SIG_UNBLOCK, &set, saved);
+    return 1;
+}
+
+void
+abort_block_wait_end(const sigset_t *saved)
+{
+    sigprocmask(SIG_SETMASK, saved, NULL);
 }
 
 #ifdef GCC_NORETURN

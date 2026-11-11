@@ -588,9 +588,9 @@ void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
 void abort_bbs(int sig) GCC_NORETURN;
 void block_abort_signals_at(sigset_t *oldset, const char *file, int line)
-    TSA_ACQUIRE(abort_block);
+    GCC_NONNULL(1) TSA_ACQUIRE(abort_block);
 void restore_abort_signals_at(const sigset_t *oldset, const char *file, int line)
-    TSA_RELEASE(abort_block);
+    GCC_NONNULL(1) TSA_RELEASE(abort_block);
 /* The caller's file and line go into the abort_block log. */
 #define block_abort_signals(oldset) \
     block_abort_signals_at((oldset), __FILE__, __LINE__)
@@ -599,6 +599,12 @@ void restore_abort_signals_at(const sigset_t *oldset, const char *file, int line
 /* No key may be read, or waited for, inside a block_abort_signals() region
  * (see there). Placed where the input backends read or wait for input. */
 void abort_block_violation(const char *what, const char *file, int line);
+int abort_block_wait_begin(sigset_t *saved) GCC_NONNULL(1);
+void abort_block_wait_end(const sigset_t *saved) GCC_NONNULL(1);
+/* Before a wait for input that may block, in the backends: a region that
+ * broke the rules lets a kick through while it waits. */
+#define ABORT_BLOCK_WAIT_BEGIN(saved) \
+    (abort_block_depth > 0 && abort_block_wait_begin(saved))
 #define CHECK_NOT_IN_ABORT_BLOCK() do { \
 	if (abort_block_depth) \
 	    abort_block_violation("input", __FILE__, __LINE__); \

@@ -6,11 +6,13 @@
 #define GCC_NORETURN          __attribute__ ((__noreturn__))
 #define GCC_UNUSED            __attribute__ ((__unused__))
 #define GCC_WEAK              __attribute__ ((weak))
+#define GCC_NONNULL(...)      __attribute__ ((__nonnull__ (__VA_ARGS__)))
 #else
 #define GCC_CHECK_FORMAT(a,b)
 #define GCC_NORETURN
 #define GCC_UNUSED
 #define GCC_WEAK
+#define GCC_NONNULL(...)
 #endif
 
 #include "thread_safety_analysis.h"
