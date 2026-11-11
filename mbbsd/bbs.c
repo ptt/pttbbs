@@ -195,33 +195,6 @@ static int currlistmode = LISTMODE_DATE;
 	(currlistmode == LISTMODE_MONEY || \
 	 ((currmode & MODE_SELECT) && (currsrmode & RS_MONEY)))
 
-void
-anticrosspost(void)
-{
-    // probably failure here.
-    if (HasUserPerm(PERM_ADMIN | PERM_MANAGER)) {
-        vmsg("系統可能誤判您 CP, 為避免出錯先行斷線");
-        exit(0);
-    }
-
-    log_filef("etc/illegal_money",
-             ANSI_COLOR(1;33;46) "%s "
-             ANSI_COLOR(37;45) "cross post 文章"
-             ANSI_RESET "\n",
-             cuser.userid);
-
-    post_violatelaw(cuser.userid, BBSMNAME "系統警察",
-                    "Cross-post", "罰單處份");
-    pwcuViolateLaw();
-    mail_send_file(cuser.userid, "Cross-Post罰單",
-	    "etc/crosspost.txt", BBSMNAME "警察部隊");
-    // Delete all references from BN_ALLPOST, if available.
-    delete_allpost(cuser.userid);
-    kick_all(cuser.userid); // XXX: in2: wait for testing
-    u_exit("Cross Post");
-    exit(0);
-}
-
 /* Heat CharlieL */
 int
 save_violatelaw(void)

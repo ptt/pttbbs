@@ -99,22 +99,23 @@ content_alert(const content_verdict_t *v, const char *text)
                  v->details[0] ? v->details : text, FN_CONTENT_ALERT);
 }
 
-// A ban: suspended, posted with the details, mailed to the user, and all
-// sessions kicked.
+// A ban: a ticket (罰單) as police give, posted with the details, mailed
+// to the user, and all sessions kicked. With a ticket the user can still
+// read the mail, appeal and change settings, and pays it to get back.
 static void
 content_ban(const content_verdict_t *v)
 {
     const char *memo = v->details[0] ? v->details : NULL;
     char reason[sizeof(v->reason) + sizeof(v->details) + 8];
 
-    // Take PERM_BASIC as well, or they cannot tell what happened.
-    pwcuBitDisableLevel(PERM_BASIC | PERM_POST);
-    post_violatelaw2(cuser.userid, CONTENT_POLICE, v->reason, "停權", memo);
+    pwcuViolateLaw();
+    post_violatelaw2(cuser.userid, CONTENT_POLICE, v->reason, "罰單處分",
+                     memo);
     if (memo)
         snprintf(reason, sizeof(reason), "%s\n %s\n", v->reason, memo);
     else
         strlcpy(reason, v->reason, sizeof(reason));
-    mail_violatelaw(cuser.userid, CONTENT_POLICE, reason, "停權");
+    mail_violatelaw(cuser.userid, CONTENT_POLICE, reason, "罰單處分");
     kick_all(cuser.userid);
 }
 

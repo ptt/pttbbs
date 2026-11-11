@@ -411,7 +411,6 @@ main(/*int argc, char **argv*/)
 
 	keeplog("etc/today", BN_RECORD, "上站人次統計", NULL);
 	keeplog(FN_MONEY, BN_SECURITY, "本日金錢往來記錄", NULL);
-	keeplog("etc/illegal_money", BN_SECURITY, "本日違法賺錢記錄", NULL);
 	keeplog("etc/osong.log", BN_SECURITY, "本日點歌記錄", NULL);
 	keeplog("etc/chicken", BN_RECORD, "雞場報告", NULL);
 

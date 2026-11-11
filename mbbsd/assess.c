@@ -60,21 +60,8 @@ apply_badpost(const char *userid, const fileheader_t *fhdr,
     if (fhdr && strlen(genbuf) < 64)
         strncat(genbuf, fhdr->title, 64 - strlen(genbuf));
 
-
-    if (!(inc_badpost(userid, 1) % 5)){
-	userec_t xuser;
-	post_violatelaw(userid, BBSMNAME "系統警察",
-		"退文累計 5 篇", "罰單一張");
-	mail_violatelaw(userid, BBSMNAME "系統警察",
-		"退文累計 5 篇", "罰單一張");
-	kick_all(userid);
-	passwd_sync_query(tusernum, &xuser);
-	xuser.money = moneyof(tusernum);
-	xuser.vl_count++;
-	xuser.userlevel |= PERM_VIOLATELAW;
-	xuser.timeviolatelaw = now;
-	passwd_sync_update(tusernum, &xuser);
-    }
+    // Only police or the system give tickets, not a count of bad posts.
+    inc_badpost(userid, 1);
 
     file_appendf(newpath, STR_POST_MARK "BadPost Reason: %s\n", reason);
 

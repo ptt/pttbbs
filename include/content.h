@@ -25,7 +25,7 @@
 //   <allow|deny> <ui> <penalty> <report> <reporter> <reason>\n
 //   [<details>]
 //     ui       none (silently) | alert (the content alert screen)
-//     penalty  none | ban (suspends PERM_BASIC and PERM_POST, posted to
+//     penalty  none | ban (a ticket, PERM_VIOLATELAW, posted to
 //              BN_VIOLATELAW, mailed, and kicked). Temporary mutes are kept
 //              by the service, which denies everything until they expire.
 //     report   "report": report the file (posts, mails) to BN_POLICELOG;
