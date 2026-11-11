@@ -57,8 +57,8 @@ PTT_LDFLAGS:=	-Wl,--as-needed
 ifeq ($(CLANG),1)
 PTT_CFLAGS+=	-Qunused-arguments -Wno-parentheses-equality \
 		-fcolor-diagnostics -Wno-invalid-source-encoding \
-		-Werror
-PTT_CXXFLAGS+=	-Wno-invalid-source-encoding
+		-Wthread-safety -Werror
+PTT_CXXFLAGS+=	-Wno-invalid-source-encoding -Wthread-safety
 else
 PTT_CFLAGS+=	-Wno-format-truncation \
                 -Wno-incompatible-pointer-types \
