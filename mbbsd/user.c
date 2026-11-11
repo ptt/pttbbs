@@ -370,36 +370,6 @@ user_display(const userec_t * u, int adminmode)
 }
 
 void
-mail_violatelaw(const char *crime, const char *police, const char *reason, const char *result)
-{
-    char            genbuf[200];
-    fileheader_t    fhdr;
-    FILE           *fp;
-
-    sendalert(crime,  ALERT_PWD_PERM);
-
-    sethomepath(genbuf, crime);
-    stampfile(genbuf, &fhdr);
-    if (!(fp = fopen(genbuf, "w")))
-	return;
-    fprintf(fp, "作者: [" BBSMNAME "警察局]\n"
-	    "標題: [報告] 違法報告\n"
-	    "時間: %s\n", ctime4(&now));
-    fprintf(fp,
-	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n     " ANSI_COLOR(1;32) "%s" ANSI_RESET
-	    "因" ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
-	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此通知\n\n"
-	    "請到 " BN_LAW " 查詢相關法規資訊，並從主選單進入:\n"
-	    "(P)lay【娛樂與休閒】=>(P)ay【" BBSMNAME2 "量販店 】=> (1)ViolateLaw 繳罰單\n"
-	    "以繳交罰單。\n",
-	    police, crime, reason, result);
-    fclose(fp);
-    strcpy(fhdr.title, "[報告] 違法判決報告");
-    STRLCPY(fhdr.owner, "[" BBSMNAME "警察局]");
-    append_fileheader(TEMP_HOMEDIR(crime), &fhdr);
-}
-
-void
 kick_all(const char *user)
 {
    userinfo_t *ui;
@@ -416,36 +386,55 @@ kick_all(const char *user)
 void
 violate_law(userec_t * u, int unum)
 {
+    // The reasons of tickets, whether the posts in BN_ALLPOST are deleted
+    // by default, and whether to ask who reported it.
+    static const struct {
+        const char *reason;
+        bool allpost, ask;
+    } tickets[] = {
+        { "Cross-post", true, false },
+        { "亂發廣告信", true, false },
+        { "亂發連鎖信", false, false },
+        { "騷擾站上使用者", false, true },
+    };
     char            ans[4], ans2[4];
     char            reason[128];
+    bool            allpost = false;
+    int             i;
+
     move(1, 0);
     clrtobot();
     move(2, 0);
-    outs("(1)Cross-post (2)亂發廣告信 (3)亂發連鎖信\n");
-    outs("(4)騷擾站上使用者 (8)其他以罰單處置行為\n(9)砍 id 行為\n");
+    for (i = 0; i < (int)ARRAY_SIZE(tickets); i++)
+        prints("(%d)%s ", i + 1, tickets[i].reason);
+    outs("\n(8)其他以罰單處置行為 (9)砍 id 行為\n");
     getdata(5, 0, "(0)結束", ans, 3, DOECHO);
-    switch (ans[0]) {
-    case '1':
-	STRLCPY(reason, "Cross-post");
-	break;
-    case '2':
-	strcpy(reason, "亂發廣告信");
-	break;
-    case '3':
-	strcpy(reason, "亂發連鎖信");
-	break;
-    case '4':
-	while (!getdata(7, 0, "請輸入被檢舉理由以示負責：", reason, 50, DOECHO));
-	strcat(reason, "[騷擾站上使用者]");
-	break;
-    case '8':
-    case '9':
-	while (!getdata(6, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
-	break;
-    default:
-	return;
+    i = ans[0] - '1';
+    if (i >= 0 && i < (int)ARRAY_SIZE(tickets)) {
+        if (tickets[i].ask) {
+            while (!getdata(7, 0, "請輸入被檢舉理由以示負責：", reason, 50,
+                            DOECHO));
+            strlcat(reason, "[", sizeof(reason));
+            strlcat(reason, tickets[i].reason, sizeof(reason));
+            strlcat(reason, "]", sizeof(reason));
+        } else {
+            strlcpy(reason, tickets[i].reason, sizeof(reason));
+        }
+        allpost = tickets[i].allpost;
+    } else if (ans[0] == '8' || ans[0] == '9') {
+        while (!getdata(7, 0, "請輸入理由以示負責：", reason, 50, DOECHO));
+    } else {
+        return;
     }
-    getdata(7, 0, MSG_SURE_NY, ans2, 3, LCECHO);
+    // Deleting the account deletes the posts anyway.
+    if (ans[0] != '9') {
+        getdata(8, 0, allpost ? "刪除此使用者在 " BN_ALLPOST " 的文章? [Y/n] " :
+                                "刪除此使用者在 " BN_ALLPOST " 的文章? [y/N] ",
+                ans2, 3, LCECHO);
+        if (ans2[0])
+            allpost = (ans2[0] == 'y');
+    }
+    getdata(9, 0, MSG_SURE_NY, ans2, 3, LCECHO);
     if (*ans2 != 'y')
 	return;
     if (ans[0] == '9') {
@@ -459,17 +448,11 @@ violate_law(userec_t * u, int unum)
 	delete_allpost(u->userid);
         ban_usermail(u, reason);
         kill_user(unum, u->userid);
-	post_violatelaw(u->userid, cuser.userid, reason, "砍除 ID");
+	violatelaw_post(u->userid, NULL, reason, "砍除 ID", NULL);
     } else {
-        kick_all(u->userid);
-	u->userlevel |= PERM_VIOLATELAW;
-	u->timeviolatelaw = now;
-	u->vl_count++;
-	passwd_sync_update(unum, u);
-        if (*ans == '1' || *ans == '2')
+	violatelaw_ticket(u->userid, NULL, reason, NULL);
+        if (allpost)
             delete_allpost(u->userid);
-	post_violatelaw(u->userid, cuser.userid, reason, "罰單處分");
-	mail_violatelaw(u->userid, "站務警察", reason, "罰單處分");
     }
     pressanykey();
 }

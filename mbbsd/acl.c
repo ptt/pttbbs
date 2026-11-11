@@ -570,7 +570,7 @@ modlog_strip(char *s)
 
 // The public modlog never shows accounts, only the role of who did it.
 // Police doing police work are shown as MODLOG_POLICE_NAME, the same as
-// post_violatelaw2() shows in public, also in the audit record: who it was
+// violatelaw_post() shows in public, also in the audit record: who it was
 // is recorded in BN_POLICELOG.
 #define MODLOG_POLICE_NAME "¯¸°ÈÄµ¹î"
 

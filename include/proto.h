@@ -132,7 +132,6 @@ int whereami(void);
 void set_board(void);
 int do_post(int edflags);
 int ReadSelect(void);
-int save_violatelaw(void);
 int board_select(void);
 int board_digest(void);
 int does_board_have_bm(const boardheader_t *bp);
@@ -920,8 +919,9 @@ int post_msg2(const char* bname, const char* title, const char *msg,
               const char* author, char *output_path);
 int post_file(const char *bname, const char *title, const char *filename, const char *author);
 void post_newboard(const char *bgroup, const char *bname, const char *bms);
-void post_violatelaw(const char *crime, const char *police, const char *reason, const char *result);
-void post_violatelaw2(const char *crime, const char *police, const char *reason, const char *result, const char *memo);
+void violatelaw_post(const char *userid, const char *police, const char *reason, const char *result, const char *memo);
+int violatelaw_ticket(const char *userid, const char *police, const char *reason, const char *memo);
+int save_violatelaw(void);
 void post_change_perm(int oldperm, int newperm, const char *sysopid, const char *userid);
 void post_auto_enable_perm(const char *userid, int perm_bit, const char *brdname);
 void post_policelog(const char *bname, const char *atitle, const char *action,
@@ -1012,7 +1012,6 @@ int showsignature(char *fname, int *j, SigInfo *psi);
 int u_cancelbadpost(void);
 void kick_all(const char *user);
 void violate_law(userec_t * u, int unum);
-void mail_violatelaw(const char* crime, const char* police, const char* reason, const char* result);
 int u_info(void);
 int reauth_password_and_2fa(const char *nochange);
 void showplans(const char *uid);

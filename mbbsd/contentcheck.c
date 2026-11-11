@@ -105,18 +105,8 @@ content_alert(const content_verdict_t *v, const char *text)
 static void
 content_ban(const content_verdict_t *v)
 {
-    const char *memo = v->details[0] ? v->details : NULL;
-    char reason[sizeof(v->reason) + sizeof(v->details) + 8];
-
-    pwcuViolateLaw();
-    post_violatelaw2(cuser.userid, CONTENT_POLICE, v->reason, "罰單處分",
-                     memo);
-    if (memo)
-        snprintf(reason, sizeof(reason), "%s\n %s\n", v->reason, memo);
-    else
-        strlcpy(reason, v->reason, sizeof(reason));
-    mail_violatelaw(cuser.userid, CONTENT_POLICE, reason, "罰單處分");
-    kick_all(cuser.userid);
+    violatelaw_ticket(cuser.userid, CONTENT_POLICE, v->reason,
+                      v->details[0] ? v->details : NULL);
 }
 
 int

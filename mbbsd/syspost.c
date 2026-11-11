@@ -122,40 +122,174 @@ post_auto_enable_perm(const char *userid, int perm_bit, const char *brdname)
     log_user_security(userid, "[AutoPerm] Enabled %s on board %s\n", perm_name, brdname ? brdname : "");
 }
 
-void
-post_violatelaw(const char *crime, const char *police, const char *reason, const
-                char *result) {
-    return post_violatelaw2(crime, police, reason, result, "");
-}
+// Penalties (違規處分) are announced in ViolateLaw and mailed. police is who
+// gives them: NULL for the current user (police or SYSOP), shown as
+// VIOLATELAW_POLICE and with the account in BN_POLICELOG, or the name of a
+// system check (e.g. BBSMNAME " 系統警察"), shown as it is.
+#define VIOLATELAW_POLICE "站務警察"
 
+// Posts that userid gets the penalty result for reason, with memo (may be
+// NULL) below.
 void
-post_violatelaw2(const char *crime, const char *police, const char *reason, const
-                char *result, const char *memo)
+violatelaw_post(const char *userid, const char *police, const char *reason,
+                const char *result, const char *memo)
 {
-    AUTO_STR(title, "[報告] %s:%-*s 判決", crime,
-	    (int)(30 - stream_width(crime)), reason);
+    AUTO_STR(title, "[報告] %s:%-*s 判決", userid,
+	    (int)(30 - stream_width(userid)), reason);
+
+    if (!police) {
+	AUTO_STR(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
+		"     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
+                ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
+		"違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
+                "，特此公告\n\n\n%s\n",
+		cuser.userid, userid, reason, result, memo ? memo : "");
+	post_msg(BN_POLICELOG, title, msg, "[" BBSMNAME "法院]");
+	police = VIOLATELAW_POLICE;
+    }
 
     AUTO_STR(msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
 	    "     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
             ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
 	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
             "，特此公告\n\n\n%s\n",
-	    police, crime, reason, result, memo ? memo : "");
+	    police, userid, reason, result, memo ? memo : "");
+    post_msg("ViolateLaw", title, msg, "[" BBSMNAME "法院]");
+}
 
-    if (!mbs_strstr(police, "警察")) {
-	post_msg(BN_POLICELOG, title, msg, "[" BBSMNAME "法院]");
+#define VIOLATELAW_MAIL_FROM  "[" BBSMNAME "警察局]"
+#define VIOLATELAW_MAIL_TITLE "[報告] 違法判決報告"
 
-	AUTO_STR(police_msg, ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n"
-		"     " ANSI_COLOR(1;32) "%s" ANSI_RESET "因"
-                ANSI_COLOR(1;35) "%s" ANSI_RESET "行為，\n"
-		"違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET
-                "，特此公告\n\n\n%s\n",
-		"站務警察", crime, reason, result, memo ? memo : "");
-	post_msg("ViolateLaw", title, police_msg, "[" BBSMNAME "法院]");
-	return;
+// Mails userid the penalty result, with how to pay the ticket.
+static void
+violatelaw_mail(const char *userid, const char *police, const char *reason,
+                const char *result, const char *memo)
+{
+    if (!police)
+	police = VIOLATELAW_POLICE;
+    // The permissions changed.
+    sendalert(userid,  ALERT_PWD_PERM);
+
+    // The usual header (ctime4() ends with a new line), then the verdict.
+    AUTO_STR(msg, "作者: " VIOLATELAW_MAIL_FROM "\n"
+	    "標題: " VIOLATELAW_MAIL_TITLE "\n"
+	    "時間: %s\n"
+	    ANSI_COLOR(1;32) "%s" ANSI_RESET "判決：\n     " ANSI_COLOR(1;32) "%s" ANSI_RESET
+	    "因" ANSI_COLOR(1;35) "%s%s%s%s" ANSI_RESET "行為，\n"
+	    "違反本站站規，處以" ANSI_COLOR(1;35) "%s" ANSI_RESET "，特此通知\n\n"
+	    "請到 " BN_LAW " 查詢相關法規資訊，並從主選單進入:\n"
+	    "(P)lay【娛樂與休閒】=>(P)ay【" BBSMNAME2 "量販店 】=> (1)ViolateLaw 繳罰單\n"
+	    "以繳交罰單。\n",
+	    ctime4(&now), police, userid, reason, memo ? "\n " : "",
+	    memo ? memo : "", memo ? "\n" : "", result);
+    save_mailbox(VIOLATELAW_MAIL_FROM, userid, VIOLATELAW_MAIL_TITLE, msg,
+                 NULL, 0, MAILSEND_FLAG_NONE, NULL);
+}
+
+// Gives userid a ticket (罰單) for reason: PERM_VIOLATELAW until it is paid
+// (see save_violatelaw()), posted, mailed, and all sessions kicked.
+// Returns 0, or -1 if there is no such user.
+int
+violatelaw_ticket(const char *userid, const char *police, const char *reason,
+                  const char *memo)
+{
+    const char *result = "罰單處分";
+    int uid = searchuser(userid, NULL);
+
+    if (uid <= 0)
+	return -1;
+    if (uid == usernum) {
+	pwcuViolateLaw();
+	violatelaw_post(userid, police, reason, result, memo);
+	violatelaw_mail(userid, police, reason, result, memo);
+	kick_all(userid);
+	return 0;
     }
 
-    post_msg("ViolateLaw", title, msg, "[" BBSMNAME "法院]");
+    // Kicked first, as their sessions could save the record over it.
+    userec_t u;
+    kick_all(userid);
+    if (passwd_sync_query(uid, &u) != 0)
+	return -1;
+    u.userlevel |= PERM_VIOLATELAW;
+    u.timeviolatelaw = now;
+    u.vl_count++;
+    passwd_sync_update(uid, &u);
+    violatelaw_post(userid, police, reason, result, memo);
+    violatelaw_mail(userid, police, reason, result, memo);
+    return 0;
+}
+
+// Pays the ticket (罰單) given by violatelaw_ticket(), after waiting 3 days
+// for each ticket ever given, with 1000 for each. (Heat CharlieL)
+int
+save_violatelaw(void)
+{
+    char            ok[3];
+    int             day;
+
+    setutmpmode(VIOLATELAW);
+    clear();
+    vs_hdr("繳罰單中心");
+
+    // XXX reload lots of stuff here?
+    pwcuReload();
+    if (!(cuser.userlevel & PERM_VIOLATELAW)) {
+	vmsg("你沒有被開罰單。");
+	return 0;
+    }
+
+    day =  cuser.vl_count*3 - time4_days_elapsed(now, cuser.timeviolatelaw);
+    if (day > 0) {
+        vmsgf("依照違規次數(%d), 你還需要 %d 天才能繳罰單",
+              cuser.vl_count, day);
+	return 0;
+    }
+    reload_money();
+    if (cuser.money < (int)cuser.vl_count * 1000) {
+	mvouts(22, 0, TEMPFORMAT(128, ANSI_COLOR(1;31) "這是你第 %d 次違反本站法規"
+                 "必須繳出 %d " MONEYNAME "；但你目前只有 %d ，數量不足!!"
+                 ANSI_RESET, (int)cuser.vl_count, (int)cuser.vl_count * 1000,
+                 cuser.money));
+	pressanykey();
+	return 0;
+    }
+    move(5, 0);
+    prints("這是你第 %d 次違法 必須繳出 %d " MONEYNAME "\n\n",
+	    cuser.vl_count, cuser.vl_count * 1000);
+    outs(ANSI_COLOR(1;37) "你是否確定以後不會再犯了？" ANSI_RESET "\n");
+
+    if (!getdata(10, 0, "確定嗎？[y/N]:", ok, sizeof(ok), LCECHO) ||
+	ok[0] != 'y')
+    {
+	move(15, 0);
+	outs(ANSI_COLOR(1;31) "不想付嗎？ 還是不知道要按 y ？\n"
+	     "請養成看清楚系統訊息的好習慣。\n" ANSI_RESET);
+	pressanykey();
+	return 0;
+    }
+
+    //Ptt:check one more time
+    reload_money();
+    if (cuser.money < (int)cuser.vl_count * 1000)
+    {
+	log_filef("log/violation",
+		"%s pay-violation error: race-conditionn hack?\n",
+		cuser.userid);
+	vmsg(MONEYNAME "怎麼忽然不夠了？ 試圖欺騙系統被查到將砍帳號！");
+	return 0;
+    }
+
+    pay(1000 * (int)cuser.vl_count, "繳付罰單 (#%d)", cuser.vl_count);
+    pwcuSaveViolateLaw();
+    log_filef("log/violation",
+	    "%s pay-violation: $%d complete.\n",
+	    cuser.userid, (int)cuser.vl_count*1000);
+
+    vmsg("罰單已付，請重新登入。");
+    u_exit("save_violate");
+    exit(0);
+    return 0;
 }
 
 void
