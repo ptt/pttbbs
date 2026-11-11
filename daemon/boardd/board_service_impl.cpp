@@ -99,8 +99,8 @@ Board AsBoard(int bid, const boardheader_t *bp) {
   return b;
 }
 
-Status BoardServiceImpl::Board(ServerContext *context, const BoardRequest *req,
-                               BoardReply *rep) {
+Status BoardServiceImpl::Board(ServerContext * /*context*/,
+                               const BoardRequest *req, BoardReply *rep) {
   for (const auto &ref : req->ref()) {
     int bid;
     const boardheader_t *bp;
@@ -124,8 +124,8 @@ Post AsPost(size_t index, const fileheader_t &fh) {
   return p;
 }
 
-Status BoardServiceImpl::List(ServerContext *context, const ListRequest *req,
-                              ListReply *rep) {
+Status BoardServiceImpl::List(ServerContext * /*context*/,
+                              const ListRequest *req, ListReply *rep) {
   int bid;
   const boardheader_t *bp;
   RETURN_ON_FAIL(ResolveRef(req->ref(), &bid, &bp));
@@ -158,8 +158,8 @@ Status BoardServiceImpl::List(ServerContext *context, const ListRequest *req,
   return Status::OK;
 }
 
-Status BoardServiceImpl::Hotboard(ServerContext *context,
-                                  const HotboardRequest *req,
+Status BoardServiceImpl::Hotboard(ServerContext * /*context*/,
+                                  const HotboardRequest * /*req*/,
                                   HotboardReply *rep) {
   for (int i = 0; i < SHM->hotboards.num; i++) {
     int bid = SHM->hotboards.bids[i] + 1;
@@ -223,7 +223,7 @@ Status DoSelect(const std::string &fn, const std::string &consistency_token,
   return Status::OK;
 }
 
-Status BoardServiceImpl::Content(ServerContext *context,
+Status BoardServiceImpl::Content(ServerContext * /*context*/,
                                  const ContentRequest *req, ContentReply *rep) {
   if (!paths::IsValidFilename(req->filename())) {
     return Status(StatusCode::NOT_FOUND, "invalid filename");
@@ -293,7 +293,7 @@ Status SetPredicate(const SearchFilter &filter, fileheader_predicate_t *pred) {
   return Status::OK;
 }
 
-Status BoardServiceImpl::Search(ServerContext *context,
+Status BoardServiceImpl::Search(ServerContext * /*context*/,
                                 const SearchRequest *req, SearchReply *rep) {
   int bid;
   const boardheader_t *bp;

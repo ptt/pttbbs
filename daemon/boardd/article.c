@@ -102,7 +102,8 @@ find_good_truncate_point_from_end(const char *content, int size)
 }
 
 static int
-select_article_head(const char *data, int len, int *offset, int *size, void *ctx)
+select_article_head(const char *data, int len, int *offset, int *size,
+                    void *ctx GCC_UNUSED)
 {
     *offset = 0;
     *size = find_good_truncate_point_from_begin(data, len);
@@ -110,7 +111,8 @@ select_article_head(const char *data, int len, int *offset, int *size, void *ctx
 }
 
 static int
-select_article_tail(const char *data, int len, int *offset, int *size, void *ctx)
+select_article_tail(const char *data, int len, int *offset, int *size,
+                    void *ctx GCC_UNUSED)
 {
     *offset = find_good_truncate_point_from_end(data, len);
     *size = find_good_truncate_point_from_begin(data + *offset, len - *offset);
@@ -118,7 +120,8 @@ select_article_tail(const char *data, int len, int *offset, int *size, void *ctx
 }
 
 static int
-select_article_part(const char *data, int len, int *offset, int *size, void *ctx)
+select_article_part(const char *data GCC_UNUSED, int len, int *offset,
+                    int *size, void *ctx GCC_UNUSED)
 {
     *offset = 0;
     *size = len;
@@ -126,7 +129,8 @@ select_article_part(const char *data, int len, int *offset, int *size, void *ctx
 }
 
 static void
-cleanup_evbuffer(const void *data, size_t datalen, void *extra)
+cleanup_evbuffer(const void *data GCC_UNUSED, size_t datalen GCC_UNUSED,
+                 void *extra)
 {
     evbuffer_free((struct evbuffer *)extra);
 }
