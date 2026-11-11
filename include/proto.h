@@ -587,6 +587,8 @@ void mkuserdir(const char *userid);
 void log_usies(const char *mode, const char *mesg);
 void system_abort(void);
 void abort_bbs(int sig) GCC_NORETURN;
+void block_abort_signals(sigset_t *oldset);
+void restore_abort_signals(const sigset_t *oldset);
 void u_exit(const char *mode);
 void talk_request(int sig);
 int establish_talk_connection(const userinfo_t *uip);

@@ -239,6 +239,32 @@ abort_bbs(int sig GCC_UNUSED)
     exit(0);
 }
 
+/* Block the signals that reach abort_bbs() -- SIGHUP (hangup), SIGPIPE (a
+ * flush to a dead socket), SIGTERM, SIGXCPU -- so a money/record critical
+ * section completes instead of being torn by a client disconnect, which
+ * exit()s with no unwinding. Pair with restore_abort_signals(). The guarded
+ * region must contain no tty read: a synchronous abort_bbs() from input EOF
+ * is not a signal and bypasses the mask. */
+void
+block_abort_signals(sigset_t *oldset)
+{
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGHUP);
+    sigaddset(&set, SIGPIPE);
+    sigaddset(&set, SIGTERM);
+#ifdef SIGXCPU
+    sigaddset(&set, SIGXCPU);
+#endif
+    sigprocmask(SIG_BLOCK, &set, oldset);
+}
+
+void
+restore_abort_signals(const sigset_t *oldset)
+{
+    sigprocmask(SIG_SETMASK, oldset, NULL);
+}
+
 #ifdef GCC_NORETURN
 static void abort_bbs_debug(int sig) GCC_NORETURN;
 #endif

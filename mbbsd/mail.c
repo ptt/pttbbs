@@ -1246,13 +1246,8 @@ multi_send(const char *title)
 	    return;
 	}
 
-	sigset_t mask_set, old_set;
-	sigemptyset(&mask_set);
-	sigaddset(&mask_set, SIGHUP);
-	sigaddset(&mask_set, SIGPIPE);
-	sigaddset(&mask_set, SIGTERM);
-	sigaddset(&mask_set, SIGXCPU);
-	sigprocmask(SIG_BLOCK, &mask_set, &old_set);
+	sigset_t old_set;
+	block_abort_signals(&old_set);
 
 	struct Vector failed;
 	Vector_init(&failed, IDLEN+1);
@@ -1280,7 +1275,7 @@ multi_send(const char *title)
 	else
 	    vmsg("信件全部未寄出");
 	unlink(fpath);
-	sigprocmask(SIG_SETMASK, &old_set, NULL);
+	restore_abort_signals(&old_set);
 	Vector_delete(&namelist);
     } else {
 	Vector_delete(&namelist);
