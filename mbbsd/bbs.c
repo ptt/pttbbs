@@ -1934,13 +1934,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
                 fee = 0;
             }
         }
-
-        // Check again because of getdata and we hope the code below is fast enough.
-        reload_money();
-        if (fee && cuser.money < fee) {
-            STRLCPY(save_title, fhdr->title);
-            fee = 0;
-        }
     }
 
     oldmt = dasht4(genbuf);
@@ -1972,9 +1965,26 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     fhdr->modified = dasht4(genbuf);
+
+    // Take the fee right before the .DIR change, and only if it is all
+    // there: taken after it with pay(), which stops at zero, a second login
+    // spending the money meanwhile would keep the post's pay. Short now,
+    // the title stays, as when the check before the prompt fails. A kick
+    // can't split the fee from the change, and a failed change gives it
+    // back.
+    sigset_t old_set;
+    block_abort_signals(&old_set);
+    int short_fee = 0;
+    if (fee > 0 &&
+        pay_if_enough(fee, "%s 看板修改此標題扣除稿費: %s", currboard, save_title) < 0) {
+        short_fee = fee;
+        STRLCPY(save_title, fhdr->title);
+        fee = 0;
+    }
     if (fee > 0)
         fhdr->multi.money = 0;
-    if (strcmp(save_title, fhdr->title) != 0) {
+    int retitle = strcmp(save_title, fhdr->title) != 0;
+    if (retitle) {
         LOG_IF(LOG_CONF_EDIT_TITLE,
                log_filef("log/edit_title.log",
                          "%s(E) %s(%s) %s => %s\n",
@@ -1984,13 +1994,24 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     // substitute_ref_record(direct, fhdr, ent);
-    modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified, save_title,
-                    NULL, NULL, 0, &fhdr->multi, 0, 0);
-
-    if (fee > 0) {
-        pay(fee, "%s 看板修改此標題扣除稿費: %s", currboard, save_title);
-        vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
+    int changed = modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified,
+                                  save_title, NULL, NULL, 0, &fhdr->multi,
+                                  0, 0) == 0;
+    if (!changed && fee > 0) {
+        pay(-fee, "%s 看板修改標題失敗，退還扣除的稿費: %s", currboard, save_title);
+        fee = 0;
     }
+    restore_abort_signals(&old_set);
+
+    // The text is saved already; only the new title (and the modified
+    // time) didn't make it into the .DIR.
+    if (!changed && retitle)
+        vmsg("文章已儲存，但標題未能修改，請稍後再試。");
+    if (short_fee)
+        vmsgf("您身上的" MONEYNAME "不夠，修改此標題需扣除全部稿費 %d " MONEYNAME
+              "，標題維持不變。", short_fee);
+    if (fee > 0)
+        vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
 
     // mark my self as "read this file".
     brc_addlist(fhdr->filename, fhdr->modified);
@@ -2795,25 +2816,36 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     if (genbuf[0] != 'y')
         return FULLUPDATE;
 
-    // Check again because of getdata and we hope the code below is fast enough.
-    reload_money();
-    if (fee && cuser.money < fee) {
-        vmsgf("您身上的" MONEYNAME "不夠，修改此標題需扣除全部稿費 %d " MONEYNAME, fee);
-        return FULLUPDATE;
-    }
-
     if (fee > 0)
         tmpfhdr.multi.money = 0;
 
-    if (modify_dir_lite(direct, ent, fhdr->filename, 0, tmpfhdr.title,
-                        tmpfhdr.owner, tmpfhdr.date, 0, &tmpfhdr.multi, 0, 0) != 0) {
+    // Take the fee right before the .DIR change, and only if it is all
+    // there (see edit_post()); a kick can't split the two, and a failed
+    // change gives it back.
+    sigset_t old_set;
+    block_abort_signals(&old_set);
+    int short_fee = 0, changed = 0;
+    if (fee > 0 &&
+        pay_if_enough(fee, "%s 看板修改此標題扣除稿費: %s", currboard, tmpfhdr.title) < 0) {
+        short_fee = 1;
+    } else {
+        changed = modify_dir_lite(direct, ent, fhdr->filename, 0, tmpfhdr.title,
+                                  tmpfhdr.owner, tmpfhdr.date, 0,
+                                  &tmpfhdr.multi, 0, 0) == 0;
+        if (!changed && fee > 0)
+            pay(-fee, "%s 看板修改標題失敗，退還扣除的稿費: %s", currboard, tmpfhdr.title);
+    }
+    restore_abort_signals(&old_set);
+    if (short_fee) {
+        vmsgf("您身上的" MONEYNAME "不夠，修改此標題需扣除全部稿費 %d " MONEYNAME, fee);
+        return FULLUPDATE;
+    }
+    if (!changed) {
         vmsg("抱歉，系統忙碌中，請稍後再試。");
         return FULLUPDATE;
     }
-    if (fee > 0) {
-        pay(fee, "%s 看板修改此標題扣除稿費: %s", currboard, tmpfhdr.title);
+    if (fee > 0)
         vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
-    }
     if (by_mod)
         modlog(currboard, NULL, &log);
     LOG_IF(LOG_CONF_EDIT_TITLE,
