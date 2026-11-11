@@ -3530,11 +3530,20 @@ mail_removed_post(const char *author, const char *bname, const char *title,
 
     if (!author || !*author)
         return -1;
-    snprintf(subject, sizeof(subject), "文章被移除: %s", title);
+    snprintf(subject, sizeof(subject), "移除文章: %s", title);
     mbs_safe_trim(subject);
-    AUTO_STR(msg, "你在 %s 的發文已被移除%s%s\n原文如下：\n\n", bname,
+    // The usual header (ctime4() ends with a new line), then the post.
+    // With bad posts, tell that this is not one: those are mailed by
+    // apply_badpost().
+    syncnow();
+    AUTO_STR(msg, "作者: [系統] 看板: %s\n標題: %s\n時間: %s\n"
+             "你在 %s 的發文已被移除%s%s\n%s原文如下：\n\n", bname, subject,
+             ctime4(&now), bname,
              reason && *reason ? "，原因：" : "。",
-             reason && *reason ? reason : "");
+             reason && *reason ? reason : "",
+             IS_ENABLED(CONFIG_ASSESS) ?
+             "注意這並不是退文只是基於著作權將原信交還，"
+             "您的發文資格並不受影響\n" : "");
     if (save_mailbox("[系統]", author, subject, msg, path, 0,
                      MAILSEND_FLAG_NONE, NULL) != MAILSEND_OK)
         return -1;
@@ -3735,6 +3744,24 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             // a exploit by race condition.
         }
 
+        // The post to mail to the author, copied before deleting adds who
+        // removed it.
+        char mailpath[PATHLEN] = "";
+        if (by_mod && tusernum > 0 && !as_badpost) {
+            int fd;
+            setuserfile(mailpath, "removed_XXXXXX");
+            if ((fd = mkstemp(mailpath)) < 0) {
+                mailpath[0] = '\0';
+            } else {
+                close(fd);
+                AUTO_DIRPATH(src, direct, fhdr->filename);
+                if (Copy(src, mailpath) < 0) {
+                    unlink(mailpath);
+                    mailpath[0] = '\0';
+                }
+            }
+        }
+
 	if(
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 	   ((reason[0] || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
@@ -3794,8 +3821,9 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             // anymore. apply_badpost() mails bad posts already.
             if (by_mod && tusernum > 0 && !as_badpost && *newpath &&
                 IS_DELETE_FILE_CONTENT_OK(del_ret)) {
-                if (mail_removed_post(getuserid(tusernum), bp->brdname,
-                                      log_title, log_reason, newpath) == 0) {
+                if (*mailpath &&
+                    mail_removed_post(getuserid(tusernum), bp->brdname,
+                                      log_title, log_reason, mailpath) == 0) {
                     outs("原文已寄到作者的信箱。\n");
                 } else {
                     outs(ANSI_COLOR(1;31) "* 無法將原文寄到作者的信箱。"
@@ -3843,9 +3871,13 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 syncnow();
                 bp->SRexpire = time4_next(bp->SRexpire, now);
             }
+            if (*mailpath)
+                unlink(mailpath);
             pressanykey();
 	    return DIRCHANGED;
 	} else { // delete_fileheader
+            if (*mailpath)
+                unlink(mailpath);
             vmsg(as_badpost ? "無法刪除檔案記錄，也未退文。請稍候再試。" :
                  "無法刪除檔案記錄。請稍候再試。");
             return DIRCHANGED;
