@@ -335,10 +335,6 @@ my_query(const char *uident)
                    (muser.userlevel & PERM_SYSOPHIDE) ? "¯µ±K" :
                    Cdate(muser.lastseen ? &muser.lastseen : &muser.lastlogin));
             // print out muser.lasthost
-#ifdef USE_MASKED_FROMHOST
-            if(!HasUserPerm(PERM_SYSOP|PERM_ACCOUNTS))
-                obfuscate_ipstr(muser.lasthost);
-#endif // !USE_MASKED_FROMHOST
             outs(muser.lasthost[0] ? muser.lasthost : "(¤£¸Ô)");
             outs("\n");
         }

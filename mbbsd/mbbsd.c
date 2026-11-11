@@ -915,10 +915,6 @@ user_login(void)
 
     redrawwin();
 
-    /* mask fromhost a.b.c.d to a.b.c.* */
-    STRLCPY(fromhost_masked, fromhost);
-    obfuscate_ipstr(fromhost_masked);
-
     if (!IS_ENABLED(CONFIG_MULTI_WELCOME_LOGIN)) {
 	more("etc/Welcome_login", NA);
     } else {

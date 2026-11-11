@@ -27,7 +27,6 @@ void setuserhashedfile(char *buf, const char *filename);
 const char* money_level(int money);
 
 /* string.c */  
-void obfuscate_ipstr(char *s);
 bool is_valid_brdname(const char *brdname);
 const char *subject_ex(const char *title, int *ptype);
 const char *subject(const char *title);

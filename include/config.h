@@ -506,11 +506,7 @@
 #define PW_PLAIN_MIN    (4)             /* 密碼最小長度 */
 #endif
 
-#ifdef USE_MASKED_FROMHOST
-#define FROMHOST    fromhost_masked
-#else
 #define FROMHOST    fromhost
-#endif
 
 /////////////////////////////////////////////////////////////////////////////
 // Logging 記錄設定
