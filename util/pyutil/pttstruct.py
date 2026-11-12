@@ -1,8 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: Big5 -*-
-
-from __future__ import print_function
-from builtins import zip, map
 
 import collections
 import struct
@@ -188,7 +185,7 @@ def unpack_data(blob, format_pattern):
     # Convert C-style strings.
     for name, pat in format_pattern:
         if 's' in pat:
-            data[name] = big5.decode(data[name].partition(chr(0))[0])
+            data[name] = big5.decode(data[name].partition(b'\0')[0])
     return data
 
 def pack_data(data, format_pattern):
@@ -236,6 +233,6 @@ if __name__ == '__main__':
     board = unpack_data(entry, BOARDHEADER_FMT)
     print(board)
 
-    print('user name: ', big5.encode(user['realname']))
-    print('file title: ', big5.encode(header['title']))
-    print('board title: ', big5.encode(board['title']))
+    print('user name: ', user['realname'])
+    print('file title: ', header['title'])
+    print('board title: ', board['title'])

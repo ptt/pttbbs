@@ -1,11 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # encoding=latin1
 
 # This file is using latin1 with some Big5 literals, to prevent parsing files
 # with non-standard Big5 data (ex, Big5-UAO or escape sequence between DBCS).
-
-from __future__ import print_function
-from builtins import zip, map
 
 import re
 import sys
@@ -43,6 +40,10 @@ def IsCrossPostLog(buf):
     return (buf.startswith("¡° " + ANSI_COLOR(1,32)) and
             buf.find(ANSI_COLOR(0,32) + ':Âà¿ý¦Ü') > 0)
 
+def _decode_latin1(s):
+    # A post is read as latin-1: back to its bytes, then decoded from Big5.
+    return big5.decode(s.encode('latin-1'))
+
 def ParseComment(buf):
     """Parses a buffer for known comment formats.
 
@@ -54,10 +55,10 @@ def ParseComment(buf):
         return None
     match = match[0]
     (kind, author, content, trailing) = match
-    return dict(list(zip(('kind', 'author', 'content', 'trailing'),
-                    list(map(big5.decode, (str(CommentsPrefixes.index(kind) + 1),
-                                           author, content.rstrip(' '),
-                                           trailing.rstrip('\n')))))))
+    fields = (str(CommentsPrefixes.index(kind) + 1), author,
+              content.rstrip(' '), trailing.rstrip('\n'))
+    return dict(zip(('kind', 'author', 'content', 'trailing'),
+                    map(_decode_latin1, fields)))
 
 def ParsePost(contents):
     '''Returns a legacy post into two parts.
@@ -73,7 +74,10 @@ def ParsePost(contents):
     lineno = 0
 
     if (type(contents) is str):
-        contents = contents.splitlines(True)
+        # Split as bytes, at \r and \n only, as Python 2 did: str.splitlines()
+        # also splits at \x85 (a UAO lead byte) and a few control bytes.
+        contents = [l.decode('latin-1')
+                    for l in contents.encode('latin-1').splitlines(True)]
 
     # Now, try to skip header.
     if len(contents) < 1:
@@ -114,7 +118,9 @@ def main(argv):
         filename = 'sample'
     else:
         filename = argv[0]
-    print(ParsePost(open(filename).readlines()))
+    # Lines end at \n only and keep any \r, as Python 2 read them.
+    with open(filename, encoding='latin-1', newline='\n') as f:
+        print(ParsePost(f.readlines()))
 
 if __name__ == '__main__':
     main(sys.argv[1:])
