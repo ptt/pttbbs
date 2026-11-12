@@ -891,54 +891,6 @@ buildBMcache(int bid) /* bid starts from 1 */
  * section - PTT cache (adbanner cache?)
  * 動態看板與其它
  */
-int 
-filter_aggressive(const char*s GCC_UNUSED)
-{
-    if (
-	/*
-	mbs_strstr(s, "此處放較不適當的爭議性字句") != NULL ||
-	*/
-	0
-	)
-	return 1;
-    return 0;
-}
-
-int 
-filter_dirtywords(const char*s)
-{
-    if (
-	mbs_strstr(s, "幹你娘") != NULL ||
-	0)
-	return 1;
-    return 0;
-}
-
-#define AGGRESSIVE_FN ".aggressive"
-static char drop_aggressive = 0;
-
-void 
-load_aggressive_state()
-{
-    if (dashf(AGGRESSIVE_FN))
-	drop_aggressive = 1;
-    else
-	drop_aggressive = 0;
-}
-
-void 
-set_aggressive_state(int s)
-{
-    FILE *fp = NULL;
-    if (s)
-    {
-	fp = fopen(AGGRESSIVE_FN, "wb");
-	fclose(fp);
-    } else {
-	remove(AGGRESSIVE_FN);
-    }
-}
-
 /* cache for 動態看板 */
 void
 reload_pttcache(void)
@@ -962,21 +914,19 @@ reload_pttcache(void)
     fileheader_t    item, subitem;
     char            pbuf[256], buf[256];
     FILE           *fp, *fp1, *fp2;
-    int             id, aggid, rawid;
+    int             id;
 	SHM->last_film = 0;
 	bzero(SHM->notes, sizeof(SHM->notes));
 	setapath(pbuf, BN_NOTE);
 	setadir(buf, pbuf);
 
-	load_aggressive_state();
-	id = aggid = rawid = 0; // effective count, aggressive count, total (raw) count
+	id = 0;
 
 	if ((fp = fopen(buf, "r"))) {
 
 	    // .DIR loop
 	    while (fread(&item, sizeof(item), 1, fp)) {
 
-		int chkagg = 0; // should we check aggressive?
 		int is_ordersong_dir = 0;
 
 		if (item.title[3] != '<' || item.title[8] != '>')
@@ -986,11 +936,6 @@ reload_pttcache(void)
 		if (strncmp(item.title+3, ORDERSONG_FOLDERNAME, strlen(ORDERSONG_FOLDERNAME)) == 0)
 		    is_ordersong_dir = 1;
 
-#ifdef BN_NOTE_AGGCHKDIR
-		// TODO aggressive: only count '<點歌>' section
-		if (strncmp(item.title+3, BN_NOTE_AGGCHKDIR, strlen(BN_NOTE_AGGCHKDIR)) == 0)
-		    chkagg = 1;
-#endif
 		SNPRINTF(buf, "%s/%s/" FN_DIR,
 			pbuf, item.filename);
 
@@ -1009,29 +954,8 @@ reload_pttcache(void)
 		    fread(SHM->notes[id], sizeof(char), sizeof(SHM->notes[0]), fp2);
 		    SHM->notes[id][sizeof(SHM->notes[0]) - 1] = 0;
 		    storage_to_mb(SHM->notes[id], SHM->notes[id], sizeof(SHM->notes[0]));
-		    rawid ++;
 
-		    // filtering
-		    if (filter_dirtywords(SHM->notes[id]))
-		    {
-			memset(SHM->notes[id], 0, sizeof(SHM->notes[0]));
-			rawid --;
-		    }
-		    else if (chkagg && filter_aggressive(SHM->notes[id]))
-		    {
-			aggid++;
-			// handle aggressive notes by last detemined state
-			if (drop_aggressive)
-			    memset(SHM->notes[id], 0, sizeof(SHM->notes[0]));
-			else
-			    id++;
-			// Debug purpose
-			// fprintf(stderr, "found aggressive: %s\r\n", buf);
-		    } 
-		    else 
-		    {
-			id++;
-		    }
+		    id++;
 
 		    fclose(fp2);
 		    if (id >= MAX_ADBANNER)
@@ -1048,15 +972,6 @@ reload_pttcache(void)
 
 	    } // end of .DIR loop
 	    fclose(fp);
-
-	    // decide next aggressive state
-	    if (rawid && aggid*3 >= rawid) // if aggressive exceed 1/3
-		set_aggressive_state(1);
-	    else
-		set_aggressive_state(0);
-
-	    // fprintf(stderr, "id(%d)/agg(%d)/raw(%d)\r\n",
-	    //	    id, aggid, rawid);
 	}
 	SHM->last_film = id - 1;
 
