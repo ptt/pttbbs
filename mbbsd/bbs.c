@@ -2907,7 +2907,6 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     const char	    *myid = cuser.userid;
     char	    aligncmt = 0;
     char	    mynick[IDLEN+1];
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     static const char *ctype[RECTYPE_SIZE] = {
 		       "推", "噓", "→",
 		   };
@@ -2915,7 +2914,9 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 		       ANSI_COLOR(1;33),
 		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;37),
-		   }, *ctype_long[RECTYPE_SIZE] = {
+		   };
+#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
+    static const char *ctype_long[RECTYPE_SIZE] = {
 		       "值得推薦",
 		       "給它噓聲",
 		       "只加→註解",
@@ -3159,16 +3160,15 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	myid = mynick;
     }
 
-#if IS_ENABLED(CONFIG_OLD_RECOMMEND)
-    maxlength -= 2; /* '推' */
     maxlength -= strlen(myid);
-    sprintf(buf, "%s %s:", "→" , myid);
-
-#else // !CONFIG_OLD_RECOMMEND
-    maxlength -= strlen(myid);
-    sprintf(buf, "%s%s%s %s:",
-	    ctype_attr[type], ctype[type], ANSI_RESET, myid);
-#endif // !CONFIG_OLD_RECOMMEND
+    if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
+	maxlength -= 2; /* '推' */
+	sprintf(buf, "%s %s:", "→", myid);
+    } else {
+	maxlength--;  /* space after colon */
+	sprintf(buf, "%s%s%s %s: ",
+		ctype_attr[type], ctype[type], ANSI_RESET, myid);
+    }
 
     move(b_lines, 0);
     clrtoeol();

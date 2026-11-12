@@ -33,7 +33,7 @@ void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
                    "ctype_attr2 must have one entry per comment type");
     snprintf(buf, szbuf,
              "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33)
-             ":%-*s" ANSI_RESET "%s\n",
+             ": %-*s" ANSI_RESET "%s\n",
              ctype_attr2[type], ctype[type], myid,
              maxlength, msg, tail);
     }
@@ -242,6 +242,15 @@ int CommentsGetCount(void *ctx)
     return num;
 }
 
+// Older comments may have no space after the colon.
+static void
+strip_comment_sep_space(char *s)
+{
+    char *p = strstr(s, ": ");
+    if (p)
+        memmove(p + 1, p + 2, strlen(p + 2) + 1);
+}
+
 int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
 {
     size_t pattern_len, pattern2_len;
@@ -266,6 +275,17 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
     // for comparison.
     *strrchr(pattern, ESC_CHR) = 0;
     *strrchr(pattern2, ESC_CHR) = 0;
+    const int legacy = !IS_ENABLED(CONFIG_OLD_RECOMMEND);
+    char pattern3[ANSILINELEN] = "", pattern4[ANSILINELEN] = "";
+    size_t pattern3_len = 0, pattern4_len = 0;
+    if (legacy) {
+        strlcpy(pattern3, pattern, sizeof(pattern3));
+        strlcpy(pattern4, pattern2, sizeof(pattern4));
+        strip_comment_sep_space(pattern3);
+        strip_comment_sep_space(pattern4);
+        pattern3_len = strlen(pattern3);
+        pattern4_len = strlen(pattern4);
+    }
     /* Remove the trailing \n for strncmp. */
     pattern_len = strlen(pattern);
     pattern2_len = strlen(pattern2);
@@ -277,7 +297,11 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
             (strncmp(buf, pattern, pattern_len) == 0 &&
              (buf[pattern_len] == ' ' || buf[pattern_len] == ESC_CHR)) ||
             (strncmp(buf, pattern2, pattern2_len) == 0 &&
-             (buf[pattern2_len] == ' ' || buf[pattern2_len] == ESC_CHR)))) {
+             (buf[pattern2_len] == ' ' || buf[pattern2_len] == ESC_CHR)) ||
+            (legacy && strncmp(buf, pattern3, pattern3_len) == 0 &&
+             (buf[pattern3_len] == ' ' || buf[pattern3_len] == ESC_CHR)) ||
+            (legacy && strncmp(buf, pattern4, pattern4_len) == 0 &&
+             (buf[pattern4_len] == ' ' || buf[pattern4_len] == ESC_CHR)))) {
             // Note reason is 40 chars in length.
             fprintf(out, ANSI_COLOR(1;30)
                     "(%s 刪除 %s 的推文: %s)" ANSI_RESET "\n",
