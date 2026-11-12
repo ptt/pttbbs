@@ -3174,7 +3174,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     STATINC(STAT_COMMENT);
     LOG_IF(LOG_CONF_PUSH, file_appendf("log/push",
-                                    "%d %s %s %s\n", (int)now,
+                                    "%s %d %s %s %s\n", cuser.userid, (int)now,
                                     currboard, fhdr->filename, msg));
 #ifdef USE_COMMENTD
     if (CommentsAddRecord(bp->brdname, fhdr->filename, type, msg)) {
