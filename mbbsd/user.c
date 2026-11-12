@@ -1214,9 +1214,11 @@ prompt_again:
                     if (!(atuser.userlevel & PERM_LOGINOK)) {
                         outs("\n使用者未通過認證，請重新輸入。\n");
                         i--;
+                        continue;
                     } else if (atuser.numlogindays < 6*30) {
 			outs("\n" STR_LOGINDAYS "未超過 180，請重新輸入\n");
 			i--;
+			continue;
 		    }
 		    // Adjust upper or lower case
                     STRLCPY(witness[i], atuser.userid);
