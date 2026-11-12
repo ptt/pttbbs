@@ -1,7 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Usage: ./big5_gen.py > big5_tbl.py
 
-from __future__ import print_function
 import os
 import tarfile
 
@@ -18,7 +17,7 @@ b2u = [line.strip().split(b' ')
        if line.strip().startswith(b'0x')]
 b2u = dict((int(b, 0), int(u, 0)) for (b, u) in b2u)
 
-print("""#!/usr/bin/env python
+print("""#!/usr/bin/env python3
 
 """)
 print("b2u_table = (")

@@ -71,7 +71,7 @@
     以下是編譯前建議先安裝的套件清單，
     可以用 apt / yum 等套件管理員指令檢查自己有沒有安裝到：
     gmake, ccache, clang, gcc, git, libevent-dev/libevent-devel,
-    pkg-config/pkgconfig/pkgconf, python
+    pkg-config/pkgconfig/pkgconf, python3
 
     想加速的話還可以使用 ckati+ninja:
     先安裝 ckati ninja-build 兩個套件，在 pttbbs/ 下打
