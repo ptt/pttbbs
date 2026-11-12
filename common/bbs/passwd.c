@@ -391,6 +391,7 @@ passwd_query(int num, userec_t * buf)
 	return -1;
     if ((pwdfd = open(FN_PASSWD, O_RDONLY)) < 0)
 	exit(1);
+    posix_fadvise(pwdfd, sizeof(userec_t) * (num - 1), sizeof(userec_t), POSIX_FADV_RANDOM);
     lseek(pwdfd, sizeof(userec_t) * (num - 1), SEEK_SET);
     read(pwdfd, buf, sizeof(userec_t));
     close(pwdfd);

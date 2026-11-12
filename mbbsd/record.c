@@ -22,6 +22,7 @@ get_sum_records(const char *fpath, int size)
     // Ptt : should avoid big loop
     if ((fp = fopen(fpath, "r"))==NULL)
 	return -1;
+    posix_fadvise(fileno(fp), 0, 0, POSIX_FADV_SEQUENTIAL);
 
     STRLCPY(buf, fpath);
     p = strrchr(buf, '/');

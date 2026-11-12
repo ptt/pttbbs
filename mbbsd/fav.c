@@ -539,6 +539,7 @@ int fav_load(void)
 
     if ((frp = fopen(buf, "r")) == NULL)
 	return -1;
+    posix_fadvise(fileno(frp), 0, 0, POSIX_FADV_WILLNEED);
     if (IS_ENABLED(CONFIG_CRITICAL_MEMORY)) {
 	// kcwu: dirty hack, avoid 64byte slot. use 128 instead.
 	fp = (fav_t *)fav_malloc(sizeof(fav_t) + 64);
@@ -555,6 +556,7 @@ int fav_load(void)
 	fp = (fav_t *)fav_malloc(sizeof(fav_t));
     }
     fav_stack_push_fav(fp);
+    posix_fadvise(fileno(frp), 0, 0, POSIX_FADV_DONTNEED);
     fclose(frp);
     dirty = 0;
     return 0;

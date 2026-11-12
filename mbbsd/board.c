@@ -2034,6 +2034,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
 	if (!brc_initial_board(B_BH(ptr)->brdname)) {
 	    num = 1;
 	} else {
+	    posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
 	    num = total - 1;
 	    step = 4;
 	    while (num > 0) {
