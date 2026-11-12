@@ -60,7 +60,7 @@ validate_song_address(const vform_field_t *f GCC_UNUSED, const void *val, void *
     case MAILSEND_OK:
         return NULL;
     case MAILSEND_ERR_QUOTA:
-        return "對方信箱已滿，無法收信";
+        return "對方" MSG_MAILBOX_FULL "，無法收信";
     default:
         return "對方無法收信";
     }

@@ -721,7 +721,7 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
 
     if (is_rejected(userid)) {
         vmsg("對方拒收");
-        return -2;
+        return MAILSEND_ERR_CANCEL;
     }
 
     if (!mfpath)
@@ -736,7 +736,7 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     if (content_precheck(CONTENT_KIND_MAIL, userid)) {
         unlink(tmp_fpath);
         setutmpmode(oldstat);
-        return -2;
+        return MAILSEND_ERR_CANCEL;
     }
     content_set_context(CONTENT_KIND_MAIL, userid, 0, 1);
     int edit_ret = vedit2(tmp_fpath, YEA, save_title,
@@ -745,14 +745,14 @@ do_innersend(const char *userid, char *mfpath, const char *title, char *newtitle
     if (edit_ret == EDIT_ABORTED) {
         unlink(tmp_fpath);
         setutmpmode(oldstat);
-        return -2;
+        return MAILSEND_ERR_CANCEL;
     }
 
     if (strcasecmp(userid, cuser.userid) != 0) {
         if (mail_charge_quota(1, "超額寄信手續費") < 0) {
             unlink(tmp_fpath);
             setutmpmode(oldstat);
-            return -2;
+            return MAILSEND_ERR_CANCEL;
         }
     }
 
@@ -1084,21 +1084,21 @@ mail_ui_send(const char *userid, const char *title)
 
     STATINC(STAT_DOSEND);
     // Before editing: refuse recipients that cannot receive it.
-    switch (mail_check_recipient(userid)) {
+    int r = mail_check_recipient(userid);
+    switch (r) {
     case MAILSEND_OK:
 	break;
     case MAILSEND_ERR_NOUSER:
-	return -1;
     case MAILSEND_ERR_QUOTA:
-	return MAILSEND_ERR_QUOTA;
+	return r;
     default:
-	return -3;
+	return MAILSEND_ERR_NOPERM;
     }
     // Before paying and the title: the recipient may reject the sender.
     if (is_rejected(userid))
-	return -5;
+	return MAILSEND_ERR_REJECTED;
     if (strcasecmp(userid, cuser.userid) != 0 && !mail_precheck_quota(1, NULL, NULL))
-	return -2;
+	return MAILSEND_ERR_CANCEL;
 
     /* process title */
     if (title)
@@ -1129,23 +1129,17 @@ mail_ui_send_result(int ret, const char *userid)
     case 1:
 	vmsg("信件已寄出");
 	break;
-    case -1:
+    case MAILSEND_ERR_NOUSER:
 	vmsg(ERR_UID);
 	break;
-    case -2:
+    case MAILSEND_ERR_CANCEL:
 	vmsg(MSG_CANCEL);
 	break;
-    case -3:
-	vmsgf("使用者 [%s] 無法收信", userid);
-	break;
-    case -5:
-	vmsgf("使用者 [%s] 拒收您的信件", userid);
-	break;
-    case MAILSEND_ERR_QUOTA:
-	vmsgf("使用者 [%s] 信箱已滿，無法收信", userid);
-	break;
     default:
-	pressanykey();
+	if (mailsend_strerror(ret))
+	    vmsgf("使用者 [%s] %s", userid, mailsend_strerror(ret));
+	else
+	    pressanykey();
 	break;
     }
 }
@@ -1574,15 +1568,11 @@ mail_mbox(void)
 
     sethomepath(hpath, cuser.userid);
     SNPRINTF(fhdr.title, "%s 私人資料", cuser.userid);
-    switch (doforward(hpath, &fhdr, 'Z')) {
-    case 0:
+    int r = doforward(hpath, &fhdr, 'Z');
+    if (r == 0)
         vmsg("已排入打包，完成後會寄給您；若無法寄出會以站內信通知。");
-        break;
-    case -2:
-        if (!IS_ENABLED(CONFIG_DEBUG_FWDADDRERR))
-            vmsg(MSG_FWD_ERR2);
-        break;
-    }
+    else if (forward_result_msg(r))
+        vmsg(forward_result_msg(r));
     return 0;
 }
 
@@ -1662,6 +1652,41 @@ report_forward(const char *direct, const fileheader_t *fh,
                              dasht(TEMPFORMAT(PATHLEN, "%s/%s",
                                               direct, fh->filename)),
                              msg, msgsz);
+}
+
+// Messages of MailSendResult errors, indexed by -result.
+static const char * const mailsend_err_msg[] = {
+    [-MAILSEND_ERR_PARAM]    = "系統錯誤",
+    [-MAILSEND_ERR_NOUSER]   = "沒有這個使用者",
+    [-MAILSEND_ERR_NOPERM]   = "無法收信",
+    [-MAILSEND_ERR_QUOTA]    = MSG_MAILBOX_FULL "，無法收信",
+    [-MAILSEND_ERR_REJECTED] = "拒收您的信件",
+    [-MAILSEND_ERR_CANCEL]   = MSG_CANCEL,
+};
+
+const char *
+mailsend_strerror(int result)
+{
+    if (result >= 0 || -result >= (int)ARRAY_SIZE(mailsend_err_msg))
+        return NULL;
+    return mailsend_err_msg[-result];
+}
+
+const char *
+forward_result_msg(int result)
+{
+    switch (result) {
+    case MAILSEND_OK:
+        return MSG_FWD_OK;
+    case MAILSEND_ERR_PARAM:
+        return MSG_FWD_ERR1;
+    case MAILSEND_ERR_NOUSER:   // also a bad address
+        return IS_ENABLED(CONFIG_DEBUG_FWDADDRERR) ? NULL : MSG_FWD_ERR2;
+    case MAILSEND_ERR_QUOTA:
+        return MSG_FWD_ERR4;
+    default:                    // cancelled; the reason was shown
+        return NULL;
+    }
 }
 
 int

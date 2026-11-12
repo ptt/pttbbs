@@ -824,23 +824,9 @@ forward_file(const fileheader_t * fhdr, const char *direct)
     STRLCPY(buf, direct);
     if ((p = strrchr(buf, '/')))
 	*p = '\0';
-    switch (i = doforward(buf, fhdr, 'F')) {
-    case 0:
-	vmsg(MSG_FWD_OK);
-	break;
-    case -1:
-	vmsg(MSG_FWD_ERR1);
-	break;
-    case -2:
-	if (!IS_ENABLED(CONFIG_DEBUG_FWDADDRERR))
-	    vmsg(MSG_FWD_ERR2);
-	break;
-    case -4:
-	vmsg("對方信箱已滿");
-	break;
-    default:
-	break;
-    }
+    i = doforward(buf, fhdr, 'F');
+    if (forward_result_msg(i))
+	vmsg(forward_result_msg(i));
 }
 
 static int

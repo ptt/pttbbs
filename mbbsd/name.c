@@ -896,7 +896,7 @@ multilist_problem(const char *uid, int flags)
         case MAILSEND_OK:
             break;
         case MAILSEND_ERR_QUOTA:
-            return "信箱已滿";
+            return MSG_MAILBOX_FULL;
         default:
             return "無法收信";
         }

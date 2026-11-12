@@ -262,17 +262,9 @@ a_forward(const char *path, const fileheader_t * pitem, int mode)
 
     STRLCPY(fhdr.filename, pitem->filename);
     STRLCPY(fhdr.title, pitem->title);
-    switch (doforward(path, &fhdr, mode)) {
-    case 0:
-	outmsg(MSG_FWD_OK);
-	break;
-    case -1:
-	outmsg(MSG_FWD_ERR1);
-	break;
-    case -2:
-	outmsg(MSG_FWD_ERR2);
-	break;
-    }
+    const char *msg = forward_result_msg(doforward(path, &fhdr, mode));
+    if (msg)
+	outmsg(msg);
 }
 
 static void

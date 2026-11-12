@@ -553,7 +553,13 @@ typedef enum {
     MAILSEND_ERR_NOUSER = -2,
     MAILSEND_ERR_NOPERM = -3,
     MAILSEND_ERR_QUOTA = -4,
+    MAILSEND_ERR_REJECTED = -5,     // The recipient rejects the sender.
+    MAILSEND_ERR_CANCEL = -6,       // Cancelled; the reason was shown.
 } MailSendResult;
+// The message of a MailSendResult error, or NULL.
+const char *mailsend_strerror(int result);
+// The message to show for a doforward() result, or NULL for none.
+const char *forward_result_msg(int result);
 
 typedef enum {
     MAILSEND_FLAG_NONE          = 0,
