@@ -1,6 +1,7 @@
 #include "bbs.h"
 #include "psb.h"
 #include "daemons.h"
+#include "activity.h"
 
 #define QCAST   int (*)(const void *, const void *)
 
@@ -274,6 +275,19 @@ my_query(const char *uident)
 
     BEGINSTAT(STAT_QUERY);
     if ((tuid = getuser(uident, &muser))) {
+	{
+	    char msg[ACTIVITY_DENY_MSG_MAX];
+	    if (activity_nav_track(cuser.userid, cuser.firstlogin, fromhost,
+	                           get_client_code(),
+	                           HasUserPerm(ACTIVITY_EXEMPT_PERMS),
+	                           ACTIVITY_NAV_QUERY_USER, 0, 0,
+	                           msg, sizeof(msg), activity_slow_alert) > 0 &&
+	        *msg) {
+		ENDSTAT(STAT_QUERY);
+		activity_alert(msg, " ¬d¸ß ");
+		return FULLUPDATE;
+	    }
+	}
 	move(1, 0);
 	clrtobot();
 	move(1, 0);

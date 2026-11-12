@@ -96,6 +96,7 @@ enum {
     ACTIVITY_NAV_SEARCH_AID    = 2,
     ACTIVITY_NAV_SEARCH_SR     = 3,
     ACTIVITY_NAV_SEARCH_SCORE = 4, // 'Z': search by score; value is the threshold
+    ACTIVITY_NAV_QUERY_USER    = 5, // Query a user
 };
 
 // logind: a password was wrong.
