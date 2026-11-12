@@ -145,6 +145,7 @@ void editLimits(unsigned char *plogins, unsigned char *pbadpost,
 char *get_board_restriction_reason(int bid, size_t sz_msg, char *msg);
 void log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile);
 int crosspost_target_ok(int bid, const char *bname);
+int crosspost_denied(int bid, const char *fname, int xbid);
 
 /* board */
 #define setutmpbid(bid) currutmp->brc_id=bid;

@@ -467,3 +467,34 @@ activity_forward(const char *userid, int32_t user_token,
         usleep(w.delay_ms * 1000);
     return w.deny;
 }
+
+int
+activity_crosspost(const char *userid, int32_t user_token,
+                   const char *hostip, uint32_t client_code, int is_exempt,
+                   int bid, const char *filename, int xbid,
+                   char *msg, size_t msgsz)
+{
+    if (msg && msgsz)
+        *msg = '\0';
+    if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
+        return 0;
+
+    char ip[64];
+    // Answered with a verdict, like fwd.
+    struct act_wait w = { .kind = ACT_WAIT_FWD, .msg = msg, .msgsz = msgsz };
+
+    if (is_exempt || !act_field_ok(userid))
+        return 0;
+    act_dispatch(NULL, NULL, NULL);     // Drop stale replies
+    if (++g_reqid == 0)
+        g_reqid = 1;
+    w.reqid = g_reqid;
+    act_norm_ip(hostip, ip, sizeof(ip));
+    if (act_send("xpost %u %s %d %s %x %d %s %d", w.reqid, userid,
+                 user_token, ip, client_code, bid,
+                 act_field_ok(filename) ? filename : "-", xbid) == 0)
+        act_wait_reply(&w, ACTIVITY_FORWARD_WAIT_MS);
+    if (!w.deny && w.delay_ms > 0)
+        usleep(w.delay_ms * 1000);
+    return w.deny;
+}

@@ -2055,6 +2055,26 @@ forward_post(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct) {
 
 #define UPDATE_USEREC   (currmode |= MODE_DIRTY)
 
+// Asks activity.svc whether the current user may cross-post fname of board
+// bid (0: a mail) to board xbid, and tells the user why not. Returns 1 if
+// denied; pauses if the service asks.
+int
+crosspost_denied(int bid, const char *fname, int xbid)
+{
+    char msg[ACTIVITY_DENY_MSG_MAX];
+
+    if (!activity_crosspost(cuser.userid, cuser.firstlogin, fromhost,
+                            get_client_code(),
+                            HasUserPerm(ACTIVITY_EXEMPT_PERMS), bid, fname,
+                            xbid, msg, sizeof(msg)))
+        return 0;
+    if (*msg)
+        activity_alert(msg, " 未轉錄 ");
+    else
+        vmsg("轉錄太頻繁，請稍後再試。");
+    return 1;
+}
+
 // Whether the board a cross-post goes to is still there under the name it
 // was picked by: it may be deleted or renamed while the user sits at the
 // prompts. Checks the name at bid, as getbnum() can miss a board while the
@@ -2210,6 +2230,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    vmsg("看板已不存在，文章未轉錄。");
 	    return FULLUPDATE;
 	}
+	if (crosspost_denied(currbid, fhdr->filename, xbid))
+	    return FULLUPDATE;
 	setbpath(xfpath, xboard);
         if (stampfile(xfpath, &xfile) < 0) {
             vmsg("系統錯誤: 無法寫入檔案");

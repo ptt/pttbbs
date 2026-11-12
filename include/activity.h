@@ -33,13 +33,17 @@
 //                                               the Internet address (or the local userid for
 //                                               ACTIVITY_FWD_LOCAL), via the local mailbox
 //                                               that auto-forwards (or "-"); expects a verdict
+//   xpost <reqid> <userid> <firstlogin> <ip> <client_hex> <bid> <filename> <xbid>
+//                                               before a post (bid > 0) or mail (bid 0)
+//                                               is cross-posted to board xbid; expects a
+//                                               verdict
 //   <firstlogin> is an opaque user token (userec_t.firstlogin as a signed
 //   int32): the service only compares it to tell a recycled account, never
 //   uses it as a time.
 //
 // Service -> client:
 //   verdict <reqid> ok                          reply to login or fwd
-//   verdict <reqid> ok <delay_ms>               reply to fwd: send it, then pause
+//   verdict <reqid> ok <delay_ms>               reply to fwd or xpost: go on, then pause
 //   verdict <reqid> deny <delay_sec> <message>  message (Big5) runs to the end;
 //                                               for fwd: do not send (delay 0), and
 //                                               the message (may be absent) says
@@ -167,5 +171,14 @@ int activity_forward(const char *userid, int32_t user_token,
                      int bid, const char *filename, int kind,
                      const char *address, const char *via, time_t mtime,
                      char *msg, size_t msgsz);
+
+// mbbsd: asks before cross-posting `filename` on board `bid` (0: a mail) to
+// board `xbid` ("xpost"). Returns 1 if it should be denied, else 0 (always 0
+// without the service or a reply in time); sets `msg` like activity_forward().
+// If let through, pauses as the service asks.
+int activity_crosspost(const char *userid, int32_t user_token,
+                       const char *hostip, uint32_t client_code, int is_exempt,
+                       int bid, const char *filename, int xbid,
+                       char *msg, size_t msgsz);
 
 #endif // INCLUDE_ACTIVITY_H

@@ -2327,6 +2327,8 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	    vmsg("看板已不存在，文章未轉錄。");
 	    return FULLUPDATE;
 	}
+	if (crosspost_denied(0, fhdr->filename, xbid))
+	    return FULLUPDATE;
 	setbpath(xfpath, xboard);
 	if (stampfile(xfpath, &xfile) < 0) {
 	    vmsg("系統錯誤: 無法寫入檔案");
