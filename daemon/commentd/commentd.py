@@ -1,6 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from builtins import zip, map
 import struct
 import collections
 import sys
@@ -41,21 +40,21 @@ _DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 def UnpackComment(blob):
     def strip_if_string(v):
-        return v.strip(chr(0)) if type(v) == str else v
+        return v.strip(b'\0') if isinstance(v, bytes) else v
     data = struct.unpack(CommentFormatString, blob)
     logging.debug("UnpackComment: %r" % (data,))
     return Comment._make(list(map(strip_if_string, data)))
 
 def UnpackCommentKey(blob):
     def strip_if_string(v):
-        return v.strip(chr(0)) if type(v) == str else v
+        return v.strip(b'\0') if isinstance(v, bytes) else v
     data = struct.unpack(CommentKeyFormatString, blob)
     logging.debug("UnpackCommentKey: %r" % (data,))
     return CommentKey._make(list(map(strip_if_string, data)))
 
 def UnpackQuery(blob):
     def strip_if_string(v):
-        return v.strip(chr(0)) if type(v) == str else v
+        return v.strip(b'\0') if isinstance(v, bytes) else v
     data = struct.unpack(QueryFormatString, blob)
     logging.debug("Query: %r" % (data,))
     return Query._make(list(map(strip_if_string, data)))
@@ -65,28 +64,28 @@ def PackComment(comment):
 
 def LoadComment(query):
     logging.debug("LoadComment: %r", query)
-    key = '%s/%s' % (query.board, query.file)
-    num = int(g_db.get(key) or '0')
+    key = b'%s/%s' % (query.board, query.file)
+    num = int(g_db.get(key) or b'0')
     if query.start >= num:
         return None
-    key += '#%08d' % (query.start + 1)
+    key += b'#%08d' % (query.start + 1)
     data = g_db.get(key)
     logging.debug(" => %r", UnpackComment(data))
     return UnpackComment(data)
 
 def LoadCommentCount(query):
-    key = '%s/%s' % (query.board, query.file)
-    num = int(g_db.get(key) or '0')
+    key = b'%s/%s' % (query.board, query.file)
+    num = int(g_db.get(key) or b'0')
     logging.debug('LoadCommentCount: key: %s, value: %r', key, g_db.get(key))
     return num
 
 def MarkCommentDeleted(query):
     logging.debug("MarkCommentDeleted: %r", query)
-    key = '%s/%s' % (query.board, query.file)
-    num = int(g_db.get(key) or '0')
+    key = b'%s/%s' % (query.board, query.file)
+    num = int(g_db.get(key) or b'0')
     if query.start >= num:
         return -1
-    key += '#%08d' % (query.start + 1)
+    key += b'#%08d' % (query.start + 1)
     data = g_db.get(key)
     comment = UnpackComment(data)
     if comment.type & 0x80000000:
@@ -99,11 +98,11 @@ def MarkCommentDeleted(query):
 
 def SaveComment(keypak, comment):
     logging.debug("SaveComment: %r => %r", keypak, comment)
-    key = '%s/%s' % (keypak.board, keypak.file)
+    key = b'%s/%s' % (keypak.board, keypak.file)
     num = g_db.get(key)
     num = 1 if (num is None) else (int(num) + 1)
-    g_db.set(key, '%d' % num)
-    key += '#%08d' % (num)
+    g_db.set(key, b'%d' % num)
+    key += b'#%08d' % (num)
     g_db.set(key, PackComment(comment))
     logging.debug(' Saved: %s', key)
 
@@ -138,7 +137,7 @@ def open_database(db_path):
     return g_db
 
 def handle_request(socket, _):
-    fd = socket.makefile('rw')
+    fd = socket.makefile('rwb')
     fmt_len = '@i'
     try:
         req = fd.read(struct.calcsize(RequestFormatString))
