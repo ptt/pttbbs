@@ -52,6 +52,79 @@ get_max_pay_by_post_title(const char *title GCC_UNUSED)
     return MAX_POST_MONEY;
 }
 
+// Adjusts the pay of a post (already capped by MAX_POST_MONEY), before the
+// daily cap and get_max_pay_by_post_title().
+GCC_WEAK int
+adjust_post_money(int money)
+{
+    return money;
+}
+
+// Returns false to refuse cross-posting the article fh in board bp, after
+// telling the user why.
+GCC_WEAK bool
+can_crosspost(const boardheader_t *bp GCC_UNUSED,
+              const fileheader_t *fh GCC_UNUSED)
+{
+    return true;
+}
+
+// Called before saving a user whose bad posts are increased (inc_badpost()).
+GCC_WEAK void
+on_inc_badpost(userec_t *u GCC_UNUSED)
+{
+}
+
+// Called before a comment (msg, of type RECTYPE_*) is added to the post fh in
+// board bp; who is the ID shown (e.g. an anonymous angel's nickname).
+GCC_WEAK void
+on_comment(const boardheader_t *bp GCC_UNUSED,
+           const fileheader_t *fh GCC_UNUSED, int type GCC_UNUSED,
+           const char *who GCC_UNUSED, const char *msg GCC_UNUSED)
+{
+}
+
+// Fixes the first line of a text just loaded into the editor (data, may be
+// changed in place, e.g. to remove junk sent by broken clients). Returns its
+// length.
+GCC_WEAK int
+edit_fix_first_line(char *data)
+{
+    return strlen(data);
+}
+
+// Called after a key is typed into line lineno (0: the first) of the editor.
+// Returns true to abandon editing (after telling the user why), e.g. when a
+// broken client keeps sending junk.
+GCC_WEAK bool
+edit_reject_input(int lineno GCC_UNUSED, const char *line GCC_UNUSED)
+{
+    return false;
+}
+
+// Returns false to refuse a search (sr_mode RS_*) for keyword in the reader,
+// after telling the user why.
+GCC_WEAK bool
+can_select_read(const char *keyword GCC_UNUSED, int sr_mode GCC_UNUSED)
+{
+    return true;
+}
+
+// Returns true to stop saving comments to commentd (USE_COMMENTD).
+GCC_WEAK bool
+is_commentd_disabled(void)
+{
+    return false;
+}
+
+// Days to keep an account since its last login before it can be expired.
+GCC_WEAK int
+get_keep_days(const userec_t *u)
+{
+    return (u->userlevel & (PERM_LOGINOK | PERM_VIOLATELAW)) ?
+        KEEP_DAYS_REGGED : KEEP_DAYS_UNREGGED;
+}
+
 // Override for the dynamic cap.
 GCC_WEAK int
 calc_post_cap(int post_count, int base_cap)

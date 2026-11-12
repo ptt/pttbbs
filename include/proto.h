@@ -890,6 +890,16 @@ bool is_rejected_forward(const char *address);
 bool can_forward(const char *title);
 void on_crosspost(const char *board, const char *fname,
                   const char *xboard, const char *xfname);
+int adjust_post_money(int money);
+bool can_crosspost(const boardheader_t *bp, const fileheader_t *fh);
+void on_inc_badpost(userec_t *u);
+int get_keep_days(const userec_t *u);
+bool is_commentd_disabled(void);
+void on_comment(const boardheader_t *bp, const fileheader_t *fh, int type,
+                const char *who, const char *msg);
+bool can_select_read(const char *keyword, int sr_mode);
+int edit_fix_first_line(char *data);
+bool edit_reject_input(int lineno, const char *line);
 
 /* contentcheck */
 // A system alert over the current screen (restored afterwards): `title` and

@@ -4656,6 +4656,9 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	quoted = true;
     }
 
+    if (curr_buf->firstline)
+	curr_buf->firstline->len = edit_fix_first_line(curr_buf->firstline->data);
+
     if (curr_buf->oldcurrline != curr_buf->firstline ||
 	curr_buf->currline != curr_buf->firstline) {
 	/* we must adjust because cursor (currentline) moved. */
@@ -4714,6 +4717,10 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	    else if (mblen == 1)
 		insert_char(mb[0]);
 	    curr_buf->lastindent = -1;
+	    if (edit_reject_input(curr_buf->currln, curr_buf->currline->data)) {
+		exit_edit_buffer();
+		return -1;
+	    }
 	} else {
 	    int dispatch_key = (ch == KEY_ESC) ? KEY_EDIT_ESC(KEY_ESC_arg) : ch;
 	    cmd_ctx_t cctx = { .key = dispatch_key };

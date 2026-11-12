@@ -928,6 +928,9 @@ select_read(read_ctx_t *cx, int sr_mode)
     if (!success)
         return ui_ret;
 
+    if (!can_select_read(predicate.keyword, sr_mode))
+        return READ_REDRAW;
+
     if (!cx->view.remap) {
         cx->view.remap = (int32_t *)calloc(SEARCH_SVC_WINDOW_SIZE, sizeof(int32_t));
         assert(cx->view.remap != NULL);

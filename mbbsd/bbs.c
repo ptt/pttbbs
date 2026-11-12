@@ -1380,6 +1380,7 @@ do_post_article(int edflags)
         money = calc_post_money(cuser.userid, currboard, fpath);
         if (money > MAX_POST_MONEY)
             money = MAX_POST_MONEY;
+        money = adjust_post_money(money);
 
         if (money > 0) {
             int post_cap = calc_post_cap(StatGetDailyPost(), money);
@@ -2097,6 +2098,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         vmsg("本文目前受標記為待證實文章，依規定暫不開放轉錄。");
         return FULLUPDATE;
     }
+
+    if (!can_crosspost(bp, fhdr))
+        return FULLUPDATE;
 
     if (!dashf(TEMP_BFILE(currboard, fhdr->filename)))
     {
@@ -3177,11 +3181,16 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
                                     "%s %d %s %s %s\n", cuser.userid, (int)now,
                                     currboard, fhdr->filename, msg));
 #ifdef USE_COMMENTD
+    if (is_commentd_disabled()) {
+	// do nothing
+    } else
     if (CommentsAddRecord(bp->brdname, fhdr->filename, type, msg)) {
         vmsg("錯誤: 資料庫連線異常，無法寫入。請稍候再試。");
         return FULLUPDATE;
     }
 #endif
+
+    on_comment(bp, fhdr, type, myid, msg);
 
     {
 	/* build tail first. */
