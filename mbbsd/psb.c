@@ -1605,6 +1605,21 @@ render_columns_array(PSB_CTX *ctx, const char *const *data, int n)
     vs_cols_array(ctx->vcols, w, ctx->cols, data, n);
 }
 
+int
+psb_col_x(PSB_CTX *ctx, int col)
+{
+    if (!ctx || !ctx->vcols || col < 0 || col >= ctx->cols ||
+        col >= PSB_MAX_COLS)
+        return -1;
+    if (ctx->col_widths[0] == 0 || ctx->vcols != ctx->cached_vcols || ctx->cached_cols != t_columns)
+        psb_sync_cols(ctx);
+    const VCOLW *w = ctx->widths ? ctx->widths : ctx->col_widths;
+    int x = 0;
+    for (int c = 0; c < col; c++)
+        x += w[c];
+    return x;
+}
+
 void
 render_columns_v(PSB_CTX *ctx, va_list ap)
 {
@@ -1747,6 +1762,8 @@ psb_on_select(cmd_ctx_t *ctx, int new_curr) {
                 move(y, 0);
                 clrtoeol();
                 psbctx->renderer(old_curr, psbctx);
+                if (psbctx->decorate)
+                    psbctx->decorate(psbctx);
             }
         }
         if (new_curr >= base && new_curr < base + rows && new_curr < psbctx->cmd.total) {
@@ -1833,6 +1850,8 @@ psb_main(PSB_CTX *psbctx)
                 move(psbctx->header_lines + max_i, 0);
                 clrtoln(psbctx->header_lines + rows);
             }
+            if (psbctx->decorate)
+                psbctx->decorate(psbctx);
         }
 
         if (draw_footer) {

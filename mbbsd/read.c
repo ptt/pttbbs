@@ -1813,6 +1813,15 @@ read_renderer(int idx, PSB_CTX *psbctx)
     return 0;
 }
 
+static void
+read_decorate(PSB_CTX *psbctx)
+{
+    read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
+    if (cx->entries > 0)
+        decorate_read_page(psbctx, psbctx->header_lines, headers,
+                           cx->entries);
+}
+
 static int
 read_cursor(int y, PSB_CTX *psbctx GCC_UNUSED)
 {
@@ -2047,6 +2056,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle)(PSB_CTX *),
         .empty_renderer = read_empty_renderer,
         .cursor = read_cursor,
         .cursor_clear = read_cursor_clear,
+        .decorate = read_decorate,
     };
 
     psb_main(&psbctx);

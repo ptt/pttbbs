@@ -102,6 +102,17 @@ edit_reject_input(int lineno GCC_UNUSED, const char *line GCC_UNUSED)
     return false;
 }
 
+// Called after rows of a page of posts or mails (the count entries in page,
+// the first at screen row y) are drawn, to draw anything over the page
+// (psb_col_x() tells where the columns of ctx are). Called again whenever a
+// row is redrawn (e.g. the cursor moved), so draw all of it every time; the
+// cursor is drawn afterwards.
+GCC_WEAK void
+decorate_read_page(PSB_CTX *ctx GCC_UNUSED, int y GCC_UNUSED,
+                   const fileheader_t *page GCC_UNUSED, int count GCC_UNUSED)
+{
+}
+
 // Returns false to refuse a search (sr_mode RS_*) for keyword in the reader,
 // after telling the user why.
 GCC_WEAK bool

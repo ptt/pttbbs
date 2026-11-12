@@ -122,6 +122,8 @@ typedef struct PSB_CTX {
     int (*empty_renderer)(struct PSB_CTX *ctx);
     int (*cursor)(int y, struct PSB_CTX *ctx);
     bool (*cursor_clear)(int y, struct PSB_CTX *ctx);
+    // After rows are drawn (any of them, before the cursor): draw over them.
+    void (*decorate)(struct PSB_CTX *ctx);
     int (*on_key)(struct PSB_CTX *ctx);
     int (*col_measurer)(int i, int col, struct PSB_CTX *ctx);
     bool wrap;
@@ -160,6 +162,8 @@ void cmd_bar_register_newmail_hotspot(int x_start, int x_end);
 
 void psb_render_header_columns(PSB_CTX *ctx, const char *right_str);
 void render_columns_array(PSB_CTX *ctx, const char *const *data, int n);
+// The screen column where column col of ctx starts, or -1 without columns.
+int psb_col_x(PSB_CTX *ctx, int col);
 void render_columns_v(PSB_CTX *ctx, va_list ap);
 void render_columns(PSB_CTX *ctx, ...);
 #define psb_render_columns render_columns

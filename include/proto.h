@@ -899,6 +899,8 @@ bool is_commentd_disabled(void);
 void on_comment(const boardheader_t *bp, const fileheader_t *fh, int type,
                 const char *who, const char *msg);
 bool can_select_read(const char *keyword, int sr_mode);
+void decorate_read_page(PSB_CTX *ctx, int y, const fileheader_t *page,
+                        int count);
 int edit_fix_first_line(char *data);
 bool edit_reject_input(int lineno, const char *line);
 
