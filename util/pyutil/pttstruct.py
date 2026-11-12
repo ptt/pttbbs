@@ -4,7 +4,10 @@
 import collections
 import struct
 
-from . import big5
+if __package__:
+    from . import big5
+else:  # run as a script
+    import big5
 
 IDLEN = 12
 IPV4LEN = 15

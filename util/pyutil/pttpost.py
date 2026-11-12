@@ -7,7 +7,10 @@
 import re
 import sys
 
-from . import big5
+if __package__:
+    from . import big5
+else:  # run as a script
+    import big5
 
 STR_AUTHOR1 = "作者:"
 STR_AUTHOR2 = "發信人:"

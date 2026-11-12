@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-from . import big5_tbl
+if __package__:
+    from . import big5_tbl
+else:  # for pttpost.py or pttstruct.py run as a script
+    import big5_tbl
 
 def decode(s, strip_zero=True):
     """Decodes Big5 (UAO) bytes into a str."""
