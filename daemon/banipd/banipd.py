@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2012 Hung-Te Lin <piaip@csie.ntu.edu.tw>. All rights reserved.
 # Use of this source code is governed by a BSD license.
 
@@ -6,7 +6,6 @@
 banipd: Daemon to check if an IP is banned, and sending to reason.
 """
 
-from io import open
 import eventlet
 import getopt
 import logging
@@ -70,7 +69,9 @@ def LoadConfigTable(filename):
             return ips
 
     entry = Entry()
-    with open(filename, 'rt', encoding='big5') as f:
+    # The text is sent as it is in the file, Big5 or not: latin-1 keeps the
+    # bytes.
+    with open(filename, 'rt', encoding='latin-1') as f:
         for line in f:
             t = line.strip()
             if t.startswith('#'):
@@ -97,8 +98,8 @@ def handle_request(sock, fd):
     # Output: int32_t len, BYTE[len]
     fmt_len = '@i'
     try:
-        ip = fd.readline().strip()
-        msg = g_tbl.get(ip, '')
+        ip = fd.readline().strip().decode('latin-1')
+        msg = g_tbl.get(ip, '').encode('latin-1')
         logging.debug('Query [%s]: %s', ip, '[BANNED]' if msg else '[PASS]')
         fd.write(struct.pack(fmt_len, len(msg)))
         fd.write(msg)
@@ -169,7 +170,7 @@ def main(myname, argv):
     while True:
         try:
             new_sock, address = server.accept()
-            pool.spawn_n(handle_request, new_sock, new_sock.makefile('rw'))
+            pool.spawn_n(handle_request, new_sock, new_sock.makefile('rwb'))
         except (SystemExit, KeyboardInterrupt):
             break
 
