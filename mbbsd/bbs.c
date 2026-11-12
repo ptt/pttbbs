@@ -4057,7 +4057,6 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 
-#ifdef USE_SUSPICIOUS_MARK
 static int
 mark_suspicious(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -4081,7 +4080,6 @@ mark_suspicious(int ent, fileheader_t * fhdr, const char *direct)
 
    return change_post_mode(ent, fhdr, direct, FILE_SUSPICIOUS);
 }
-#endif
 
 static int
 view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
@@ -4691,14 +4689,16 @@ mask_post_content(int ent, fileheader_t * fhdr,
 static int
 manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     int ans;
-    const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字"
-#ifdef USE_SUSPICIOUS_MARK
-        " [S]標記待證"
-#endif
+    char prompt[STRLEN];
+
+    snprintf(prompt, sizeof(prompt), "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字%s%s:",
+             IS_ENABLED(CONFIG_SUSPICIOUS_MARK) ? " [S]標記待證" : "",
 #ifdef USE_COMMENTD
-        " [V]推文管理"
+             " [V]推文管理"
+#else
+             ""
 #endif
-        ":";
+             );
 
     if (currstat == RMAIL)
         return DONOTHING;
@@ -4727,11 +4727,10 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
             mask_post_content(ent, fhdr, direct);
             break;
 
-#ifdef USE_SUSPICIOUS_MARK
         case 's':
-            mark_suspicious(ent, fhdr, direct);
+            if (IS_ENABLED(CONFIG_SUSPICIOUS_MARK))
+                mark_suspicious(ent, fhdr, direct);
             break;
-#endif
 
 #ifdef USE_COMMENTD
         case 'v':
