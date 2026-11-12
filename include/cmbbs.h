@@ -343,6 +343,9 @@ int StatAddDailyMail(int count);
 int StatGetDailySong(void);
 int StatIncDailySong(void);
 
+/* trackmail.c */
+int trackmail_notify_send(const char *sender, const char *recipient, const char *subject, const char *filename, const char *mail_path, time4_t ts);
+
 
 /* cgo.c */
 const char *get_bbshome(void);

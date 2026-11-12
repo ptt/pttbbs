@@ -256,6 +256,7 @@ int start_services()
         CONDITIONAL_SVC(ACTIVITY, "activity")
         CONDITIONAL_SVC(CONTENT, "content")
         CONDITIONAL_SVC(UQUERY, "uquery")
+        CONDITIONAL_SVC(TRACKMAIL, "trackmail")
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {

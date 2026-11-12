@@ -486,14 +486,8 @@ save_mailbox_end(home_mail_t *hm, const char *sender, const char *title,
     }
 
     /* Track mail ONLY if MAILSEND_FLAG_USER_CONTENT is set */
-    if (send_flags & MAILSEND_FLAG_USER_CONTENT) {
-#ifdef USE_TRACKMAIL_SVC
+    if (IS_ENABLED(CONFIG_TRACKMAIL_SVC) && (send_flags & MAILSEND_FLAG_USER_CONTENT))
         trackmail_notify_send(mhdr->owner, rightid, mhdr->title, mhdr->filename, hm->fpath, mhdr->modified);
-#elif defined(TRACKMAIL)
-        log_filef("log/trackmail.log",
-                  "%s %s %s %s\n", mhdr->owner, rightid, mhdr->filename, mhdr->title);
-#endif
-    }
     if (!(mhdr->filemode & FILE_READ)) {
         sendalert(rightid, ALERT_NEW_MAIL);
     }
