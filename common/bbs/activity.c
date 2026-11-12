@@ -217,6 +217,8 @@ act_handle(char *msg, activity_verdict_cb cb, void *arg, struct act_wait *w)
             w->deny = deny;
             if (deny)   // "deny 0 <message>"
                 act_keep_msg(w, p);
+            else if (n >= 4)    // "ok <delay_ms>"
+                w->delay_ms = atoi(tok[3]);
             w->done = 1;
         }
     } else if (strcmp(tok[0], "reads") == 0 && n >= 3) {
@@ -461,5 +463,7 @@ activity_forward(const char *userid, int32_t user_token,
                  act_field_ok(via) ? via : "-",
                  mtime > 0 ? (long long)mtime : 0LL) == 0)
         act_wait_reply(&w, ACTIVITY_FORWARD_WAIT_MS);
+    if (!w.deny && w.delay_ms > 0)
+        usleep(w.delay_ms * 1000);
     return w.deny;
 }

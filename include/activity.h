@@ -39,6 +39,7 @@
 //
 // Service -> client:
 //   verdict <reqid> ok                          reply to login or fwd
+//   verdict <reqid> ok <delay_ms>               reply to fwd: send it, then pause
 //   verdict <reqid> deny <delay_sec> <message>  message (Big5) runs to the end;
 //                                               for fwd: do not send (delay 0), and
 //                                               the message (may be absent) says
@@ -160,7 +161,7 @@ enum {
 // or NULL; `mtime`: when the file was last changed, to tell a changed post
 // from a duplicate, or 0 if unknown). Returns 1 if it should be denied, else 0 (always 0 without the
 // service or a reply in time); sets `msg` (if not NULL, `msgsz` bytes) to why
-// it is denied ("" if not told).
+// it is denied ("" if not told). If let through, pauses as the service asks.
 int activity_forward(const char *userid, int32_t user_token,
                      const char *hostip, uint32_t client_code, int is_exempt,
                      int bid, const char *filename, int kind,
