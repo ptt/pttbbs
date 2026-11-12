@@ -32,10 +32,12 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
 	return mbs_strcasestr(fh->title, keyword) == NULL;
     else if (sr_mode & RS_TITLE)
 	return strcasecmp(subject(fh->title), keyword) == 0;
-    else if (sr_mode & RS_SCORE)
+    else if (sr_mode & RS_SCORE) {
+        int16_t score = fh->filemode & FILE_SUSPICIOUS ? 0 : fh->score;
 	return pred->score > 0 ?
-	    (fh->score >= pred->score) :
-	    (fh->score <= pred->score);
+	    (score >= pred->score) :
+	    (score <= pred->score);
+    }
     else if (sr_mode & RS_COMMENTS)
 	return (int)fh->comments >= (pred->comments > 0 ? pred->comments : pred->score);
     else if (sr_mode & RS_MONEY) {

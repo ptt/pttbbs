@@ -71,7 +71,7 @@ int
 modify_dir_lite(
 	const char *direct, int ent, const char *fhdr_name, time4_t modified,
         const char *title, const char *owner, const char *date,
-        char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes)
+        char comment, void *multi, uint16_t enable_modes, uint16_t disable_modes)
 {
     // since we want to do 'modification'...
     int fd;
@@ -650,6 +650,8 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     if (title_type == SUBJECT_LOCKED)
         STRLCPY(recom, "0m--");
+    else if (ent->filemode & FILE_SUSPICIOUS)
+        STRLCPY(recom,"0m  ");
     else if(ent->score >= MAX_DISPLAY_SCORE)
 	  strcpy(recom,"1m爆");
     else if(ent->score>9)
@@ -692,14 +694,16 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
     }
 
     char col_author[64];
-    SNPRINTF(col_author, "%s%s%s",
+    SNPRINTF(col_author, "%s%s%s%s",
              isonline ? ANSI_COLOR(1) : "",
+	     (ent->filemode & FILE_SUSPICIOUS) ? ANSI_COLOR(1;30) : "",
              ent->owner,
-             isonline ? ANSI_RESET : "");
+             isonline || (ent->filemode & FILE_SUSPICIOUS)? ANSI_RESET : "");
 
     char col_title[512];
     if (strcmp(currtitle, title) == 0) {
         SNPRINTF(col_title, ANSI_COLOR(1;3%c) "%s %s" ANSI_RESET,
+		(ent->filemode & FILE_SUSPICIOUS) ? '0' :
                  color, mark, title);
     } else {
         if (special) {
@@ -2088,6 +2092,12 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->owner[0] == '-')
 	return DONOTHING;
 
+    if (fhdr->filemode & FILE_SUSPICIOUS)
+    {
+        vmsg("本文目前受標記為待證實文章，依規定暫不開放轉錄。");
+        return FULLUPDATE;
+    }
+
     if (!dashf(TEMP_BFILE(currboard, fhdr->filename)))
     {
 	vmsg("檔案已不存在。");
@@ -2453,6 +2463,11 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
             vmsgf("redirect: %s", genbuf);
     } while (0);
 
+    if (fhdr->filemode & FILE_SUSPICIOUS)
+    {
+        more(FN_FILE_SUSPICIOUS_DESC, YEA);
+        clear();
+    }
     // Report the read; the activity service may ask to slow down.
     activity_read_post(cuser.userid, cuser.firstlogin, get_client_code(),
             HasUserPerm(ACTIVITY_EXEMPT_PERMS), currbid,
@@ -4042,6 +4057,32 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 
+#ifdef USE_SUSPICIOUS_MARK
+static int
+mark_suspicious(int ent, fileheader_t * fhdr, const char *direct)
+{
+    aidu_t aidu = 0;
+    aidu = fn2aidu((char *)fhdr->filename);
+    if (aidu > 0) {
+        char aidc[10];
+        char buf[256];
+        aidu2aidc(aidc, aidu);
+
+        if (fhdr->filemode & FILE_SUSPICIOUS)
+            snprintf(buf, sizeof(buf),
+                     "%s 將 #%s (%s) 解除待查證", cuser.userid, aidc, currboard);
+        else
+            snprintf(buf, sizeof(buf),
+                     "%s 將 #%s (%s) 標記待查證", cuser.userid, aidc, currboard);
+
+        post_msg(BN_SECURITY, buf, "請注意標記的合法性", "[待證標記]");
+   }
+
+
+   return change_post_mode(ent, fhdr, direct, FILE_SUSPICIOUS);
+}
+#endif
+
 static int
 view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
               const char *direct GCC_UNUSED, int crs_ln)
@@ -4651,6 +4692,9 @@ static int
 manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     int ans;
     const char *prompt = "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字"
+#ifdef USE_SUSPICIOUS_MARK
+        " [S]標記待證"
+#endif
 #ifdef USE_COMMENTD
         " [V]推文管理"
 #endif
@@ -4682,6 +4726,12 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
         case 'm':
             mask_post_content(ent, fhdr, direct);
             break;
+
+#ifdef USE_SUSPICIOUS_MARK
+        case 's':
+            mark_suspicious(ent, fhdr, direct);
+            break;
+#endif
 
 #ifdef USE_COMMENTD
         case 'v':

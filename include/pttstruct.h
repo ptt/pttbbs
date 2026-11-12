@@ -346,6 +346,7 @@ typedef struct fileheader_t { /* 128 bytes */
 #define FILE_BM         0x0040  /* BM only,	in announce */
 #define FILE_PETITION   0x0040  /* for petition, in non-announce */
 #define FILE_ANONYMOUS  0x0080  /* anonymous file */
+#define FILE_SUSPICIOUS 0x0100    /* marked as suspicious */
 
 /* TODO multi.money is a mess.
  * please help verify and finish these.

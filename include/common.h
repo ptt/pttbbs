@@ -62,6 +62,7 @@
 #define FN_CONTENT_ALERT "etc/content/alert"  // Notes in content alerts (content.svc)
 #define FN_ACTIVITY_ALERT "etc/activity_alert" // Notes in activity alerts (activity.svc)
 #define FN_POSTTYPE	"posttype"
+#define FN_FILE_SUSPICIOUS_DESC "etc/file_suspicious_desc"  // 待查證文章標記說明
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 #define FN_BADLOGIN	"logins.bad"	// in BBSHOME & user directory
 #define FN_RECENTLOGIN	"logins.recent"	// in user directory

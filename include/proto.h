@@ -266,7 +266,7 @@ int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
 int modify_dir_lite(const char *direct, int ent, const char *fhdr_name, time4_t modified,
                     const char *title, const char *owner, const char *date,
-                    char comment, void *multi, uint8_t enable_modes, uint8_t disable_modes);
+                    char comment, void *multi, uint16_t enable_modes, uint16_t disable_modes);
 
 void FormatCommentString(char *buf, size_t szbuf, int type,
                          const char *myid, int maxlength,
