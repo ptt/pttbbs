@@ -674,10 +674,6 @@
 
 #define SHOW_IDLE_TIME          /* 顯示閒置時間 */
 
-#if defined(PLAY_ANGEL) && !defined(CONFIG_ANGEL)
-#define CONFIG_ANGEL 1
-#endif
-
 #if defined(ALL_REEDIT_LOG) && !defined(CONFIG_ALL_REEDIT_LOG)
 #define CONFIG_ALL_REEDIT_LOG 1
 #endif

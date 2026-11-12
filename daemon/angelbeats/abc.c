@@ -86,7 +86,8 @@ int main(int argc, char *argv[])
                "max_masters_of_active_angels=%d\n"
                "my_index=%d\n"
                "my_active_index=%d\n"
-               "my_active_masters=%d\n",
+               "my_active_masters=%d\n"
+	       "inactive_days=%d\n",
                rpt.total_angels,
                rpt.total_online_angels,
                rpt.total_active_angels,
@@ -96,7 +97,8 @@ int main(int argc, char *argv[])
                rpt.max_masters_of_active_angels,
                rpt.my_index,
                rpt.my_active_index,
-               rpt.my_active_masters);
+               rpt.my_active_masters,
+	       rpt.inactive_days);
     } else if (req.operation == ANGELBEATS_REQ_GET_ONLINE_LIST) {
         int i;
         if (toread(fd, &list, sizeof(list)) != sizeof(list)) {

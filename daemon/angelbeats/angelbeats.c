@@ -37,31 +37,17 @@
 // configuration
 static int debug = IS_ENABLED(CONFIG_DEBUG);
 
-// Decide default algorithm
-#if !(defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY) || \
-      defined(ANGELBEATS_ASSIGN_BY_RANDOM))
-#define ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY
-#endif
-
-#ifndef ANGELBEATS_RANDOM_RANGE
-#define ANGELBEATS_RANDOM_RANGE (150)
-#endif
-
 // same as expire length
 #ifndef ANGELBEATS_INACTIVE_TIME
 #define ANGELBEATS_INACTIVE_TIME   ( 180 * DAY_SECONDS )
 #endif
 
 // Lower priority for re-assigning masters in given period.
-#ifndef ANGELBEATS_REASSIGN_PERIOD
-#define ANGELBEATS_REASSIGN_PERIOD  (DAY_SECONDS)
-#endif
+#define ANGELBEATS_REASSIGN_PERIOD  (DAY_SECONDS / 24)
 
 // A period for master to send message, otherwies consider master as "dummy"
 // and move angel back to schedule list.
-#ifndef ANGELBEATS_ASSIGN_PROBATION_PERIOD
-#define ANGELBEATS_ASSIGN_PROBATION_PERIOD (10*60)
-#endif
+#define ANGELBEATS_ASSIGN_PROBATION_PERIOD (6*60)
 
 // Merge activities in every X seconds.
 #ifndef ANGELBEATS_ACTIVITY_MERGE_PERIOD
@@ -294,11 +280,6 @@ suggest_online_angel(int master_uid) {
 #endif
     AngelInfo *kanade = g_angel_list;
 
-#ifdef ANGELBEATS_ASSIGN_BY_RANDOM
-    int random_uids[ANGELBEATS_RANDOM_RANGE];
-    int crandom_uids = 0;
-#endif
-
     for (i = 0; i < g_angel_list_size; i++, kanade++) {
 
         // skip the master himself
@@ -324,25 +305,13 @@ suggest_online_angel(int master_uid) {
             "[probation]" : "");
 #endif
 
-#if defined(ANGELBEATS_ASSIGN_BY_LAST_ACTIVITY)
         if (!uid)
             uid = kanade->uid;
 #ifndef TRACE_ANGEL_SELECTION
         if (uid)
             break;
 #endif
-
-#elif defined(ANGELBEATS_ASSIGN_BY_RANDOM)
-        random_uids[crandom_uids++] = kanade->uid;
-        if (crandom_uids >= ANGELBEATS_RANDOM_RANGE)
-            break;
-#endif
     }
-#ifdef ANGELBEATS_ASSIGN_BY_RANDOM
-    if (crandom_uids > 0) {
-        uid = random_uids[arc4random_uniform(crandom_uids)];
-    }
-#endif
     return uid;
 }
 

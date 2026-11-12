@@ -54,7 +54,7 @@ def is_lazy(e):
 def is_all_reject2(e):
     # 'ALL_REJECT2'
     '\033[1;31m以下是關呼叫統計比例過高([線上]減[關閉]與[停收]小於5)的小天使\033[m'
-    return (e.pause2 + e.pause1 >= e.sample - 4)
+    return (e.pause2 + e.pause1 >= e.sample - 5)
 
 def parse_perf_file(filename):
     data = {}
@@ -84,8 +84,11 @@ def get_nick(uid):
     fn = '%s/home/%c/%s/angelmsg' % (BBSHOME, uid[0], uid)
     nick = ''
     if os.path.exists(fn):
-        with open(fn, 'rb') as f:
-            nick = f.readline().strip().decode('big5').strip('%%[')
+        try:
+            with open(fn, 'rb') as f:
+                nick = f.readline().strip().decode('big5').strip('%%[')
+        except UnicodeDecodeError:
+            nick = '(非中英文暱稱顯示錯誤)'
     else:
         nick = uid
     return nick + '小天使'

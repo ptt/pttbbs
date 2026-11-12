@@ -18,6 +18,13 @@
 #define ANGEL_INACTIVE_DAYS (180)
 #endif
 
+// How PTT1, the only site with angels, runs them.
+#define ANGEL_ORDER_SONG_DAY        (29)    // Order songs for the angel on this day of a month
+#define ANGEL_CHANGE_TIMELIMIT_MINS (1)     // Between angel changes (x3 for bad masters)
+#define ANGEL_CIA_ACCOUNT           "AngelsCIA" // Its activity is not told to angelbeats
+#define ANGEL_ASSIGN_DOCUMENT       "etc/angel_assign.txt"  // How angels are assigned
+#define ANGELBEATS_ACTIVE_MASTER_RECORD_START (1361168062)  // Active masters counted since
+
 static const char
 *PROMPT_ANGELBEATS = "Angel Beats! 天使公會",
 *ERR_CONNECTION = "抱歉，無法連線至天使公會，請稍後再試。\n"
@@ -74,6 +81,11 @@ angel_notify_activity(const char *userid) {
     int master;
     static time4_t t = 0;
     time4_t tick;
+
+    // TODO last piece to replace by ROLE_ANGEL_CIA.
+    // Don't notify AngelBeats for CIA account.
+    if (strcasecmp(userid, ANGEL_CIA_ACCOUNT) == 0)
+	return;
 
     // tick: every 1 minutes.
     syncnow();
@@ -340,7 +352,6 @@ do_changeangel(int force) {
 
     if (!(force || HasUserPerm(PERM_ADMIN)))
     {
-#ifdef ANGEL_CHANGE_TIMELIMIT_MINS
         int duration = ANGEL_CHANGE_TIMELIMIT_MINS;
         if (is_bad_master)
             duration *= 3;
@@ -349,10 +360,15 @@ do_changeangel(int force) {
             vmsgf("每次更換小天使最少間隔 %d 分鐘。", duration);
             return 0;
         }
-#endif
-       if (is_bad_master)
-           log_filef("log/bad_master.log",
-                     "%s change angel.\n", cuser.userid);
+	if (cuser.timeplayangel < cuser.timesetangel - 15 * 60) {
+	    // bad master flooding angel change requests.
+	    static int flood_times = 0;
+	    if (++flood_times > 10) {
+		log_filef("log/bad_master.log",
+			  "%s (potential)\n", cuser.userid);
+		flood_times = 0;
+	    }
+	}
         if (is_bad_master &&
             !verify_captcha("為避免大量非正常更換小天使，\n"))
             return 0;
@@ -384,7 +400,6 @@ angel_order_song(char *receiver, size_t sz_receiver) {
     if (!*cuser.myangel)
         return NULL;
 
-#ifdef ANGEL_ORDER_SONG_DAY
     // check day
     {
         struct tm tm;
@@ -392,7 +407,6 @@ angel_order_song(char *receiver, size_t sz_receiver) {
         if (tm.tm_mday != ANGEL_ORDER_SONG_DAY)
             return NULL;
     }
-#endif
 
     // ensure if my angel is still valid.
     if (passwd_load_user(cuser.myangel, &udata) <= 0 ||
@@ -466,13 +480,11 @@ angel_log_order_song(const char *angel_nick) {
 
 void
 angel_log_msg_to_angel(void) {
-#ifdef ANGEL_CHANGE_TIMELIMIT_MINS
     if (time4_gt(cuser.timeplayangel, cuser.timesetangel)) {
         // Try to avoid mass logs
         if (time4_diff(now, cuser.timeplayangel) >= ANGEL_CHANGE_TIMELIMIT_MINS * 60)
             return;
     }
-#endif
     pwcuPlayAngel();
 }
 
@@ -515,39 +527,21 @@ int a_angelreport() {
        if (!rpt.inactive_days)
            rpt.inactive_days = ANGEL_INACTIVE_DAYS;
 
-        prints(
-            "\t 上線天使中，擁有活躍小主人數目最少為 %d 位，最多為 %d 位\n"
-            "\t 上線且開放收主人的天使中，活躍主人最少 %d 位，最多 %d 位\n"
+	prints(
             "\t 活躍小主人定義為 %d 天內有對任一(包含前任)小天使傳過訊息\n",
-            rpt.min_masters_of_online_angels,
-            rpt.max_masters_of_online_angels,
-            rpt.min_masters_of_active_angels,
-            rpt.max_masters_of_active_angels,
             rpt.inactive_days);
-#ifdef ANGELBEATS_ACTIVE_MASTER_RECORD_START
        int days = time4_days_elapsed(now, ANGELBEATS_ACTIVE_MASTER_RECORD_START);
        days += 1;
        if (days < rpt.inactive_days)
-           prints("\t (由於活躍小主人是新增的統計項目，"
+           prints("\t (由於活躍小主人統計方法調整，"
                    "目前實際只有 %d 天內的數據)\n", days);
-#endif
 
        prints("\n\t " ANSI_COLOR(1;33) "提醒您以下數據有包含您私人的記錄，"
                "任意公佈可能會洩露身份。\n" ANSI_RESET);
 
-#ifdef ANGEL_REPORT_INDEX
-        if (HasUserPerm(PERM_ANGEL)) {
-            if (currutmp->angelpause != ANGELPAUSE_NONE)
-                prints("\t 由於您目前拒收小主人所以無順位資訊\n");
-            else if (rpt.my_active_index == 0)
-                prints("\t 您似乎有其它登入停收或拒收所以目前無天使順位\n");
-            else
-                prints("\t 您的線上小天使順位為 %d。\n"
-                       "\t 此順位可能會因其它小天使上線或改變呼叫器而變大\n",
-                       rpt.my_active_index);
-        }
-#endif
         prints("\t 您目前大約有 %d 位活躍小主人。\n", rpt.my_active_masters);
+	prints("\t 從上次收到新主人後有開呼叫器卻未分配到新主人的次數為: %d\n",
+	       rpt.missed_assign);
 
         if (rpt.last_assigned_master > 0) {
             // TODO check if last_assigned is already invalid.
@@ -559,18 +553,16 @@ int a_angelreport() {
                   "\t  如果你等很久都沒看到新主人的訊息，就可以明白為何之前\n"
                   "\t  會以為都沒有新主人，其實是有收到但對方不講話)\n");
         }
-#ifdef ANGEL_ASSIGN_DOCUMENT
-       prints("\n\t 若覺得很久都沒收到新主人可按 [a] 鍵查看分配機制說明。\n");
-#endif
+       {
+	   time4_t assign_time = dasht(ANGEL_ASSIGN_DOCUMENT);
+	   prints("\n\t 查看分配機制說明(最後更新: %s)請按 [a]\n",
+		   Cdatelite(&assign_time));
+       }
     }
     close(fd);
-#ifdef ANGEL_ASSIGN_DOCUMENT
     if (tolower(pressanykey()) == 'a') {
        more(ANGEL_ASSIGN_DOCUMENT, YEA);
     }
-#else
-    pressanykey();
-#endif
     wait_penalty(1);
     return 0;
 }
@@ -877,27 +869,6 @@ TalkToAngel(){
 	if (getuser(cuser.myangel, &xuser) < 1 ||
             !(xuser.userlevel & PERM_ANGEL)) {
 	    pwcuSetMyAngel("");
-#ifdef USE_FREE_ANGEL_FOR_INACTIVE_MASTER
-        } else if (!supervisor &&
-                   (time4_diff(now, cuser.timeplayangel) >
-                    ANGEL_INACTIVE_DAYS * DAY_SECONDS)) {
-            // Inactive master.
-            uent = search_ulist_userid(cuser.myangel);
-            if (uent == NULL || angel_reject_me(uent) ||
-                uent->angelpause || uent->mode == DEBUGSLEEPING) {
-                log_filef("log/auto_change_angel.log",
-                          "master %s (%d days), angel %s, state (%s)\n",
-                          cuser.userid,
-                          time4_days_elapsed(now, cuser.timeplayangel),
-                          cuser.myangel,
-                          !uent ? "not online" : angel_reject_me(uent) ?
-                          "reject" : uent->angelpause ? "pause" : "debugsleep");
-                pwcuSetMyAngel("");
-                angel_beats_do_request(
-                    ANGELBEATS_REQ_REMOVE_LINK, usernum,
-                    searchuser(cuser.myangel, NULL));
-            }
-#endif
         }
     }
     AngelPermChecked = 1;

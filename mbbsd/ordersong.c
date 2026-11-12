@@ -172,7 +172,7 @@ do_order_song(void)
     memset(&sdata, 0, sizeof(sdata));
     STRLCPY(sdata.sender, cuser.userid);
 
-#ifdef USE_ANGEL_SONG
+#if IS_ENABLED(CONFIG_ANGEL)
     override_receiver = angel_order_song(sdata.receiver, sizeof(sdata.receiver));
     if (override_receiver)
         sdata.has_override = true;
@@ -274,7 +274,7 @@ do_order_song(void)
                      cuser.userid, trans_buffer, address,
                      sender, receiver, say));
 
-#ifdef USE_ANGEL_SONG
+#if IS_ENABLED(CONFIG_ANGEL)
     if (override_receiver)
         angel_log_order_song(override_receiver);
 #endif
