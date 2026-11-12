@@ -94,9 +94,10 @@ typedef struct conn_data
     uint32_t flags;
     // Added later: senders that predate it (bbs-sshd, older wsproxy) send
     // only the fields above, with cb = CONN_DATA_V1_SIZE.
-    uint32_t client_code;   // Client known to the sender (e.g. wsproxy from
-                            // the User-Agent), taken when the client sends no
-                            // telnet negotiation; 0: none
+    uint32_t client_code;   // Client known to the sender: wsproxy from the
+                            // User-Agent (taken when the client sends no
+                            // telnet negotiation), bbs-sshd from the SSH
+                            // identification string (always taken); 0: none
 } PACKSTRUCT conn_data;
 
 #define CONN_DATA_V1_SIZE offsetof(conn_data, client_code)
@@ -105,9 +106,10 @@ typedef struct conn_data
 #define CONN_FLAG_WEBSOCKET (1 << 1)  // From wsproxy
 #define CONN_FLAG_SSH       (1 << 2)  // From bbs-sshd
 
-// logind continues the client code of an SSH connection with this byte: the
-// telnet negotiation is bbs-sshd's own (the window size), so the code tells
-// SSH apart from a client sending the same bytes over WebSocket.
+// logind continues the client code of an SSH connection without a
+// client_code with this byte: the telnet negotiation is bbs-sshd's own (the
+// window size), so the code tells SSH apart from a client sending the same
+// bytes over WebSocket.
 #define CLIENT_CODE_SSH_MARK 'S'
 
 #ifndef GET_SVC_SOCKET

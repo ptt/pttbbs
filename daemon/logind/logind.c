@@ -1976,14 +1976,20 @@ start_service(int fd, login_conn_ctx *conn)
     STRLCPY(ld.port, ctx->port);
     ld.encoding = ctx->encoding;
     ld.client_code = ctx->client_code;
-    // No telnet negotiation at all (most apps): the client the sender knows
-    // (wsproxy: from the User-Agent), if any.
-    if (ld.client_code == FNV1_32_INIT && login_ctx_has_conn_data(ctx) &&
-        ctx->cdata.cb == sizeof(ctx->cdata) && ctx->cdata.client_code)
+    if (login_ctx_transport(ctx) == ACTIVITY_TRANSPORT_SSH) {
+        // SSH: the negotiation is bbs-sshd's own (the window size), so the
+        // client bbs-sshd knows (from the SSH identification string) wins;
+        // without one, the negotiation marked as SSH (daemons.h).
+        if (ctx->cdata.cb == sizeof(ctx->cdata) && ctx->cdata.client_code)
+            ld.client_code = ctx->cdata.client_code;
+        else
+            FNV1A_CHAR(CLIENT_CODE_SSH_MARK, ld.client_code);
+    } else if (ld.client_code == FNV1_32_INIT && login_ctx_has_conn_data(ctx) &&
+               ctx->cdata.cb == sizeof(ctx->cdata) && ctx->cdata.client_code) {
+        // No telnet negotiation at all (most apps): the client the sender
+        // knows (wsproxy: from the User-Agent).
         ld.client_code = ctx->cdata.client_code;
-    // SSH: the negotiation is bbs-sshd's own (daemons.h).
-    if (login_ctx_transport(ctx) == ACTIVITY_TRANSPORT_SSH)
-        FNV1A_CHAR(CLIENT_CODE_SSH_MARK, ld.client_code);
+    }
     ld.t_lines  = 24;   // default size
     ld.t_cols   = 80;
     if (ctx->t_lines > ld.t_lines)
