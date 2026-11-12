@@ -72,11 +72,13 @@ static var_t more_vars[] = {
 static var_t thread_vars[] = {
     DEFINE_VAR(COUNTER, THREAD),
     DEFINE_VAR(COUNTER, SELECTREAD),
+    DEFINE_VAR(COUNTER, SELECT_BY_AID),
     DEFINE_VAR_END,
 };
 
 static var_t record_vars[] = {
     DEFINE_VAR(COUNTER, BOARDREC),
+    DEFINE_VAR(COUNTER, SEARCH_AIDU),
     DEFINE_VAR_END,
 };
 
@@ -100,6 +102,8 @@ static var_t cpu_vars[] = {
     DEFINE_VAR(COUNTER, DOCOMMENT_UCPU),
     DEFINE_VAR(COUNTER, QUERY_SCPU),
     DEFINE_VAR(COUNTER, QUERY_UCPU),
+    DEFINE_VAR(COUNTER, SEARCH_AIDU_SCPU),
+    DEFINE_VAR(COUNTER, SEARCH_AIDU_UCPU),
     DEFINE_VAR_END,
 };
 

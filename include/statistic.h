@@ -1,5 +1,8 @@
 #ifndef STATISTIC_H_
 #define STATISTIC_H_
+
+#include <assert.h>
+
 #define STAT(X, OP) do { \
     if(SHM && SHM->version==SHM_VERSION && 0<=(X) && (X)<STAT_MAX) \
       SHM->statistic[X] OP; \
@@ -114,8 +117,13 @@ enum { // XXX description in shmctl.c
     STAT_MBBSD_ENTER,
     STAT_MBBSD_EXIT,
     STAT_MBBSD_ABORTED,
+    STAT_SELECT_BY_AID,
+    STAT_SEARCH_AIDU,
+    STAT_SEARCH_AIDU_SCPU,
+    STAT_SEARCH_AIDU_UCPU,
     /* insert here. don't forget update shmctl.c */
     STAT_NUM,
     STAT_MAX=512
 };
+static_assert(STAT_NUM <= STAT_MAX, "Too many stats");
 #endif

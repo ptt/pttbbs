@@ -592,7 +592,13 @@ int showstat(int argc GCC_UNUSED, char *argv[])
 	"STAT_MBBSD_ENTER",
 	"STAT_MBBSD_EXIT",
 	"STAT_MBBSD_ABORTED",
+	"STAT_SELECT_BY_AID",
+	"STAT_SEARCH_AIDU",
+	"STAT_SEARCH_AIDU_SCPU",
+	"STAT_SEARCH_AIDU_UCPU",
     };
+    static_assert(STAT_NUM * sizeof(stat_desc[0]) == sizeof(stat_desc),
+	    "Missing entry in stat_desc, please update");
 
     if(argv[1] && strcmp(argv[1],"-c")==0)
 	flag_clear=1;

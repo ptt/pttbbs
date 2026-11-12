@@ -4,11 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "bbs.h"
 #include "cmsys.h"
 #include "cmbbs.h"
 #include "pttstruct.h"
 #include "common.h"
 #include "config.h"
+#include "statistic.h"
 
 static inline int
 match_fhdr_stamp_hex(const fileheader_t *fh, char prefix_ch,
@@ -439,7 +441,10 @@ aidu_t aidc2aidu(const char *aidc)
 int
 search_aidu(const char *bfile, aidu_t aidu, int source)
 {
+    // Ok if we don't record failures.
+    BEGINSTAT(STAT_SEARCH_AIDU);
     int idx = search_dir_by_aidu(bfile, aidu, 0, NULL, source);
+    ENDSTAT(STAT_SEARCH_AIDU);
     return idx > 0 ? idx - 1 : -1;
 }
 

@@ -692,6 +692,8 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	return FULLUPDATE;
     }
 
+    STATINC(STAT_SELECT_BY_AID);
+
     /* skip leading spaces and '#' */
     sp = aidc;
     while(*sp == ' ')
