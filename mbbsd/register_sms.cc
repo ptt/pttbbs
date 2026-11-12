@@ -28,9 +28,11 @@ using Bytes = std::vector<uint8_t>;
 
 const char *kCodePrefix = "ptt";
 constexpr int kCodeLen = 3 + 8;
-constexpr int kCodeValidSecs = 15 * 60;
+// A wrong code costs a few seconds (see InputCode), so a code can stay valid
+// for long.
+constexpr int kCodeValidSecs = SMS_CODE_VALID_SECS;
 constexpr int kMaxStateSize = 16384;
-constexpr int kCooldownDays = 3;
+constexpr int kCooldownDays = SMS_COOLDOWN_DAYS;
 
 struct UserRef {
   std::string userid;
@@ -67,7 +69,11 @@ std::string RandomCode() {
   uint32_t num;
   must_getrandom(&num, sizeof(num));
   num %= 100000000U;
-  return std::string(kCodePrefix) + std::to_string(num);
+  std::string code = kCodePrefix;
+  std::string numstr = std::to_string(num);
+  while (code.size() + numstr.size() < kCodeLen)
+    code.append(1, '0');
+  return code + numstr;
 }
 
 class SmsValidation {
@@ -202,10 +208,12 @@ bool SmsValidation::InputPhone() {
     const VerifyDb::GetReply *reply;
     if (!verifydb_getverify(VMETHOD_SMS, fullphone.c_str(), &buf, &reply) ||
         !reply->ok() || !reply->entry()) {
+      REGISTER_SMS_LOG("VERIFYDB_FAILED_CONN", "%s", fullphone.c_str());
       vmsg("認證系統無法使用，請稍候再試。");
       return false;
     }
     if (reply->entry()->size() > 0) {
+      REGISTER_SMS_LOG("PHONE_USED", "%s", fullphone.c_str());
       vmsg("此號碼已被使用過了！");
       continue;
     }
@@ -267,17 +275,33 @@ bool SmsValidation::InputCode() {
     move(10, 0);
     outs(ANSI_COLOR(1;33) "注意: " ANSI_RESET "認證碼應為 ");
     outs(kCodePrefix);
-    outs(" 開頭, 其後應有 8 位數字。");
+    outs(" 開頭, 其後應有 8 位數字。\n");
+    outs("      並確認認證碼開頭無複製到多餘空白字元。\n");
+    outs("      輸入 " ANSI_COLOR(1) "x" ANSI_RESET " 取消操作。\n");
     // clang-format on
     char incode[kCodeLen + 1] = {};
     getdata(9, 0, "請輸入認證碼: ", incode, sizeof(incode), LCECHO);
     if (std::string(incode) == code_)
       return true;
+    // Some people don't type the prefix. Accept it for now.
+    if (std::string(kCodePrefix) + std::string(incode) == code_)
+      return true;
+    if (std::string(incode) == "x" || std::string(incode) == "X") {
+      vmsg("操作取消");
+      return false;
+    }
     if (--tries > 0)
       vmsgf("認證碼錯誤! 還有 %d 次機會.", tries);
     else
-      vmsg("認證碼錯誤次數過多, 認證取消.");
+      vmsg("認證碼錯誤次數過多, 操作取消.");
     REGISTER_SMS_LOG("INVALID_CODE", "%s %s", code_.c_str(), incode);
+
+    // Slow down brute forcing.
+    move(9, 0); clrtobot();
+    outs("請稍候...");
+    doupdate();
+    sleep(5);
+    move(9, 0); clrtobot();
   } while (tries);
   return false;
 }
@@ -339,6 +363,12 @@ void SmsValidation::Run() {
     } else {
       is_resume = true;
     }
+  }
+
+  // Block if close to system maintenance.
+  if (is_near_sys_maintenance()) {
+    vmsg("目前接近例行系統維護, 暫時無法開始新的認證");
+    return;
   }
 
   // Show user agreement for a new session.

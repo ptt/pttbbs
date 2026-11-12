@@ -374,6 +374,19 @@
 #define MAX_LIFE                (120 * 24 * 60 * 60)
 #endif
 
+/* 新帳號註冊滿幾天才能開始認證 (0: 不限制) */
+#ifndef REGISTER_MIN_ACCOUNT_DAYS
+#define REGISTER_MIN_ACCOUNT_DAYS (0)
+#endif
+
+/* 手機認證碼有效時間 (秒) 與重新認證的冷卻天數 */
+#ifndef SMS_CODE_VALID_SECS
+#define SMS_CODE_VALID_SECS (15 * 60)
+#endif
+#ifndef SMS_COOLDOWN_DAYS
+#define SMS_COOLDOWN_DAYS (3)
+#endif
+
 /* 停權通知中請使用者查詢的看板 */
 #ifndef STR_BAN_NOTICE_BOARDS
 #define STR_BAN_NOTICE_BOARDS "ViolateLaw"

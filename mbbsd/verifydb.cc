@@ -45,7 +45,7 @@ bool verifydb_transact(const void *msg, size_t len, Bytes *out) {
   return ok;
 }
 
-std::string Highlighed(const char *txt, bool ansi_color) {
+std::string Highlighed(const std::string &txt, bool ansi_color) {
   std::string s;
   if (ansi_color)
     s += ANSI_COLOR(1);
@@ -55,16 +55,25 @@ std::string Highlighed(const char *txt, bool ansi_color) {
   return s;
 }
 
+std::string MaybeHidePhone(std::string s) {
+  if (s.size() > 2)
+    for (size_t i = 6; i < s.size() - 2; ++i)
+      s[i] = 'x';
+  return s;
+}
+
 }  // namespace
 
 std::optional<std::string> FormatVerify(int32_t vmethod, const char *vkey,
                                         bool ansi_color) {
   std::string s;
+  vkey = vkey ?: "?";
   switch (vmethod) {
   case VMETHOD_EMAIL:
-    return std::string("(電子信箱) ") + Highlighed(vkey ?: "?", ansi_color);
+    return std::string("(電子信箱) ") + Highlighed(vkey, ansi_color);
   case VMETHOD_SMS:
-    return std::string("(手機認證) ") + Highlighed(vkey ?: "?", ansi_color);
+    return std::string("(手機認證) ") +
+           Highlighed(MaybeHidePhone(vkey), ansi_color) + " (部分隱藏)";
   }
   return std::nullopt;
 }

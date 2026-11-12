@@ -17,7 +17,7 @@
 #define FN_REG_METHODS	"etc/reg.methods"
 
 // Max number of reg methods to load.
-#define MAX_REG_METHODS (3)
+#define MAX_REG_METHODS (8)
 
 typedef struct {
     const char *disp_name;
@@ -32,6 +32,8 @@ typedef struct {
 #define FN_REJECT_STR_NAME "etc/reg_reject_str.name"
 #define FN_REJECT_STR_ADDR "etc/reg_reject_str.addr"
 #define FN_REJECT_STR_CAREER "etc/reg_reject_str.career"
+
+#define FN_NO_REG "NO_REG"
 
 // #define DBG_DISABLE_CHECK	// disable all input checks
 // #define DBG_DRYRUN	// Dry-run test (mainly for RegForm2)
@@ -542,6 +544,15 @@ do_register_captcha()
 }
 
 
+static void
+check_allow_register()
+{
+    if (!dashf(FN_NO_REG))
+	return;
+    vmsg("目前無法註冊帳號!");
+    exit(1);
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // New Registration (Phase 1: Create Account)
 /////////////////////////////////////////////////////////////////////////////
@@ -758,6 +769,8 @@ new_register(void)
     const char 	   *errmsg = NULL;
     uint8_t         ua_version = get_system_user_agreement_version();
     bool	    email_verified = false;
+
+    check_allow_register();
 
     if (!accept_user_aggrement()) {
 	vmsg("抱歉, 您須要接受使用者條款才能註冊帳號享受我們的服務唷!");
@@ -1516,6 +1529,10 @@ static reg_method_t sms_reg_method_ops = {
     .disp_name = "手機認證",
     .enter = u_sms_verification,
 };
+static reg_method_t prg_sms_reg_method_ops = {
+    .disp_name = "手機認證 (程式組)",
+    .enter = u_sms_verification,
+};
 
 #endif
 
@@ -1600,6 +1617,11 @@ u_manual_verification(void)
 	return;
     }
 
+    if (IS_ENABLED(CONFIG_MANUAL_NOREGCODE) &&
+        !HasUserPerm(PERM_NOREGCODE)) {
+	vmsg("人工審核僅開放給無法使用認證碼之帳號使用, 請使用其他認證方式.");
+	return;
+    }
     manual_reg_form_data_t regdata = {
 	.is_living_in_tw = !HasUserFlag(UF_FOREIGN),
     };
@@ -1658,6 +1680,8 @@ load_reg_methods(reg_method_t *rms, size_t maxcount)
 #ifdef USE_SMS_VERIFICATION
 	else if (!strcmp(line, "sms"))
 	    rms[i++] = sms_reg_method_ops;
+	else if (HasUserPerm(PERM_PRG) && !strcmp(line, "prg_sms"))
+	    rms[i++] = prg_sms_reg_method_ops;
 #endif
     }
 
@@ -1675,6 +1699,12 @@ u_register()
     size_t n = load_reg_methods(rms, MAX_REG_METHODS);
     if (!n) {
 	vmsg("目前暫時不開放認證帳號。");
+	return FULLUPDATE;
+    }
+
+    if (REGISTER_MIN_ACCOUNT_DAYS > 0 &&
+        time4_days_elapsed(now, cuser.firstlogin) < REGISTER_MIN_ACCOUNT_DAYS) {
+	vmsgf("新帳號需註冊滿 %d 天才開放認證帳號。", REGISTER_MIN_ACCOUNT_DAYS);
 	return FULLUPDATE;
     }
 

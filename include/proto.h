@@ -891,6 +891,7 @@ void on_crosspost(const char *board, const char *fname,
                   const char *xboard, const char *xfname);
 int adjust_post_money(int money);
 bool IsFreeBoardName(const char *brdname);
+bool is_near_sys_maintenance(void);
 const char *get_logindays_color(int logindays);
 bool can_crosspost(const boardheader_t *bp, const fileheader_t *fh);
 void on_inc_badpost(userec_t *u);

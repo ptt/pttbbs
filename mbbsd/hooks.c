@@ -109,6 +109,14 @@ get_logindays_color(int logindays GCC_UNUSED)
     return "";
 }
 
+// Whether it is near the maintenance of the site so time-consuming tasks should
+// be disallowed.
+GCC_WEAK bool
+is_near_sys_maintenance(void)
+{
+    return false;
+}
+
 // Returns whether posts on board brdname pay nothing.
 GCC_WEAK bool
 IsFreeBoardName(const char *brdname)
