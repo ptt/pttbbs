@@ -219,16 +219,15 @@ ui_mute_user_for_board(const char *uid, const char *board) {
             vmsg("日期過大或無法處理，請重新輸入。");
             return -1;
         }
-        move(y+3, 0); clrtobot();
-        // sprintf(datebuf, "%s", Cdatelite(&expire));
-        sprintf(datebuf, "%d 天", val);
-        prints("期限將設定為 %s之後: %s\n",
-               datebuf, Cdatelite(&expire));
+        move(y+2, 0); clrtobot();
+        snprintf(datebuf, sizeof(datebuf), "%d天", val);
+        prints("期限將設定為 %s之後: %s\n", datebuf, Cdatelite(&expire));
         days = val;
     }
 
     assert(sizeof(reason) >= BAKUMAN_REASON_LEN);
-    mvouts(y+2, 0, ANSI_COLOR(1;31) "請注意此理由會由信件通知使用者也會在看板管理紀錄自動公告。" ANSI_RESET);
+    mvouts(y+3, 0, ANSI_COLOR(1;31)
+           "請注意輸入的理由會由信件通知使用者也會在看板管理紀錄自動公告。" ANSI_RESET);
     // maybe race condition here, but fine.
     if (modlog_ask_reason(board, y+4, reason, BAKUMAN_REASON_LEN) < 0)
         return -1;
@@ -1051,15 +1050,15 @@ modlog_ask_reason_as(const char *bname, int y, char *reason, size_t sz,
     mvouts(yp + 2, 0, "此理由會與執行者的資訊一起被記入下列紀錄：");
     move(yp + 3, 0);
     prints(police ?
-           "- 看板管理紀錄(自動公告，可編輯)不寫理由，您的身份會顯示為 [%s]" :
-           "- 在看板管理紀錄(自動公告，可編輯)您的身份會顯示為 [%s]", role);
+           "- 看板管理紀錄(自動公告，可編輯)不寫理由，您的身份會顯示為[%s]" :
+           "- 在看板管理紀錄(自動公告，可編輯)您的身份會顯示為[%s]", role);
     move(yp + 4, 0);
     if (anonymous)
-        prints("- 看板管理稽核紀錄(管理者才可看，不可編輯)一樣顯示為 [%s]",
+        prints("- 看板管理稽核紀錄(管理者才可看，不可編輯)一樣顯示為[%s]",
                role);
     else
-        prints("- 看板管理稽核紀錄(管理者才可看，不可編輯)另記錄執行者 [%s]"
-               " 與來源 IP", cuser.userid);
+        prints("- 看板管理稽核紀錄(管理者才可看，不可編輯)另記錄執行者[%s]"
+               "與來源IP", cuser.userid);
 
     reason[0] = '\0';
     if (choices) {
