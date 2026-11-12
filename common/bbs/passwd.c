@@ -546,6 +546,11 @@ logattempt(const char *uid, char type, time4_t now, const char *loghost)
     if (type == '-') {
 	sethomefile(fname, uid, FN_BADLOGIN);
 	file_appendf(fname, "[%s] %s\n", Cdate(&now), loghost);
+	// A history that the user can not clear, for investigations.
+	if (LOG_CONF_BADLOGIN_HISTORY) {
+	    sethomefile(fname, uid, FN_BADLOGIN ".history");
+	    file_appendf(fname, "[%s] %s\n", Cdate(&now), loghost);
+	}
     }
 }
 

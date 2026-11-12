@@ -379,6 +379,26 @@
 #define STR_BAN_NOTICE_BOARDS "ViolateLaw"
 #endif
 
+/* mbbsd 的 listen backlog */
+#ifndef SOCKET_QLEN
+#define SOCKET_QLEN 4
+#endif
+
+/* 寄信需要帳號滿幾天 (CONFIG_VIOLATELAW_NOMAIL: 禁止違規 (PERM_VIOLATELAW) 的帳號寄信) */
+#ifndef MAIL_MIN_ACCOUNT_DAYS
+#define MAIL_MIN_ACCOUNT_DAYS (0)
+#endif
+
+/* 稿酬至少多少才計入每日發文數 */
+#ifndef DAILY_POST_MIN_MONEY
+#define DAILY_POST_MIN_MONEY (0)
+#endif
+
+/* 從使用者名單丟水球後暫停幾秒 */
+#ifndef USERLIST_WRITE_DELAY
+#define USERLIST_WRITE_DELAY (0)
+#endif
+
 #ifndef KEEP_DAYS_REGGED
 #define KEEP_DAYS_REGGED        (120)       /* 已註冊使用者保留多久 */
 #endif
@@ -539,6 +559,9 @@
 #endif
 #ifndef LOG_CONF_VALIDATE_REG   // 記錄審核註冊單
 #define LOG_CONF_VALIDATE_REG   (0)
+#endif
+#ifndef LOG_CONF_BADLOGIN_HISTORY // 另記一份使用者無法清除的登入失敗記錄
+#define LOG_CONF_BADLOGIN_HISTORY (0)
 #endif
 #ifndef LOG_CONF_MASS_DELETE    // 記錄大量刪除檔案
 #define LOG_CONF_MASS_DELETE    (0)

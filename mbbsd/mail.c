@@ -1024,6 +1024,16 @@ mail_muser(userec_t muser, const char *title, const char *filename)
     return save_mailbox(cuser.userid, muser.userid, title, NULL, filename, 0, MAILSEND_FLAG_ALLOW_FORWARD, NULL);
 }
 
+bool
+HasSendMailUserPerm(void)
+{
+    if (!HasBasicUserPerm(PERM_LOGINOK))
+	return false;
+    if (IS_ENABLED(CONFIG_VIOLATELAW_NOMAIL) && HasUserPerm(PERM_VIOLATELAW))
+	return false;
+    return time4_days_elapsed(now, cuser.firstlogin) >= MAIL_MIN_ACCOUNT_DAYS;
+}
+
 int
 chkmailbox(void)
 {

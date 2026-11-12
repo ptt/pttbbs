@@ -102,6 +102,23 @@ edit_reject_input(int lineno GCC_UNUSED, const char *line GCC_UNUSED)
     return false;
 }
 
+// The color (ANSI) of logindays in user queries, or "".
+GCC_WEAK const char *
+get_logindays_color(int logindays GCC_UNUSED)
+{
+    return "";
+}
+
+// Returns whether posts on board brdname pay nothing.
+GCC_WEAK bool
+IsFreeBoardName(const char *brdname)
+{
+    if (strcmp(brdname, BN_TEST) == 0 || strcmp(brdname, BN_ALLPOST) == 0)
+        return true;
+    // DEFAULT_BOARD allows posting without special permission, so no rewards.
+    return strcasecmp(brdname, DEFAULT_BOARD) == 0;
+}
+
 // Called after rows of a page of posts or mails (the count entries in page,
 // the first at screen row y) are drawn, to draw anything over the page
 // (psb_col_x() tells where the columns of ctx are). Called again whenever a

@@ -13,8 +13,6 @@
 #endif
 
 
-#define SOCKET_QLEN 4
-
 void do_aloha(void);
 static void getremotename(const struct in_addr from, char *rhost);
 
@@ -1677,7 +1675,11 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     /* setup standalone */
     start_daemon(option);
     pid = (unsigned int)getpid(); // the pid will be changed after start_daemon.
-    signal_restart(SIGCHLD, reapchild);
+    if (IS_ENABLED(CONFIG_TUNNEL_AUTOREAP))
+        // Let the kernel reap the children. Note they inherit SIG_IGN.
+        signal(SIGCHLD, SIG_IGN);
+    else
+        signal_restart(SIGCHLD, reapchild);
 
     assert( option->flag_tunnel_path &&
 	   *option->flag_tunnel_path);

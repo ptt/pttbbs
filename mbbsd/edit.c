@@ -2126,6 +2126,11 @@ write_header(FILE * fp,  const char *mytitle, bool allow_anon)
     edit_fprintf_line(fp, hbuf);
     snprintf(hbuf, sizeof(hbuf), "®É¶¡: %s", ctime4(&now));
     edit_fprintf_line(fp, hbuf);
+
+    // Warn the receivers of mails from new accounts (e.g. of frauds).
+    if (currstat == SMAIL && is_new_account(&cuser) &&
+        dashf(FN_MAIL_NEWUSER_NOTICE))
+	b_suckinfile(fp, FN_MAIL_NEWUSER_NOTICE);
 }
 
 off_t

@@ -565,8 +565,12 @@ typedef struct
         rawmode;        // show file as-is.
 } MF_BrowsingPreference;
 
+#ifndef PMORE_DEFAULT_WRAPINDICATOR
+#define PMORE_DEFAULT_WRAPINDICATOR (1)
+#endif
+
 MF_BrowsingPreference bpref =
-{ MFDISP_WRAP_WRAP, MFDISP_SEP_DEFAULT, 1,
+{ MFDISP_WRAP_WRAP, MFDISP_SEP_DEFAULT, PMORE_DEFAULT_WRAPINDICATOR,
     0, 0, 0 };
 
 /* structure generalized for the one-arg mf_attach_handler */

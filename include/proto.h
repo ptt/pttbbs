@@ -521,6 +521,8 @@ void strip_esc_star(char *s);
 int x_love(void);
 
 /* mail */
+// Whether the user may send mails (see MAIL_MIN_ACCOUNT_DAYS).
+bool HasSendMailUserPerm(void);
 int load_mailalert(const char *userid);
 int sendalert(const char *userid, int alert);
 int sendalert_uid(int uid, int alert);
@@ -892,6 +894,8 @@ bool can_forward(const char *title);
 void on_crosspost(const char *board, const char *fname,
                   const char *xboard, const char *xfname);
 int adjust_post_money(int money);
+bool IsFreeBoardName(const char *brdname);
+const char *get_logindays_color(int logindays);
 bool can_crosspost(const boardheader_t *bp, const fileheader_t *fh);
 void on_inc_badpost(userec_t *u);
 int get_keep_days(const userec_t *u);

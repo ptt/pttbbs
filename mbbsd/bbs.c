@@ -305,20 +305,6 @@ GetWebUrl(const boardheader_t *bp, const fileheader_t *fhdr, char *buf,
 
 #endif // QUERY_ARTICLE_URL
 
-// post 文章不算錢的板
-int IsFreeBoardName(const char *brdname)
-{
-    if (strcmp(brdname, BN_TEST) == 0)
-	return 1;
-    if (strcmp(brdname, BN_ALLPOST) == 0)
-	return 1;
-    // since DEFAULT_BOARD is allowed to post without
-    // special permission, we should not give rewards.
-    if (strcasecmp(brdname, DEFAULT_BOARD) == 0)
-	return 1;
-    return 0;
-}
-
 /* Picks up a permission change that someone else made (ALERT_PWD_PERM). */
 void
 check_new_perm(void)
@@ -1465,7 +1451,8 @@ do_post_article(int edflags)
 	    {
                 pay(-money, "%s 看板發文稿酬: %s", currboard, postfile.title);
 		pwcuIncNumPost();
-		StatIncDailyPost();
+		if (money >= DAILY_POST_MIN_MONEY)
+		    StatIncDailyPost();
 		prints("這是您的第 %d 篇有效文章，獲得稿酬 %d "
                         MONEYNAME "\n", cuser.numposts, money);
 		prints("\n (若之後自行或被板主刪文"

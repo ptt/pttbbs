@@ -316,7 +316,11 @@ my_query(const char *uident)
 
 	// ------------------------------------------------------------
 
-	prints("《" STR_LOGINDAYS "》%d " STR_LOGINDAYS_QTY, muser.numlogindays);
+	{
+	    const char *color = get_logindays_color(muser.numlogindays);
+	    prints("《" STR_LOGINDAYS "》%s%d%s " STR_LOGINDAYS_QTY, color,
+		   muser.numlogindays, *color ? ANSI_RESET : "");
+	}
 #ifdef SHOW_LOGINOK
 	if (!(muser.userlevel & PERM_LOGINOK))
 	    outs(" (尚未通過認證)");
@@ -1503,8 +1507,11 @@ userlist_cmd_kick(cmd_ctx_t *ctx) {
 static int
 userlist_cmd_write(cmd_ctx_t *ctx) {
     userlist_ctx_t *cx = (userlist_ctx_t *)ctx->priv;
-    if (call_in(cx->uentp, cx->fri_stat))
+    if (call_in(cx->uentp, cx->fri_stat)) {
         ctx->reload = true;
+        if (USERLIST_WRITE_DELAY > 0)
+            wait_penalty(USERLIST_WRITE_DELAY);
+    }
     return 0;
 }
 
