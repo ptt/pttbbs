@@ -1,12 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #-*- coding: big5 -*-
-
-from __future__ import print_function, unicode_literals
-from builtins import bytes, chr, map
 
 import collections
 import math
 import os
+import sys
 import time
 
 BBSHOME = '/home/bbs'
@@ -86,10 +84,11 @@ def get_nick(uid):
     fn = '%s/home/%c/%s/angelmsg' % (BBSHOME, uid[0], uid)
     nick = ''
     if os.path.exists(fn):
-        nick = open(fn).readline().strip().decode('big5').strip('%%[')
+        with open(fn, 'rb') as f:
+            nick = f.readline().strip().decode('big5').strip('%%[')
     else:
         nick = uid
-    return (nick + '小天使').encode('big5').decode('big5')
+    return nick + '小天使'
 
 def build_badges(max_sample, avg_sample, std_sample, data):
     result = {}
@@ -110,6 +109,8 @@ def build_badges(max_sample, avg_sample, std_sample, data):
     return result
 
 def main():
+    # The report is Big5, whatever the locale, as under Python 2.
+    sys.stdout.reconfigure(encoding='big5')
     max_sample, avg_sample, std_sample, data = parse_perf_file(INPUT_FILE)
     # print 'max=%f, avg=%f, std=%f' % (max_sample, avg_sample, std_sample)
     if max_sample < SAMPLE_MINIMAL:
