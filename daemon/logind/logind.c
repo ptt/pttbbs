@@ -1440,14 +1440,17 @@ static const char *auth_is_free_userid(const char *userid);
 static void login_conn_remove(login_conn_ctx *conn, int fd, int sleep_sec);
 
 // How the login came in: wsproxy sets CONN_FLAG_WEBSOCKET in its conn_data,
-// bbs-sshd sends conn_data without it, telnet none.
+// bbs-sshd CONN_FLAG_SSH (none before it: conn_data without either is
+// taken as SSH, the only other sender), telnet sends no conn_data.
 static int
 login_ctx_transport(login_ctx *ctx)
 {
     if (!login_ctx_has_conn_data(ctx))
         return ACTIVITY_TRANSPORT_TELNET;
-    return (ctx->cdata.flags & CONN_FLAG_WEBSOCKET) ? ACTIVITY_TRANSPORT_WS :
-                                                      ACTIVITY_TRANSPORT_SSH;
+    if (ctx->cdata.flags & CONN_FLAG_WEBSOCKET)
+        return ACTIVITY_TRANSPORT_WS;
+    // TODO: apply SSH only if CONN_FLAG_SSH is set.
+    return ACTIVITY_TRANSPORT_SSH;
 }
 
 static int
@@ -1978,6 +1981,9 @@ start_service(int fd, login_conn_ctx *conn)
     if (ld.client_code == FNV1_32_INIT && login_ctx_has_conn_data(ctx) &&
         ctx->cdata.cb == sizeof(ctx->cdata) && ctx->cdata.client_code)
         ld.client_code = ctx->cdata.client_code;
+    // SSH: the negotiation is bbs-sshd's own (daemons.h).
+    if (login_ctx_transport(ctx) == ACTIVITY_TRANSPORT_SSH)
+        FNV1A_CHAR(CLIENT_CODE_SSH_MARK, ld.client_code);
     ld.t_lines  = 24;   // default size
     ld.t_cols   = 80;
     if (ctx->t_lines > ld.t_lines)

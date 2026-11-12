@@ -103,6 +103,12 @@ typedef struct conn_data
 
 #define CONN_FLAG_SECURE    (1 << 0)
 #define CONN_FLAG_WEBSOCKET (1 << 1)  // From wsproxy
+#define CONN_FLAG_SSH       (1 << 2)  // From bbs-sshd
+
+// logind continues the client code of an SSH connection with this byte: the
+// telnet negotiation is bbs-sshd's own (the window size), so the code tells
+// SSH apart from a client sending the same bytes over WebSocket.
+#define CLIENT_CODE_SSH_MARK 'S'
 
 #ifndef GET_SVC_SOCKET
 #define GET_SVC_SOCKET(name) (BBSHOME "/run/" #name ".svc.sock")
