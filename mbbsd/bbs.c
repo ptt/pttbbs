@@ -4081,6 +4081,31 @@ mark_suspicious(int ent, fileheader_t * fhdr, const char *direct)
    return change_post_mode(ent, fhdr, direct, FILE_SUSPICIOUS);
 }
 
+// The ID of an anonymous author shown to this user: the same for the same
+// author within a connection and a (local) day, but can not be linked
+// across connections, days or viewers without the per-connection key.
+static uint32_t
+anon_display_id(uint32_t anon_uid)
+{
+    static uint64_t key;
+    static bool has_key;
+    struct tm tm;
+    uint64_t x;
+
+    if (!has_key) {
+	must_getrandom(&key, sizeof(key));
+	has_key = true;
+    }
+    localtime4_r(&now, &tm);
+    x = key ^ ((uint64_t)anon_uid << 32) ^
+	(uint64_t)(tm.tm_year * 366 + tm.tm_yday);
+    // splitmix64 finalizer
+    x ^= x >> 30; x *= 0xbf58476d1ce4e5b9ULL;
+    x ^= x >> 27; x *= 0x94d049bb133111ebULL;
+    x ^= x >> 31;
+    return (uint32_t)x;
+}
+
 static int
 view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
               const char *direct GCC_UNUSED, int crs_ln)
@@ -4163,11 +4188,10 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 #endif
 
     if(fhdr->filemode & FILE_ANONYMOUS) {
-        /* Note in MODE_SELECT, the multi may be fucked by ref number. */
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_post_article() */
 	prints("│ 匿名管理編號: %u (同一人號碼會一樣)",
-	   (unsigned int)fhdr->multi.anon_uid + (unsigned int)currutmp->pid);
+	       anon_display_id(fhdr->multi.anon_uid));
     } else if (fhdr->filemode & FILE_PETITION) {
         const boardheader_t *brd = getbcache(currbid);
         uint32_t bp = brd ? brd->petition_limit_badpost : 0,

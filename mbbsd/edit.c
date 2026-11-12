@@ -2322,7 +2322,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
         }
 
         // common trail
-        prints("[S]%s", msgSave);
+        prints("[S/V]%s", msgSave);
     }
 
 #ifdef EXP_EDIT_UPLOAD
@@ -2378,7 +2378,8 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
 	    strlcpy(mytitle, ans, STRLEN);
 	return KEEP_EDITING;
     case 's':
-        break;
+    case 'v':
+	break;
     }
 
     if (!aborted) {

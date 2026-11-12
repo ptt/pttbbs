@@ -374,6 +374,11 @@
 #define MAX_LIFE                (120 * 24 * 60 * 60)
 #endif
 
+/* 停權通知中請使用者查詢的看板 */
+#ifndef STR_BAN_NOTICE_BOARDS
+#define STR_BAN_NOTICE_BOARDS "ViolateLaw"
+#endif
+
 #ifndef KEEP_DAYS_REGGED
 #define KEEP_DAYS_REGGED        (120)       /* 已註冊使用者保留多久 */
 #endif
