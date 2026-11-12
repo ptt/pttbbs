@@ -3,6 +3,13 @@
 
 #include "bbs.h"
 
+// Where -s saves the list of files of each board: MANDEX_LIST_DIR/B/BOARD.
+#define FN_MANDEX_EXCLUDE "etc/mandex_exclude"
+
+#ifndef MANDEX_LIST_DIR
+#define MANDEX_LIST_DIR BBSHOME "/man/list"
+#endif
+
 typedef struct {
     char bname[BRDNAME_SIZE];
     int ndir, nfile, k;
@@ -12,6 +19,8 @@ static const char *color[4] = {"[1;33m", "[1;32m", "[1;36m", "[1;37m"};
 static const char *fn_index = ".index";
 static const char *fn_new = ".index.new";
 static const char *index_title = "¡· ºëµØ°Ï¥Ø¿ý¯Á¤Þ";;
+int     savelist = 0;
+FILE    *flist;
 
 int sortbyname(const void *a, const void *b)
 {
@@ -63,8 +72,11 @@ mandex(const int level, const char *num_header, char *fpath)
 		mandex(level + 1, buf, fpath);
 	    }
 	}
-	else
+	else {
+	    if (flist && !(fhdr.filemode&(FILE_BM|FILE_HIDE)))
+		fprintf(flist, "%s\n", fpath);
 	    curr_brdinfo.nfile++;
+	}
     }
 
     fclose(fp_dir);
@@ -189,6 +201,10 @@ output_chart(const boardinfo_t * board, const int nbrds)
 	if (bptr->brdattr & (BRD_NOCREDIT | BRD_NOCOUNT | BRD_HIDE))
 	    continue;
 
+	/* ¯¸¤è¤£¦C¤J±Æ¦Wªº¬ÝªO (etc/mandex_exclude, ¤@¦æ¤@­Ó) */
+	if (file_exist_entry(FN_MANDEX_EXCLUDE, bptr->brdname))
+	    continue;
+
 	if (board[i].ndir + board[i].nfile < 5)
 	    break;
 
@@ -215,14 +231,19 @@ int main(int argc, char* argv[])
     int     nSorted, nb;
     DIR     *dirp;
     struct  dirent *de;
+    char    listpath[MAXPATHLEN];
     int     i, fd, checkrebuild = 0;
     char    *fname, fpath[PATHLEN];
 
     nice(10);
-    while ((i = getopt(argc, argv, "xh")) != -1) {
+
+    while ((i = getopt(argc, argv, "sxh")) != -1) {
 	switch (i) {
 	    case 'x':
 		checkrebuild = 1;
+		break;
+	    case 's':
+		savelist = 1;
 		break;
 	    case 'h':
 		printf("NAME\n"
@@ -250,8 +271,21 @@ int main(int argc, char* argv[])
 
     /* process boards given in arguments */
     if (argc > 0) {
-	for (i = 0; i < argc; i++)
+	for (i = 0; i < argc; i++) {
+	    if (savelist) {
+		snprintf(listpath, sizeof(listpath), MANDEX_LIST_DIR "/%c/%s",
+			 argv[i][0], argv[i]);
+		if (!(flist = fopen(listpath, "w")))
+		    perror(listpath);
+	    }
+
 	    man_index(argv[i]);
+
+	    if (flist) {
+		fclose(flist);
+		flist = NULL;
+	    }
+	}
 
 	return 0;
     }
@@ -305,7 +339,19 @@ int main(int argc, char* argv[])
 		unlink(fpath);
 	    }
 
+	    if (savelist) {
+		snprintf(listpath, sizeof(listpath), MANDEX_LIST_DIR "/%c/%s",
+			 dirs[i], fname);
+		if (!(flist = fopen(listpath, "w")))
+		    perror(listpath);
+	    }
+
 	    man_index(fname);
+
+	    if (flist) {
+		fclose(flist);
+		flist = NULL;
+	    }
 
 	    if (!curr_brdinfo.k)
 		continue;

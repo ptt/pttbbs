@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# expire rules
-EXPIRE_MINUTES="+$((103000 / 3))"
-HOME_EXPIRE_MINUTES="+$((103000 / 6))"
+# expire rules in minutes; a site may set them in the environment
+: "${EXPIRE_MINUTES:=$((103000 / 3))}"
+: "${HOME_EXPIRE_MINUTES:=$((103000 / 6))}"
 
 # configuration
 BBSHOME=$HOME
@@ -21,7 +21,7 @@ expire_folder() {
     fi
 
     # first stage, expire files
-    find "$timecap_base" -mmin "$expire" -ls -delete
+    find "$timecap_base" -mmin "+$expire" -ls -delete
 
     # second stage, modify .DIR files
     # dir_file="$timecap_base/archive.idx"

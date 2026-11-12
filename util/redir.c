@@ -2,13 +2,58 @@
 #include "bbs.h"
 #define SKIP_FILE_CHECK
 
+// Site spam patterns, one per line: "title <text>" or "owner <userid>".
+#define FN_REDIR_SPAM BBSHOME "/etc/redir_spam"
+
+static char **spam_titles, **spam_owners;
+static size_t num_spam_titles, num_spam_owners;
+
+static void
+load_spam_patterns(void)
+{
+    char buf[256];
+    FILE *fp = fopen(FN_REDIR_SPAM, "r");
+    if (!fp)
+        return;
+    while (fgets(buf, sizeof(buf), fp)) {
+        char *p = strchr(buf, '\n');
+        if (p)
+            *p = 0;
+        if (strncmp(buf, "title ", 6) == 0 && buf[6]) {
+            spam_titles = realloc(spam_titles,
+                                  sizeof(char *) * (num_spam_titles + 1));
+            spam_titles[num_spam_titles++] = strdup(buf + 6);
+        } else if (strncmp(buf, "owner ", 6) == 0 && buf[6]) {
+            spam_owners = realloc(spam_owners,
+                                  sizeof(char *) * (num_spam_owners + 1));
+            spam_owners[num_spam_owners++] = strdup(buf + 6);
+        }
+    }
+    fclose(fp);
+}
+
+static int
+in_site_spam(const fileheader_t *fh)
+{
+    for (size_t i = 0; i < num_spam_titles; i++)
+        if (strcasestr(fh->title, spam_titles[i]))
+            return 1;
+    for (size_t i = 0; i < num_spam_owners; i++)
+        if (strcmp(fh->owner, spam_owners[i]) == 0)
+            return 1;
+    return 0;
+}
+
 int in_spam(const fileheader_t *fh) {
     const char *title = fh->title;
     return strcasestr(title, "[SPAM] FILL YOUR SPAM HERE") ||
+	   in_site_spam(fh) ||
 
 	   // legacy return receipt
 	   (strcmp(fh->owner, "MAILER-DAEMON") == 0 &&
 	    strcmp(fh->title, "Undelivered Mail Returned to Sender") == 0) ||
+	   (strcmp(fh->owner, "MAILER-DAEMON") == 0 &&
+	    strcmp(fh->title, "Returned mail: see transcript for details") == 0) ||
 
 	   // let's also remove dangerous birthday links
 	   (strcmp(fh->owner, BBSNAME) == 0 &&
@@ -33,6 +78,10 @@ int process(FILE *fin, FILE *fout, const char *index_path,
 
 	if (!should_remove && remove_spam && in_spam(&fh))
             should_remove = 1;
+
+	// workaround... (some anonymous posts have modified = 0)
+	if (remove_modified_days > 0 && fh.modified == 0)
+	    fh.modified = atoi(fh.filename + 2);
 
         if (!should_remove && remove_modified_days > 0 && fh.modified) {
             if (time4_days_elapsed(now, fh.modified) >= remove_modified_days)
@@ -71,7 +120,7 @@ int process(FILE *fin, FILE *fout, const char *index_path,
 
 void die_usage(const char *myname) {
     printf("usage: %s [-options] PATH_TO_FN_DIR\n"
-           " -s: remove spam\n"
+           " -s: remove spam (also patterns in etc/redir_spam)\n"
            " -e: check existence\n"
            " -d days: remove posts > days\n"
            " -v: verbose\n"
@@ -93,6 +142,7 @@ int main(int argc, char **argv)
         switch (opt) {
             case 's':
                 remove_spam = 1;
+                load_spam_patterns();
                 break;
 
             case 'd':
