@@ -353,7 +353,7 @@ activity_login_failed(const char *userid, const char *hostip)
 
 uint32_t
 activity_login_query(const char *userid, const char *hostip, int is_exempt,
-                     int transport)
+                     int transport, uint32_t client_code)
 {
     if (!IS_ENABLED(CONFIG_ACTIVITY_SVC))
         return 0;
@@ -363,7 +363,7 @@ activity_login_query(const char *userid, const char *hostip, int is_exempt,
         [ACTIVITY_TRANSPORT_SSH]    = "ssh",
         [ACTIVITY_TRANSPORT_WS]     = "ws",
     };
-    const char *via = "";
+    const char *via = "-";
     char ip[64];
 
     if (!act_field_ok(userid))
@@ -373,9 +373,9 @@ activity_login_query(const char *userid, const char *hostip, int is_exempt,
         via = transports[transport];
     if (++g_reqid == 0)
         g_reqid = 1;
-    if (act_send("login %u %s %s %d%s%s", g_reqid, userid,
+    if (act_send("login %u %s %s %d %s %x", g_reqid, userid,
                  act_norm_ip(hostip, ip, sizeof(ip)), is_exempt ? 1 : 0,
-                 *via ? " " : "", via) < 0)
+                 via, client_code) < 0)
         return 0;
     return g_reqid;
 }

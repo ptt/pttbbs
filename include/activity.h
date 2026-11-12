@@ -17,10 +17,11 @@
 //
 // Client -> service:
 //   fail <userid> <ip>                          wrong password
-//   login <reqid> <userid> <ip> <exempt> [<transport>]
+//   login <reqid> <userid> <ip> <exempt> [<transport> [<client_hex>]]
 //                                               authenticated; expects verdict;
 //                                               transport: ws, ssh or telnet
-//                                               (ACTIVITY_TRANSPORT_*), absent if unknown
+//                                               (ACTIVITY_TRANSPORT_*), "-" or absent if
+//                                               unknown; client_hex: the client code
 //   read <userid> <firstlogin> <client_hex> <bid> <filename>
 //                                               a post read
 //   nav <userid> <firstlogin> <ip> <client_hex> <type> <bid> [<value>]
@@ -104,11 +105,11 @@ enum {
 };
 
 // logind: asks for a verdict on an authenticated login that came in over
-// transport (ACTIVITY_TRANSPORT_*). Returns a request id (> 0) whose verdict
-// arrives through activity_client_dispatch(), or 0 if the login should be
-// accepted right away (service unavailable).
+// transport (ACTIVITY_TRANSPORT_*) from client client_code. Returns a request
+// id (> 0) whose verdict arrives through activity_client_dispatch(), or 0 if
+// the login should be accepted right away (service unavailable).
 uint32_t activity_login_query(const char *userid, const char *hostip, int is_exempt,
-                              int transport);
+                              int transport, uint32_t client_code);
 
 // logind: socket to watch for readability, or -1.
 int activity_client_fd(void);
