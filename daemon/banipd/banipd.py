@@ -121,7 +121,7 @@ def main(myname, argv):
         try:
             newtbl = LoadConfigTable(config_file)
             g_tbl.clear()
-            g_tbl.update()
+            g_tbl.update(newtbl)
             logging.warning("Successfully updated table.")
         except:
             logging.exception("Failed loading new config: %s" % config_file)
