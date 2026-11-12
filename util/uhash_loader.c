@@ -9,6 +9,9 @@ void userec_add_to_uhash(int n, userec_t *id, int onfly);
 void fill_uhash(int onfly);
 void load_uhash(void);
 
+// Free slots (empty user IDs) kept in the hash for new registrations.
+static int free_slots_in_hash = 1000;
+
 int main()
 {
     setgid(BBSGID);
@@ -109,6 +112,9 @@ void fill_uhash(int onfly)
 	fd = stbuf.st_size / sizeof(userec_t);
 	if (fd > MAX_USERS)
 	    fd = MAX_USERS;
+	// 0.5% of the records, at least 1000 (10000 for 2 million users).
+	if (fd / 200 > free_slots_in_hash)
+	    free_slots_in_hash = fd / 200;
         	
 	for (mimage = fimage; usernumber < fd; mimage += sizeof(userec_t))
 	{
@@ -137,7 +143,7 @@ void userec_add_to_uhash(int n, userec_t *user, int onfly)
 	// dirty hack, preserve few slot for new register
 	static int count = 0;
 	count++;
-	if (count > 1000)
+	if (count > free_slots_in_hash)
 	    return;
     }
 

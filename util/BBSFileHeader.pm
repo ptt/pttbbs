@@ -4,17 +4,18 @@ use strict;
 use IO::Handle;
 use Data::Dumper;
 
-use fields qw/dir fh cache/;
+use fields qw/dir fh cache notskip/;
 
 sub TIEHASH
 {
-    my($class, $dir) = @_;
+    my($class, $dir, $notskip) = @_;
     my $self = fields::new($class);
 
     open $self->{fh}, "<$dir/.DIR";
     return undef if( !$self->{fh} );
 
     $self->{dir} = $dir;
+    $self->{notskip} = $notskip;
     return $self;
 }
 
@@ -51,7 +52,8 @@ sub FETCH
 	 $h{money}, undef, $h{filemode}) =
 	    unpack('Z33sZ14Z6Z65iCC', $t);
 	$h{recommend} = $h{rating};
-	$h{title} = substr($h{title}, 3);
+	$h{title} = substr($h{title}, 3)
+	    if( !$self->{notskip} );
 	$self->{cache}{$num}{$_} = $h{$_}
 	    foreach( 'filename', 'owner', 'date',
 		     'title', 'money', 'filemode', 'rating', 'recommend' );

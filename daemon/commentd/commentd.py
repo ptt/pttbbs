@@ -182,9 +182,9 @@ def handle_request(socket, _):
             pass
 
 def main(myname, argv):
-    level = logging.INFO
+    #level = logging.INFO
     level = logging.WARNING
-    level = logging.DEBUG
+    # level = logging.DEBUG
     logging.basicConfig(level=level, format='%(asctime)-15s %(message)s')
     if len(argv) not in [0, 1]:
         print("Usage: %s [db_path]" % myname)

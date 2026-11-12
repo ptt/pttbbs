@@ -483,11 +483,43 @@ int fixbcache(int argc GCC_UNUSED, char **argv GCC_UNUSED)
     }
     return 0;
 }
+int expireboardsr(int argc, char **argv){
+    int i;
+
+    if(argc < 2){
+	puts("no board specified");
+	return 0;
+    }
+
+    time4_t now = time(NULL);
+    for(i = 1; i < argc; ++i){
+	int bid = getbnum(argv[i]);
+	boardheader_t *bp;
+	if (!bid || !(bp = getbcache(bid))) {
+	    printf("board '%s' not found\n", argv[i]);
+	    continue;
+	}
+
+	time4_t prev_expire = bp->SRexpire;
+	bp->SRexpire = now;
+
+	printf("%s processed: %d -> %d\n", bp->brdname,
+		prev_expire, bp->SRexpire);
+    }
+    return 0;
+}
 
 int rlfcache(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 {
     reload_fcache();
     puts("fcache reloaded");
+    return 0;
+}
+
+int rlpttcache(int argc GCC_UNUSED, char **argv GCC_UNUSED)
+{
+    reload_pttcache();
+    puts("pttcache reloaded");
     return 0;
 }
 
@@ -627,7 +659,9 @@ struct Cmd {
     {dummy,      "\b\b\b\bBuild cache/fix tool:", ""},
     {torb,       "reloadbcache", "reload bcache"},
     {fixbcache,  "fixbcache",  "fix bcache"},
+    {expireboardsr, "expireboardsr", "set board SRexpire to now"},
     {rlfcache,   "reloadfcache", "reload fcache"},
+    {rlpttcache, "reloadpttcache", "reload pttcache"},
     {bBMC,       "bBMC",       "build BM cache (deprecated, no-op)"},
     {utmpfix,    "utmpfix",    "clear dead userlist entry & kick idle user. Options: [-h: see full usage]"},
     {utmpreset,  "utmpreset",  "SHM->busystate=0"},

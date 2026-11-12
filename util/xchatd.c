@@ -299,6 +299,11 @@ debug_room()
 static int valid_chatid(register char *id) {
     register int ch, len;
     
+    if (strstr(id, "　") ||
+	// blacklist here
+	0)
+	return 0;
+
     if (mbs_strstr(id, "◆") ||
         mbs_strstr(id, STR_REF_MARK))
         return 0;
@@ -1189,13 +1194,20 @@ static void
 chat_query(ChatUser *cu, char *msg)
 {
     char *recipient;
-    ChatUser *xuser;
+    ChatUser *xuser = NULL;
 
     recipient = nextword(&msg);
-    xuser = (ChatUser *) fuzzy_cuser_by_chatid(recipient);
-    if (xuser == NULL)
-	xuser = cuser_by_userid(recipient);
-    if (xuser == NULL)
+
+    if (recipient && *recipient)
+    {
+	xuser = (ChatUser *) fuzzy_cuser_by_chatid(recipient);
+	if (xuser == NULL)
+	    xuser = cuser_by_userid(recipient);
+    }
+
+    if (!recipient || !*recipient)
+	strcpy(chatbuf, "※ 請指定要查詢的聊天代號");
+    else if (xuser == NULL)
 	SNPRINTF(chatbuf, msg_no_such_id, recipient);
     else if (xuser == FUZZY_USER)
 	STRLCPY(chatbuf, "※ 請清楚指明對方的聊天代號"); // ambiguous

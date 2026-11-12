@@ -3,6 +3,38 @@
 
 boardheader_t allbrd[MAX_BOARD];
 
+const char *brd_attr_names[] = {
+    "NOZAP",
+    "NOCOUNT",
+    "NOTRAN",
+    "GROUPBOARD",
+    "HIDE",
+    "POSTMASK",
+    "ANONYMOUS",
+    "DEFAULTANONYMOUS",
+    "NOCREDIT",
+    "VOTEBOARD",
+    "WARNEL",
+    "TOP",
+    "NORECOMMEND",
+    "ANGELANONYMOUS",
+    "BMCOUNT",
+    "SYMBOLIC",
+    "NOBOO",
+    "LOCALSAVE",
+    "RESTRICTEDPOST",
+    "GUESTPOST",
+    "COOLDOWN",
+    "CPLOG",
+    "NOFASTRECMD",
+    "IPLOGRECMD",
+    "OVER18",
+    "NOREPLY",
+    "ALIGNEDCMT",
+    "NOSELFDELPOST",
+    NULL
+};
+
 int board_cmp(boardheader_t *a, boardheader_t *b)
 {
     return (strcasecmp(a->brdname, b->brdname));
@@ -76,6 +108,11 @@ int main(int argc, char *argv[])
 	printf("bclass:\t%s\n", b.bclass);
 	printf("desc:\t%s\n", b.desc);
 	printf("brdattr:\t%08x\n", b.brdattr);
+	for (i = 0; brd_attr_names[i]; i++) {
+	    if (b.brdattr & (1 << i))
+		printf(" %s", brd_attr_names[i]);
+	}
+	printf("\n");
 	printf("post_limit_logins:\t%d\n", b.post_limit_logins);
 	printf("post_limit_badpost:\t%d\n", b.post_limit_badpost);
 	printf("level:\t%d\n", b.level);
