@@ -32,9 +32,15 @@ type Config struct {
 	FlushSeconds   int
 	MinReplyRunes  int
 	FilterEncoding string // "big5" (default) or "utf-8"
-	ShardID        int
-	NumShards      int
+	NumShards      int    // engines sharing the file descriptors
 	MaxOpenFiles   int
+
+	// NextPostID allocates the ID of a new post. Post IDs are global: a
+	// sharded storage hands out one sequence to all its engines, so an ID
+	// names one post wherever it lives (and keeps naming it when the post
+	// moves to another engine). If nil, SQLite assigns the next ID of this
+	// engine (AUTOINCREMENT).
+	NextPostID func() uint64
 
 	// Communities is the community registry shared by all engines. If nil,
 	// OpenEngine opens one in DataDir and closes it with the engine.
@@ -47,16 +53,15 @@ func (c Config) IsBig5() bool {
 }
 
 type Engine struct {
-	cfg            Config
-	postsDB        *pebble.DB
-	commentsDB     *pebble.DB
-	votesDB        *pebble.DB
-	historyDB      *pebble.DB
-	metaDB         *sql.DB
-	metaWriteMu    sync.Mutex
-	reg            *CommunityRegistry
-	ownsReg        bool
-	postSeqCounter uint64
+	cfg         Config
+	postsDB     *pebble.DB
+	commentsDB  *pebble.DB
+	votesDB     *pebble.DB
+	historyDB   *pebble.DB
+	metaDB      *sql.DB
+	metaWriteMu sync.Mutex
+	reg         *CommunityRegistry
+	ownsReg     bool
 
 	// In-memory atomic sequence counters per post
 	seqMu       sync.RWMutex
@@ -232,12 +237,6 @@ func OpenEngine(cfg Config) (*Engine, error) {
 		dirtyDeltas: make(map[uint64]*postDelta),
 		flushTicker: time.NewTicker(time.Duration(cfg.FlushSeconds) * time.Second),
 		stopFlush:   make(chan struct{}),
-	}
-
-	if cfg.NumShards > 1 {
-		var maxID uint64
-		_ = metaDB.QueryRow("SELECT COALESCE(MAX(id), 0) FROM posts").Scan(&maxID)
-		e.postSeqCounter = maxID / uint64(cfg.NumShards)
 	}
 
 	go e.flusherLoop()
@@ -416,9 +415,8 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 
 	// 1. Insert into SQLite to get unique ID if not provided
 	if p.ID == 0 {
-		if e.cfg.NumShards > 1 {
-			seq := atomic.AddUint64(&e.postSeqCounter, 1)
-			p.ID = (seq * uint64(e.cfg.NumShards)) + uint64(e.cfg.ShardID)
+		if e.cfg.NextPostID != nil {
+			p.ID = e.cfg.NextPostID()
 			e.metaWriteMu.Lock()
 			_, err := e.metaDB.Exec(`
 				INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
@@ -426,7 +424,7 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 			`, p.ID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
 			e.metaWriteMu.Unlock()
 			if err != nil {
-				return nil, fmt.Errorf("insert sqlite post with shard id failed: %w", err)
+				return nil, fmt.Errorf("insert sqlite post with allocated id failed: %w", err)
 			}
 		} else {
 			e.metaWriteMu.Lock()
@@ -469,6 +467,36 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	_ = e.WritePostCache(p)
 
 	return p, nil
+}
+
+// MaxPostID returns the largest post ID this engine has ever used: the
+// largest in SQLite or Pebble, or that SQLite AUTOINCREMENT has handed out
+// (which also covers posts purged since).
+func (e *Engine) MaxPostID() uint64 {
+	var maxID, seq uint64
+	_ = e.metaDB.QueryRow("SELECT COALESCE(MAX(id), 0) FROM posts").Scan(&maxID)
+	_ = e.metaDB.QueryRow("SELECT COALESCE(MAX(seq), 0) FROM sqlite_sequence WHERE name = 'posts'").Scan(&seq)
+	if seq > maxID {
+		maxID = seq
+	}
+	if it, err := e.postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'p'}, UpperBound: []byte{'q'}}); err == nil {
+		for ok := it.Last(); ok; ok = it.Prev() {
+			if id, err := model.DecodePostKey(it.Key()); err == nil {
+				if id > maxID {
+					maxID = id
+				}
+				break
+			}
+		}
+		it.Close()
+	}
+	return maxID
+}
+
+// HasPost reports whether post postID is in this engine.
+func (e *Engine) HasPost(postID uint64) bool {
+	var one int
+	return e.metaDB.QueryRow("SELECT 1 FROM posts WHERE id = ?", postID).Scan(&one) == nil
 }
 
 func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
@@ -2986,9 +3014,8 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 		var candidateID any
 		if p.ID > 0 {
 			candidateID = p.ID
-		} else if e.cfg.NumShards > 1 {
-			seq := atomic.AddUint64(&e.postSeqCounter, 1)
-			candidateID = (seq * uint64(e.cfg.NumShards)) + uint64(e.cfg.ShardID)
+		} else if e.cfg.NextPostID != nil {
+			candidateID = e.cfg.NextPostID()
 		}
 
 		var id uint64

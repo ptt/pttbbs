@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"pttbbs/post/config"
@@ -15,11 +16,18 @@ import (
 // the shard of each community, chosen once when it is created: the shard
 // its name is pinned to, or else (ID % shards). Renaming a community, or
 // changing the pins, never moves it.
+//
+// Post IDs are global, as in Lemmy: one sequence for all engines, so an ID
+// names one post whichever engine holds it, and the post keeps its ID when
+// it moves to another engine. The ID says nothing about the engine; a post
+// is found by its community (through the registry) or, given only its ID,
+// by asking every engine (there are only a few).
 type ShardedEngine struct {
 	baseCfg Config
 	engines []*Engine
 	reg     *CommunityRegistry
 	pins    map[string]int // lower-cased community name -> shard, for new communities
+	lastID  atomic.Uint64  // the last post ID handed out
 }
 
 // OpenStorage creates either a single Engine or a ShardedEngine based on ServiceConfig
@@ -50,7 +58,6 @@ func OpenStorage(sc *config.ServiceConfig) (Storage, error) {
 		}
 		baseCfg.DataDir = dataDir
 		baseCfg.CacheDir = cacheDir
-		baseCfg.ShardID = 0
 		baseCfg.NumShards = 1
 		return OpenEngine(baseCfg)
 	}
@@ -66,6 +73,7 @@ func OpenShardedEngine(baseCfg Config, locations []config.EngineLocation, pins m
 
 	numShards := len(locations)
 	engines := make([]*Engine, numShards)
+	s := &ShardedEngine{baseCfg: baseCfg}
 
 	regDir := baseCfg.DataDir
 	if regDir == "" {
@@ -81,8 +89,8 @@ func OpenShardedEngine(baseCfg Config, locations []config.EngineLocation, pins m
 		cfg.Communities = reg
 		cfg.DataDir = loc.DataDir
 		cfg.CacheDir = loc.CacheDir
-		cfg.ShardID = i
 		cfg.NumShards = numShards
+		cfg.NextPostID = s.nextPostID
 
 		// Distribute cache memory proportionally across shards
 		if cfg.CacheSizeMB > 0 {
@@ -111,14 +119,21 @@ func OpenShardedEngine(baseCfg Config, locations []config.EngineLocation, pins m
 		}
 	}
 
-	s := &ShardedEngine{
-		baseCfg: baseCfg,
-		engines: engines,
-		reg:     reg,
-		pins:    copiedPins,
+	s.engines, s.reg, s.pins = engines, reg, copiedPins
+	// Continue after the largest ID any engine has used, so that the IDs
+	// of a single engine stay valid when it becomes the first of several.
+	for _, e := range engines {
+		if id := e.MaxPostID(); id > s.lastID.Load() {
+			s.lastID.Store(id)
+		}
 	}
 	reg.SetShardAssigner(s.assignShard)
 	return s, nil
+}
+
+// nextPostID allocates the ID of a new post in any engine.
+func (s *ShardedEngine) nextPostID() uint64 {
+	return s.lastID.Add(1)
 }
 
 // assignShard chooses the shard of a new community: the one its name is
@@ -175,13 +190,18 @@ func (s *ShardedEngine) engineForWrite(community string) (*Engine, error) {
 	return s.GetEngineByCommunityID(id), nil
 }
 
-// GetEngineByPostID routes a post ID to its origin engine shard via modulo
+// GetEngineByPostID finds the engine that holds post postID by asking every
+// engine (a primary key lookup in each). Unknown IDs go to the first
+// engine, which then simply finds nothing.
 func (s *ShardedEngine) GetEngineByPostID(postID uint64) *Engine {
-	if len(s.engines) == 1 {
-		return s.engines[0]
+	if len(s.engines) > 1 {
+		for _, e := range s.engines {
+			if e.HasPost(postID) {
+				return e
+			}
+		}
 	}
-	idx := int(postID % uint64(len(s.engines)))
-	return s.engines[idx]
+	return s.engines[0]
 }
 
 // -----------------------------------------------------------------------------

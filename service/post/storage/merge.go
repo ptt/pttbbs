@@ -24,7 +24,9 @@ type postRef struct {
 // Posts whose post file the target already has are left behind (and
 // counted as collisions). When both communities live on the same engine,
 // the posts simply change their community ID; otherwise they are copied to
-// the engine of the target (with new post IDs) and purged from the source.
+// the engine of the target and purged from the source. Either way they keep
+// their (global) post IDs, so replies keep their parents, and clients the
+// IDs they know.
 func mergeCommunity(reg *CommunityRegistry, from, to string, route func(int64) *Engine, all []*Engine) (moved, collisions int, err error) {
 	fromID, ok := reg.Lookup(from)
 	if !ok {
@@ -62,9 +64,8 @@ func mergeCommunity(reg *CommunityRegistry, from, to string, route func(int64) *
 		return moved, collisions, err
 	}
 
-	newIDs := make(map[uint64]uint64, len(refs))
 	for _, r := range refs {
-		if err := src.moveToEngine(r.id, toID, dst, newIDs); err != nil {
+		if err := src.moveToEngine(r.id, toID, dst); err != nil {
 			return moved, collisions, fmt.Errorf("move post %s/%s failed: %w", from, r.postFile, err)
 		}
 		moved++
@@ -177,7 +178,8 @@ func (e *Engine) retargetCrossposts(fromID, toID int64, files map[string]bool) e
 // copyPostHistory copies the revisions of post oldID (and of its comments)
 // in src to post newID in e, setting the community of the post revisions
 // to communityID. src and e may be the same engine, and oldID and newID
-// the same post.
+// the same post. The revisions of the comments stay as they are when both
+// are the same.
 func (e *Engine) copyPostHistory(src *Engine, oldID, newID uint64, communityID int64) error {
 	batch := e.historyDB.NewBatch()
 	defer batch.Close()
@@ -202,7 +204,7 @@ func (e *Engine) copyPostHistory(src *Engine, oldID, newID uint64, communityID i
 		return err
 	}
 
-	if newID != oldID {
+	if src != e || newID != oldID {
 		cPrefix := model.EncodeCommentPrefix(oldID)
 		cIter, err := src.commentsDB.NewIter(&pebble.IterOptions{
 			LowerBound: cPrefix,
@@ -295,10 +297,9 @@ func (e *Engine) moveLocal(refs []postRef, fromID, toID int64) (int, error) {
 }
 
 // moveToEngine copies the post id of this engine (with its comments, votes,
-// revisions and crossposts) to community toID in dst, and then purges it
-// here. newIDs maps the IDs of posts moved so far to their new IDs, so
-// replies keep pointing to their parents.
-func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine, newIDs map[uint64]uint64) error {
+// revisions and crossposts) to community toID in dst, keeping its ID, and
+// then purges it here.
+func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine) error {
 	p, err := e.GetPost(id)
 	if err != nil {
 		return err
@@ -330,12 +331,8 @@ func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine, newIDs map[uin
 	}
 
 	moved := *p
-	moved.ID = 0
 	moved.CommunityID = toID
 	moved.Community = ""
-	if parent, ok := newIDs[p.ParentID]; ok {
-		moved.ParentID = parent
-	}
 	numComments := p.NumComments
 	if err := dst.ImportPostBatch([]*ImportedPostData{{
 		Post:       &moved,
@@ -345,7 +342,6 @@ func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine, newIDs map[uin
 	}}, ""); err != nil {
 		return err
 	}
-	newIDs[id] = moved.ID
 
 	// ImportPostBatch counts every comment; keep the count as it was.
 	if moved.NumComments != numComments {

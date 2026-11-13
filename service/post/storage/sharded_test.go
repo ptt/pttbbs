@@ -68,7 +68,8 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 		t.Errorf("Marginalman not pinned to engine 1")
 	}
 
-	// 2. Create posts on different shards and verify ID modulo
+	// 2. Create posts on different shards: the IDs come from one global
+	// sequence and say nothing about the shard
 	p0 := &model.Post{
 		Community:   "Gossiping",
 		PostFile:    "M.1700000000.A.001",
@@ -80,9 +81,6 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 	c0, err := sharded.CreatePost(p0)
 	if err != nil {
 		t.Fatalf("CreatePost on Gossiping failed: %v", err)
-	}
-	if c0.ID%uint64(numShards) != 0 {
-		t.Errorf("expected post ID %% %d == 0 for Shard 0, got ID %d", numShards, c0.ID)
 	}
 
 	p1 := &model.Post{
@@ -97,11 +95,14 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreatePost on Marginalman failed: %v", err)
 	}
-	if c1.ID%uint64(numShards) != 1 {
-		t.Errorf("expected post ID %% %d == 1 for Shard 1, got ID %d", numShards, c1.ID)
+	if c0.ID != 1 || c1.ID != 2 {
+		t.Errorf("post IDs on shards 0 and 1 = %d, %d; want 1, 2", c0.ID, c1.ID)
+	}
+	if sharded.GetEngineByPostID(c0.ID) != e0 || sharded.GetEngineByPostID(c1.ID) != e1 {
+		t.Errorf("posts not found on the shards of their communities")
 	}
 
-	// 3. Verify retrieval by Post ID (O(1) modulo routing)
+	// 3. Verify retrieval by Post ID (asking every shard)
 	gotP0, err := sharded.GetPost(c0.ID)
 	if err != nil || gotP0 == nil {
 		t.Fatalf("GetPost(%d) failed: %v", c0.ID, err)
@@ -164,5 +165,56 @@ func TestShardedEngineRoutingAndID(t *testing.T) {
 	}
 	if purgedPosts != 1 {
 		t.Errorf("expected 1 purged post for user1, got %d", purgedPosts)
+	}
+}
+
+// A single engine becomes the first of several: its posts keep their IDs
+// (and are still found by them), and new posts continue the sequence.
+func TestSingleEngineBecomesSharded(t *testing.T) {
+	dir := t.TempDir()
+	disk0 := filepath.Join(dir, "disk0")
+	single, err := OpenEngine(Config{DataDir: disk0, CacheDir: filepath.Join(dir, "cache0"), FilterEncoding: "utf-8"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var old []*model.Post
+	for i := 0; i < 3; i++ {
+		p, err := single.CreatePost(&model.Post{Community: fmt.Sprintf("Old%d", i), PostFile: "M.1.A.001", Title: "old", CreatorName: "author", Content: "body"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		old = append(old, p)
+	}
+	// A purged post's ID is never used again.
+	purged, err := single.CreatePost(&model.Post{Community: "Old0", PostFile: "M.2.A.001", Title: "purged", CreatorName: "author", Content: "body"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := single.PurgePost(purged.ID); err != nil {
+		t.Fatal(err)
+	}
+	single.Close()
+
+	locations := []config.EngineLocation{
+		{Index: 0, DataDir: disk0, CacheDir: filepath.Join(dir, "cache0")},
+		{Index: 1, DataDir: filepath.Join(dir, "disk1"), CacheDir: filepath.Join(dir, "cache1")},
+	}
+	s, err := OpenShardedEngine(Config{FilterEncoding: "utf-8"}, locations, map[string]int{"New": 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	for _, p := range old {
+		got, err := s.GetPost(p.ID)
+		if err != nil || got.Community != p.Community {
+			t.Fatalf("GetPost(%d) after sharding = %+v, %v", p.ID, got, err)
+		}
+	}
+	fresh, err := s.CreatePost(&model.Post{Community: "New", PostFile: "M.3.A.001", Title: "new", CreatorName: "author", Content: "body"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fresh.ID != purged.ID+1 || s.GetEngineByPostID(fresh.ID) != s.engines[1] {
+		t.Fatalf("new post %d on shard 1: want ID %d", fresh.ID, purged.ID+1)
 	}
 }

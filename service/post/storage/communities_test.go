@@ -423,8 +423,8 @@ func TestShardedMergeAcrossShards(t *testing.T) {
 	if err != nil {
 		t.Fatalf("moved post not found under the target: %v", err)
 	}
-	if p.ID == src.ID || s.GetEngineByPostID(p.ID) != s.GetEngineByCommunityID(dstPost.CommunityID) {
-		t.Fatalf("moved post %d not re-numbered for the target shard", p.ID)
+	if p.ID != src.ID || s.GetEngineByPostID(p.ID) != s.GetEngineByCommunityID(dstPost.CommunityID) {
+		t.Fatalf("moved post %d (was %d) not on the target shard with its ID", p.ID, src.ID)
 	}
 	if p.Content != "source post, edited" || p.Community != "Dst" {
 		t.Fatalf("moved post: %+v", p)
@@ -442,14 +442,15 @@ func TestShardedMergeAcrossShards(t *testing.T) {
 	if revs, _ := s.ListCommentHistory(p.ID, 1); len(revs) != 1 || revs[0].PostID != p.ID {
 		t.Fatalf("comment history of the moved post: %+v", revs)
 	}
-	if r, err := s.GetPostByCommunityFile("Dst", "M.1.A.002"); err != nil || r.ParentID != p.ID {
-		t.Fatalf("moved reply does not point to the moved parent: %+v, err=%v", r, err)
+	if r, err := s.GetPostByCommunityFile("Dst", "M.1.A.002"); err != nil || r.ID != reply.ID || r.ParentID != p.ID {
+		t.Fatalf("moved reply does not keep its ID and parent: %+v, err=%v", r, err)
 	}
-	if _, err := s.GetPost(src.ID); err == nil {
-		t.Fatalf("source post %d still on the source shard", src.ID)
+	srcEngine := s.GetEngineByCommunityID(src.CommunityID)
+	if srcEngine.HasPost(src.ID) || srcEngine.HasPost(reply.ID) {
+		t.Fatalf("moved posts still on the source shard")
 	}
-	if _, err := s.GetPost(reply.ID); err == nil {
-		t.Fatalf("source reply %d still on the source shard", reply.ID)
+	if got, err := s.GetPost(reply.ID); err != nil || got.Community != "Dst" {
+		t.Fatalf("GetPost(%d) after merge = %+v, %v", reply.ID, got, err)
 	}
 	if n, _ := s.CountPosts("Src"); n != 0 {
 		t.Fatalf("CountPosts(Src) = %d after merge", n)
