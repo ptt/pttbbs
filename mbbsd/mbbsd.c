@@ -980,22 +980,14 @@ check_bad_clients(void) {
 
 static void append_log_recent_login()
 {
-    char buf[STRLEN], logfn[PATHLEN];
-    int szlogfn = 0, szlogentry = 0;
+    char logfn[PATHLEN];
 
-    // prepare log format
-    SNPRINTF(buf, "%s %-15s\n",
-	    Cdatelite(&login_start_time), fromhost);
-    szlogentry = strlen(buf);	// should be the same for all entries
-
+    // Trim by whole lines: the entries are not all the same length (a
+    // fromhost longer than 15 characters, or older formats), and cutting
+    // them as fixed-size records left a broken line at the top.
     setuserfile(logfn, FN_RECENTLOGIN);
-    szlogfn = dashs(logfn);
-    if (szlogfn > SZ_RECENTLOGIN) {
-	// rotate to 1/4 of SZ_RECENTLOGIN
-	delete_records(logfn, szlogentry, 1,
-		(szlogfn-(SZ_RECENTLOGIN/4)) / szlogentry);
-    }
-    file_append(logfn, buf);
+    rotate_text_logfile(logfn, SZ_RECENTLOGIN, 0.25);
+    file_appendf(logfn, "%s %-15s\n", Cdatelite(&login_start_time), fromhost);
 }
 
 static void check_mailbox_quota(void)
