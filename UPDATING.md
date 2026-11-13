@@ -15,6 +15,18 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## anonid: 匿名管理編號的站台 key
+
+文章資訊 (`Q`) 的「匿名管理編號」改用站台 key `etc/anonid.key` 計算：
+同一人同一天在同一個看板發的文，每個人看到的編號都一樣；沒有 key
+就無法跨板、跨日比對，也查不出作者。
+
+> - key 會在第一次有人對匿名文章按 `Q` 時自動建立 (權限 0600)，不需手動產生。
+> - 請把它跟站台資料一起備份；換掉或遺失 key，所有匿名編號都會改變。
+> - 換 key 之後，舊的 mbbsd 結束前仍用舊 key，新舊 session 看到的編號會不同。
+> - 讀不到 key 時 `Q` 會顯示「無法取得」，原因記在 `log/anonid.log`。
+
+---
 ## modlog: 舊禁言紀錄改為 modlog 格式
 
 從舊看板禁言歷史 (`muted.history`) 搬進 `modlog.audit` 的紀錄，改寫成 modlog 的格式，

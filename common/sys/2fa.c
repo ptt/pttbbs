@@ -112,6 +112,7 @@ static void sha1_transform(uint32_t state[5], const uint8_t buffer[64]) {
         a = temp;
     }
     state[0] += a; state[1] += b; state[2] += c; state[3] += d; state[4] += e;
+    explicit_bzero(w, sizeof(w));  // w[0..15] is the block, e.g. key ^ ipad
 }
 
 static void sha1_init(SHA1_CTX *ctx) {
@@ -156,7 +157,6 @@ static void sha1_final(SHA1_CTX *ctx, uint8_t digest[20]) {
     }
 }
 
-static
 void hmac_sha1(const uint8_t *key, size_t key_len,
                const uint8_t *msg, size_t msg_len,
                uint8_t output[20])
@@ -169,6 +169,7 @@ void hmac_sha1(const uint8_t *key, size_t key_len,
         sha1_init(&ctx);
         sha1_update(&ctx, key, key_len);
         sha1_final(&ctx, k0);
+        explicit_bzero(&ctx, sizeof(ctx));
     } else {
         memcpy(k0, key, key_len);
     }
@@ -191,6 +192,13 @@ void hmac_sha1(const uint8_t *key, size_t key_len,
     sha1_update(&outer_ctx, opad, 64);
     sha1_update(&outer_ctx, inner_digest, 20);
     sha1_final(&outer_ctx, output);
+
+    // Each of these gives the key or lets one compute the HMAC without it.
+    explicit_bzero(k0, sizeof(k0));
+    explicit_bzero(ipad, sizeof(ipad));
+    explicit_bzero(opad, sizeof(opad));
+    explicit_bzero(&inner_ctx, sizeof(inner_ctx));
+    explicit_bzero(&outer_ctx, sizeof(outer_ctx));
 }
 
 /* =========================================================================
