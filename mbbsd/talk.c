@@ -631,8 +631,11 @@ my_talk(userinfo_t * uin, int fri_stat, char defact)
 	    case 'f':
 		{
 		    char            msgbuf[60];
+		    ssize_t         len;
 
-		    read(msgsock, msgbuf, 60);
+		    // The callee sends 60 bytes; it may hang up before that.
+		    len = read(msgsock, msgbuf, sizeof(msgbuf) - 1);
+		    msgbuf[len > 0 ? len : 0] = '\0';
 		    prints("我現在不方便 %s，因為\n", get_sig_des(uin->sig));
 		    move(10, 18);
 		    outs(msgbuf);
