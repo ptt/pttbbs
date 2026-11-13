@@ -1762,6 +1762,9 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
     if (hostaddr && strcasecmp(hostaddr + 1, MYHOSTNAME) == 0)
         hostaddr = NULL;
 
+    if (hostaddr && !site_can_forward_to(address))
+	return 0;
+
     /* °lÂÜ¨Ï¥ÎªÌ */
     if (HasUserPerm(PERM_LOGUSER))
 	log_user("mailforward to %s ",address);

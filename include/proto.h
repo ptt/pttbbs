@@ -884,6 +884,7 @@ void site_on_login(void);
 const char *site_get_load_desc(int load);
 const char *site_get_email_reject_reason(const char *email);
 bool site_can_forward(const char *title);
+bool site_can_forward_to(const char *address);
 void site_on_crosspost_prompt(void);
 void site_on_crosspost(const char *board, const char *fname,
                        const char *xboard, const char *xfname);

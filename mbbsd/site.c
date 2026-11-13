@@ -23,6 +23,14 @@ site_can_forward(const char *title GCC_UNUSED)
     return true;
 }
 
+// Returns false to drop forwarding to the Internet address (the user is told
+// it was sent), e.g. for forwarding services.
+GCC_WEAK bool
+site_can_forward_to(const char *address GCC_UNUSED)
+{
+    return true;
+}
+
 // Called when the user starts cross-posting an article, before asking
 // anything (e.g. to show the site rules about cross-posting).
 GCC_WEAK void
