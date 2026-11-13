@@ -1025,6 +1025,10 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
     }
 
     memcpy(&fh, postfile, sizeof(fileheader_t));
+    // The copy drops the modes that make multi something other than money,
+    // e.g. the author of an anonymous post.
+    if (postfile->filemode & INVALIDMONEY_MODES)
+	fh.multi.money = 0;
     AUTO_BFILE(dest_file, brd, postfile->filename);
 
     if(!strcasecmp(brd, BN_UNANONYMOUS))
@@ -4520,6 +4524,10 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	    unlink(genbuf);
 
 	digest.filemode = 0;
+	// As in do_crosspost(): the copy drops the modes that make multi
+	// something other than money.
+	if (fhdr->filemode & INVALIDMONEY_MODES)
+	    digest.multi.money = 0;
 	AUTO_STR(genbuf2, "%s%s", buf, fhdr->filename);
 	Copy(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
