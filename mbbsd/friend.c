@@ -278,7 +278,7 @@ edit_user_list(const char *fpath, const user_list_cfg_t *cfg)
 		     (cfg->desc_prompt && *cfg->desc_prompt) ? "(E)修改" : "",
 		     cfg->import_fn ? "(P)引入" : "",
 		     cfg->allow_clean ? "(C)整理有效名單" : "",
-		     cfg->allow_wmsg ? "(W)水球" : "");
+		     (cfg->allow_wmsg && can_send_wmsg()) ? "(W)水球" : "");
 	} else {
 	    snprintf(prompt, sizeof(prompt),
 		     "(A)增加 %s(Q)結束?[Q] ",
@@ -350,7 +350,8 @@ edit_user_list(const char *fpath, const user_list_cfg_t *cfg)
 		unlink(fpath);
 		dirty = 1;
 	    }
-	} else if (uident[0] == 'w' && count && cfg->allow_wmsg) {
+	} else if (uident[0] == 'w' && count && cfg->allow_wmsg &&
+		   can_send_wmsg()) {
 	    char            wall[60];
 	    char            ans[4];
 	    if (!getdata(0, 0, "群體水球:", wall, sizeof(wall), DOECHO))

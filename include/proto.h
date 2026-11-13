@@ -1005,6 +1005,7 @@ int TagCount();
         (isvisible_stat(currutmp, uentp, friend_stat(me, uentp)))
      
 int iswritable_stat(const userinfo_t *uentp, int fri_stat);
+int can_send_wmsg(void);
 int isvisible_stat(const userinfo_t * me, const userinfo_t * uentp, int fri_stat);
 int cmpwatermtime(const void *a, const void *b);
 void ofo_my_write(void);

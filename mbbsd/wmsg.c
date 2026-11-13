@@ -40,6 +40,15 @@ get_writelog_path(char *path) {
     return path;
 }
 
+/* Whether this user may send wmsgs: SYSOP, or registered and not ticketed. */
+int
+can_send_wmsg(void)
+{
+    if (HasUserPerm(PERM_SYSOP))
+        return 1;
+    return HasBasicUserPerm(PERM_LOGINOK) && !HasUserPerm(PERM_VIOLATELAW);
+}
+
 int
 iswritable_stat(const userinfo_t * uentp, int fri_stat)
 {
@@ -49,7 +58,7 @@ iswritable_stat(const userinfo_t * uentp, int fri_stat)
     if (HasUserPerm(PERM_SYSOP))
         return 1;
 
-    if (!HasBasicUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_VIOLATELAW))
+    if (!can_send_wmsg())
         return 0;
 
     return (uentp->wmsg != WMSG_ANTIWB &&
