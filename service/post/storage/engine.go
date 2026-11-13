@@ -1681,10 +1681,22 @@ func (e *Engine) removePostRecord(p *model.Post, keepIncoming, keepCache bool) e
 // Votes (Independent DB: One Vote per User per Post)
 // -----------------------------------------------------------------------------
 
-// VotePost records a user's vote (1: Upvote, -1: Downvote, 0: Cancel vote)
+// VotePost records a user's vote (1: Upvote, -1: Downvote, 0: Cancel vote).
+// A person (personID) has one vote per post, whatever name it is shown
+// with; only votes of unknown persons (personID 0) go by personName. A
+// known person takes over the vote recorded under its name for an unknown
+// person (legacy votes imported without resolving their voters).
 func (e *Engine) VotePost(postID uint64, personName string, personID model.PersonID, newVote model.VoteType, createdAt int64, ip string) (upDelta, downDelta int, err error) {
-	key := model.EncodeVoteKey(postID, personName)
+	key := model.EncodeVoteKey(postID, personID, personName)
 	val, closer, err := e.votesDB.Get(key)
+	var legacyKey []byte
+	if err != nil && personID != 0 && personName != "" {
+		legacyKey = model.EncodeVoteKey(postID, 0, personName)
+		val, closer, err = e.votesDB.Get(legacyKey)
+		if err != nil {
+			legacyKey = nil
+		}
+	}
 
 	var prevVote model.VoteType = model.VoteNeutral
 	if err == nil {
@@ -1700,6 +1712,9 @@ func (e *Engine) VotePost(postID uint64, personName string, personID model.Perso
 
 	if prevVote == newVote {
 		return 0, 0, nil // Duplicate vote, no-op
+	}
+	if legacyKey != nil {
+		_ = e.votesDB.Delete(legacyKey, pebble.NoSync)
 	}
 
 	// Calculate deltas
@@ -1718,7 +1733,7 @@ func (e *Engine) VotePost(postID uint64, personName string, personID model.Perso
 		} else {
 			downDelta += 1
 		}
-		valBuf := model.EncodeVoteValue(newVote, personID, createdAt, ip)
+		valBuf := model.EncodeVoteValue(newVote, personID, personName, createdAt, ip)
 		e.votesDB.Set(key, valBuf, pebble.NoSync)
 	} else {
 		// Cancel vote
@@ -1753,11 +1768,11 @@ func (e *Engine) GetVotes(postID uint64) ([]*model.VoteRecord, error) {
 
 	var votes []*model.VoteRecord
 	for iter.First(); iter.Valid() && bytes.HasPrefix(iter.Key(), vPrefix); iter.Next() {
-		pID, user, err := model.DecodeVoteKey(iter.Key())
+		pID, _, _, err := model.DecodeVoteKey(iter.Key())
 		if err != nil || pID != postID {
 			continue
 		}
-		vType, personID, ctime, ip, err := model.DecodeVoteValue(iter.Value())
+		vType, personID, user, ctime, ip, err := model.DecodeVoteValue(iter.Value())
 		if err != nil || (vType != model.VoteUp && vType != model.VoteDown) {
 			continue
 		}
@@ -2335,7 +2350,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	postDownvotes := make(map[uint64]int)
 
 	for vIter.First(); vIter.Valid(); vIter.Next() {
-		postID, _, err := model.DecodeVoteKey(vIter.Key())
+		postID, _, _, err := model.DecodeVoteKey(vIter.Key())
 		if err != nil {
 			continue
 		}
@@ -3101,8 +3116,8 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			if v.Vote != model.VoteUp && v.Vote != model.VoteDown {
 				continue
 			}
-			key := model.EncodeVoteKey(p.ID, v.PersonName)
-			_ = voteBatch.Set(key, model.EncodeVoteValue(v.Vote, v.PersonID, v.CreatedAt, v.IP), nil)
+			key := model.EncodeVoteKey(p.ID, v.PersonID, v.PersonName)
+			_ = voteBatch.Set(key, model.EncodeVoteValue(v.Vote, v.PersonID, v.PersonName, v.CreatedAt, v.IP), nil)
 		}
 
 		// Crossposts

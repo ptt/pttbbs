@@ -393,15 +393,19 @@ func EncodeAuthorCommentPrefix(author string) []byte {
 	return k
 }
 
-// Vote Key: 'v' (1 byte) + 8-byte PostID + user string
-func EncodeVoteKey(postID uint64, user string) []byte {
-	var buf bytes.Buffer
-	buf.WriteByte('v')
-	var idBytes [8]byte
-	binary.BigEndian.PutUint64(idBytes[:], postID)
-	buf.Write(idBytes[:])
-	buf.WriteString(user)
-	return buf.Bytes()
+// Vote Key: 'v' (1 byte) + 8-byte PostID + the voter: 0x00 + 8-byte
+// PersonID, or the name for voters whose person is unknown (PersonID 0,
+// such as legacy votes of accounts that are gone). As Lemmy's post_like is
+// keyed by (person_id, post_id), a person has one vote per post whatever
+// name it is shown with.
+func EncodeVoteKey(postID uint64, personID PersonID, name string) []byte {
+	k := EncodeVotePrefix(postID)
+	if personID != 0 {
+		var idBytes [9]byte
+		binary.BigEndian.PutUint64(idBytes[1:], uint64(personID))
+		return append(k, idBytes[:]...)
+	}
+	return append(k, name...)
 }
 
 func EncodeVotePrefix(postID uint64) []byte {
@@ -411,23 +415,33 @@ func EncodeVotePrefix(postID uint64) []byte {
 	return k
 }
 
-func DecodeVoteKey(k []byte) (postID uint64, user string, err error) {
+// DecodeVoteKey returns the post of a vote key and its voter: a PersonID,
+// or (if that is 0) a name.
+func DecodeVoteKey(k []byte) (postID uint64, personID PersonID, name string, err error) {
 	if len(k) < 10 || k[0] != 'v' {
-		return 0, "", fmt.Errorf("invalid vote key")
+		return 0, 0, "", fmt.Errorf("invalid vote key")
 	}
 	postID = binary.BigEndian.Uint64(k[1:9])
-	user = string(k[9:])
-	return postID, user, nil
+	if k[9] == 0 {
+		if len(k) != 18 {
+			return 0, 0, "", fmt.Errorf("invalid vote key")
+		}
+		return postID, PersonID(binary.BigEndian.Uint64(k[10:18])), "", nil
+	}
+	return postID, 0, string(k[9:]), nil
 }
 
 // EncodeVoteValue encodes a vote record value:
 // Byte 0: 'U' (Upvote) or 'D' (Downvote)
 // Bytes 1..8: PersonID of the voter (uint64, BigEndian)
 // Bytes 9..16: CreatedAt (int64, BigEndian)
-// Bytes 17..: IP (UTF-8 string)
-func EncodeVoteValue(vote VoteType, personID PersonID, createdAt int64, ip string) []byte {
-	ipBytes := []byte(ip)
-	buf := make([]byte, 17+len(ipBytes))
+// Byte 17: length of the shown name of the voter, then the name
+// Then: IP (UTF-8 string)
+func EncodeVoteValue(vote VoteType, personID PersonID, name string, createdAt int64, ip string) []byte {
+	if len(name) > 255 {
+		name = name[:255]
+	}
+	buf := make([]byte, 18, 18+len(name)+len(ip))
 	if vote == VoteUp {
 		buf[0] = 'U'
 	} else if vote == VoteDown {
@@ -437,31 +451,27 @@ func EncodeVoteValue(vote VoteType, personID PersonID, createdAt int64, ip strin
 	}
 	binary.BigEndian.PutUint64(buf[1:9], uint64(personID))
 	binary.BigEndian.PutUint64(buf[9:17], uint64(createdAt))
-	copy(buf[17:], ipBytes)
-	return buf
+	buf[17] = byte(len(name))
+	buf = append(buf, name...)
+	return append(buf, ip...)
 }
 
-func DecodeVoteValue(val []byte) (vote VoteType, personID PersonID, createdAt int64, ip string, err error) {
-	if len(val) == 0 {
-		return VoteNeutral, 0, 0, "", fmt.Errorf("empty vote value")
+func DecodeVoteValue(val []byte) (vote VoteType, personID PersonID, name string, createdAt int64, ip string, err error) {
+	if len(val) < 18 || len(val) < 18+int(val[17]) {
+		return VoteNeutral, 0, "", 0, "", fmt.Errorf("invalid vote value")
 	}
-	if val[0] == 'U' {
+	switch val[0] {
+	case 'U':
 		vote = VoteUp
-	} else if val[0] == 'D' {
+	case 'D':
 		vote = VoteDown
-	} else {
+	default:
 		vote = VoteNeutral
 	}
-	if len(val) >= 9 {
-		personID = PersonID(binary.BigEndian.Uint64(val[1:9]))
-	}
-	if len(val) >= 17 {
-		createdAt = int64(binary.BigEndian.Uint64(val[9:17]))
-		if len(val) > 17 {
-			ip = string(val[17:])
-		}
-	}
-	return vote, personID, createdAt, ip, nil
+	personID = PersonID(binary.BigEndian.Uint64(val[1:9]))
+	createdAt = int64(binary.BigEndian.Uint64(val[9:17]))
+	n := 18 + int(val[17])
+	return vote, personID, string(val[18:n]), createdAt, string(val[n:]), nil
 }
 
 // Crosspost Key: 'x' (1 byte) + 8-byte uint64 SourcePostID + 4-byte uint32 Seq = 13 bytes
