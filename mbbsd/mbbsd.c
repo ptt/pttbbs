@@ -20,10 +20,6 @@ static void getremotename(const struct in_addr from, char *rhost);
 // Site Optimization
 // override these macro if you need more optimization,
 // based on OS/lib/package...
-#ifndef OPTIMIZE_SOCKET
-#define OPTIMIZE_SOCKET(sock) do {} while (0)
-#endif
-
 #ifndef XAUTH_HOST
 #define XAUTH_HOST(x) x
 #endif
@@ -1247,7 +1243,6 @@ set_connection_opt(int sock)
     // adjust transmission window
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&szrecv, sizeof(szrecv));
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&szsend, sizeof(szsend));
-    OPTIMIZE_SOCKET(sock);
 
     return 0;
 }

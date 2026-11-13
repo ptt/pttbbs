@@ -105,10 +105,6 @@
 #define TUNNEL_BUFFER_SIZE  (131072)
 #endif
 
-#ifndef OPTIMIZE_SOCKET
-#define OPTIMIZE_SOCKET(sock) do {} while(0)
-#endif
-
 // to prevent flood trying services...
 #ifndef LOGIND_MAX_RETRY_SERVICE
 #define LOGIND_MAX_RETRY_SERVICE   (15)
@@ -759,7 +755,6 @@ _set_connection_opt(int sock)
     // adjust transmission window
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (void*)&szrecv, sizeof(szrecv));
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (void*)&szsend, sizeof(szsend));
-    OPTIMIZE_SOCKET(sock);
 
     return 0;
 }
