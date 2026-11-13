@@ -396,6 +396,35 @@ func (s *ShardedEngine) MergeCommunity(from, to string) (int, int, error) {
 	return mergeCommunity(s.reg, from, to, s.GetEngineByCommunityID, s.engines)
 }
 
+// MoveCommunity moves community name, with its posts (which keep their
+// IDs), to engine shard and returns the number of posts moved. Posts are
+// copied while the community is still routed to its old engine, then the
+// registry is switched, and posts written meanwhile are moved too. A
+// comment or vote written to a post in the moment it is copied may be
+// lost, so move a board while it is quiet (or closed).
+func (s *ShardedEngine) MoveCommunity(name string, shard int) (int, error) {
+	if shard < 0 || shard >= len(s.engines) {
+		return 0, fmt.Errorf("no engine %d: there are %d engines", shard, len(s.engines))
+	}
+	id, ok := s.reg.Lookup(name)
+	if !ok {
+		return 0, fmt.Errorf("%w: %s", ErrCommunityNotFound, name)
+	}
+	src, dst := s.GetEngineByCommunityID(id), s.engines[shard]
+	if src == dst {
+		return 0, nil
+	}
+	moved, err := src.moveCommunityPosts(id, dst)
+	if err != nil {
+		return moved, err
+	}
+	if err := s.reg.SetShard(id, shard); err != nil {
+		return moved, err
+	}
+	n, err := src.moveCommunityPosts(id, dst)
+	return moved + n, err
+}
+
 func (s *ShardedEngine) PurgePost(postID uint64) error {
 	return s.GetEngineByPostID(postID).PurgePost(postID)
 }

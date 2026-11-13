@@ -43,6 +43,9 @@ type Storage interface {
 	// except for those whose post file to already has, and returns the
 	// numbers of posts moved and left behind.
 	MergeCommunity(from, to string) (int, int, error)
+	// MoveCommunity moves community name (with its posts, which keep their
+	// IDs) to engine shard and returns the number of posts moved.
+	MoveCommunity(name string, shard int) (int, error)
 	// Communities returns the community registry.
 	Communities() *CommunityRegistry
 	PurgePost(postID uint64) error

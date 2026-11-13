@@ -1552,6 +1552,26 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 		conn.Write([]byte(fmt.Sprintf("OK %d %d\n", moved, collisions)))
 
+	case "MOVE_COMMUNITY":
+		// MOVE_COMMUNITY <community> <shard>
+		// Moves the community, with its posts (which keep their IDs), to
+		// engine <shard>. Replies OK <moved>.
+		if len(parts) < 3 || parts[1] == "" {
+			conn.Write([]byte("ERR invalid arguments for MOVE_COMMUNITY\n"))
+			return
+		}
+		shard, err := strconv.Atoi(parts[2])
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR invalid shard: %s\n", parts[2])))
+			return
+		}
+		moved, err := s.storage.MoveCommunity(parts[1], shard)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", moved)))
+
 	case "LIST_COMMUNITIES":
 		// LIST_COMMUNITIES
 		// Replies OK <count>, then one line per community, tab-separated:

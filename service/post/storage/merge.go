@@ -298,7 +298,8 @@ func (e *Engine) moveLocal(refs []postRef, fromID, toID int64) (int, error) {
 
 // moveToEngine copies the post id of this engine (with its comments, votes,
 // revisions and crossposts) to community toID in dst, keeping its ID, and
-// then purges it here.
+// then purges it here. toID may be the community of the post, which then
+// only changes engine.
 func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine) error {
 	p, err := e.GetPost(id)
 	if err != nil {
@@ -360,5 +361,49 @@ func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine) error {
 			}
 		}
 	}
-	return e.purgePostRecord(p)
+	// Moving within the community keeps the crossposts to the post: their
+	// records belong to the source posts (which stay here) and still name
+	// the post by its community and post file.
+	sameCommunity := p.CommunityID == toID
+	return e.removePostRecord(p, sameCommunity, dst.CacheFilePath(&moved) == e.CacheFilePath(p))
+}
+
+// moveCommunityPosts moves all posts of community id from this engine to
+// dst, keeping their IDs, and returns how many it moved.
+func (e *Engine) moveCommunityPosts(id int64, dst *Engine) (int, error) {
+	e.FlushDirtyDeltas()
+	rows, err := e.metaDB.Query(`SELECT id FROM posts WHERE community_id = ? ORDER BY id`, id)
+	if err != nil {
+		return 0, err
+	}
+	var ids []uint64
+	for rows.Next() {
+		var pid uint64
+		if err := rows.Scan(&pid); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		ids = append(ids, pid)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	for i, pid := range ids {
+		if err := e.moveToEngine(pid, id, dst); err != nil {
+			return i, fmt.Errorf("move post %d failed: %w", pid, err)
+		}
+	}
+	return len(ids), nil
+}
+
+// MoveCommunity of a single engine only accepts its one shard (0).
+func (e *Engine) MoveCommunity(name string, shard int) (int, error) {
+	if _, ok := e.reg.Lookup(name); !ok {
+		return 0, fmt.Errorf("%w: %s", ErrCommunityNotFound, name)
+	}
+	if shard != 0 {
+		return 0, fmt.Errorf("no engine %d: there is only one engine", shard)
+	}
+	return 0, nil
 }

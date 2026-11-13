@@ -662,3 +662,96 @@ func TestShardedAssignByDiskUsage(t *testing.T) {
 		t.Errorf("DiskUsage() = %d after a post, was %d", after, before)
 	}
 }
+
+func TestShardedMoveCommunity(t *testing.T) {
+	const numShards = 2
+	s, dir := openTestSharded(t, numShards, map[string]int{"Board": 0, "Other": 0})
+
+	post := mustCreatePost(t, s, "Board", "M.1.A.001", "post to be moved")
+	reply, err := s.CreatePost(&model.Post{
+		Community:   "Board",
+		PostFile:    "M.1.A.002",
+		ParentID:    post.ID,
+		Title:       "Re: post",
+		CreatorName: "replier",
+		Content:     "a reply that is long enough not to be demoted to a comment",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	copied := mustCreatePost(t, s, "Board", "M.1.A.003", "crosspost of the post")
+	if _, _, err := s.AddCrosspost("Board", "M.1.A.001", "Board", "M.1.A.003", "sharer", 0, 0); err != nil {
+		t.Fatal(err)
+	}
+	other := mustCreatePost(t, s, "Other", "M.1.A.001", "stays")
+	if _, err := s.AddComment(&model.Comment{PostID: post.ID, CreatorName: "c1", Content: "push one"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.VotePost(post.ID, "voter", 0, model.VoteUp, 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.UpdatePost(post.ID, "", "post to be moved, edited", "author", 0, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UpdateComment(post.ID, 1, "push one, edited", "c1", 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.MoveCommunity("Board", numShards); err == nil {
+		t.Fatalf("moved to an engine that does not exist")
+	}
+	if _, err := s.MoveCommunity("NoSuchBoard", 1); err == nil {
+		t.Fatalf("moved an unknown community")
+	}
+	if n, err := s.MoveCommunity("Board", 0); err != nil || n != 0 {
+		t.Fatalf("MoveCommunity to its own engine = %d, %v", n, err)
+	}
+	if n, err := s.MoveCommunity("board", 1); err != nil || n != 3 {
+		t.Fatalf("MoveCommunity = %d, %v; want 3", n, err)
+	}
+
+	if shard, _ := s.reg.Shard(post.CommunityID); shard != 1 {
+		t.Fatalf("Board on shard %d after the move", shard)
+	}
+	if s.engines[0].HasPost(post.ID) || s.engines[0].HasPost(reply.ID) || s.engines[0].HasPost(copied.ID) {
+		t.Fatalf("moved posts still on the old engine")
+	}
+	if s.GetEngineByPostID(other.ID) != s.engines[0] {
+		t.Fatalf("post of another community moved")
+	}
+	p, err := s.GetPostByCommunityFile("Board", "M.1.A.001")
+	if err != nil || p.ID != post.ID || p.Content != "post to be moved, edited" || p.Upvotes != 1 {
+		t.Fatalf("moved post: %+v, err=%v", p, err)
+	}
+	if got, err := s.GetPost(post.ID); err != nil || got.Community != "Board" {
+		t.Fatalf("GetPost(%d) after the move = %+v, %v", post.ID, got, err)
+	}
+	if r, err := s.GetPostByCommunityFile("Board", "M.1.A.002"); err != nil || r.ID != reply.ID || r.ParentID != post.ID {
+		t.Fatalf("moved reply: %+v, err=%v", r, err)
+	}
+	if cmts, _ := s.GetComments(post.ID, 1, 10); len(cmts) != 1 || cmts[0].Content != "push one, edited" {
+		t.Fatalf("comments of the moved post: %+v", cmts)
+	}
+	if revs, _ := s.ListPostHistory(post.ID); len(revs) != 1 {
+		t.Fatalf("history of the moved post: %+v", revs)
+	}
+	if revs, _ := s.ListCommentHistory(post.ID, 1); len(revs) != 1 {
+		t.Fatalf("comment history of the moved post: %+v", revs)
+	}
+	if cps, err := s.GetCrossposts("Board", "M.1.A.001"); err != nil || len(cps) != 1 || cps[0].TargetPostFile != "M.1.A.003" {
+		t.Fatalf("crossposts of the moved post: %+v, err=%v", cps, err)
+	}
+	if origin, _, err := s.GetOriginPost("Board", "M.1.A.003"); err != nil || origin == nil || origin.ID != post.ID {
+		t.Fatalf("origin of the moved crosspost: %+v, err=%v", origin, err)
+	}
+	cache := filepath.Join(dir, "cache1", strconv.FormatInt(post.CommunityID, 10), "M.1.A.001")
+	if _, err := os.Stat(cache); err != nil {
+		t.Fatalf("cache of the moved post not written: %v", err)
+	}
+
+	// New posts of the community go to its new engine.
+	fresh := mustCreatePost(t, s, "Board", "M.2.A.001", "after the move")
+	if s.GetEngineByPostID(fresh.ID) != s.engines[1] {
+		t.Fatalf("new post not on the new engine")
+	}
+}

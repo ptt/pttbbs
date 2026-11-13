@@ -230,6 +230,24 @@ func (r *CommunityRegistry) Shard(id int64) (int, bool) {
 	return 0, false
 }
 
+// SetShard records that the community id is now on shard; the caller moves
+// its posts.
+func (r *CommunityRegistry) SetShard(id int64, shard int) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	c, ok := r.byID[id]
+	if !ok {
+		return fmt.Errorf("%w: #%d", ErrCommunityNotFound, id)
+	}
+	now := time.Now().Unix()
+	if _, err := r.db.Exec(`UPDATE community SET shard = ?, updated = ? WHERE id = ?`, shard, now, id); err != nil {
+		return fmt.Errorf("set shard of community #%d failed: %w", id, err)
+	}
+	c.Shard = shard
+	c.Updated = now
+	return nil
+}
+
 // insertLocked registers a new community named name, on the shard that
 // assignShard chooses; r.mu must be held.
 func (r *CommunityRegistry) insertLocked(name string, now int64) (*model.Community, error) {

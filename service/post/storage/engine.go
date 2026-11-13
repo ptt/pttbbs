@@ -1526,6 +1526,15 @@ func (e *Engine) PurgePostByCommunityFile(community, postFile string) error {
 }
 
 func (e *Engine) purgePostRecord(p *model.Post) error {
+	return e.removePostRecord(p, false, false)
+}
+
+// removePostRecord removes post p and everything keyed by its ID from this
+// engine. Moving the post to another engine keeps the records of the
+// crossposts to it (keepIncoming; they belong to their source posts, which
+// stay here) and its cache file if the other engine uses the same one
+// (keepCache).
+func (e *Engine) removePostRecord(p *model.Post, keepIncoming, keepCache bool) error {
 	if p == nil {
 		return fmt.Errorf("post is nil")
 	}
@@ -1541,7 +1550,11 @@ func (e *Engine) purgePostRecord(p *model.Post) error {
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Exec("DELETE FROM crossposts WHERE source_post_id = ? OR (target_community_id = ? AND target_post_file = ?)", p.ID, p.CommunityID, p.PostFile); err != nil {
+	if keepIncoming {
+		if _, err := tx.Exec("DELETE FROM crossposts WHERE source_post_id = ?", p.ID); err != nil {
+			return fmt.Errorf("delete crossposts failed: %w", err)
+		}
+	} else if _, err := tx.Exec("DELETE FROM crossposts WHERE source_post_id = ? OR (target_community_id = ? AND target_post_file = ?)", p.ID, p.CommunityID, p.PostFile); err != nil {
 		return fmt.Errorf("delete crossposts failed: %w", err)
 	}
 	if _, err := tx.Exec("DELETE FROM posts WHERE id = ?", p.ID); err != nil {
@@ -1650,8 +1663,9 @@ func (e *Engine) purgePostRecord(p *model.Post) error {
 	historyBatch.Close()
 
 	// Clean cache file
-	cachePath := e.CacheFilePath(p)
-	_ = os.Remove(cachePath)
+	if !keepCache {
+		_ = os.Remove(e.CacheFilePath(p))
+	}
 
 	return nil
 }

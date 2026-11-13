@@ -56,7 +56,7 @@ type Community struct {
 	CommentsDisabled           bool   `json:"comments_disabled"`             // BRD_NO_COMMENTS
 	DownvotesDisabled          bool   `json:"downvotes_disabled"`            // BRD_NO_DOWNVOTE
 	RepliesDisabled            bool   `json:"replies_disabled"`              // BRD_NOREPLY
-	Shard                      int    `json:"shard"`                         // storage shard, fixed at creation
+	Shard                      int    `json:"shard"`                         // storage shard, chosen at creation; changed only by moving the community
 	BID                        int    `json:"bid,omitempty"`                 // index (1-based) in .BRD
 	GroupBID                   int    `json:"group_bid,omitempty"`           // gid: bid of the group board
 	Group                      string `json:"group,omitempty"`               // name of the group board

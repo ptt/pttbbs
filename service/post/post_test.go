@@ -2786,6 +2786,12 @@ func TestServerCommunityCommands(t *testing.T) {
 	if resp, _ := ipc("LIST Other"); !strings.HasPrefix(resp, "OK 2 2") {
 		t.Fatalf("LIST after merge: %s", resp)
 	}
+	if resp, _ := ipc("MOVE_COMMUNITY Other 0"); resp != "OK 0" {
+		t.Fatalf("MOVE_COMMUNITY to the only engine: %s", resp)
+	}
+	if resp, _ := ipc("MOVE_COMMUNITY Other 1"); !strings.HasPrefix(resp, "ERR") {
+		t.Fatalf("MOVE_COMMUNITY to an engine that does not exist: %s", resp)
+	}
 
 	if resp, _ := ipc("DELETE_COMMUNITY newboard"); resp != fmt.Sprintf("OK %d", oldID) {
 		t.Fatalf("DELETE_COMMUNITY: %s", resp)

@@ -1300,6 +1300,20 @@ func main() {
 			fmt.Printf("%s posts were left in '%s' as '%s' already has their post files.\n", parts[2], args[1], args[2])
 		}
 
+	case "move-community":
+		if len(args) < 3 {
+			log.Fatalf("Usage: post.ctl move-community <community> <engine>")
+		}
+		resp, _, err := sendCmd(fmt.Sprintf("MOVE_COMMUNITY %s %s\n", args[1], args[2]), nil)
+		if err != nil {
+			log.Fatalf("move-community failed: %v", err)
+		}
+		parts := strings.Fields(resp)
+		if len(parts) < 2 || parts[0] != "OK" {
+			log.Fatalf("move-community failed: %s", resp)
+		}
+		fmt.Printf("Moved '%s' with %s posts to engine %s.\n", args[1], parts[1], args[2])
+
 	case "communities", "list-communities":
 		resp, payload, err := sendCmd("LIST_COMMUNITIES\n", nil)
 		if err != nil {
@@ -1534,6 +1548,7 @@ Usage:
   post.ctl import-boards [--dry-run]
   post.ctl rename-community <old> <new>
   post.ctl merge-community <from> <to>
+  post.ctl move-community <community> <engine> (move to another engine)
   post.ctl delete-community <community>       (soft delete; posts are kept)
   post.ctl purge-community <community>|#<id>  (removes all posts)
   post.ctl vote <post> <user> [1|-1|0] [person_id] [ip] [ctime]
