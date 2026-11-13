@@ -549,6 +549,7 @@ logattempt(const char *uid, char type, time4_t now, const char *loghost)
 	// A history that the user can not clear, for investigations.
 	if (LOG_CONF_BADLOGIN_HISTORY) {
 	    sethomefile(fname, uid, FN_BADLOGIN ".history");
+	    rotate_text_logfile(fname, SZ_BADLOGIN_HISTORY, 0.5);
 	    file_appendf(fname, "[%s] %s\n", Cdate(&now), loghost);
 	}
     }

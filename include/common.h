@@ -68,6 +68,9 @@
 #define FN_MAIL_NEWUSER_NOTICE "etc/mail_newuser_notice" // 新帳號寄出的信件開頭的提醒
 #define FN_USERMEMO	"memo.txt"	// 使用者個人記事本
 #define FN_BADLOGIN	"logins.bad"	// in BBSHOME & user directory
+#ifndef SZ_BADLOGIN_HISTORY
+#define SZ_BADLOGIN_HISTORY (32000)	// max size of logins.bad.history
+#endif
 #define FN_RECENTLOGIN	"logins.recent"	// in user directory
 #define FN_USERSECURITY	"user.security"	// in user directory
 #define FN_FORWARD      ".forward"      /* auto forward */
