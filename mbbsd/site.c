@@ -1,5 +1,5 @@
 // Site hooks (site_*): default (weak) implementations. A site may override
-// them, for example in mbbsd/local/*.c.
+// them, for example in mbbsd/site/*.c.
 #include "bbs.h"
 
 // Called when the user has logged in, right before the main menu.
