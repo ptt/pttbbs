@@ -309,20 +309,29 @@ func (s *ShardedEngine) GetThread(rootID uint64) ([]*model.Post, error) {
 	return s.GetEngineByPostID(rootID).GetThread(rootID)
 }
 
+// AddCrosspost records a crosspost with its source post, in the engine of
+// the source community: the record is keyed by the source post (whose
+// crosspost count it raises) and names the target by community and post
+// file, which may be in any engine.
 func (s *ShardedEngine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64) (*model.CrosspostRecord, int, error) {
-	eng, err := s.engineForWrite(targetCommunity)
-	if err != nil {
-		return nil, 0, err
-	}
-	return eng.AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName, creatorID, createdAt)
+	return s.GetEngineByCommunity(srcCommunity).AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName, creatorID, createdAt)
 }
 
+// GetCrossposts lists the crossposts of a post, kept with it.
 func (s *ShardedEngine) GetCrossposts(community, postFile string) ([]*model.CrosspostRecord, error) {
 	return s.GetEngineByCommunity(community).GetCrossposts(community, postFile)
 }
 
+// GetOriginPost finds the source of a crosspost by asking every engine, as
+// the record is kept with the source post.
 func (s *ShardedEngine) GetOriginPost(targetCommunity, targetPostFile string) (*model.Post, *model.CrosspostRecord, error) {
-	return s.GetEngineByCommunity(targetCommunity).GetOriginPost(targetCommunity, targetPostFile)
+	for _, e := range s.engines {
+		p, rec, err := e.GetOriginPost(targetCommunity, targetPostFile)
+		if err != nil || p != nil {
+			return p, rec, err
+		}
+	}
+	return nil, nil, nil
 }
 
 func (s *ShardedEngine) AddComment(c *model.Comment) (*model.Comment, error) {

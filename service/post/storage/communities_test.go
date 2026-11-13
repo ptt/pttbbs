@@ -755,3 +755,22 @@ func TestShardedMoveCommunity(t *testing.T) {
 		t.Fatalf("new post not on the new engine")
 	}
 }
+
+func TestShardedCrosspostAcrossEngines(t *testing.T) {
+	s, _ := openTestSharded(t, 2, map[string]int{"Src": 0, "Dst": 1})
+	src := mustCreatePost(t, s, "Src", "M.1.A.001", "original")
+	mustCreatePost(t, s, "Dst", "M.2.A.001", "copy")
+	rec, n, err := s.AddCrosspost("Src", "M.1.A.001", "Dst", "M.2.A.001", "sharer", 0, 0)
+	if err != nil || n != 1 || rec.SourcePostID != src.ID {
+		t.Fatalf("AddCrosspost = %+v, %d, %v", rec, n, err)
+	}
+	if cps, err := s.GetCrossposts("Src", "M.1.A.001"); err != nil || len(cps) != 1 || cps[0].TargetCommunity != "Dst" {
+		t.Fatalf("GetCrossposts = %+v, %v", cps, err)
+	}
+	if origin, _, err := s.GetOriginPost("Dst", "M.2.A.001"); err != nil || origin == nil || origin.ID != src.ID {
+		t.Fatalf("GetOriginPost = %+v, %v", origin, err)
+	}
+	if p, _ := s.GetPost(src.ID); p.NumCrossposts != 1 {
+		t.Fatalf("source post has %d crossposts, want 1", p.NumCrossposts)
+	}
+}
