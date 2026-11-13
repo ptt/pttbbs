@@ -12,6 +12,9 @@ import (
 // slot of the account in .PASSWDS, and firstlogin tells apart the accounts
 // that have used the same slot. 0 (user_t { 0, 0 }) means unknown (e.g.
 // system posts, or legacy records whose author cannot be resolved any more).
+// firstlogin 0 with a usernum is the author of a legacy anonymous post whose
+// account cannot be told any more: only the slot (fileheader_t.multi) is
+// known.
 //
 // Every record that post.svc keeps about what a user did has both the name
 // shown for the user (which may be changed, e.g. for anonymous posts) and

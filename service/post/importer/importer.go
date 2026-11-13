@@ -1144,9 +1144,20 @@ func parseDeletedTitle(title string) (author, deletedBy, reason string) {
 // posts keep the usernum of their author in multi.
 func resolveAuthor(users UserResolver, fhdr *FileHeader, ctime int64) model.PersonID {
 	if int(fhdr.Filemode)&model.FileAnonymous != 0 {
-		return ResolvePersonID(users, "", int(int32(fhdr.Multi)), ctime)
+		return resolveAnonymous(users, int(int32(fhdr.Multi)), ctime)
 	}
 	return ResolvePersonID(users, fhdr.Owner, 0, ctime)
+}
+
+// resolveAnonymous returns the person behind an anonymous post, whose .DIR
+// record keeps the usernum of the author (fileheader_t.multi.anon_uid). If
+// the account cannot be told any more, the usernum is still kept (with
+// firstlogin 0), so that .DIR can be rebuilt from post.svc.
+func resolveAnonymous(users UserResolver, usernum int, ctime int64) model.PersonID {
+	if id := ResolvePersonID(users, "", usernum, ctime); id != 0 {
+		return id
+	}
+	return model.MakePersonID(usernum, 0)
 }
 
 // moneyOf returns the money of a post in .DIR, whose multi holds something
@@ -1192,7 +1203,7 @@ func importSafeDeleted(engine storage.Storage, opts ImportBoardOptions, users Us
 	}
 	creatorID := ResolvePersonID(users, creatorName, 0, ctime)
 	if int(fhdr.Filemode)&model.FileAnonymous != 0 {
-		creatorID = ResolvePersonID(users, "", int(int32(fhdr.Multi)), ctime)
+		creatorID = resolveAnonymous(users, int(int32(fhdr.Multi)), ctime)
 	}
 	deletedByID := creatorID
 	if deletedByName != creatorName {

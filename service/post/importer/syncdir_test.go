@@ -166,7 +166,7 @@ func (f dirFixture) record() []byte {
 	binary.LittleEndian.PutUint16(rec[fhdrOffScore:], uint16(f.score))
 	copy(rec[fhdrOffOwner:], f.owner)
 	orig, _ := IsSafeDeletedFilename(f.filename)
-	copy(rec[fhdrOffDate:], fhdrDate(stampTime(orig)))
+	copy(rec[fhdrOffDate:], fhdrDate(stampTime(model.CanonicalPostFile(orig))))
 	copy(rec[fhdrOffTitle:], big5uao.Encode(f.title))
 	binary.LittleEndian.PutUint32(rec[fhdrOffMulti:], f.multi)
 	binary.LittleEndian.PutUint16(rec[fhdrOffFilemode:], f.filemode)
