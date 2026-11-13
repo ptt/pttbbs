@@ -1008,7 +1008,13 @@ user_login(void)
 
     /* log usies */
     STATINC(STAT_MBBSD_ENTER);
-    log_usies("ENTER", fromhost);
+    {
+        // The client code goes after the address, so the parsers that
+        // take the address as the first field after the user id
+        // (saveloginptt.pl, uquery.svc) still work.
+        AUTO_STR(mesg, "%s cc=%08x", fromhost, get_client_code());
+        log_usies("ENTER", mesg ? mesg : fromhost);
+    }
 #ifndef VALGRIND
     setproctitle("%s: %s", margs, cuser.userid);
 #endif
