@@ -4,18 +4,13 @@
 .depend
 .clang_complete
 tags
-var.h
 /pttbbs.conf
-common/sys/big5.c
-mbbsd/mbbsd
-mbbsd/testmbbsd
-mbbsd/testsz
-mbbsd/vers.c
-util/pyutil/big5_tbl.py
-diff/
+/include/var.h
+/common/sys/big5.c
+/diff/
 *.svc
 *.ctl
 # ...but only the built binaries: keep the cmd/<name>.svc|ctl/ source dirs.
 !*.svc/
 !*.ctl/
-service-private/
+/service-private
