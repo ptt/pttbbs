@@ -721,7 +721,7 @@ p_sysinfo(void)
 #endif
 
     load = cpuload(NULL);
-    cpuloadstr = get_loading_str(load);
+    cpuloadstr = site_get_load_desc(load);
 
     vs_hdr("系統資訊");
     move(2, 0);

@@ -25,7 +25,7 @@ inc_badpost(const char *userid, int num) {
 
     xuser.timeremovebadpost = adjust_badpost_time(xuser.timeremovebadpost);
     xuser.badpost += num;
-    on_inc_badpost(&xuser);
+    site_on_inc_badpost(&xuser);
     passwd_sync_update(uid, &xuser);
     return xuser.badpost;
 }

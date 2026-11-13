@@ -818,7 +818,7 @@ forward_file(const fileheader_t * fhdr, const char *direct)
     char            buf[PATHLEN];
     char           *p;
 
-    if (!can_forward(fhdr->title))
+    if (!site_can_forward(fhdr->title))
 	return;
 
     STRLCPY(buf, direct);
@@ -928,7 +928,7 @@ select_read(read_ctx_t *cx, int sr_mode)
     if (!success)
         return ui_ret;
 
-    if (!can_select_read(predicate.keyword, sr_mode))
+    if (!site_can_search(predicate.keyword, sr_mode))
         return READ_REDRAW;
 
     if (!cx->view.remap) {
@@ -1818,8 +1818,8 @@ read_decorate(PSB_CTX *psbctx)
 {
     read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
     if (cx->entries > 0)
-        decorate_read_page(psbctx, psbctx->header_lines, headers,
-                           cx->entries);
+        site_decorate_read_page(psbctx, psbctx->header_lines, headers,
+                                cx->entries);
 }
 
 static int

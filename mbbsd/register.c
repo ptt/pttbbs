@@ -244,7 +244,7 @@ compute_user_value(const userec_t * urec, time4_t clock)
 	return 30 - value;
 #endif
 
-    return get_keep_days(urec) * 24 * 60 - value;
+    return site_get_keep_days(urec) * 24 * 60 - value;
 }
 
 int
@@ -1274,7 +1274,7 @@ register_email_input(email_input_t *ein)
 	return REGISTER_ERR_INVALID_EMAIL;
 
     if (!ein->allow_untrusted) {
-	const char *reason = is_rejected_email(email);
+	const char *reason = site_get_email_reject_reason(email);
 	if (reason) {
 	    move(15, 0); clrtobot();
 	    mvouts(17, 0, reason);

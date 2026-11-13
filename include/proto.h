@@ -136,9 +136,7 @@ int board_select(void);
 int board_digest(void);
 int does_board_have_bm(const boardheader_t *bp);
 #define does_board_have_public_bm does_board_have_bm
-int get_max_pay_by_post_title(const char *title);
 int check_title_change_fee(const fileheader_t *fhdr, const char *new_title);
-int calc_post_cap(int post_count, int base_cap);
 int do_limitedit(int ent, fileheader_t * fhdr, const char *direct);
 void editLimits(unsigned char *plogins, unsigned char *pbadpost,
                 const char *notice);
@@ -881,29 +879,31 @@ void grayout_rect(int y, int end, int x_start, int x_end, int level);
 /* AIDS */
 /* end of AIDS */
 
-/* hooks (weak; a site may override them) */
-void on_user_login(void);
-const char *get_loading_str(int load);
-const char *is_rejected_email(const char *email);
-bool is_rejected_forward(const char *address);
-bool can_forward(const char *title);
-void on_crosspost(const char *board, const char *fname,
-                  const char *xboard, const char *xfname);
-int adjust_post_money(int money);
-bool IsFreeBoardName(const char *brdname);
-bool is_near_sys_maintenance(void);
-const char *get_logindays_color(int logindays);
-bool can_crosspost(const boardheader_t *bp, const fileheader_t *fh);
-void on_inc_badpost(userec_t *u);
-int get_keep_days(const userec_t *u);
-bool is_commentd_disabled(void);
-void on_comment(const boardheader_t *bp, const fileheader_t *fh, int type,
-                const char *who, const char *msg);
-bool can_select_read(const char *keyword, int sr_mode);
-void decorate_read_page(PSB_CTX *ctx, int y, const fileheader_t *page,
-                        int count);
-int edit_fix_first_line(char *data);
-bool edit_reject_input(int lineno, const char *line);
+/* site: site hooks (weak; a site may override them) */
+void site_on_login(void);
+const char *site_get_load_desc(int load);
+const char *site_get_email_reject_reason(const char *email);
+bool site_can_forward(const char *title);
+void site_on_crosspost_prompt(void);
+void site_on_crosspost(const char *board, const char *fname,
+                       const char *xboard, const char *xfname);
+int site_get_post_money(int money);
+int site_get_max_pay_by_title(const char *title);
+int site_get_post_cap(int post_count, int base_cap);
+bool site_is_free_board(const char *brdname);
+bool site_is_near_maintenance(void);
+const char *site_get_logindays_color(int logindays);
+bool site_can_crosspost(const boardheader_t *bp, const fileheader_t *fh);
+void site_on_inc_badpost(userec_t *u);
+int site_get_keep_days(const userec_t *u);
+bool site_is_commentd_disabled(void);
+void site_on_comment(const boardheader_t *bp, const fileheader_t *fh, int type,
+                     const char *who, const char *msg);
+bool site_can_search(const char *keyword, int sr_mode);
+void site_decorate_read_page(PSB_CTX *ctx, int y, const fileheader_t *page,
+                             int count);
+int site_fix_edit_first_line(char *data);
+bool site_can_edit_input(int lineno, const char *line);
 
 /* contentcheck */
 // A system alert over the current screen (restored afterwards): `title` and

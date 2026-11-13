@@ -4662,7 +4662,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
     }
 
     if (curr_buf->firstline)
-	curr_buf->firstline->len = edit_fix_first_line(curr_buf->firstline->data);
+	curr_buf->firstline->len = site_fix_edit_first_line(curr_buf->firstline->data);
 
     if (curr_buf->oldcurrline != curr_buf->firstline ||
 	curr_buf->currline != curr_buf->firstline) {
@@ -4722,7 +4722,7 @@ vedit2(const char *fpath, int saveheader, char title[STRLEN], int flags)
 	    else if (mblen == 1)
 		insert_char(mb[0]);
 	    curr_buf->lastindent = -1;
-	    if (edit_reject_input(curr_buf->currln, curr_buf->currline->data)) {
+	    if (!site_can_edit_input(curr_buf->currln, curr_buf->currline->data)) {
 		exit_edit_buffer();
 		return -1;
 	    }

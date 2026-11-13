@@ -366,7 +366,7 @@ void SmsValidation::Run() {
   }
 
   // Block if close to system maintenance.
-  if (is_near_sys_maintenance()) {
+  if (site_is_near_maintenance()) {
     vmsg("目前接近例行系統維護, 暫時無法開始新的認證");
     return;
   }

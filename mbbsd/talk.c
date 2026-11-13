@@ -317,7 +317,7 @@ my_query(const char *uident)
 	// ------------------------------------------------------------
 
 	{
-	    const char *color = get_logindays_color(muser.numlogindays);
+	    const char *color = site_get_logindays_color(muser.numlogindays);
 	    prints("¡m" STR_LOGINDAYS "¡n%s%d%s " STR_LOGINDAYS_QTY, color,
 		   muser.numlogindays, *color ? ANSI_RESET : "");
 	}

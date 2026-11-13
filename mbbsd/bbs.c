@@ -1062,7 +1062,7 @@ check_title_change_fee(const fileheader_t *fhdr, const char *new_title)
     if (!new_title || !*new_title || strcmp(new_title, fhdr->title) == 0)
         return 0;
 
-    if (IsFreeBoardName(currboard) || (currbrdattr & BRD_NOCREDIT) ||
+    if (site_is_free_board(currboard) || (currbrdattr & BRD_NOCREDIT) ||
         (currmode & MODE_DIGEST))
         return 0;
 
@@ -1070,7 +1070,7 @@ check_title_change_fee(const fileheader_t *fhdr, const char *new_title)
     if (entry_money <= 0)
         return 0;
 
-    int max_pay = get_max_pay_by_post_title(new_title);
+    int max_pay = site_get_max_pay_by_title(new_title);
     if (max_pay >= 0 && max_pay < entry_money)
         return entry_money;
 
@@ -1356,7 +1356,7 @@ do_post_article(int edflags)
 
     if (!ifuseanony &&
         HasBasicUserPerm(PERM_LOGINOK) &&
-        !IsFreeBoardName(currboard) &&
+        !site_is_free_board(currboard) &&
         !(currbrdattr & BRD_NOCREDIT) &&
 #ifdef USE_HIDDEN_BOARD_NOCREDIT
         !(currbrdattr & BRD_HIDE) &&
@@ -1366,15 +1366,15 @@ do_post_article(int edflags)
         money = calc_post_money(cuser.userid, currboard, fpath);
         if (money > MAX_POST_MONEY)
             money = MAX_POST_MONEY;
-        money = adjust_post_money(money);
+        money = site_get_post_money(money);
 
         if (money > 0) {
-            int post_cap = calc_post_cap(StatGetDailyPost(), money);
+            int post_cap = site_get_post_cap(StatGetDailyPost(), money);
             if (money > post_cap)
                 money = post_cap;
         }
 
-        int max_pay = get_max_pay_by_post_title(save_title);
+        int max_pay = site_get_max_pay_by_title(save_title);
         if (max_pay >= 0 && money > max_pay)
             money = max_pay;
     } else {
@@ -2106,7 +2106,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         return FULLUPDATE;
     }
 
-    if (!can_crosspost(bp, fhdr))
+    if (!site_can_crosspost(bp, fhdr))
         return FULLUPDATE;
 
     if (!dashf(TEMP_BFILE(currboard, fhdr->filename)))
@@ -2154,9 +2154,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
     }
 
-#ifdef LOCAL_ALERT_CROSSPOST
-    LOCAL_ALERT_CROSSPOST();
-#endif
+    site_on_crosspost_prompt();
 
     move(1, 0);
 
@@ -2340,7 +2338,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
                          (unsigned) getpid(),
                          currboard, xboard, fhdr->filename, fhdr->title));
 
-	on_crosspost(currboard, fhdr->filename, xboard, xfile.filename);
+	site_on_crosspost(currboard, fhdr->filename, xboard, xfile.filename);
 
 	// update crosspost record
 	if (is_board_moderator(xbid)) {
@@ -3190,7 +3188,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
                                     "%s %d %s %s %s\n", cuser.userid, (int)now,
                                     currboard, fhdr->filename, msg));
 #ifdef USE_COMMENTD
-    if (is_commentd_disabled()) {
+    if (site_is_commentd_disabled()) {
 	// do nothing
     } else
     if (CommentsAddRecord(bp->brdname, fhdr->filename, type, msg)) {
@@ -3199,7 +3197,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
-    on_comment(bp, fhdr, type, myid, msg);
+    site_on_comment(bp, fhdr, type, myid, msg);
 
     {
 	/* build tail first. */
@@ -3685,7 +3683,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         // INVALIDMONEY_MODES (FILE_BID, FILE_ANONYMOUS, ...) 也都不用扣
         // also check VALID_POST_MONEY in case any error made bad money...
         if (del_fee < 0 ||
-            IsFreeBoardName(currboard) ||
+            site_is_free_board(currboard) ||
             (currbrdattr & BRD_NOCREDIT) ||
             (currmode & MODE_DIGEST) ||
             (fhdr->filemode & INVALIDMONEY_MODES) ||
