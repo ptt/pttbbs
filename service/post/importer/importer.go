@@ -774,6 +774,7 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 		fhdr        *FileHeader
 		articlePath string
 		deleted     bool // safe-deleted record; fhdr.Filename is the original name
+		locked      bool // locked (L.<stamp> in .DIR); fhdr.Filename is the M. name
 	}
 	type parseResult struct {
 		seq      int
@@ -898,6 +899,7 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 							Downvotes:   downvotes,
 							NumComments: len(comments),
 							Content:     parsed.BodyContent,
+							Locked:      job.locked,
 							Encoding:    "utf-8",
 						}
 
@@ -961,12 +963,28 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 				continue
 			}
 
+			locked := false
+			if canon := model.CanonicalPostFile(fhdr.Filename); canon != fhdr.Filename {
+				locked = !deleted
+				fhdr.Filename = canon
+			}
+
 			if seenFiles[fhdr.Filename] {
 				continue
 			}
 			seenFiles[fhdr.Filename] = true
 
 			articlePath := filepath.Join(boardDir, fhdr.Filename)
+			if locked {
+				// mbbsd keeps the file of a locked post as X.<stamp>
+				// (older locks left it as L.<stamp>).
+				for _, name := range []string{model.LockedFileName(fhdr.Filename), model.LockedListName(fhdr.Filename)} {
+					if _, err := os.Stat(filepath.Join(boardDir, name)); err == nil {
+						articlePath = filepath.Join(boardDir, name)
+						break
+					}
+				}
+			}
 			validCount++
 			select {
 			case <-ctx.Done():
@@ -976,6 +994,7 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 				fhdr:        fhdr,
 				articlePath: articlePath,
 				deleted:     deleted,
+				locked:      locked,
 			}:
 			}
 		}

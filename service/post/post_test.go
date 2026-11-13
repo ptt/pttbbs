@@ -732,6 +732,23 @@ func TestServerIPC(t *testing.T) {
 	}
 	t.Logf("UPDATE_COMMENT and COMMENT_HISTORY verified: %s", string(cHistPayload))
 
+	// Posts are locked by ID or by their name in .DIR (Lemmy's LockPost).
+	for _, tc := range []struct{ cmd, want string }{
+		{"LOCK_POST_FILE gossiping M.1727800000.A.003 1", "OK"},
+		{"LOCK_POST_FILE gossiping L.1727800000.A.003 0", "OK"},
+		{fmt.Sprintf("LOCK_POST %d 1", p2.ID), "OK"},
+		{fmt.Sprintf("LOCK_POST %d 0", p2.ID), "OK"},
+		{"LOCK_POST_FILE gossiping M.1.A.404 1", "ERR"},
+	} {
+		c, _ := net.Dial("unix", sockPath)
+		c.Write([]byte(tc.cmd + "\n"))
+		resp, _ := bufio.NewReader(c).ReadString('\n')
+		c.Close()
+		if !strings.HasPrefix(resp, tc.want) {
+			t.Fatalf("%s: %s", tc.cmd, resp)
+		}
+	}
+
 	// Comments are deleted and restored by their comment ID.
 	for _, tc := range []struct{ cmd, want string }{
 		{fmt.Sprintf("DELETE_COMMENT %d sysop 0 spam", firstCommentID), "OK"},

@@ -11,6 +11,9 @@ type Storage interface {
 	CreatePost(p *model.Post) (*model.Post, error)
 	GetPost(postID uint64) (*model.Post, error)
 	GetPostByCommunityFile(community, postFile string) (*model.Post, error)
+	// LockPost locks or unlocks a post (Lemmy's LockPost).
+	LockPost(postID uint64, locked bool) error
+	LockPostByCommunityFile(community, postFile string, locked bool) error
 	CountPosts(community string) (int, error)
 	ListPostMeta(community string) ([]*model.Post, error)
 	SetPostMeta(community, postFile string, filemode, money int) error

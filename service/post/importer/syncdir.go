@@ -212,6 +212,15 @@ func setString(rec []byte, off, n int, val []byte) {
 	copy(field, val)
 }
 
+// boardFileName returns the name of the board file of p: X.<stamp> while it
+// is locked.
+func boardFileName(p *model.Post) string {
+	if p.Locked {
+		return model.LockedFileName(p.PostFile)
+	}
+	return p.PostFile
+}
+
 func setCounts(rec []byte, p *model.Post) {
 	binary.LittleEndian.PutUint16(rec[fhdrOffScore:], uint16(ScoreFromVotes(p.Upvotes, p.Downvotes)))
 	binary.LittleEndian.PutUint16(rec[fhdrOffComments:], CommentsFromCount(p.NumComments))
@@ -221,6 +230,9 @@ func setCounts(rec []byte, p *model.Post) {
 // post.svc does not know (pad2) are kept.
 func fillRecord(rec []byte, p *model.Post, isBig5 bool) {
 	filename, owner, title, modified := p.PostFile, p.CreatorName, p.Title, p.Modified
+	if p.Locked {
+		filename = model.LockedListName(p.PostFile)
+	}
 	if p.DeletedOrRemoved() {
 		filename = safeDelPrefix + p.PostFile[min(2, len(p.PostFile)):]
 		owner = safeDelOwner
@@ -314,6 +326,7 @@ func SyncDir(st storage.Storage, opts SyncDirOptions) (*SyncDirStats, error) {
 		stats.Records++
 		old := data[off : off+FileHeaderSize]
 		key, safeDeleted := IsSafeDeletedFilename(cString(old[fhdrOffFilename : fhdrOffFilename+fhdrLenFilename]))
+		key = model.CanonicalPostFile(key)
 		seen[key] = true
 		p := byFile[key]
 
@@ -355,7 +368,7 @@ func SyncDir(st storage.Storage, opts SyncDirOptions) (*SyncDirStats, error) {
 			}
 			missing = append(missing, dirEntry{rec: rec, ts: ts, changed: true})
 			stats.Added++
-			if _, err := os.Stat(filepath.Join(boardDir, p.PostFile)); err != nil {
+			if _, err := os.Stat(filepath.Join(boardDir, boardFileName(p))); err != nil {
 				stats.AddedNoFile++
 			}
 		}
@@ -458,7 +471,7 @@ func rebuildDir(st storage.Storage, opts SyncDirOptions, boardDir, dirPath strin
 	for off := 0; off < len(data); off += FileHeaderSize {
 		stats.Records++
 		key, _ := IsSafeDeletedFilename(cString(data[off+fhdrOffFilename : off+fhdrOffFilename+fhdrLenFilename]))
-		old[key] = true
+		old[model.CanonicalPostFile(key)] = true
 	}
 	known := make(map[string]bool, len(posts))
 
@@ -485,7 +498,7 @@ func rebuildDir(st storage.Storage, opts SyncDirOptions, boardDir, dirPath strin
 		if p.DeletedOrRemoved() {
 			continue
 		}
-		path := filepath.Join(boardDir, p.PostFile)
+		path := filepath.Join(boardDir, boardFileName(p))
 		if _, err := os.Stat(path); err == nil {
 			continue
 		}

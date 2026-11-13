@@ -277,6 +277,14 @@ func (s *ShardedEngine) GetPost(postID uint64) (*model.Post, error) {
 	return s.GetEngineByPostID(postID).GetPost(postID)
 }
 
+func (s *ShardedEngine) LockPost(postID uint64, locked bool) error {
+	return s.GetEngineByPostID(postID).LockPost(postID, locked)
+}
+
+func (s *ShardedEngine) LockPostByCommunityFile(community, postFile string, locked bool) error {
+	return s.GetEngineByCommunity(community).LockPostByCommunityFile(community, postFile, locked)
+}
+
 func (s *ShardedEngine) GetPostByCommunityFile(community, postFile string) (*model.Post, error) {
 	return s.GetEngineByCommunity(community).GetPostByCommunityFile(community, postFile)
 }

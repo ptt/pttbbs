@@ -56,6 +56,9 @@ type Post struct {
 	NumComments   int      `json:"num_comments"`    // Total comments count
 	NumCrossposts int      `json:"num_crossposts"`  // Total crossposts count (shares)
 	Encoding      string   `json:"encoding"`        // Always "utf-8" in DB
+	// Locked as Lemmy's post.locked: no new comments, and (as PTT locks
+	// posts) the content is not shown; see CanonicalPostFile.
+	Locked bool `json:"locked,omitempty"`
 	Deletion
 	Content          string `json:"content"`                      // UTF-8 Post Body
 	DemotedToComment bool   `json:"demoted_to_comment,omitempty"` // True if content was too short and converted to comment
@@ -534,6 +537,9 @@ func EncodeRFC822Post(p *Post) []byte {
 	b.WriteString(fmt.Sprintf("Filemode: %d\n", p.Filemode))
 	if p.Money != 0 {
 		b.WriteString(fmt.Sprintf("Money: %d\n", p.Money))
+	}
+	if p.Locked {
+		b.WriteString("Locked: true\n")
 	}
 	p.Deletion.writeRFC822(&b)
 	b.WriteString("\n")

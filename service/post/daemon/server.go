@@ -1754,6 +1754,36 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
 
+	case "LOCK_POST":
+		// LOCK_POST <post_id> <1|0>  (Lemmy's LockPost)
+		if len(parts) < 3 {
+			conn.Write([]byte("ERR invalid arguments for LOCK_POST\n"))
+			return
+		}
+		postID, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR invalid post_id: %s\n", parts[1])))
+			return
+		}
+		if err := s.storage.LockPost(postID, parts[2] == "1"); err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte("OK\n"))
+
+	case "LOCK_POST_FILE":
+		// LOCK_POST_FILE <community> <post_file> <1|0>
+		// post_file may be the M., L. (as in .DIR) or X. name of the post.
+		if len(parts) < 4 {
+			conn.Write([]byte("ERR invalid arguments for LOCK_POST_FILE\n"))
+			return
+		}
+		if err := s.storage.LockPostByCommunityFile(parts[1], parts[2], parts[3] == "1"); err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte("OK\n"))
+
 	case "UNDELETE_POST":
 		// UNDELETE_POST <post_id>
 		if len(parts) < 2 {

@@ -268,7 +268,8 @@ func initSQLiteSchema(db *sql.DB) error {
 		mod_person_name TEXT DEFAULT '',
 		mod_person_id INTEGER DEFAULT 0,
 		reason TEXT DEFAULT '',
-		money INTEGER DEFAULT 0
+		money INTEGER DEFAULT 0,
+		locked INTEGER DEFAULT 0
 	);
 	CREATE INDEX IF NOT EXISTS idx_posts_comm_id ON posts(community_id, id DESC);
 	CREATE INDEX IF NOT EXISTS idx_posts_comm_del ON posts(community_id, deleted, removed, id DESC);
@@ -373,6 +374,7 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	}
 	p.Encoding = "utf-8"
 	p.Title = model.HeaderValue(p.Title)
+	p.PostFile = model.CanonicalPostFile(p.PostFile)
 	if err := e.resolveCommunity(p); err != nil {
 		return nil, err
 	}
@@ -525,9 +527,9 @@ func (e *Engine) HasPost(postID uint64) bool {
 func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
 	var p model.Post
 	err := e.metaDB.QueryRow(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE id = ?
-	`, postID).Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money)
+	`, postID).Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked)
 	if err != nil {
 		return nil, err
 	}
@@ -566,6 +568,46 @@ func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
 	return &p, nil
 }
 
+// LockPost locks or unlocks post postID, as Lemmy's LockPost: a locked
+// post takes no new comments and, as PTT locks posts, its board file is
+// renamed to X.<stamp> (which mbbsd does not show) while it is locked.
+func (e *Engine) LockPost(postID uint64, locked bool) error {
+	p, err := e.GetPost(postID)
+	if err != nil {
+		return err
+	}
+	if p.Locked == locked {
+		return nil
+	}
+	from := e.BoardFilePath(p)
+	p.Locked = locked
+	e.metaWriteMu.Lock()
+	_, err = e.metaDB.Exec(`UPDATE posts SET locked = ? WHERE id = ?`, boolToInt(locked), postID)
+	e.metaWriteMu.Unlock()
+	if err != nil {
+		return fmt.Errorf("lock post %d failed: %w", postID, err)
+	}
+	if err := e.postsDB.Set(model.EncodePostKey(postID), model.EncodeRFC822Post(p), pebble.NoSync); err != nil {
+		return fmt.Errorf("lock post %d failed: %w", postID, err)
+	}
+	// mbbsd renames the file itself; do it here for other clients.
+	if to := e.BoardFilePath(p); from != "" && to != "" && from != to {
+		if _, err := os.Stat(to); os.IsNotExist(err) {
+			_ = os.Rename(from, to)
+		}
+	}
+	return nil
+}
+
+// LockPostByCommunityFile locks or unlocks the post postFile of community.
+func (e *Engine) LockPostByCommunityFile(community, postFile string, locked bool) error {
+	p, err := e.GetPostByCommunityFile(community, postFile)
+	if err != nil {
+		return fmt.Errorf("post not found: %s/%s: %w", community, postFile, err)
+	}
+	return e.LockPost(p.ID, locked)
+}
+
 func (e *Engine) GetPostByCommunityFile(community, postFile string) (*model.Post, error) {
 	cid, ok := e.reg.Lookup(community)
 	if !ok {
@@ -574,7 +616,7 @@ func (e *Engine) GetPostByCommunityFile(community, postFile string) (*model.Post
 	var id uint64
 	err := e.metaDB.QueryRow(`
 		SELECT id FROM posts WHERE community_id = ? AND post_file = ?
-	`, cid, postFile).Scan(&id)
+	`, cid, model.CanonicalPostFile(postFile)).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
@@ -604,7 +646,7 @@ func (e *Engine) ListPostMeta(community string) ([]*model.Post, error) {
 	e.FlushDirtyDeltas()
 
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE community_id = ? ORDER BY id
 	`, cid)
 	if err != nil {
@@ -615,7 +657,7 @@ func (e *Engine) ListPostMeta(community string) ([]*model.Post, error) {
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
@@ -635,7 +677,7 @@ func (e *Engine) SetPostMeta(community, postFile string, filemode, money int) er
 		return fmt.Errorf("post not found: %s/%s", community, postFile)
 	}
 	var id uint64
-	if err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community_id = ? AND post_file = ?`, cid, postFile).Scan(&id); err != nil {
+	if err := e.metaDB.QueryRow(`SELECT id FROM posts WHERE community_id = ? AND post_file = ?`, cid, model.CanonicalPostFile(postFile)).Scan(&id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("post not found: %s/%s", community, postFile)
 		}
@@ -678,7 +720,7 @@ func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, 
 		return nil, nil
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE community_id = ? AND deleted = 0 AND removed = 0 ORDER BY id DESC LIMIT ? OFFSET ?
 	`, cid, limit, offset)
 	if err != nil {
@@ -689,7 +731,7 @@ func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, 
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
@@ -713,7 +755,7 @@ func (e *Engine) ListDeletedPosts(community string, limit, offset int) ([]*model
 		return nil, nil
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE community_id = ? AND (deleted = 1 OR removed = 1) ORDER BY id DESC LIMIT ? OFFSET ?
 	`, cid, limit, offset)
 	if err != nil {
@@ -724,7 +766,7 @@ func (e *Engine) ListDeletedPosts(community string, limit, offset int) ([]*model
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
@@ -742,7 +784,7 @@ func (e *Engine) GetReplies(parentID uint64, limit, offset int) ([]*model.Post, 
 		limit = 50
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE parent_id = ? ORDER BY id ASC LIMIT ? OFFSET ?
 	`, parentID, limit, offset)
 	if err != nil {
@@ -753,7 +795,7 @@ func (e *Engine) GetReplies(parentID uint64, limit, offset int) ([]*model.Post, 
 	var replies []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
@@ -796,6 +838,7 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 	if err != nil {
 		return nil, 0, err
 	}
+	targetPostFile = model.CanonicalPostFile(targetPostFile)
 
 	// 1. Insert into SQLite crossposts table
 	e.metaWriteMu.Lock()
@@ -887,7 +930,7 @@ func (e *Engine) GetOriginPost(targetCommunity, targetPostFile string) (*model.P
 	err := e.metaDB.QueryRow(`
 		SELECT id, source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at
 		FROM crossposts WHERE target_community_id = ? AND target_post_file = ?
-	`, targetID, targetPostFile).Scan(&r.ID, &r.SourcePostID, &r.TargetCommunityID, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt)
+	`, targetID, model.CanonicalPostFile(targetPostFile)).Scan(&r.ID, &r.SourcePostID, &r.TargetCommunityID, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, nil
@@ -1926,6 +1969,9 @@ func (e *Engine) BoardFilePath(p *model.Post) string {
 		return ""
 	}
 	dir := BoardDir(e.cfg.BBSHome, p.Community)
+	if p.Locked {
+		return filepath.Join(dir, model.LockedFileName(p.PostFile))
+	}
 	return filepath.Join(dir, p.PostFile)
 }
 
@@ -2250,8 +2296,8 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 	}
 
 	stmt, err := tx.Prepare(`
-		INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'utf-8', ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 'utf-8', ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, 0, err
@@ -2303,7 +2349,7 @@ func (e *Engine) RebuildSQLiteFromPebble() (postCount int, commentCount int, err
 		money, _ := strconv.Atoi(meta["Money"])
 		communityID, _ := strconv.ParseInt(meta["CommunityID"], 10, 64)
 		if _, err := stmt.Exec(postID, parentID, communityID, meta["PostFile"], meta["Title"], meta["CreatorName"], model.ParsePersonID(meta["CreatorID"]), ctime, mtime, filemode,
-			boolToInt(del.Deleted), boolToInt(del.Removed), del.DeletedAt, del.ModPersonName, del.ModPersonID, del.Reason, money); err != nil {
+			boolToInt(del.Deleted), boolToInt(del.Removed), del.DeletedAt, del.ModPersonName, del.ModPersonID, del.Reason, money, boolToInt(meta["Locked"] == "true")); err != nil {
 			return 0, 0, err
 		}
 		if !del.DeletedOrRemoved() {
@@ -3011,9 +3057,10 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 
 	stmtPost, err := tx.Prepare(`
 		INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding,
-			deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(community_id, post_file) DO UPDATE SET
+			locked = excluded.locked,
 			title = excluded.title,
 			creator_name = excluded.creator_name,
 			creator_id = excluded.creator_id,
@@ -3052,6 +3099,7 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	for _, item := range batch {
 		item.Comments = foldComments(item.Comments)
 		p := item.Post
+		p.PostFile = model.CanonicalPostFile(p.PostFile)
 		if err := e.resolveCommunity(p); err != nil {
 			return err
 		}
@@ -3078,7 +3126,7 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes,
 			p.NumComments, p.NumCrossposts, p.Encoding,
 			boolToInt(p.Deleted), boolToInt(p.Removed), p.DeletedAt, p.ModPersonName, p.ModPersonID, p.Reason,
-			p.Money,
+			p.Money, boolToInt(p.Locked),
 		).Scan(&id)
 		if err != nil {
 			return fmt.Errorf("insert post %s/%s failed: %w", p.Community, p.PostFile, err)
@@ -3190,7 +3238,11 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 				} else {
 					rendered = RenderPostWithComments(it.Post, it.Comments, e.cfg.IsBig5())
 				}
-				targetPath := filepath.Join(renderTarget, it.Post.PostFile)
+				name := it.Post.PostFile
+				if it.Post.Locked {
+					name = model.LockedFileName(name)
+				}
+				targetPath := filepath.Join(renderTarget, name)
 				_ = os.WriteFile(targetPath, rendered, 0644)
 			}(item)
 		}
