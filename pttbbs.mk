@@ -50,9 +50,14 @@ EXT_CXXFLAGS+=	-finput-charset=big5 -fexec-charset=$(EXEC_CHARSET)
 
 PTT_WARN:=	-Wall -Wextra -Wformat=2 -Werror=vla -Werror=alloca \
 		-Wno-missing-field-initializers -Wno-address-of-packed-member
-PTT_CFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
-PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
+PTT_CFLAGS:=	$(PTT_WARN) -pipe -fstack-protector-strong \
+		-DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
+PTT_CXXFLAGS:=	$(PTT_WARN) -pipe -fstack-protector-strong \
+		-DBBSHOME='"$(BBSHOME)"' -I$(SRCROOT)/include
 PTT_LDFLAGS:=	-Wl,--as-needed
+
+# Optimization level (e.g. make OPTFLAGS=-Os for smaller programs).
+OPTFLAGS?=	-O3
 
 ifeq ($(CLANG),1)
 PTT_CFLAGS+=	-Qunused-arguments -Wno-parentheses-equality \
@@ -117,9 +122,9 @@ CXXFLAGS:=	-g -O0 $(PTT_CXXFLAGS)
 LDFLAGS:=	-O0 $(PTT_LDFLAGS)
 LDLIBS:=	$(PTT_LDLIBS)
 else
-CFLAGS:=	-g -Os $(PTT_CFLAGS) $(EXT_CFLAGS)
-CXXFLAGS:=	-g -Os $(PTT_CXXFLAGS) $(EXT_CXXFLAGS)
-LDFLAGS:=	-Os $(PTT_LDFLAGS)
+CFLAGS:=	-g $(OPTFLAGS) $(PTT_CFLAGS) $(EXT_CFLAGS)
+CXXFLAGS:=	-g $(OPTFLAGS) $(PTT_CXXFLAGS) $(EXT_CXXFLAGS)
+LDFLAGS:=	$(OPTFLAGS) $(PTT_LDFLAGS)
 LDLIBS:=	$(PTT_LDLIBS)
 
 ifdef OMITFP
