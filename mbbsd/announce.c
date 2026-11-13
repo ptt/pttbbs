@@ -978,8 +978,8 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
 
     move(1, 0); clrtobot(); outs(A_WHEREAMI_PREFIX_STR ANSI_COLOR(1));
 
-    // decide length of last index
-    SNPRINTF(abuf, "-%d", current_idx);
+    // decide length of last index (printed 1-based, as below)
+    SNPRINTF(abuf, "-%d", current_idx + 1);
     last_idx_len = strlen(abuf)+1;
     // calculate remaining length
     zidx_len = sizeof(zidx_buf) - strlen(zidx) - last_idx_len;
@@ -992,7 +992,8 @@ a_where_am_i(const menu_t *root, int current_idx, const char *current_title)
 	if (p->next == NULL)
 	{
 	    // tail. always print it.
-	    strlcpy(zidx, bskipping ? abuf+1 : abuf, last_idx_len+1);
+	    strlcpy(zidx, bskipping ? abuf+1 : abuf,
+		    zidx_buf + sizeof(zidx_buf) - zidx);
 	} else if (bskipping) {
 	    // skip iteration
 	    continue;
