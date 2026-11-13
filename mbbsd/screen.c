@@ -79,7 +79,7 @@ initscr(void)
 }
 
 int
-resizeterm(int rows, int cols)
+resizeterm(int rows, int cols GCC_UNUSED)
 {
     screenline_t   *new_picture;
 
@@ -387,7 +387,6 @@ void
 clrtoeol(void)
 {
     register screenline_t *slp = GetCurrentLine();
-    register int    ln;
 
     standing = NA;
 
@@ -697,6 +696,16 @@ grayout(int y, int end, int level)
     char buf[ANSILINELEN];
     int i = 0;
 
+    // Attribute toggles; pfterm keeps them per cell.
+    switch (level) {
+	case GRAYOUT_LOCATOR:
+	case GRAYOUT_LOCEND:
+	case GRAYOUT_STANDOUT:
+	case GRAYOUT_STANDEND:
+	    grayout_rect(y, end, 0, t_columns, level);
+	    return;
+    }
+
     if (y < 0) y = 0;
     if (end > b_lines) end = b_lines;
 
@@ -763,6 +772,64 @@ grayout(int y, int end, int level)
 		break;
 	}
 	slp->emod = slp->len -1;
+    }
+}
+
+// Simplified: a line here has one standout region and no per-column
+// attributes, so the locator and standout levels set or clear that region
+// over columns [x_start, x_end) of lines [y, end). Other levels are ignored.
+void
+grayout_rect(int y, int end, int x_start, int x_end, int level)
+{
+    bool on;
+
+    switch (level) {
+	case GRAYOUT_LOCATOR:
+	case GRAYOUT_STANDOUT:
+	    on = true;
+	    break;
+	case GRAYOUT_LOCEND:
+	case GRAYOUT_STANDEND:
+	    on = false;
+	    break;
+	default:
+	    return;
+    }
+
+    if (y < 0) y = 0;
+    if (end > t_lines) end = t_lines;
+    for (; y < end; y++) {
+	screenline_t *slp = GetLine(y);
+
+	if (slp->len < 1)
+	    continue;
+	if (on) {
+	    const char *s = (const char *)slp->data;
+	    int i, esc = -1;
+
+	    slp->data[slp->len] = 0;
+	    slp->sso = stream_col_offset(x_start, s, NULL);
+	    slp->eso = stream_col_offset(x_end, s, NULL);
+	    // End before escapes at x_end, so they still color the text after.
+	    for (i = slp->sso; i < slp->eso; ) {
+		if (s[i] == ESC_CHR) {
+		    if (esc < 0)
+			esc = i;
+		    i = skip_control_sequence(s + i) - s;
+		} else {
+		    esc = -1;
+		    i++;
+		}
+	    }
+	    if (esc >= 0)
+		slp->eso = esc;
+	    slp->mode |= STANDOUT;
+	} else {
+	    slp->mode &= ~STANDOUT;
+	}
+	slp->mode |= MODIFIED;
+	slp->smod = 0;
+	slp->emod = slp->len - 1;
     }
 }
 
