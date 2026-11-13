@@ -47,7 +47,8 @@ void verify_display(const userec_t *u, const VerifyDb::GetReply *reply) {
 }
 
 bool write_email_to_passwd(const char *userid, const char *email) {
-#if !IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
+  if (IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT))
+    return true;
   userec_t u = {};
   int unum = passwd_load_user(userid, &u);
   if (unum < 0)
@@ -56,7 +57,6 @@ bool write_email_to_passwd(const char *userid, const char *email) {
   strlcpy(u.justify, *email ? "<E-Mail>: Manual" : "", sizeof(u.justify));
   if (passwd_sync_update(unum, &u) < 0)
     return false;
-#endif
   return true;
 }
 
