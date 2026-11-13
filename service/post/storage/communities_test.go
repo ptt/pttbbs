@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"pttbbs/post/config"
 	"pttbbs/post/model"
@@ -296,6 +298,8 @@ func openTestSharded(t *testing.T, numShards int, pins map[string]int) (*Sharded
 		t.Fatalf("OpenShardedEngine failed: %v", err)
 	}
 	t.Cleanup(func() { s.Close() })
+	// The same disk usage everywhere, so new communities take turns.
+	s.diskUsage = func(int) int64 { return 0 }
 	return s, dir
 }
 
@@ -311,13 +315,14 @@ func TestShardedCommunityRouting(t *testing.T) {
 	for i := 0; i < 6; i++ {
 		posts = append(posts, mustCreatePost(t, s, fmt.Sprintf("Board%d", i), "M.1.A.001", "content"))
 	}
-	for _, p := range posts {
-		want := s.engines[p.CommunityID%numShards]
-		if shard, _ := s.reg.Shard(p.CommunityID); shard != int(p.CommunityID%numShards) {
-			t.Errorf("%s (#%d) stored on shard %d", p.Community, p.CommunityID, shard)
+	// With the same disk usage, new communities take turns.
+	for i, p := range posts {
+		want := s.engines[i%numShards]
+		if shard, _ := s.reg.Shard(p.CommunityID); shard != i%numShards {
+			t.Errorf("%s (#%d) stored on shard %d, want %d", p.Community, p.CommunityID, shard, i%numShards)
 		}
 		if s.GetEngineByCommunity(p.Community) != want || s.GetEngineByCommunityID(p.CommunityID) != want {
-			t.Errorf("%s (#%d) not routed to shard %d", p.Community, p.CommunityID, p.CommunityID%numShards)
+			t.Errorf("%s (#%d) not routed to shard %d", p.Community, p.CommunityID, i%numShards)
 		}
 		if s.GetEngineByPostID(p.ID) != want {
 			t.Errorf("post %d of %s not on the shard of its community", p.ID, p.Community)
@@ -329,7 +334,7 @@ func TestShardedCommunityRouting(t *testing.T) {
 	if _, err := s.RenameCommunity(p.Community, "Renamed"); err != nil {
 		t.Fatal(err)
 	}
-	if s.GetEngineByCommunity("renamed") != s.engines[p.CommunityID%numShards] {
+	if s.GetEngineByCommunity("renamed") != s.engines[1] {
 		t.Errorf("renamed community moved to another shard")
 	}
 	if got, err := s.GetPostByCommunityFile("Renamed", "M.1.A.001"); err != nil || got.ID != p.ID {
@@ -381,7 +386,7 @@ func TestShardedMergeAcrossShards(t *testing.T) {
 	const numShards = 2
 	s, dir := openTestSharded(t, numShards, nil)
 
-	// Consecutive IDs land on different shards.
+	// Consecutive new communities land on different shards.
 	src := mustCreatePost(t, s, "Src", "M.1.A.001", "source post")
 	dstPost := mustCreatePost(t, s, "Dst", "M.2.A.001", "target post")
 	if s.GetEngineByCommunityID(src.CommunityID) == s.GetEngineByCommunityID(dstPost.CommunityID) {
@@ -455,7 +460,8 @@ func TestShardedMergeAcrossShards(t *testing.T) {
 	if n, _ := s.CountPosts("Src"); n != 0 {
 		t.Fatalf("CountPosts(Src) = %d after merge", n)
 	}
-	dstCache := filepath.Join(dir, fmt.Sprintf("cache%d", dstPost.CommunityID%numShards), strconv.FormatInt(dstPost.CommunityID, 10), "M.1.A.001")
+	dstShard, _ := s.reg.Shard(dstPost.CommunityID)
+	dstCache := filepath.Join(dir, fmt.Sprintf("cache%d", dstShard), strconv.FormatInt(dstPost.CommunityID, 10), "M.1.A.001")
 	if _, err := os.Stat(dstCache); err != nil {
 		t.Fatalf("cache of the moved post not written: %v", err)
 	}
@@ -572,7 +578,7 @@ func TestShardedRoutingSurvivesReopen(t *testing.T) {
 	// Different pins after a restart: existing communities stay where
 	// they are; only new ones follow the pins.
 	s = open(map[string]int{"Plain": 0, "Fresh": 1})
-	defer s.Close()
+	defer func() { s.Close() }()
 	if got, err := s.GetPostByCommunityFile("Moved", "M.1.A.001"); err != nil || got.ID != pinned.ID {
 		t.Fatalf("renamed pinned community after reopen: %+v, err=%v", got, err)
 	}
@@ -582,5 +588,77 @@ func TestShardedRoutingSurvivesReopen(t *testing.T) {
 	fresh := mustCreatePost(t, s, "Fresh", "M.1.A.001", "fresh")
 	if s.GetEngineByPostID(fresh.ID) != s.engines[1] {
 		t.Fatalf("new community not on its pinned shard")
+	}
+	s.Close()
+
+	// An engine added later takes the new communities until its disk
+	// usage catches up; existing communities stay where they are.
+	locations = append(locations, config.EngineLocation{
+		Index:    3,
+		DataDir:  filepath.Join(dir, "disk3"),
+		CacheDir: filepath.Join(dir, "cache3"),
+	})
+	s = open(nil)
+	if got, err := s.GetPostByCommunityFile("Plain", "M.1.A.001"); err != nil || got.ID != plain.ID {
+		t.Fatalf("existing community after adding an engine: %+v, err=%v", got, err)
+	}
+	// 3 communities with 1200 bytes, 400 each on average.
+	s.diskUsage = func(shard int) int64 { return []int64{1000, 100, 100, 0}[shard] }
+	for i, want := range []int{3, 1, 2, 3, 1} {
+		id, err := s.Communities().Ensure(fmt.Sprintf("Later%d", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if shard, _ := s.reg.Shard(id); shard != want {
+			t.Errorf("Later%d on shard %d, want %d", i, shard, want)
+		}
+	}
+}
+
+func TestShardedAssignByDiskUsage(t *testing.T) {
+	s, _ := openTestSharded(t, 3, map[string]int{"Heavy": 0, "A1": 1, "A2": 1, "B1": 2, "B2": 2})
+	for _, name := range []string{"Heavy", "A1", "A2", "B1", "B2"} {
+		if _, err := s.Communities().Ensure(name); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Shard 0 has the fewest communities but the most data: 5
+	// communities with 1500 bytes, 300 each on average.
+	usage := []int64{900, 300, 300}
+	s.diskUsage = func(shard int) int64 { return usage[shard] }
+	s.usageAt = time.Time{} // measure again
+	ensure := func(name string, want int) {
+		t.Helper()
+		id, err := s.Communities().Ensure(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if shard, _ := s.reg.Shard(id); shard != want {
+			t.Errorf("%s on shard %d, want %d", name, shard, want)
+		}
+	}
+	// Boards registered before their posts arrive (no new usage) count
+	// 300 each, so they are spread, and shard 0 gets none until the others
+	// catch up.
+	for i, want := range []int{1, 2, 1, 2, 0} {
+		ensure(fmt.Sprintf("New%d", i), want)
+	}
+
+	// Usage is measured again after usageTTL.
+	usage = []int64{900, 2000, 300}
+	ensure("BeforeTTL", 1)
+	s.usageAt = time.Now().Add(-usageTTL)
+	ensure("AfterTTL", 2)
+
+	// Engines measure the bytes of their databases.
+	e := s.engines[0]
+	before := e.DiskUsage()
+	if before <= 0 {
+		t.Fatalf("DiskUsage() = %d", before)
+	}
+	mustCreatePost(t, s, "Heavy", "M.1.A.001", strings.Repeat("content ", 1<<14))
+	if after := e.DiskUsage(); after <= before {
+		t.Errorf("DiskUsage() = %d after a post, was %d", after, before)
 	}
 }

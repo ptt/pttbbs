@@ -43,7 +43,7 @@ type CommunityRegistry struct {
 	byName map[string]int64 // lower-cased name of active communities
 
 	// assignShard chooses the shard of a new community; nil means 0.
-	assignShard func(name string, id int64) int
+	assignShard ShardAssigner
 }
 
 func communityKey(name string) string {
@@ -203,11 +203,17 @@ func (r *CommunityRegistry) Lookup(name string) (int64, bool) {
 	return id, ok
 }
 
-// SetShardAssigner sets how the shard of a new community is chosen (from
-// its name and ID). The shard is stored with the community and never
-// changes, so renaming a community, or changing how new ones are assigned,
-// does not move it. Without an assigner, communities are on shard 0.
-func (r *CommunityRegistry) SetShardAssigner(assign func(name string, id int64) int) {
+// ShardAssigner chooses the shard of a new community from its name and ID,
+// given the number of communities (soft-deleted ones included) already on
+// each shard.
+type ShardAssigner func(name string, id int64, communities map[int]int) int
+
+// SetShardAssigner sets how the shard of a new community is chosen. The
+// shard is stored with the community and only changes when the community
+// is moved, so renaming a community, or changing how new ones are
+// assigned, does not move it. Without an assigner, communities are on
+// shard 0.
+func (r *CommunityRegistry) SetShardAssigner(assign ShardAssigner) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.assignShard = assign
@@ -242,7 +248,11 @@ func (r *CommunityRegistry) insertLocked(name string, now int64) (*model.Communi
 	}
 	shard := 0
 	if r.assignShard != nil {
-		shard = r.assignShard(name, id)
+		counts := make(map[int]int)
+		for _, c := range r.byID {
+			counts[c.Shard]++
+		}
+		shard = r.assignShard(name, id, counts)
 	}
 	if _, err := tx.Exec(`UPDATE community SET shard = ? WHERE id = ?`, shard, id); err != nil {
 		return nil, err

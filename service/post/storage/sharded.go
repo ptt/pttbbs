@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -14,8 +15,10 @@ import (
 // All engines share one community registry, kept in the base DataDir (or
 // the DataDir of the first engine if there is none). The registry stores
 // the shard of each community, chosen once when it is created: the shard
-// its name is pinned to, or else (ID % shards). Renaming a community, or
-// changing the pins, never moves it.
+// its name is pinned to, or else the shard with the least disk usage (see
+// assignShard). Renaming a community, or changing the pins or the number
+// of engines, never moves it; new engines simply take the new communities
+// until they catch up.
 //
 // Post IDs are global, as in Lemmy: one sequence for all engines, so an ID
 // names one post whichever engine holds it, and the post keeps its ID when
@@ -28,6 +31,16 @@ type ShardedEngine struct {
 	reg     *CommunityRegistry
 	pins    map[string]int // lower-cased community name -> shard, for new communities
 	lastID  atomic.Uint64  // the last post ID handed out
+
+	// For assignShard: the disk usage of each engine measured at usageAt,
+	// the average usage of a community then, and the communities added
+	// to each engine since.
+	diskUsage func(shard int) int64 // Engine.DiskUsage; replaced by tests
+	usageMu   sync.Mutex
+	usage     []int64
+	usageAt   time.Time
+	avgUsage  int64
+	added     []int64
 }
 
 // OpenStorage creates either a single Engine or a ShardedEngine based on ServiceConfig
@@ -127,6 +140,7 @@ func OpenShardedEngine(baseCfg Config, locations []config.EngineLocation, pins m
 			s.lastID.Store(id)
 		}
 	}
+	s.diskUsage = func(shard int) int64 { return s.engines[shard].DiskUsage() }
 	reg.SetShardAssigner(s.assignShard)
 	return s, nil
 }
@@ -136,16 +150,54 @@ func (s *ShardedEngine) nextPostID() uint64 {
 	return s.lastID.Add(1)
 }
 
+// usageTTL is how long assignShard uses one measure of the disk usage of
+// the engines before measuring again.
+const usageTTL = 10 * time.Minute
+
 // assignShard chooses the shard of a new community: the one its name is
-// pinned to, or else (ID % shards).
-func (s *ShardedEngine) assignShard(name string, id int64) int {
-	if idx, ok := s.pins[communityKey(name)]; ok {
-		return idx
+// pinned to, or else the one with the least disk usage. Boards are
+// registered (by import-boards or the board headers) before their posts
+// arrive, so each community put on an engine since its usage was measured
+// counts as much as the average community then; until the next measure
+// (after usageTTL), many boards registered at once are spread over the
+// engines. An engine with a large community gets fewer new ones, and an
+// engine added later takes the new ones until it catches up.
+func (s *ShardedEngine) assignShard(name string, _ int64, communities map[int]int) int {
+	s.usageMu.Lock()
+	defer s.usageMu.Unlock()
+	if now := time.Now(); len(s.usage) != len(s.engines) || now.Sub(s.usageAt) >= usageTTL {
+		s.measureUsage(communities)
+		s.usageAt = now
 	}
-	if id < 0 {
-		id = -id
+	shard, ok := s.pins[communityKey(name)]
+	if !ok {
+		load := func(i int) int64 { return s.usage[i] + s.added[i]*s.avgUsage }
+		for i := 1; i < len(s.engines); i++ {
+			if load(i) < load(shard) {
+				shard = i
+			}
+		}
 	}
-	return int(id % int64(len(s.engines)))
+	s.added[shard]++
+	return shard
+}
+
+// measureUsage measures the disk usage of each engine and the average
+// usage of the communities (soft-deleted ones included, as their posts
+// are still there); s.usageMu must be held.
+func (s *ShardedEngine) measureUsage(communities map[int]int) {
+	s.usage = make([]int64, len(s.engines))
+	s.added = make([]int64, len(s.engines))
+	var total, n int64
+	for i := range s.engines {
+		s.usage[i] = s.diskUsage(i)
+		total += s.usage[i]
+		n += int64(communities[i])
+	}
+	if n == 0 {
+		n = 1
+	}
+	s.avgUsage = max(total/n, 1)
 }
 
 // Shards returns the number of active shards

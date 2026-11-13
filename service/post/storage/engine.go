@@ -469,6 +469,23 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	return p, nil
 }
 
+// DiskUsage returns the bytes this engine takes on its disk: its Pebble
+// databases (with their WAL) and its SQLite database (with its WAL). The
+// rendered files in CacheDir are not counted, as they can be rebuilt.
+func (e *Engine) DiskUsage() int64 {
+	var n uint64
+	for _, db := range []*pebble.DB{e.postsDB, e.commentsDB, e.votesDB, e.historyDB} {
+		n += db.Metrics().DiskSpaceUsage()
+	}
+	sqlitePath := filepath.Join(e.cfg.DataDir, "meta.sqlite3")
+	for _, path := range []string{sqlitePath, sqlitePath + "-wal"} {
+		if fi, err := os.Stat(path); err == nil {
+			n += uint64(fi.Size())
+		}
+	}
+	return int64(n)
+}
+
 // MaxPostID returns the largest post ID this engine has ever used: the
 // largest in SQLite or Pebble, or that SQLite AUTOINCREMENT has handed out
 // (which also covers posts purged since).

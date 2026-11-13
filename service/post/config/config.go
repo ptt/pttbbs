@@ -32,8 +32,8 @@ type ServiceConfig struct {
 	// shared by all shards) is kept in the DataDir of the first one.
 	Engines []EngineLocation `json:"engines"`
 	// Pins chooses the shard of communities (by case-insensitive name)
-	// when they are created; other new communities go to shard
-	// (community ID % shards). The registry then keeps the shard of each
+	// when they are created; other new communities go to the shard with
+	// the least disk usage. The registry then keeps the shard of each
 	// community, so changing the pins does not move existing communities,
 	// and renaming one needs no change.
 	Pins map[string]int `json:"pins"`
