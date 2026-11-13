@@ -343,6 +343,10 @@ int StatAddDailyMail(int count);
 int StatGetDailySong(void);
 int StatIncDailySong(void);
 
+/* userinfo.c */
+void userlevel_str(uint32_t level, char buf[33]);
+void user_flags_str(const userec_t *u, char *buf, size_t sz);
+
 /* trackmail.c */
 int trackmail_notify_send(const char *sender, const char *recipient, const char *subject, const char *filename, const char *mail_path, time4_t ts);
 

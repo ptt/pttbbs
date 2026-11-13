@@ -235,10 +235,7 @@ user_display(const userec_t * u, int adminmode)
 
     // See comment above
     if (adminmode && HasUserPerm(PERM_ACCOUNTS | PERM_ACCTREG)) {
-	STRLCPY(genbuf, "bTCPRp#@XWBA#VSM0123456789ABCDEF");
-	for (diff = 0; diff < 32; diff++)
-	    if (!(u->userlevel & (1 << diff)))
-		genbuf[diff] = '-';
+	userlevel_str(u->userlevel, genbuf);
 	prints("\t帳號權限: %s\n", genbuf);
 	prints("\t認證資料: %s\n", u->justify);
     }
@@ -340,32 +337,8 @@ user_display(const userec_t * u, int adminmode)
 		"\n您的註冊程序已經完成，歡迎加入本站" :
 		"\n如果要提昇權限，請參考本站公佈欄辦理註冊");
     } else {
-	// XXX list user pref here
-	int i;
-	static const char *uflag_desc[] = {
-	    "拒收外信",
-	    "新板加最愛",
-	    "外藉",
-	    "居留權",
-	};
-	static uint32_t uflag_mask[] = {
-	    UF_REJ_OUTTAMAIL,
-	    UF_FAV_ADDNEW,
-	    UF_FOREIGN,
-	};
-
-	prints("\n其它資訊: [%s]", (u->userlevel & PERM_LOGINOK) ?
-		"已註冊" : "未註冊");
-	if (dashs(TEMP_HOMEFILE(u->userid, FN_FORWARD)) > 0)
-	    outs("[自動轉寄]");
-
-	for (i = 0; (size_t)i < ARRAY_SIZE(uflag_mask); i++)
-	{
-	    if (!(u->uflag & uflag_mask[i]))
-		continue;
-	    prints("[%s]", uflag_desc[i]);
-	}
-	prints("\n");
+	user_flags_str(u, genbuf, sizeof(genbuf));
+	prints("\n其它資訊: %s\n", genbuf);
     }
 }
 
