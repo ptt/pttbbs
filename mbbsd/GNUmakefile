@@ -32,6 +32,9 @@ CFLAGS += -Isite
 SITE_SRCS := $(wildcard site/*.c)
 SITE_OBJS := $(SITE_SRCS:.c=.o)
 OBJS += $(SITE_OBJS)
+# A site may only define hooks (declared in proto.h) and static functions,
+# so a misspelled or renamed hook fails instead of being silently ignored.
+$(SITE_OBJS): CFLAGS += -Werror=missing-prototypes
 endif
 
 # reduce .bss align overhead
