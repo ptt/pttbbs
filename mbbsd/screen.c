@@ -82,20 +82,23 @@ int
 resizeterm(int rows, int cols GCC_UNUSED)
 {
     screenline_t   *new_picture;
+    int             i;
 
-    if (rows > t_lines && big_picture) {
-	new_picture = (screenline_t *)
-		calloc(rows, sizeof(screenline_t));
-	if (new_picture == NULL) {
-	    syslog(LOG_ERR, "calloc(): %m");
-	    return 0;
-	}
-	memcpy(new_picture, big_picture, t_lines * sizeof(screenline_t));
-	free(big_picture);
-	big_picture = new_picture;
-	return 1;
+    if (rows == t_lines || !big_picture)
+	return 0;
+
+    new_picture = (screenline_t *) calloc(rows, sizeof(screenline_t));
+    if (new_picture == NULL) {
+	syslog(LOG_ERR, "calloc(): %m");
+	return 0;
     }
-    return 0;
+    // Copy the lines in screen order, so roll starts over within rows.
+    for (i = 0; i < rows && i < t_lines; i++)
+	new_picture[i] = *GetLine(i);
+    free(big_picture);
+    big_picture = new_picture;
+    roll = 0;
+    return 1;
 }
 
 void
@@ -879,7 +882,7 @@ void TSA_NO_ANALYSIS scr_restore(const screen_backup_t *old)
     const int len = MIN(old->row, t_lines);
 
     // XXX simple step to solve scrolling issue...
-    roll = old->roll;
+    roll = (old->roll < t_lines) ? old->roll : 0;
 
     for(i = 0; i < len; i++) {
 	/* restore header */

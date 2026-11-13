@@ -324,7 +324,7 @@ water_t         *water, *swater[WB_OFO_USER_NUM], *water_which;
 /* screen.c */
 #define SCR_COLS        ANSILINELEN
 screenline_t   *big_picture = NULL;
-char            roll = 0;
+int             roll = 0;      /* 0 <= roll < t_lines */
 char		msg_occupied = 0;
 
 /* gomo.c */
