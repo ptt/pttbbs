@@ -21,7 +21,6 @@
 // How PTT1, the only site with angels, runs them.
 #define ANGEL_ORDER_SONG_DAY        (29)    // Order songs for the angel on this day of a month
 #define ANGEL_CHANGE_TIMELIMIT_MINS (1)     // Between angel changes (x3 for bad masters)
-#define ANGEL_CIA_ACCOUNT           "AngelsCIA" // Its activity is not told to angelbeats
 #define ANGEL_ASSIGN_DOCUMENT       "etc/angel_assign.txt"  // How angels are assigned
 #define ANGELBEATS_ACTIVE_MASTER_RECORD_START (1361168062)  // Active masters counted since
 
@@ -76,15 +75,14 @@ angel_register_new(const char *userid) {
                            searchuser(userid, NULL));
 }
 
+// The master (me) sent a message to angel angel_uid.
 void
-angel_notify_activity(const char *userid) {
-    int master;
+angel_notify_activity(int angel_uid) {
     static time4_t t = 0;
     time4_t tick;
 
-    // TODO last piece to replace by ROLE_ANGEL_CIA.
-    // Don't notify AngelBeats for CIA account.
-    if (strcasecmp(userid, ANGEL_CIA_ACCOUNT) == 0)
+    // The CIA tests angels: not a master.
+    if (HasUserRole(ROLE_ANGEL_CIA))
 	return;
 
     // tick: every 1 minutes.
@@ -94,11 +92,9 @@ angel_notify_activity(const char *userid) {
     // ping daemon only in different ticks.
     if (tick == t)
         return;
-
-    master = searchuser(userid, NULL);
     t = tick;
 
-    angel_beats_do_request(ANGELBEATS_REQ_HEARTBEAT, master, usernum);
+    angel_beats_do_request(ANGELBEATS_REQ_HEARTBEAT, usernum, angel_uid);
 }
 
 void
@@ -305,7 +301,7 @@ select_angel() {
             vmsg("數字不正確。");
             return 0;
         }
-        // No need to tell AngelBeats since this is only for ANGEL_CIA_ACCOUNT.
+        // No need to tell AngelBeats since this is only for ROLE_ANGEL_CIA.
         pwcuSetMyAngel(getuserid(list.uids[idx - 1]));
 	log_filef(BBSHOME "/log/changeangel.log",
                   "品管 %s 抽測 %s 小天使\n",
@@ -983,7 +979,7 @@ pressanykey_or_callangel(){
 
 int angel_reject_me(userinfo_t *uin GCC_UNUSED) { return 0; }
 void angel_register_new(const char *userid GCC_UNUSED) { }
-void angel_notify_activity(const char *userid GCC_UNUSED) { }
+void angel_notify_activity(int angel_uid GCC_UNUSED) { }
 void angel_log_order_song(const char *angel_nick GCC_UNUSED) { }
 void angel_log_msg_to_angel(void) {}
 const char *angel_order_song(char *receiver GCC_UNUSED, size_t sz_receiver GCC_UNUSED) {

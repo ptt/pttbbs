@@ -76,11 +76,6 @@ show_msg(int save, const msgque_t *msg)
     int mode = msg->msgmode;
 
     format_msg(buf, sizeof(buf), msg);
-    if (IS_ENABLED(CONFIG_ANGEL) && mode == MSGMODE_TOANGEL) {
-        // I must be an Angel. Let's try to update angel beats info.
-        // TODO maybe it's better to move this to "sender".
-        angel_notify_activity(msg->userid);
-    }
     /* Non-modal: the owner of the screen shows it (see wmsg_set_nonmodal). */
     if (!wmsg_nonmodal)
         outmsg(buf);
@@ -625,6 +620,9 @@ my_write_deliver(int flag, const char *msg, userinfo_t *uin)
 
     if (flag == WMSG_ALOHA)
         return;
+
+    if (res >= 0 && msgmode == MSGMODE_TOANGEL)
+        angel_notify_activity(uin->uid);
 
     if (res < 0) {
         if (res == -5 || !ipc_is_connected()) {

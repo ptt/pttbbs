@@ -34,7 +34,7 @@ int a_angelreload(void);
 
 int angel_reject_me(userinfo_t * uin);
 void angel_register_new(const char *userid);
-void angel_notify_activity(const char *userid);
+void angel_notify_activity(int angel_uid);
 void angel_log_order_song(const char *angel_nick);
 void angel_log_msg_to_angel(void);
 const char *angel_order_song(char *receiver, size_t sz_receiver);
