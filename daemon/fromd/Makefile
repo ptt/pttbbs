@@ -1,9 +1,6 @@
 SRCROOT=	../..
 include $(SRCROOT)/pttbbs.mk
 
-ENABLE_MAXMIND_DB=y
-ENABLE_GEOIP_DB=y
-
 PROGRAMS=	fromd fromc
 
 LDLIBS+=$(SRCROOT)/common/sys/libcmsys.a \

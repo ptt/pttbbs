@@ -166,6 +166,10 @@ GFLAGS_LIBS_l:=		$(shell (pkg-config --libs-only-l gflags || true) 2>/dev/null)
 
 USE_MBBSD_CXX:=	$(call DEF_CHECK,USE_MBBSD_CXX)
 
+# fromd: IP databases. The old GeoIP database needs no reloading.
+ENABLE_MAXMIND_DB?=	n
+ENABLE_GEOIP_DB?=	y
+
 ######################################
 
 .DEFAULT_GOAL := all
