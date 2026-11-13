@@ -759,3 +759,49 @@ func TestSearchAuthor(t *testing.T) {
 		t.Errorf("Expected header to contain '搜尋作者: \"hungte\"', got:\n%s", rendered)
 	}
 }
+
+func TestParseRC(t *testing.T) {
+	home := "/home/bbs"
+	content := "# comment\n\ndir=/tmp/a\nboard=SYSOP\n dir = ~/man/boards/T/Test \nboard=Test\n"
+	paths, labels, err := parseRC(content, home)
+	if err != nil {
+		t.Fatalf("parseRC failed: %v", err)
+	}
+	wantPaths := []string{
+		"/tmp/a",
+		"/home/bbs/boards/S/SYSOP",
+		"/home/bbs/man/boards/T/Test",
+		"/home/bbs/boards/T/Test",
+	}
+	wantLabels := []string{"/tmp/a", "SYSOP", "~/man/boards/T/Test", "Test"}
+	if strings.Join(paths, "|") != strings.Join(wantPaths, "|") {
+		t.Errorf("paths = %v, want %v", paths, wantPaths)
+	}
+	if strings.Join(labels, "|") != strings.Join(wantLabels, "|") {
+		t.Errorf("labels = %v, want %v", labels, wantLabels)
+	}
+
+	for _, bad := range []string{"foo", "dir=", "unknown=x", "board=../x", "board=a/b"} {
+		if _, _, err := parseRC(bad, home); err == nil {
+			t.Errorf("parseRC(%q) expected error", bad)
+		}
+	}
+}
+
+func TestLoadRCFile(t *testing.T) {
+	tmp := t.TempDir()
+	if _, _, err := loadRCFile(filepath.Join(tmp, rcFileName), tmp); !os.IsNotExist(err) {
+		t.Errorf("expected not-exist error, got %v", err)
+	}
+	rc := filepath.Join(tmp, rcFileName)
+	if err := os.WriteFile(rc, []byte("board=Test\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	paths, _, err := loadRCFile(rc, tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 1 || paths[0] != filepath.Join(tmp, "boards", "T", "Test") {
+		t.Errorf("unexpected paths %v", paths)
+	}
+}

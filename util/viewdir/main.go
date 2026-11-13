@@ -900,6 +900,70 @@ func truncateFrontWidth(s string, maxWidth int) string {
 	return prefix + string(runes[cutIdx:])
 }
 
+// rcFileName is the config file (under $HOME) read when no paths are given.
+const rcFileName = ".viewdir.rc"
+
+// expandHome expands a leading "~" or "~/" in p to home.
+func expandHome(p, home string) string {
+	if p == "~" {
+		return home
+	}
+	if strings.HasPrefix(p, "~/") {
+		return filepath.Join(home, p[2:])
+	}
+	return p
+}
+
+// boardDirPath returns the directory of a board: home/boards/B/Board.
+func boardDirPath(home, board string) string {
+	return filepath.Join(home, "boards", board[:1], board)
+}
+
+// parseRC parses rc content. Each non-empty, non-comment line is either
+// "dir=<path>" or "board=<boardname>"; both may appear multiple times.
+// Returns the resolved paths and their display labels.
+func parseRC(content, home string) ([]string, []string, error) {
+	var paths, labels []string
+	for lineNo, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			return nil, nil, fmt.Errorf("line %d: missing '='", lineNo+1)
+		}
+		key = strings.ToLower(strings.TrimSpace(key))
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return nil, nil, fmt.Errorf("line %d: empty value for %q", lineNo+1, key)
+		}
+		switch key {
+		case "dir":
+			paths = append(paths, expandHome(value, home))
+			labels = append(labels, value)
+		case "board":
+			if strings.ContainsAny(value, "/\\") || strings.HasPrefix(value, ".") {
+				return nil, nil, fmt.Errorf("line %d: invalid board name %q", lineNo+1, value)
+			}
+			paths = append(paths, boardDirPath(home, value))
+			labels = append(labels, value)
+		default:
+			return nil, nil, fmt.Errorf("line %d: unknown key %q", lineNo+1, key)
+		}
+	}
+	return paths, labels, nil
+}
+
+// loadRCFile reads and parses the rc file at rcPath.
+func loadRCFile(rcPath, home string) ([]string, []string, error) {
+	data, err := os.ReadFile(rcPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	return parseRC(string(data), home)
+}
+
 func main() {
 	var encFlag string
 	flag.StringVar(&encFlag, "encoding", "", "Output encoding (utf8 or big5)")
@@ -907,8 +971,20 @@ func main() {
 	flag.Parse()
 
 	paths := flag.Args()
+	labels := append([]string(nil), paths...)
+	if len(paths) == 0 {
+		if home, err := os.UserHomeDir(); err == nil {
+			rcPaths, rcLabels, err := loadRCFile(filepath.Join(home, rcFileName), home)
+			if err != nil && !os.IsNotExist(err) {
+				fmt.Printf("讀取 %s 失敗: %v\n", rcFileName, err)
+				os.Exit(1)
+			}
+			paths, labels = rcPaths, rcLabels
+		}
+	}
 	if len(paths) == 0 {
 		paths = []string{"."}
+		labels = []string{"."}
 	}
 
 	outputEnc := strings.ToLower(strings.TrimSpace(encFlag))
@@ -960,13 +1036,13 @@ func main() {
 	} else {
 		baseDir = "路徑列表"
 		dirFile = "路徑列表"
-		for _, rawPath := range paths {
+		for i, rawPath := range paths {
 			absPath, err := filepath.Abs(rawPath)
 			if err != nil {
 				absPath = rawPath
 			}
 
-			displayTitle := truncateFrontWidth(rawPath, 64)
+			displayTitle := truncateFrontWidth(labels[i], 64)
 			articles = append(articles, ArticleHeader{
 				Filename: absPath,
 				Owner:    "DIR",
