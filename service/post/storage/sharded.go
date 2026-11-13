@@ -24,7 +24,8 @@ import (
 // names one post whichever engine holds it, and the post keeps its ID when
 // it moves to another engine. The ID says nothing about the engine; a post
 // is found by its community (through the registry) or, given only its ID,
-// by asking every engine (there are only a few).
+// by asking every engine (there are only a few). A comment ID is its post
+// ID and floor (model.MakeCommentID), so it is found as its post is.
 type ShardedEngine struct {
 	baseCfg Config
 	engines []*Engine
@@ -145,7 +146,8 @@ func OpenShardedEngine(baseCfg Config, locations []config.EngineLocation, pins m
 	return s, nil
 }
 
-// nextPostID allocates the ID of a new post in any engine.
+// nextPostID allocates the ID of a new post in any engine (checked to be
+// within model.MaxPostID by the engine).
 func (s *ShardedEngine) nextPostID() uint64 {
 	return s.lastID.Add(1)
 }
@@ -325,6 +327,15 @@ func (s *ShardedEngine) GetOriginPost(targetCommunity, targetPostFile string) (*
 
 func (s *ShardedEngine) AddComment(c *model.Comment) (*model.Comment, error) {
 	return s.GetEngineByPostID(c.PostID).AddComment(c)
+}
+
+// GetComment finds comment commentID in the engine of its post.
+func (s *ShardedEngine) GetComment(commentID uint64) (*model.Comment, error) {
+	postID, _, ok := model.SplitCommentID(commentID)
+	if !ok {
+		return nil, fmt.Errorf("%w: %d", ErrCommentNotFound, commentID)
+	}
+	return s.GetEngineByPostID(postID).GetComment(commentID)
 }
 
 func (s *ShardedEngine) GetComments(postID uint64, startFloor, limit uint32) ([]*model.Comment, error) {

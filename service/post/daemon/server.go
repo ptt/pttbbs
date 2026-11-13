@@ -569,11 +569,13 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
+		// OK <seq> <ctime> <score> NEW|MERGED <comment_id>; a merged comment
+		// has the ID of the floor it was merged into.
+		status := "NEW"
 		if added.IsMerged {
-			conn.Write([]byte(fmt.Sprintf("OK %d %d %d MERGED\n", added.Sequence, c.CreatedAt, p.Upvotes-p.Downvotes)))
-		} else {
-			conn.Write([]byte(fmt.Sprintf("OK %d %d %d\n", added.Sequence, c.CreatedAt, p.Upvotes-p.Downvotes)))
+			status = "MERGED"
 		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %s %d\n", added.Sequence, c.CreatedAt, p.Upvotes-p.Downvotes, status, added.ID)))
 
 	case "VOTE_FILE":
 		// VOTE_FILE <community> <post_file> <person_name> <person_id> <vote> [ip] [ctime]\n
@@ -1408,20 +1410,19 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
 
 	case "UPDATE_COMMENT", "EDIT_COMMENT":
-		// UPDATE_COMMENT <post_id> <seq> <editor_name> <editor_id> <content_bytes>\n<content>
-		if len(parts) < 6 {
+		// UPDATE_COMMENT <comment_id> <editor_name> <editor_id> <content_bytes>\n<content>
+		if len(parts) < 5 {
 			conn.Write([]byte("ERR invalid arguments for UPDATE_COMMENT\n"))
 			return
 		}
-		postID, err := strconv.ParseUint(parts[1], 10, 64)
-		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR invalid post_id: %s\n", parts[1])))
+		c, ok := s.commentByID(conn, parts[1])
+		if !ok {
 			return
 		}
-		seqVal, _ := strconv.ParseUint(parts[2], 10, 32)
-		editor := parts[3]
-		editorID := model.ParsePersonID(parts[4])
-		contentLen, _ := strconv.Atoi(parts[5])
+		postID, seqVal := c.PostID, c.Sequence
+		editor := parts[2]
+		editorID := model.ParsePersonID(parts[3])
+		contentLen, _ := strconv.Atoi(parts[4])
 
 		contentBytes := make([]byte, contentLen)
 		if contentLen > 0 {
@@ -1433,7 +1434,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 
 		newContent := string(contentBytes)
 
-		rev, err := s.storage.UpdateComment(postID, uint32(seqVal), newContent, editor, editorID)
+		rev, err := s.storage.UpdateComment(postID, seqVal, newContent, editor, editorID)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1785,31 +1786,25 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte("OK\n"))
 
 	case "DELETE_COMMENT":
-		// DELETE_COMMENT <post_id> <seq> <deleter_name> <deleter_id> [reason...]
-		if len(parts) < 5 {
+		// DELETE_COMMENT <comment_id> <deleter_name> <deleter_id> [reason...]
+		if len(parts) < 4 {
 			conn.Write([]byte("ERR invalid arguments for DELETE_COMMENT\n"))
 			return
 		}
-		postID, err := strconv.ParseUint(parts[1], 10, 64)
-		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR invalid post_id: %s\n", parts[1])))
+		c, ok := s.commentByID(conn, parts[1])
+		if !ok {
 			return
 		}
-		seqVal, err := strconv.ParseUint(parts[2], 10, 32)
-		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR invalid seq: %s\n", parts[2])))
-			return
-		}
-		deleter := parts[3]
-		deleterID := model.ParsePersonID(parts[4])
+		deleter := parts[2]
+		deleterID := model.ParsePersonID(parts[3])
 		reason := ""
-		if len(parts) >= 6 {
-			reason = strings.Join(parts[5:], " ")
+		if len(parts) >= 5 {
+			reason = strings.Join(parts[4:], " ")
 		}
 		if !utf8.ValidString(reason) {
 			reason = big5uao.Decode([]byte(reason))
 		}
-		rev, err := s.storage.DeleteComment(postID, uint32(seqVal), deleter, deleterID, reason)
+		rev, err := s.storage.DeleteComment(c.PostID, c.Sequence, deleter, deleterID, reason)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1854,22 +1849,16 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
 
 	case "UNDELETE_COMMENT":
-		// UNDELETE_COMMENT <post_id> <seq>
-		if len(parts) < 3 {
+		// UNDELETE_COMMENT <comment_id>
+		if len(parts) < 2 {
 			conn.Write([]byte("ERR invalid arguments for UNDELETE_COMMENT\n"))
 			return
 		}
-		postID, err := strconv.ParseUint(parts[1], 10, 64)
-		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR invalid post_id: %s\n", parts[1])))
+		c, ok := s.commentByID(conn, parts[1])
+		if !ok {
 			return
 		}
-		seqVal, err := strconv.ParseUint(parts[2], 10, 32)
-		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR invalid seq: %s\n", parts[2])))
-			return
-		}
-		if err := s.storage.UndeleteComment(postID, uint32(seqVal)); err != nil {
+		if err := s.storage.UndeleteComment(c.PostID, c.Sequence); err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
@@ -1901,6 +1890,26 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		conn.Write([]byte("OK\n"))
+
+	case "GET_COMMENT":
+		// GET_COMMENT <comment_id>
+		// Replies OK <post_id> <seq>, then the comment as one line of
+		// COMMENTS.
+		if len(parts) < 2 {
+			conn.Write([]byte("ERR invalid arguments for GET_COMMENT\n"))
+			return
+		}
+		commentID, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR invalid comment_id: %s\n", parts[1])))
+			return
+		}
+		c, err := s.storage.GetComment(commentID)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d\n%s", c.PostID, c.Sequence, formatTSVComment(c))))
 
 	case "COMMENTS":
 		// COMMENTS <post_id> [start [limit]]
@@ -2135,20 +2144,19 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 
 	case "COMMENT_HISTORY":
-		// COMMENT_HISTORY <post_id> <seq> [rev]
-		if len(parts) < 3 {
+		// COMMENT_HISTORY <comment_id> [rev]
+		if len(parts) < 2 {
 			conn.Write([]byte("ERR invalid arguments for COMMENT_HISTORY\n"))
 			return
 		}
-		postID, err := strconv.ParseUint(parts[1], 10, 64)
-		if err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR invalid post_id: %s\n", parts[1])))
+		c, ok := s.commentByID(conn, parts[1])
+		if !ok {
 			return
 		}
-		seqVal, _ := strconv.ParseUint(parts[2], 10, 32)
+		postID, seqVal := c.PostID, c.Sequence
 		var rev uint32
-		if len(parts) >= 4 {
-			rVal, _ := strconv.ParseUint(parts[3], 10, 32)
+		if len(parts) >= 3 {
+			rVal, _ := strconv.ParseUint(parts[2], 10, 32)
 			rev = uint32(rVal)
 		}
 
@@ -2286,6 +2294,25 @@ func (s *Server) handleIPC(conn net.Conn) {
 	}
 }
 
+// commentByID parses a comment ID argument and returns the comment, or
+// writes the error to conn.
+func (s *Server) commentByID(conn net.Conn, arg string) (*model.Comment, bool) {
+	id, err := strconv.ParseUint(arg, 10, 64)
+	if err != nil || id == 0 {
+		conn.Write([]byte(fmt.Sprintf("ERR invalid comment_id: %s\n", arg)))
+		return nil, false
+	}
+	c, err := s.storage.GetComment(id)
+	if err != nil {
+		conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+		return nil, false
+	}
+	return c, true
+}
+
+// formatTSVComment formats a comment as one line of COMMENTS:
+// <seq> <creator_name> <created_at> <ip> <type> <reason> <comment_id> <content
+// lines...>, tab-separated, where type is -1 for deleted comments.
 func formatTSVComment(c *model.Comment) string {
 	cleanReason := strings.ReplaceAll(strings.TrimRight(c.Reason, "\r\n"), "\t", " ")
 	if !utf8.ValidString(cleanReason) {
@@ -2311,8 +2338,8 @@ func formatTSVComment(c *model.Comment) string {
 		contentField = " "
 	}
 
-	return fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%s\n",
-		c.Sequence, c.CreatorName, c.CreatedAt, c.IP, typeVal, cleanReason, contentField)
+	return fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%d\t%s\n",
+		c.Sequence, c.CreatorName, c.CreatedAt, c.IP, typeVal, cleanReason, c.ID, contentField)
 }
 
 func formatTSVCommentRevision(r *model.CommentRevision) string {

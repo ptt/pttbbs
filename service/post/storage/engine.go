@@ -417,6 +417,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	if p.ID == 0 {
 		if e.cfg.NextPostID != nil {
 			p.ID = e.cfg.NextPostID()
+			if err := checkPostID(p.ID); err != nil {
+				return nil, err
+			}
 			e.metaWriteMu.Lock()
 			_, err := e.metaDB.Exec(`
 				INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
@@ -442,6 +445,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 				return nil, err
 			}
 			p.ID = uint64(id)
+			if err := checkPostID(p.ID); err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		e.metaWriteMu.Lock()
@@ -959,9 +965,8 @@ func (e *Engine) AddComment(c *model.Comment) (*model.Comment, error) {
 
 		prev.Content = strings.TrimRight(prev.Content, "\r\n") + "\n" + c.Content
 		prev.LastCommentAt = c.CreatedAt
-		cKey := model.EncodeCommentKey(prev.PostID, prev.Sequence)
-		val := model.EncodeRFC822Comment(prev)
-		if err := e.commentsDB.Set(cKey, val, pebble.NoSync); err != nil {
+		// The merged comment keeps the ID of the floor.
+		if err := e.commentsDB.Set(model.EncodeCommentKey(prev.PostID, prev.Sequence), model.EncodeRFC822Comment(prev), pebble.NoSync); err != nil {
 			return nil, fmt.Errorf("update pebble comment failed: %w", err)
 		}
 
@@ -971,6 +976,10 @@ func (e *Engine) AddComment(c *model.Comment) (*model.Comment, error) {
 		return prev, nil
 	}
 
+	if lastSeq >= model.MaxFloor {
+		e.seqMu.Unlock()
+		return nil, ErrTooManyComments
+	}
 	var seq uint32
 	if ok {
 		seq = atomic.AddUint32(ptr, 1)
@@ -981,19 +990,17 @@ func (e *Engine) AddComment(c *model.Comment) (*model.Comment, error) {
 	e.seqMu.Unlock()
 
 	c.Sequence = seq
+	c.ID = model.MakeCommentID(c.PostID, seq)
 
-	// 2. Package RFC 822 for comment (Encoding is the first header!)
-	val := model.EncodeRFC822Comment(c)
-	key := model.EncodeCommentKey(c.PostID, c.Sequence)
-
-	if err := e.commentsDB.Set(key, val, pebble.NoSync); err != nil {
+	// 2. Write the comment (RFC 822, Encoding is the first header!) and its
+	// author index u:{author}:{created_at}:{post_id}:{sequence} together.
+	batch := e.commentsDB.NewBatch()
+	_ = batch.Set(model.EncodeCommentKey(c.PostID, c.Sequence), model.EncodeRFC822Comment(c), nil)
+	_ = batch.Set(model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, c.PostID, c.Sequence), []byte{}, nil)
+	err := batch.Commit(pebble.NoSync)
+	batch.Close()
+	if err != nil {
 		return nil, fmt.Errorf("write pebble comment failed: %w", err)
-	}
-
-	// 3. Write secondary author index: u:{author}:{created_at}:{post_id}:{sequence}
-	secKey := model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, c.PostID, c.Sequence)
-	if err := e.commentsDB.Set(secKey, []byte{}, pebble.NoSync); err != nil {
-		return nil, fmt.Errorf("write comment author index failed: %w", err)
 	}
 
 	// 4. Register dirty comments count for SQLite batch flush
@@ -3028,6 +3035,7 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer voteBatch.Close()
 
 	for _, item := range batch {
+		item.Comments = foldComments(item.Comments)
 		p := item.Post
 		if err := e.resolveCommunity(p); err != nil {
 			return err
@@ -3061,6 +3069,9 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			return fmt.Errorf("insert post %s/%s failed: %w", p.Community, p.PostFile, err)
 		}
 		p.ID = id
+		if err := checkPostID(p.ID); err != nil {
+			return err
+		}
 
 		// Set in postBatch
 		postKey := model.EncodePostKey(p.ID)
@@ -3069,10 +3080,11 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			return fmt.Errorf("postBatch.Set failed: %w", err)
 		}
 
-		// Comments
+		// Comments, by floor.
 		for i, c := range item.Comments {
 			c.PostID = p.ID
 			c.Sequence = uint32(i + 1)
+			c.ID = model.MakeCommentID(p.ID, c.Sequence)
 			cKey := model.EncodeCommentKey(p.ID, c.Sequence)
 			cVal := model.EncodeRFC822Comment(c)
 			if err := commentBatch.Set(cKey, cVal, nil); err != nil {

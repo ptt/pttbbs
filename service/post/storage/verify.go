@@ -118,6 +118,28 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+// openReadOnlyPebble opens a Pebble DB read-only. Even a read-only open
+// creates an empty LOCK file; the returned close function removes it again
+// so that verification leaves the backup exactly as it was.
+func openReadOnlyPebble(path string) (*pebble.DB, func(), error) {
+	lock := filepath.Join(path, "LOCK")
+	_, err := os.Lstat(lock)
+	hadLock := !errors.Is(err, os.ErrNotExist)
+	db, err := pebble.Open(path, &pebble.Options{ReadOnly: true, Logger: quietLogger{}})
+	if err != nil {
+		if !hadLock {
+			os.Remove(lock)
+		}
+		return nil, nil, err
+	}
+	return db, func() {
+		db.Close()
+		if !hadLock {
+			os.Remove(lock)
+		}
+	}, nil
+}
+
 func openReadOnlySQLite(path string) (*sql.DB, error) {
 	return sql.Open("sqlite", "file:"+(&url.URL{Path: path}).EscapedPath()+"?mode=ro&immutable=1")
 }
@@ -172,19 +194,12 @@ func VerifyDataDir(dir, communitiesDB string) *VerifyReport {
 
 	dbs := map[string]*pebble.DB{}
 	for _, name := range []string{"posts.pebble", "comments.pebble", "votes.pebble", "history.pebble"} {
-		path := filepath.Join(dir, name)
-		// Even a read-only open creates an empty LOCK file; remove it again
-		// so that verification leaves the backup exactly as it was.
-		lock := filepath.Join(path, "LOCK")
-		if _, err := os.Lstat(lock); errors.Is(err, os.ErrNotExist) {
-			defer os.Remove(lock)
-		}
-		db, err := pebble.Open(path, &pebble.Options{ReadOnly: true, Logger: quietLogger{}})
+		db, closeDB, err := openReadOnlyPebble(filepath.Join(dir, name))
 		if err != nil {
 			r.errorf("open %s: %v", name, err)
 			continue
 		}
-		defer db.Close()
+		defer closeDB()
 		dbs[name] = db
 	}
 	if !r.OK() {
@@ -264,7 +279,8 @@ func (c *shardCursor) next(r *VerifyReport, dir string) {
 // VerifyShards checks the engine data dirs of one sharded backup (or of
 // stopped engines) against each other, in O(communities) memory:
 //   - a post ID is used by one post in one engine only (post IDs are
-//     global, so the service can find a post by its ID alone),
+//     global, so the service can find a post by its ID alone; a comment
+//     ID is its post ID and floor),
 //   - all posts of a community are in the same engine, and
 //   - with communitiesDB, each engine holds the communities of one shard,
 //     and no two engines the same shard.

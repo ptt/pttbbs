@@ -156,8 +156,12 @@ func TruncateCommentLines(content string, maxLines int) string {
 
 // Comment represents a reply / discussion item (decoupled from votes)
 type Comment struct {
+	// ID is MakeCommentID(PostID, Sequence) (see there): global and stable,
+	// as Lemmy's comment.id. Comments merged into a floor keep the ID of the
+	// floor.
+	ID            uint64   `json:"id"`
 	PostID        uint64   `json:"post_id"`
-	Sequence      uint32   `json:"sequence"` // 1-indexed sequential position
+	Sequence      uint32   `json:"sequence"` // 1-indexed sequential position (floor)
 	CreatorName   string   `json:"creator_name"`
 	CreatorID     PersonID `json:"creator_id"`
 	IP            string   `json:"ip"`
@@ -328,6 +332,34 @@ func EncodeCommentHistoryPrefix(postID uint64, seq uint32) []byte {
 	binary.BigEndian.PutUint32(k[9:13], seq)
 	k[13] = 'v'
 	return k
+}
+
+// Post and comment IDs.
+//
+// A post ID is a global serial within int32, as Lemmy's post.id. A comment
+// ID is its post ID and floor: post_id << 16 | floor, as PTT (and
+// Discourse, with topic_id and post_number) knows a comment by its post
+// and floor. Deviation from Lemmy, whose comment.id is an int32 serial: the
+// comments of PTT outnumber int32 anyway, and so a comment ID needs no
+// index or sequence of its own, the comments of a post have consecutive
+// IDs, and a comment ID (< 2^48) is still exact in JavaScript. Floors go up
+// to 65535, as fileheader_t.comments does.
+const (
+	MaxPostID   = 1<<31 - 1
+	MaxFloor    = 1<<16 - 1
+	commentBits = 16
+)
+
+// MakeCommentID returns the ID of the comment at floor seq of post postID.
+func MakeCommentID(postID uint64, seq uint32) uint64 {
+	return postID<<commentBits | uint64(seq)
+}
+
+// SplitCommentID returns the post and floor of a comment ID; ok is false
+// if it is not one.
+func SplitCommentID(commentID uint64) (postID uint64, seq uint32, ok bool) {
+	postID, seq = commentID>>commentBits, uint32(commentID&MaxFloor)
+	return postID, seq, postID > 0 && postID <= MaxPostID && seq > 0
 }
 
 // Comment Author Secondary Index Key:
@@ -547,6 +579,7 @@ func DecodeRFC822Comment(postID uint64, seq uint32, val []byte) (*Comment, error
 	content := string(val[idx+2:])
 
 	c := &Comment{
+		ID:       MakeCommentID(postID, seq),
 		PostID:   postID,
 		Sequence: seq,
 		Content:  content,

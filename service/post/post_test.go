@@ -478,6 +478,21 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("add_comment by file failed: %s", cResp)
 	}
 	t.Logf("add_comment via IPC succeeded: %s", strings.TrimSpace(cResp))
+	firstCommentID := p2.ID<<16 | 1 // post ID and floor
+	if f := strings.Fields(cResp); len(f) != 6 || f[4] != "NEW" || f[5] != fmt.Sprint(firstCommentID) {
+		t.Fatalf("COMMENT reply should end with NEW <comment_id>: %s", cResp)
+	}
+	{
+		gc, _ := net.Dial("unix", sockPath)
+		gc.Write([]byte(fmt.Sprintf("GET_COMMENT %d\n", firstCommentID)))
+		gr := bufio.NewReader(gc)
+		hdr, _ := gr.ReadString('\n')
+		line, _ := gr.ReadString('\n')
+		gc.Close()
+		if hdr != fmt.Sprintf("OK %d 1\n", p2.ID) || !strings.Contains(line, "piaip") {
+			t.Fatalf("GET_COMMENT %d: %q %q", firstCommentID, hdr, line)
+		}
+	}
 
 	// Verify comment in database
 	comments, err := st.GetComments(p2.ID, 1, 10)
@@ -694,7 +709,7 @@ func TestServerIPC(t *testing.T) {
 	conn13, _ := net.Dial("unix", sockPath)
 	defer conn13.Close()
 	newCommentB := []byte("修改後的推文內容")
-	hdr13 := fmt.Sprintf("UPDATE_COMMENT 2 1 sysop 0 %d\n", len(newCommentB))
+	hdr13 := fmt.Sprintf("UPDATE_COMMENT %d sysop 0 %d\n", firstCommentID, len(newCommentB))
 	conn13.Write([]byte(hdr13))
 	conn13.Write(newCommentB)
 	r13 := bufio.NewReader(conn13)
@@ -705,7 +720,7 @@ func TestServerIPC(t *testing.T) {
 
 	conn14, _ := net.Dial("unix", sockPath)
 	defer conn14.Close()
-	conn14.Write([]byte("COMMENT_HISTORY 2 1 1\n"))
+	conn14.Write([]byte(fmt.Sprintf("COMMENT_HISTORY %d 1\n", firstCommentID)))
 	r14 := bufio.NewReader(conn14)
 	cHistResp, _ := r14.ReadString('\n')
 	if !strings.HasPrefix(cHistResp, "OK 2 1 1") {
@@ -716,6 +731,22 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("Comment history missing original text: %s", string(cHistPayload))
 	}
 	t.Logf("UPDATE_COMMENT and COMMENT_HISTORY verified: %s", string(cHistPayload))
+
+	// Comments are deleted and restored by their comment ID.
+	for _, tc := range []struct{ cmd, want string }{
+		{fmt.Sprintf("DELETE_COMMENT %d sysop 0 spam", firstCommentID), "OK"},
+		{fmt.Sprintf("UNDELETE_COMMENT %d", firstCommentID), "OK"},
+		{"DELETE_COMMENT 999 sysop 0 spam", "ERR"},
+		{"UNDELETE_COMMENT x", "ERR"},
+	} {
+		c, _ := net.Dial("unix", sockPath)
+		c.Write([]byte(tc.cmd + "\n"))
+		resp, _ := bufio.NewReader(c).ReadString('\n')
+		c.Close()
+		if !strings.HasPrefix(resp, tc.want) {
+			t.Fatalf("%s: %s", tc.cmd, resp)
+		}
+	}
 
 	// 15. CROSSPOST via IPC
 	conn15, _ := net.Dial("unix", sockPath)

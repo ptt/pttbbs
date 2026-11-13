@@ -22,6 +22,8 @@ type Storage interface {
 	GetCrossposts(community, postFile string) ([]*model.CrosspostRecord, error)
 	GetOriginPost(targetCommunity, targetPostFile string) (*model.Post, *model.CrosspostRecord, error)
 	AddComment(c *model.Comment) (*model.Comment, error)
+	// GetComment returns the comment with the given (global) comment ID.
+	GetComment(commentID uint64) (*model.Comment, error)
 	GetComments(postID uint64, startFloor, limit uint32) ([]*model.Comment, error)
 	GetCommentsFiltered(postID uint64, startFloor, limit uint32, creatorName string, creatorID model.PersonID) ([]*model.Comment, error)
 	GetCommentCount(postID uint64) (int, error)

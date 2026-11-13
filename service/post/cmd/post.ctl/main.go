@@ -309,6 +309,24 @@ func main() {
 		}
 		fmt.Println(resp)
 
+	case "get-comment":
+		if len(args) < 2 {
+			log.Fatalf("Usage: post.ctl get-comment <comment_id>")
+		}
+		if _, err := strconv.ParseUint(args[1], 10, 64); err != nil {
+			log.Fatalf("Invalid comment ID: %s", args[1])
+		}
+		resp, payload, err := sendCmd(fmt.Sprintf("GET_COMMENT %s\n", args[1]), nil)
+		if err != nil {
+			log.Fatalf("get-comment failed: %v", err)
+		}
+		parts := strings.Fields(resp)
+		if len(parts) < 3 || parts[0] != "OK" {
+			log.Fatalf("get-comment failed: %s", resp)
+		}
+		fmt.Printf("Comment #%s is floor %s of post %s:\n", args[1], parts[2], parts[1])
+		fmt.Print(string(payload))
+
 	case "vote", "vote-file":
 		if len(args) < 3 {
 			log.Fatalf("Usage: post.ctl vote <post> <user> [1|-1|0] [creator_id] [ip] [ctime]\n  <post>: <post_id> or <post_file>@<community>")
@@ -964,12 +982,10 @@ func main() {
 		if len(args) > nextIdx+2 {
 			editor = args[nextIdx+2]
 		}
-		var header string
-		if target.isFile {
-			header = fmt.Sprintf("UPDATE_COMMENT_FILE %s %s %s %s 0 %d\n", target.community, target.postFile, seq, editor, len(contentB))
-		} else {
-			header = fmt.Sprintf("UPDATE_COMMENT %d %s %s 0 %d\n", target.postID, seq, editor, len(contentB))
+		if err := resolveToCommunityFile(&target); err != nil {
+			log.Fatalf("Error: %v", err)
 		}
+		header := fmt.Sprintf("UPDATE_COMMENT_FILE %s %s %s %s 0 %d\n", target.community, target.postFile, seq, editor, len(contentB))
 		resp, _, err := sendCmd(header, contentB)
 		if err != nil {
 			log.Fatalf("update-comment failed: %v", err)
@@ -1018,12 +1034,10 @@ func main() {
 		if len(args) > nextIdx+1 {
 			rev, _ = strconv.Atoi(args[nextIdx+1])
 		}
-		var header string
-		if target.isFile {
-			header = fmt.Sprintf("COMMENT_HISTORY_FILE %s %s %s %d\n", target.community, target.postFile, seq, rev)
-		} else {
-			header = fmt.Sprintf("COMMENT_HISTORY %d %s %d\n", target.postID, seq, rev)
+		if err := resolveToCommunityFile(&target); err != nil {
+			log.Fatalf("Error: %v", err)
 		}
+		header := fmt.Sprintf("COMMENT_HISTORY_FILE %s %s %s %d\n", target.community, target.postFile, seq, rev)
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
 			log.Fatalf("comment-history failed: %v", err)
@@ -1476,12 +1490,10 @@ func main() {
 		if len(args) > nextIdx+2 {
 			reason = strings.Join(args[nextIdx+2:], " ")
 		}
-		var cmd string
-		if target.isFile {
-			cmd = fmt.Sprintf("DELETE_COMMENT_FILE %s %s %s %s 0 %s\n", target.community, target.postFile, seq, deleter, reason)
-		} else {
-			cmd = fmt.Sprintf("DELETE_COMMENT %d %s %s 0 %s\n", target.postID, seq, deleter, reason)
+		if err := resolveToCommunityFile(&target); err != nil {
+			log.Fatalf("Error: %v", err)
 		}
+		cmd := fmt.Sprintf("DELETE_COMMENT_FILE %s %s %s %s 0 %s\n", target.community, target.postFile, seq, deleter, reason)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
 			log.Fatalf("delete-comment failed: %v", err)
@@ -1501,12 +1513,10 @@ func main() {
 			log.Fatalf("Usage: post.ctl undelete-comment <post> <seq>")
 		}
 		seq := args[nextIdx]
-		var cmd string
-		if target.isFile {
-			cmd = fmt.Sprintf("UNDELETE_COMMENT_FILE %s %s %s\n", target.community, target.postFile, seq)
-		} else {
-			cmd = fmt.Sprintf("UNDELETE_COMMENT %d %s\n", target.postID, seq)
+		if err := resolveToCommunityFile(&target); err != nil {
+			log.Fatalf("Error: %v", err)
 		}
+		cmd := fmt.Sprintf("UNDELETE_COMMENT_FILE %s %s %s\n", target.community, target.postFile, seq)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
 			log.Fatalf("undelete-comment failed: %v", err)
@@ -1554,6 +1564,7 @@ Usage:
   post.ctl vote <post> <user> [1|-1|0] [person_id] [ip] [ctime]
   post.ctl votes <post>
   post.ctl comments <post> [start [limit]]
+  post.ctl get-comment <comment_id>
   post.ctl comment <post> <author> <content> [ip] [person_id]
   post.ctl delete-comment <post> <seq> [deleter] [reason]
   post.ctl undelete-comment <post> <seq>
@@ -1589,17 +1600,18 @@ func printCommentsTable(resp string, payload []byte) {
 		return
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
-	fmt.Fprintf(w, "SEQ\tAUTHOR\tDATE\tIP\tSTATUS\tCONTENT\n")
+	fmt.Fprintf(w, "SEQ\tID\tAUTHOR\tDATE\tIP\tSTATUS\tCONTENT\n")
 	lines := strings.Split(strings.TrimRight(string(payload), "\n"), "\n")
 	for _, l := range lines {
 		if l == "" {
 			continue
 		}
 		cols := strings.Split(l, "\t")
-		if len(cols) < 7 {
+		if len(cols) < 8 {
 			continue
 		}
 		seq := cols[0]
+		commentID := cols[6]
 		author := cols[1]
 		ts, _ := strconv.ParseInt(cols[2], 10, 64)
 		dateStr := time.Unix(ts, 0).Format("01/02 15:04")
@@ -1607,7 +1619,7 @@ func printCommentsTable(resp string, payload []byte) {
 		typeVal, _ := strconv.Atoi(cols[4])
 		isDel := (typeVal < 0)
 		reason := cols[5]
-		content := strings.Join(cols[6:], " / ")
+		content := strings.Join(cols[7:], " / ")
 		status := "ACTIVE"
 		if isDel {
 			status = "DELETED"
@@ -1615,7 +1627,7 @@ func printCommentsTable(resp string, payload []byte) {
 				content = "[" + reason + "] " + content
 			}
 		}
-		fmt.Fprintf(w, "[%s]\t%s\t%s\t%s\t%s\t%s\n", seq, author, dateStr, ip, status, content)
+		fmt.Fprintf(w, "[%s]\t#%s\t%s\t%s\t%s\t%s\t%s\n", seq, commentID, author, dateStr, ip, status, content)
 	}
 	w.Flush()
 	fmt.Printf("(Showing %d of %d comments)\n", count, total)
