@@ -24,7 +24,9 @@ answer_file(struct evbuffer *buf, const char *path, struct stat *st,
     if (st == NULL)
 	st = &local_st;
 
-    if ((fd = open(path, O_RDONLY)) < 0 || fstat(fd, st) < 0) {
+    // Only regular files: evbuffer_add_file() leaks its segment on others.
+    if ((fd = open(path, O_RDONLY)) < 0 || fstat(fd, st) < 0 ||
+	!S_ISREG(st->st_mode)) {
 	ret = SELECT_ENOTFOUND;
 	goto answer_file_errout;
     }
