@@ -28,6 +28,9 @@ type ServiceConfig struct {
 	FilterEncoding string `json:"filter_encoding"`
 	MaxOpenFiles   int    `json:"max_open_files"`
 	ImportWorkers  int    `json:"import_workers"`
+	// SiteURL (e.g. https://www.ptt.cc) makes the ActivityPub IDs (ap_id,
+	// actor_id) in the Lemmy API.
+	SiteURL string `json:"site_url,omitempty"`
 	// Engines lists the shards. The community registry (communities.db,
 	// shared by all shards) is kept in the DataDir of the first one.
 	Engines []EngineLocation `json:"engines"`
@@ -202,6 +205,8 @@ func LoadConfigFile(path string, bbshome string) (*ServiceConfig, error) {
 				if n, err := strconv.Atoi(val); err == nil && n >= 0 {
 					cfg.MinReplyRunes = n
 				}
+			case "site_url":
+				cfg.SiteURL = strings.TrimRight(strings.TrimSpace(val), "/")
 			case "filter_encoding", "encoding":
 				cfg.FilterEncoding = strings.TrimSpace(val)
 			case "max_open_files", "max_files":

@@ -18,6 +18,8 @@ type Storage interface {
 	ListPostMeta(community string) ([]*model.Post, error)
 	SetPostMeta(community, postFile string, filemode, money int) error
 	ListPosts(community string, limit, offset int) ([]*model.Post, error)
+	// QueryPosts lists posts as Lemmy's GetPosts does.
+	QueryPosts(q PostQuery) ([]*model.Post, error)
 	ListDeletedPosts(community string, limit, offset int) ([]*model.Post, error)
 	GetReplies(parentID uint64, limit, offset int) ([]*model.Post, error)
 	GetThread(rootID uint64) ([]*model.Post, error)

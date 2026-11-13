@@ -309,6 +309,24 @@ func main() {
 		}
 		fmt.Println(resp)
 
+	case "api":
+		// Lemmy's API, e.g. post.ctl api GetPosts '{"community_name":"Test"}'
+		if len(args) < 2 {
+			log.Fatalf("Usage: post.ctl api <method> [json]")
+		}
+		req := []byte("{}")
+		if len(args) > 2 {
+			req = []byte(args[2])
+		}
+		resp, payload, err := sendCmd(fmt.Sprintf("API %s %d\n", args[1], len(req)), req)
+		if err != nil {
+			log.Fatalf("api failed: %v", err)
+		}
+		if !strings.HasPrefix(resp, "OK") {
+			log.Fatalf("api failed: %s", resp)
+		}
+		fmt.Println(string(payload))
+
 	case "get-comment":
 		if len(args) < 2 {
 			log.Fatalf("Usage: post.ctl get-comment <comment_id>")
@@ -1565,6 +1583,7 @@ Usage:
   post.ctl votes <post>
   post.ctl comments <post> [start [limit]]
   post.ctl get-comment <comment_id>
+  post.ctl api <method> [json]               (Lemmy API: GetPosts, GetPost, GetComments, GetComment, LockPost)
   post.ctl comment <post> <author> <content> [ip] [person_id]
   post.ctl delete-comment <post> <seq> [deleter] [reason]
   post.ctl undelete-comment <post> <seq>

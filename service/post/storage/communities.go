@@ -42,6 +42,8 @@ type CommunityRegistry struct {
 	byID   map[int64]*model.Community
 	byName map[string]int64 // lower-cased name of active communities
 
+	persons personTable // see persons.go
+
 	// assignShard chooses the shard of a new community; nil means 0.
 	assignShard ShardAssigner
 }
@@ -103,7 +105,7 @@ func OpenCommunityRegistry(dataDir string) (*CommunityRegistry, error) {
 	// All writes go through r.mu; a single connection avoids SQLITE_BUSY.
 	db.SetMaxOpenConns(1)
 
-	if _, err := db.Exec(communitySchema); err != nil {
+	if _, err := db.Exec(communitySchema + personSchema); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("init community registry schema failed: %w", err)
 	}
@@ -166,7 +168,10 @@ func (r *CommunityRegistry) load() error {
 	for _, c := range r.byID {
 		model.SortModerators(c.Moderators)
 	}
-	return mrows.Err()
+	if err := mrows.Err(); err != nil {
+		return err
+	}
+	return r.loadPersons()
 }
 
 // Close closes the registry database.

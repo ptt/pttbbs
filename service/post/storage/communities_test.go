@@ -774,3 +774,24 @@ func TestShardedCrosspostAcrossEngines(t *testing.T) {
 		t.Fatalf("source post has %d crossposts, want 1", p.NumCrossposts)
 	}
 }
+
+func TestShardedQueryPosts(t *testing.T) {
+	s, _ := openTestSharded(t, 2, map[string]int{"A": 0, "B": 1})
+	for i, c := range []string{"A", "B", "A", "B", "A"} {
+		if _, err := s.CreatePost(&model.Post{Community: c, PostFile: fmt.Sprintf("M.%d.A.001", 1000+i), Title: "t", CreatorName: "u", CreatedAt: int64(1000 + i), Content: "x"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	posts, err := s.QueryPosts(PostQuery{Sort: SortNew, Limit: 2, Offset: 1})
+	if err != nil || len(posts) != 2 || posts[0].CreatedAt != 1003 || posts[1].CreatedAt != 1002 {
+		t.Fatalf("QueryPosts(all, New, 2 from 1) = %+v, %v", posts, err)
+	}
+	a, _ := s.Communities().Lookup("A")
+	posts, err = s.QueryPosts(PostQuery{CommunityIDs: []int64{a}, Sort: SortOld})
+	if err != nil || len(posts) != 3 || posts[0].CreatedAt != 1000 || posts[2].CreatedAt != 1004 {
+		t.Fatalf("QueryPosts(A, Old) = %+v, %v", posts, err)
+	}
+	if _, err := s.QueryPosts(PostQuery{Sort: "Hot"}); err == nil {
+		t.Fatalf("QueryPosts accepted an unsupported sort")
+	}
+}

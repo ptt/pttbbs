@@ -749,6 +749,27 @@ func TestServerIPC(t *testing.T) {
 		}
 	}
 
+	// Lemmy's API.
+	{
+		c, _ := net.Dial("unix", sockPath)
+		req := fmt.Sprintf(`{"id":%d}`, p2.ID)
+		c.Write([]byte(fmt.Sprintf("API GetPost %d\n%s", len(req), req)))
+		r := bufio.NewReader(c)
+		hdr, _ := r.ReadString('\n')
+		body, _ := io.ReadAll(r)
+		c.Close()
+		if !strings.HasPrefix(hdr, fmt.Sprintf("OK %d", len(body))) || !strings.Contains(string(body), `"post_view"`) {
+			t.Fatalf("API GetPost: %q %s", hdr, body)
+		}
+		c, _ = net.Dial("unix", sockPath)
+		c.Write([]byte("API GetPost 10\n{\"id\":404}"))
+		resp, _ := bufio.NewReader(c).ReadString('\n')
+		c.Close()
+		if resp != "ERR couldnt_find_post\n" {
+			t.Fatalf("API GetPost 404: %q", resp)
+		}
+	}
+
 	// Comments are deleted and restored by their comment ID.
 	for _, tc := range []struct{ cmd, want string }{
 		{fmt.Sprintf("DELETE_COMMENT %d sysop 0 spam", firstCommentID), "OK"},

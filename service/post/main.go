@@ -19,6 +19,7 @@ import (
 	"pttbbs/post/config"
 	"pttbbs/post/daemon"
 	"pttbbs/post/importer"
+	"pttbbs/post/model"
 	"pttbbs/post/storage"
 )
 
@@ -241,7 +242,12 @@ func main() {
 	// imported as unknown.
 	var users importer.UserResolver
 	if shm, err := bbs.AttachSHM(); err == nil {
-		users = bbs.NewUserResolver(shm)
+		resolver := bbs.NewUserResolver(shm)
+		users = resolver
+		// Persons shown by the Lemmy API get their BBS userid and nickname.
+		st.Communities().SetPersonLookup(func(user model.PersonID) (string, string, bool) {
+			return resolver.LookupAccount(user.Usernum(), user.Firstlogin())
+		})
 	} else {
 		log.Printf("[post.svc] Warning: %v; person IDs of legacy authors will not be resolved", err)
 	}
@@ -251,6 +257,7 @@ func main() {
 		UnixSocket:     sockPath,
 		FilterEncoding: svcConf.FilterEncoding,
 		ImportWorkers:  svcConf.ImportWorkers,
+		SiteURL:        svcConf.SiteURL,
 		Users:          users,
 	}, st)
 

@@ -8,8 +8,10 @@ package bbs
 #include "cmbbs.h"
 #include "common.h"
 
-// Reads the userid and firstlogin of the account in slot unum of .PASSWDS.
-static int read_passwd_user(int unum, char *userid, int sz, int *firstlogin) {
+// Reads the userid, firstlogin and nickname (if nick is not NULL) of the
+// account in slot unum of .PASSWDS.
+static int read_passwd_user(int unum, char *userid, int sz, int *firstlogin,
+                            char *nick, int nicksz) {
     userec_t u;
     int fd;
     ssize_t n;
@@ -23,6 +25,8 @@ static int read_passwd_user(int unum, char *userid, int sz, int *firstlogin) {
         return -1;
     strlcpy(userid, u.userid, sz);
     *firstlogin = (int)u.firstlogin;
+    if (nick)
+        strlcpy(nick, u.nickname, nicksz);
     return 0;
 }
 */
@@ -516,10 +520,27 @@ func NewUserResolver(c *SHMClient) *UserResolver {
 func (r *UserResolver) LookupUsernum(usernum int) (string, uint32, bool) {
 	var buf [C.IDLEN + 1]C.char
 	var firstlogin C.int
-	if C.read_passwd_user(C.int(usernum), &buf[0], C.int(len(buf)), &firstlogin) != 0 {
+	if C.read_passwd_user(C.int(usernum), &buf[0], C.int(len(buf)), &firstlogin, nil, 0) != 0 {
 		return "", 0, false
 	}
 	return C.GoString(&buf[0]), uint32(firstlogin), true
+}
+
+// LookupAccount returns the userid and nickname (in UTF-8) of the account
+// in slot usernum, if it is still the account created at firstlogin.
+func (r *UserResolver) LookupAccount(usernum int, firstlogin uint32) (string, string, bool) {
+	var buf [C.IDLEN + 1]C.char
+	var nick [64]C.char
+	var fl C.int
+	if C.read_passwd_user(C.int(usernum), &buf[0], C.int(len(buf)), &fl, &nick[0], C.int(len(nick))) != 0 ||
+		uint32(fl) != firstlogin {
+		return "", "", false
+	}
+	nickname := C.GoString(&nick[0])
+	if StorageIsBig5() {
+		nickname = Big5ToUTF8([]byte(nickname))
+	}
+	return C.GoString(&buf[0]), nickname, true
 }
 
 // LookupUserid returns the usernum and firstlogin of the account userid.

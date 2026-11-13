@@ -19,6 +19,7 @@ import (
 
 	"pttbbs/big5uao"
 	"pttbbs/post/importer"
+	"pttbbs/post/lemmy"
 	"pttbbs/post/model"
 	"pttbbs/post/storage"
 )
@@ -31,6 +32,8 @@ type ServerConfig struct {
 	// Users resolves the person IDs of the users named in legacy articles and
 	// .DIR (IMPORT_BOARD, and posts imported on demand). Optional.
 	Users importer.UserResolver
+	// SiteURL makes the ActivityPub IDs in the Lemmy API (see package lemmy).
+	SiteURL string
 }
 
 func (c ServerConfig) IsBig5() bool {
@@ -344,6 +347,33 @@ func (s *Server) handleIPC(conn net.Conn) {
 
 	cmd := strings.ToUpper(parts[0])
 	switch cmd {
+	case "API":
+		// API <method> <json_bytes>\n<json>
+		// Lemmy's API (see package lemmy). Replies OK <json_bytes>\n<json>,
+		// or ERR <lemmy error>.
+		if len(parts) < 3 {
+			conn.Write([]byte("ERR invalid arguments for API\n"))
+			return
+		}
+		n, err := strconv.Atoi(parts[2])
+		if err != nil || n < 0 || n > 1<<20 {
+			conn.Write([]byte(fmt.Sprintf("ERR invalid json_bytes: %s\n", parts[2])))
+			return
+		}
+		req := make([]byte, n)
+		if _, err := io.ReadFull(reader, req); err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR read request failed: %v\n", err)))
+			return
+		}
+		api := &lemmy.Service{Storage: s.storage, SiteURL: s.cfg.SiteURL}
+		resp, err := api.Handle(parts[1], req)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", len(resp))))
+		conn.Write(resp)
+
 	case "PING":
 		conn.Write([]byte("PONG\n"))
 

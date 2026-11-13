@@ -40,3 +40,26 @@ func ParsePersonID(s string) PersonID {
 	v, _ := strconv.ParseUint(s, 10, 64)
 	return PersonID(v)
 }
+
+// Person is a person as Lemmy has it (its person table): ID is a small
+// serial (Lemmy and its clients use int32, and JavaScript numbers), Name the
+// BBS userid and DisplayName the BBS nickname. User is its BBS account
+// (Lemmy's local_user; usernum and firstlogin, as the usernum alone is not
+// enough: .PASSWDS reuses the slots of deleted accounts).
+//
+// A userid may be taken again after its account is deleted: the old person
+// is then marked Deleted (keeping its name), as Lemmy keeps the names of
+// deleted persons. Persons without an account are either Anonymous (the
+// nickname of an anonymous post, which must not lead to its author; named
+// anon<id>) or legacy (the userid of an account that cannot be told any
+// more; Deleted from the start).
+type Person struct {
+	ID          int64    `json:"id"`
+	Name        string   `json:"name"`
+	DisplayName string   `json:"display_name,omitempty"`
+	User        PersonID `json:"-"` // local_user.bbs_user: the BBS account, 0 if none
+	Anonymous   bool     `json:"-"` // bbs_anonymous
+	Deleted     bool     `json:"deleted"`
+	Published   int64    `json:"published"`
+	Updated     int64    `json:"updated,omitempty"`
+}
