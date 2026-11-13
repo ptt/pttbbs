@@ -1,5 +1,6 @@
 
 #include <sys/stat.h>
+#include <sys/file.h>
 #include <sys/mman.h>
 #include <string.h>
 #include <unistd.h>
@@ -371,4 +372,70 @@ ssize_t upper_bound_record(const char *fpath, const void *key,
     munmap(addr, sz);
     close(fd);
     return offset / size;
+}
+
+/* Log files that are trimmed from the head */
+
+// return 1 if rotated, otherwise 0
+int
+rotate_bin_logfile(const char *filename, off_t record_size,
+                   off_t max_size, float keep_ratio)
+{
+    off_t sz = dashs(filename);
+    assert(keep_ratio >= 0 && keep_ratio <= 1.0f);
+
+    if (sz < max_size)
+        return 0;
+
+    // delete from head
+    delete_records(filename, record_size, 1,
+            (1 - keep_ratio) * max_size / record_size );
+    return 1;
+}
+
+// return 1 if rotated, otherwise 0
+int
+rotate_text_logfile(const char *filename, off_t max_size, float keep_ratio)
+{
+    struct stat st;
+    size_t keep = keep_ratio * max_size, len;
+    char *buf, *newent;
+    int fd, ret = 0;
+
+    assert(keep_ratio >= 0 && keep_ratio <= 1.0f);
+
+    // Called before every append: under the limit it costs only a stat().
+    if (stat(filename, &st) < 0 || st.st_size < max_size)
+        return 0;
+
+    if ((fd = open(filename, O_RDWR)) < 0)
+        return 0;
+
+    // One process trims at a time (the others skip and just append), and
+    // the size is checked again in case it was trimmed meanwhile. Appends
+    // that land while trimming may be lost; these logs are for reference.
+    if (flock(fd, LOCK_EX | LOCK_NB) < 0 || fstat(fd, &st) < 0 ||
+        st.st_size < max_size || st.st_size < (off_t)keep ||
+        !(buf = malloc(keep + 1))) {  // + 1: never malloc(0)
+        close(fd);
+        return 0;
+    }
+
+    // Read the last keep bytes, then move them to the head in place: one
+    // open, no stdio buffers, and no window with an empty file.
+    // A short read means an I/O error: leave the log alone rather than
+    // replace it with a partial tail.
+    if (pread(fd, buf, keep, st.st_size - keep) == (ssize_t)keep) {
+        // start after the first newline, so the log begins with a whole line
+        newent = memchr(buf, '\n', keep);
+        newent = newent ? newent + 1 : buf;
+        len = keep - (newent - buf);
+        if (pwrite(fd, newent, len, 0) == (ssize_t)len &&
+            ftruncate(fd, len) == 0)
+            ret = 1;
+    }
+
+    free(buf);
+    close(fd);  // also releases the flock
+    return ret;
 }

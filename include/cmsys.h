@@ -380,6 +380,12 @@ int append_record(const char *fpath, const void *record, size_t size);
 int delete_records(const char *fpath, size_t size, int id, size_t num);
 int substitute_record(const char *fpath, const void *rptr, size_t size, int id);
 #define delete_record(fpath, size, id) delete_records(fpath, size, id, 1)
+// Trims a log file to keep_ratio of max_size once it reaches max_size,
+// keeping the newest whole lines (records). Returns 1 if rotated, else 0.
+int rotate_text_logfile(const char *filename, off_t max_size,
+                        float keep_ratio);
+int rotate_bin_logfile(const char *filename, off_t record_size,
+                       off_t max_size, float keep_ratio);
 typedef int (*record_callback_t)(const void *ptr1, const void *ptr2);
 int substitute_record2(const char *fpath,
                               const void *srcptr, const void *destptr,

@@ -810,10 +810,6 @@ int search_rec(const char* dirname, int (*filecheck)());
 int append_record_forward(char *fpath, fileheader_t *record, int size,
                           const char *origid, int checked);
 int get_sum_records(const char* fpath, int size);
-int rotate_text_logfile(const char *filename, off_t max_size, 
-                        float keep_ratio);
-int rotate_bin_logfile(const char *filename, off_t record_size, 
-                       off_t max_size, float keep_ratio); 
 int delete_file_content(const char *direct, const fileheader_t *fh,
                         const char *backup_direct,
                         char *newpath, size_t sznewpath);
