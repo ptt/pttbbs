@@ -458,14 +458,12 @@ def migrate_all_user_banned_to_muted(bbshome, user_home=None, target_user=None, 
             os.path.join(base_dir, u_name[0].lower(), u_name, 'banned'),
             os.path.join(base_dir, u_name[0].upper(), u_name, 'banned'),
             os.path.join(base_dir, u_name[0], u_name, 'banned'),
-            os.path.join(base_dir, u_name, 'banned'),
         ):
             if os.path.exists(candidate) or os.path.islink(candidate):
                 banned_dirs.add(candidate)
     else:
+        # Homes are always <c>/<userid>; <c>/banned is the home of user "banned".
         for p in glob.glob(os.path.join(base_dir, '*', '*', 'banned')):
-            banned_dirs.add(p)
-        for p in glob.glob(os.path.join(base_dir, '*', 'banned')):
             banned_dirs.add(p)
 
     renamed_count = 0
