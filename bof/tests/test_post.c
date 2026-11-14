@@ -231,6 +231,54 @@ test_edit_post(void)
 }
 
 static void
+test_lock_feature_score(void)
+{
+    fileheader_t recs[8], updated;
+    bof_actor_t me = { .name = "sysop" };
+    bof_post_response_t res = { .bbs_header = &updated };
+
+    EXPECT_INT(read_dir(recs, 8), 4);
+    // Lock: the record becomes L.<stamp> and the file X.<stamp>.
+    bof_lock_post_t lock = { .post = ref(recs, 4), .locked = 1 };
+    EXPECT_OK(bof_lock_post(&me, &lock, &res));
+    EXPECT_STR(updated.filename, "L.1700000005.A.005");
+    EXPECT(!exists(BDIR "/M.1700000005.A.005"));
+    EXPECT(exists(BDIR "/X.1700000005.A.005"));
+    EXPECT_INT(read_dir(recs, 8), 4);
+    EXPECT_STR(recs[3].filename, "L.1700000005.A.005");
+    // Locking again does nothing.
+    lock.post = ref(recs, 4);
+    EXPECT_OK(bof_lock_post(&me, &lock, &res));
+    EXPECT_STR(updated.filename, "L.1700000005.A.005");
+    // Unlock.
+    bof_lock_post_t unlock = { .post = ref(recs, 4), .locked = 0 };
+    EXPECT_OK(bof_lock_post(&me, &unlock, &res));
+    EXPECT(exists(BDIR "/M.1700000005.A.005"));
+    EXPECT(!exists(BDIR "/X.1700000005.A.005"));
+    EXPECT_INT(read_dir(recs, 8), 4);
+    EXPECT_STR(recs[3].filename, "M.1700000005.A.005");
+
+    // Feature (pin): pinned and marked; unpinning keeps the mark.
+    bof_feature_post_t pin = { .post = ref(recs, 4), .featured = 1 };
+    EXPECT_OK(bof_feature_post(&me, &pin, &res));
+    EXPECT(updated.filemode & FILE_BOTTOM);
+    EXPECT(updated.filemode & FILE_MARKED);
+    bof_feature_post_t unpin = { .post = ref(recs, 4), .featured = 0 };
+    EXPECT_OK(bof_feature_post(&me, &unpin, &res));
+    EXPECT(!(updated.filemode & FILE_BOTTOM));
+    EXPECT(updated.filemode & FILE_MARKED);
+
+    // The score goes back to 0.
+    EXPECT_INT(read_dir(recs, 8), 4);
+    EXPECT(recs[3].score != 0);   // MAX_DISPLAY_SCORE from test_edit_post
+    bof_bbs_reset_post_score_t reset = { .post = ref(recs, 4) };
+    EXPECT_OK(bof_bbs_reset_post_score(&me, &reset, &res));
+    EXPECT_INT(updated.score, 0);
+    EXPECT_INT(read_dir(recs, 8), 4);
+    EXPECT_INT(recs[3].score, 0);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -267,6 +315,7 @@ main(void)
     RUN(test_delete_post);
     RUN(test_remove_post);
     RUN(test_edit_post);
+    RUN(test_lock_feature_score);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

@@ -176,6 +176,41 @@ bof_error_t bof_bbs_set_post_modes(const bof_actor_t *actor,
                                    const bof_bbs_set_post_modes_t *req,
                                    bof_post_response_t *out);
 
+/* Lemmy's LockPost. A locked PTT post takes no comments and its content is
+ * hidden: its record is named L.<stamp> and its file X.<stamp>. Locking a
+ * locked post (or unlocking an unlocked one) does nothing. */
+typedef struct bof_lock_post_t {
+    bof_post_ref_t post;
+    int locked;
+} bof_lock_post_t;
+
+bof_error_t bof_lock_post(const bof_actor_t *actor,
+                          const bof_lock_post_t *req,
+                          bof_post_response_t *out);
+
+/* Lemmy's FeaturePost, with feature_type Community: PTT's posts pinned to
+ * the bottom of a board (FILE_BOTTOM; a pinned post is also marked). This
+ * changes the post; the list of pinned posts of the board (in its board
+ * header) is still kept by the caller. */
+typedef struct bof_feature_post_t {
+    bof_post_ref_t post;
+    int featured;
+} bof_feature_post_t;
+
+bof_error_t bof_feature_post(const bof_actor_t *actor,
+                             const bof_feature_post_t *req,
+                             bof_post_response_t *out);
+
+/* PTT: sets the score of a post (its net votes in the list) back to 0.
+ * Neither Lemmy nor Reddit lets moderators do this. */
+typedef struct bof_bbs_reset_post_score_t {
+    bof_post_ref_t post;
+} bof_bbs_reset_post_score_t;
+
+bof_error_t bof_bbs_reset_post_score(const bof_actor_t *actor,
+                                     const bof_bbs_reset_post_score_t *req,
+                                     bof_post_response_t *out);
+
 #ifdef __cplusplus
 }
 #endif

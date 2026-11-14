@@ -78,10 +78,35 @@ bof_remove_post(const bof_actor_t *actor, const bof_remove_post_t *req,
 }
 
 bof_error_t
+bof_lock_post(const bof_actor_t *actor, const bof_lock_post_t *req,
+              bof_post_response_t *out)
+{
+    bof_post_response_t local = { 0 };
+    return WRITE(lock_post, out ? out : &local, actor, req);
+}
+
+bof_error_t
+bof_feature_post(const bof_actor_t *actor, const bof_feature_post_t *req,
+                 bof_post_response_t *out)
+{
+    bof_post_response_t local = { 0 };
+    return WRITE(feature_post, out ? out : &local, actor, req);
+}
+
+bof_error_t
 bof_bbs_set_post_modes(const bof_actor_t *actor,
                        const bof_bbs_set_post_modes_t *req,
                        bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
     return WRITE(set_post_modes, out ? out : &local, actor, req);
+}
+
+bof_error_t
+bof_bbs_reset_post_score(const bof_actor_t *actor,
+                         const bof_bbs_reset_post_score_t *req,
+                         bof_post_response_t *out)
+{
+    bof_post_response_t local = { 0 };
+    return WRITE(reset_post_score, out ? out : &local, actor, req);
 }

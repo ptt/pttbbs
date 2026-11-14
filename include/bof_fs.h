@@ -29,7 +29,11 @@ extern "C" {
 BOF_FS_WRITE(edit_post, bof_edit_post_t, bof_post_response_t);
 BOF_FS_WRITE(delete_post, bof_delete_post_t, bof_post_result_t);
 BOF_FS_WRITE(remove_post, bof_remove_post_t, bof_post_result_t);
+BOF_FS_WRITE(lock_post, bof_lock_post_t, bof_post_response_t);
+BOF_FS_WRITE(feature_post, bof_feature_post_t, bof_post_response_t);
 BOF_FS_WRITE(bbs_set_post_modes, bof_bbs_set_post_modes_t,
+             bof_post_response_t);
+BOF_FS_WRITE(bbs_reset_post_score, bof_bbs_reset_post_score_t,
              bof_post_response_t);
 #undef BOF_FS_WRITE
 

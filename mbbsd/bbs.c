@@ -3921,7 +3921,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 
     bp = getbcache(currbid);
     assert(bp);
-    /* On-disk identity before the M/L rename below. */
+    /* The record as it is, for bof_lock_post (fhdr gets the new one). */
     fileheader_t orig = *fhdr;
 
     // In case idiots do this in ALLPOST...
@@ -3968,13 +3968,6 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         if (MODLOG_FOR_POSTS())
             modlog_police(currboard, genbuf, &log);
 
-        // Rename the file to be secure, introducing new X-dot file here.
-        // We can not use L-dot prefix since there may be some code that
-        // doesn't recognize locked files and end up in reading the file.
-        fhdr->filename[0] = 'X';
-        AUTO_BFILE(fnx, currboard, fhdr->filename);
-        Rename(fn1, fnx);
-        fhdr->filename[0] = 'L';
     } else if (fhdr->filename[0]=='L') {
 	int y = show_post_line(modlog_form(currboard, "解除鎖定文章"), NULL,
 			       ent, fhdr) + 1;
@@ -3986,14 +3979,6 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	getdata(y, 0, "要將文章鎖定解除嗎(y/N)?", ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return FULLUPDATE;
-        fhdr->filename[0] = 'X';
-        AUTO_BFILE(fnx, currboard, fhdr->filename);
-        fhdr->filename[0] = 'M';
-        AUTO_BFILE(fn1, currboard, fhdr->filename);
-        // Rename it back, no check for errors because old locked files
-        // are not renamed.
-        if (access(fnx, 0) == 0)
-            Rename(fnx, fn1);
         post_policelog(currboard, fhdr->title, "鎖文", genbuf, 0);
         if (MODLOG_FOR_POSTS())
             modlog_police(currboard, NULL, &log);
@@ -4001,9 +3986,18 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         vmsg("無法進行鎖定或解除。");
         return FULLUPDATE;
     }
-    // TODO fix race condition here.
-    /* fhdr->filename was renamed (M<->L); match against the original name. */
-    substitute_fileheader(direct, &orig, fhdr, ent);
+    // bof renames the record (M <-> L) and the file (M <-> X).
+    bof_actor_t me = bof_me();
+    bof_lock_post_t req = {
+        .post = bof_ref(direct, ent, &orig),
+        .locked = orig.filename[0] == 'M',
+    };
+    bof_post_response_t res = { .bbs_header = fhdr };
+    if (bof_lock_post(&me, &req, &res) != BOF_OK) {
+        *fhdr = orig;
+        vmsg("無法進行鎖定或解除，請重新進入看板後再試一次。");
+        return FULLUPDATE;
+    }
     syncnow();
     bp->SRexpire = time4_next(bp->SRexpire, now);
     return FULLUPDATE;
@@ -4088,9 +4082,11 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     getdata(y, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
-    fhdr->score = 0;
-    // TODO fix race condition here.
-    substitute_ref_record(direct, fhdr, ent);
+    bof_actor_t me = bof_me();
+    bof_bbs_reset_post_score_t req = { .post = bof_ref(direct, ent, fhdr) };
+    bof_post_response_t res = { .bbs_header = fhdr };
+    if (bof_bbs_reset_post_score(&me, &req, &res) != BOF_OK)
+        return FULLUPDATE;
     if (currbid > 0 && !(currmode & MODE_DIGEST)) {
 	boardheader_t *bp = getbcache(currbid);
 	if (bp) {
@@ -4494,6 +4490,25 @@ board_digest(void)
 }
 
 
+// Features (pins) the post old_fhdr at position ent of direct, or not,
+// through bof. The list of pinned posts of the board is pin_post()'s.
+static int
+pin_post_feature(const char *direct, int ent, const fileheader_t *old_fhdr,
+                 int featured)
+{
+    bof_actor_t me = bof_me();
+    bof_feature_post_t req = {
+        .post = bof_ref(direct, ent, old_fhdr), .featured = featured,
+    };
+    fileheader_t updated;
+    bof_post_response_t res = { .bbs_header = &updated };
+
+    if (bof_feature_post(&me, &req, &res) != BOF_OK)
+        return -1;
+    post_record_changed(direct, ent, &updated);
+    return 0;
+}
+
 static int
 pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
 {
@@ -4543,16 +4558,14 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
             vmsg("不得超過 5 篇重要公告 請精簡!");
             return FULLUPDATE;
         }
-        if (modify_dir_lite(direct, ent, old_fhdr->filename, 0, NULL, NULL,
-                            NULL, 0, NULL, FILE_BOTTOM | FILE_MARKED, 0) < 0) {
+        if (pin_post_feature(direct, ent, old_fhdr, 1) < 0) {
             vmsg("置底設定失敗，請重新進入看板後再試一次。");
             return FULLUPDATE;
         }
         old_fhdr->filemode |= (FILE_BOTTOM | FILE_MARKED);
         bp->bottom[num] = aidu_with_idx(target_raw, ent);
     } else {
-        if (modify_dir_lite(direct, ent, old_fhdr->filename, 0, NULL, NULL,
-                            NULL, 0, NULL, 0, FILE_BOTTOM) < 0) {
+        if (pin_post_feature(direct, ent, old_fhdr, 0) < 0) {
             vmsg("置底設定失敗，請重新進入看板後再試一次。");
             return FULLUPDATE;
         }

@@ -113,3 +113,94 @@ bof_fs_bbs_set_post_modes(void *ctx GCC_UNUSED,
     return change_record(&req->post, 0, NULL, NULL, NULL, NULL,
                          req->enable, req->disable, out);
 }
+
+static int
+valid_ref(const bof_post_ref_t *post)
+{
+    const fileheader_t *fh = post->bbs_header;
+    return post->bbs_dir && fh && post->bbs_index > 0 && fh->filename[0];
+}
+
+bof_error_t
+bof_fs_lock_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                 const bof_lock_post_t *req, bof_post_response_t *out)
+{
+    const bof_post_ref_t *post = &req->post;
+    const fileheader_t *fh = post->bbs_header;
+    fileheader_t updated;
+    char from[PATHLEN], to[PATHLEN];
+    int moved = 0;
+
+    if (!valid_ref(post))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // Already as asked.
+    if ((req->locked && fh->filename[0] == 'L') ||
+        (!req->locked && fh->filename[0] == 'M')) {
+        if (out && out->bbs_header)
+            *out->bbs_header = *fh;
+        return BOF_OK;
+    }
+    if (fh->filename[0] != (req->locked ? 'M' : 'L'))
+        return BOF_ERR_INVALID_BODY_FIELD;
+
+    // The file of a locked post is X.<stamp>: code that doesn't know
+    // locked posts must not read it as L.<stamp> (older locks did not
+    // rename it, so unlocking leaves those alone).
+    updated = *fh;
+    updated.filename[0] = req->locked ? 'M' : 'X';
+    setdirpath(from, post->bbs_dir, updated.filename);
+    updated.filename[0] = req->locked ? 'X' : 'M';
+    setdirpath(to, post->bbs_dir, updated.filename);
+    if (access(from, F_OK) == 0) {
+        if (Rename(from, to) != 0)
+            return BOF_ERR_COULDNT_UPDATE_POST;
+        moved = 1;
+    }
+    updated.filename[0] = req->locked ? 'L' : 'M';
+    if (substitute_fileheader(post->bbs_dir, fh, &updated,
+                              post->bbs_index) != 0) {
+        if (moved)
+            Rename(to, from);
+        return BOF_ERR_COULDNT_FIND_POST;
+    }
+    if (out && out->bbs_header)
+        *out->bbs_header = updated;
+    return BOF_OK;
+}
+
+bof_error_t
+bof_fs_feature_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                    const bof_feature_post_t *req, bof_post_response_t *out)
+{
+    if (req->featured)
+        return change_record(&req->post, 0, NULL, NULL, NULL, NULL,
+                             FILE_BOTTOM | FILE_MARKED, 0, out);
+    return change_record(&req->post, 0, NULL, NULL, NULL, NULL,
+                         0, FILE_BOTTOM, out);
+}
+
+static void
+reset_score(fileheader_t *fhdr, const void *ctx GCC_UNUSED)
+{
+    fhdr->score = 0;
+}
+
+bof_error_t
+bof_fs_bbs_reset_post_score(void *ctx GCC_UNUSED,
+                            const bof_actor_t *actor GCC_UNUSED,
+                            const bof_bbs_reset_post_score_t *req,
+                            bof_post_response_t *out)
+{
+    const bof_post_ref_t *post = &req->post;
+    fileheader_t updated;
+
+    if (!valid_ref(post))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if (bof_files_update_record(post->bbs_dir, post->bbs_index,
+                                post->bbs_header->filename, reset_score,
+                                NULL, &updated) != 0)
+        return BOF_ERR_COULDNT_FIND_POST;
+    if (out && out->bbs_header)
+        *out->bbs_header = updated;
+    return BOF_OK;
+}

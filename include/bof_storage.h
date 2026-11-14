@@ -49,9 +49,18 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*remove_post)(void *ctx, const bof_actor_t *actor,
                                const bof_remove_post_t *req,
                                bof_post_result_t *out);
+    bof_error_t (*lock_post)(void *ctx, const bof_actor_t *actor,
+                             const bof_lock_post_t *req,
+                             bof_post_response_t *out);
+    bof_error_t (*feature_post)(void *ctx, const bof_actor_t *actor,
+                                const bof_feature_post_t *req,
+                                bof_post_response_t *out);
     bof_error_t (*set_post_modes)(void *ctx, const bof_actor_t *actor,
                                   const bof_bbs_set_post_modes_t *req,
                                   bof_post_response_t *out);
+    bof_error_t (*reset_post_score)(void *ctx, const bof_actor_t *actor,
+                                    const bof_bbs_reset_post_score_t *req,
+                                    bof_post_response_t *out);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time
