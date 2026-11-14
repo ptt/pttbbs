@@ -2,10 +2,12 @@ SRCROOT:=	..
 include $(SRCROOT)/pttbbs.mk
 
 # bof: Birds Of Feather, the meta layer between BBS and community systems.
-# See README.md. The core (the API and its checks).
+# See README.md. The core (the API and its checks) and the files of a BBS
+# (files/).
 
 CORE_SRCS:=	bof.c
-SRCS:=	$(CORE_SRCS)
+FILES_SRCS:=	files/timecap.c
+SRCS:=	$(CORE_SRCS) $(FILES_SRCS)
 LIB:=	libbof.a
 OBJS:=	$(SRCS:.c=.o)
 
@@ -22,7 +24,7 @@ $(LIB): $(OBJS)
 	rm -f $@
 	$(AR) rcs $@ $^
 
-%.o: %.c bof_int.h $(SRCROOT)/include/bof.h
+%.o: %.c bof_int.h $(SRCROOT)/include/bof.h $(SRCROOT)/include/bof_files.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 tests/test_%: tests/test_%.c tests/bof_test.h $(LIB)

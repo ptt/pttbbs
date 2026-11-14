@@ -18,7 +18,7 @@ UTILOBJS  := stuff.o kaede.o convert.o name.o syspost.o cache.o cal.o tag.o \
 	     site.o
 UIOBJS    := menu.o vtuikit.o psb.o vform.o
 PAGEROBJS := more.o pmore.o
-PLUGOBJS  := ordersong.o angel.o timecap.o
+PLUGOBJS  := ordersong.o angel.o
 CHESSOBJS := chess.o chc.o chc_tab.o ch_gomo.o
 GAMEOBJS  := chicken.o lottery.o
 

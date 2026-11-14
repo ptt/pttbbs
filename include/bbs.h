@@ -51,6 +51,7 @@ extern "C" {
 #include "chess.h"
 #include "psb.h"
 #include "vform.h"
+#include "bof_files.h"
 #include "proto.h"
 #include "fnv_hash.h"
 #include "convert.h"

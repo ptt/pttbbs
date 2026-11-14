@@ -85,4 +85,9 @@ extern void get_memusage(int buflen, char *buf);
 
 #include "cleanup.h"
 
+/* Not every system can open a file with an exclusive lock: 0 there. */
+#ifndef O_EXLOCK
+#define O_EXLOCK (0)
+#endif
+
 #endif

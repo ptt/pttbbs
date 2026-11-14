@@ -9,7 +9,7 @@ BBSHOME=$HOME
 BOARD_BASE="$BBSHOME/boards"
 HOME_BASE="$BBSHOME/home"
 
-# check TIME_CAPSULE_BASE_FOLDER_NAME in mbbsd/timecap.c
+# check TIME_CAPSULE_BASE_FOLDER_NAME in bof/files/timecap.c
 TIMECAP_NAME=".timecap"
 
 expire_folder() {

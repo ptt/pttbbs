@@ -1,4 +1,4 @@
-#include "bbs.h"
+#include "../bof_int.h"
 
 // Time Capsule / Magical Index
 //
@@ -52,10 +52,8 @@ enum TIME_CAPSULE_ACTION_TYPE {
 #define TIME_CAPSULE_ARCHIVE_INDEX_NAME "archive.idx"
 #define TIME_CAPSULE_REVISION_INDEX_NAME ".rev"
 
-// some system does not support O_EXLOCK... well, not important at least for now
-#ifndef O_EXLOCK
-#define O_EXLOCK (0)
-#endif
+// O_EXLOCK is 0 where the system does not have it (osdep.h): not
+// important, at least for now.
 
 ///////////////////////////////////////////////////////////////////////////
 // Core Function

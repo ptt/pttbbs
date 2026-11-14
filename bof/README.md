@@ -136,11 +136,12 @@ make -C bof         # builds libbof.a
 make -C bof test    # runs the tests
 ```
 
-The sources:
+The sources are in two parts:
 
 | Directory | What | Header |
 |---|---|---|
 | `bof/` | The core: the API, its checks, error names (`bof.c`) | [`include/bof.h`](../include/bof.h) |
+| `bof/files/` | The files of a BBS, as primitives with no actor or rules: records of lists, the content of posts, the line of a comment, aggregate boards, the time capsule | [`include/bof_files.h`](../include/bof_files.h) |
 
 BoF sources are plain ASCII C (Big5 texts are macros in
 `include/common.h`); they use the shared headers in `include/` and the

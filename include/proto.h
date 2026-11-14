@@ -249,17 +249,6 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason);
 const struct CommentKeyReq *CommentsGetKeyReq(void *ctx);
 #endif
 
-/* comment types */
-enum {
-    RECTYPE_GOOD,
-    RECTYPE_BAD,
-    RECTYPE_ARROW,
-
-    RECTYPE_SIZE,
-    RECTYPE_MAX     = RECTYPE_SIZE - 1,
-    RECTYPE_DEFAULT = RECTYPE_GOOD,
-};
-
 /* post & comment storage */
 int PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
@@ -820,10 +809,6 @@ int delete_file_content2(const char *direct, const fileheader_t *fh,
                          const char *backup_direct,
                          char *newpath, size_t sznewpath,
                          const char *reason);
-#define DELETE_FILE_CONTENT_SUCCESS (0)
-#define DELETE_FILE_CONTENT_FAILED  (-1)
-#define DELETE_FILE_CONTENT_BACKUP_FAILED  (1)
-#define IS_DELETE_FILE_CONTENT_OK(x) ((x) != DELETE_FILE_CONTENT_FAILED)
 
 /* recover */
 void recover_account();
@@ -1042,21 +1027,6 @@ void term_enable_mouse(int mode);
 void term_disable_mouse(void);
 int  term_get_mouse_mode(void);
 void term_uninit(void);
-
-/* timecap (time capsule) */
-int timecapsule_add_revision(const char *filename);
-int timecapsule_get_max_revision_number(const char *filename);
-int timecapsule_get_max_archive_number(const char *filename, size_t szrefblob);
-int timecapsule_archive(const char *filename, const void *ref, size_t szref);
-int timecapsule_get_by_revision(const char *filename, int rev, char *rev_path,
-                                size_t sz_rev_path);
-int timecapsule_archive_new_revision(const char *filename,
-                                     const void *ref, size_t szref,
-                                     char *archived_path, size_t sz_archived_path);
-int timecapsule_get_archive_by_index(const char *filename, int idx,
-                                     void *refblob, size_t szrefblob);
-int timecapsule_get_archive_blobs(const char *filename, int idx, int nblobs,
-                                  void *blobsptr, size_t szblob);
 
 /* ordersong */
 int  ordersong(void);
