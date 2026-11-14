@@ -56,6 +56,29 @@ int timecapsule_get_archive_blobs(const char *filename, int idx, int nblobs,
 /* Posts in the files of a board (bof/files/record.c). */
 struct fileheader_t;
 
+/* Updates the record of the post named fhdr_name at position ent of
+ * direct: modified (if not 0), title, owner and date (if not NULL or ""),
+ * multi (if not NULL), the score by score_delta (within
+ * MAX_DISPLAY_SCORE), and the filemode bits to enable and disable. out
+ * (if not NULL) gets the updated record. Returns 0, or -1 if the record
+ * there is not that post. */
+int bof_files_modify_record(const char *direct, int ent,
+                            const char *fhdr_name, int32_t modified,
+                            const char *title, const char *owner,
+                            const char *date, int score_delta,
+                            const void *multi, uint16_t enable_modes,
+                            uint16_t disable_modes,
+                            struct fileheader_t *out);
+
+/* Reads the record of the post named fhdr_name at position ent of direct,
+ * lets change() change it (with ctx), and writes it back; out (if not
+ * NULL) gets it. Returns 0, or -1 if the record there is not that post. */
+int bof_files_update_record(const char *direct, int ent,
+                            const char *fhdr_name,
+                            void (*change)(struct fileheader_t *fh,
+                                           const void *ctx),
+                            const void *ctx, struct fileheader_t *out);
+
 /* Turns the record of a post into the record left for it when it is
  * deleted (by deleter, as the creator if deleter is its owner) or removed:
  * titled title, or by default as deleted or removed. */

@@ -73,66 +73,48 @@ modify_dir_lite(
         const char *title, const char *owner, const char *date,
         char comment, void *multi, uint16_t enable_modes, uint16_t disable_modes)
 {
-    // since we want to do 'modification'...
-    int fd;
-    off_t sz = dashs(direct);
     fileheader_t fhdr;
 
-    // prevent black holes
-    if (sz < (int)sizeof(fileheader_t) * (ent) ||
-	    (fd = open(direct, O_RDWR)) < 0 )
+    if (bof_files_modify_record(direct, ent, fhdr_name, modified, title,
+                                owner, date, comment, multi, enable_modes,
+                                disable_modes, &fhdr) != 0)
 	return -1;
+    post_record_changed(direct, ent, &fhdr);
+    return 0;
+}
 
-    // also check if fhdr->filename is same.
-    // let sz = base offset
-    sz = (sizeof(fileheader_t) * (ent-1));
-    if (lseek(fd, sz, SEEK_SET) < 0 ||
-	read(fd, &fhdr, sizeof(fhdr)) != sizeof(fhdr) ||
-	strcmp(fhdr.filename, fhdr_name) != 0)
-    {
-	close(fd);
-	return -1;
-    }
-
-    // update records
-    if (modified != 0)
-	fhdr.modified = modified;
-    if (enable_modes)
-        fhdr.filemode |= enable_modes;
-    if (disable_modes)
-        fhdr.filemode &= ~disable_modes;
-    if (title && *title)
-	mb_to_storage(title, fhdr.title, sizeof(fhdr.title));
-    if (owner && *owner)
-	mb_to_storage(owner, fhdr.owner, sizeof(fhdr.owner));
-    if (date && *date)
-	mb_to_storage(date, fhdr.date, sizeof(fhdr.date));
-    if (multi)
-        memcpy(&fhdr.multi, multi, sizeof(fhdr.multi));
-
-    if (comment) {
-	comment += fhdr.score;
-	if (comment > MAX_DISPLAY_SCORE) comment = MAX_DISPLAY_SCORE;
-	else if (comment < -MAX_DISPLAY_SCORE) comment = -MAX_DISPLAY_SCORE;
-	fhdr.score = comment;
-    }
-
-
-    // PttLock(fd, sz, sizeof(fhdr), F_WRLCK);
-    if (lseek(fd, sz, SEEK_SET) >= 0)
-	write(fd, &fhdr, sizeof(fhdr));
-    // PttLock(fd, sz, sizeof(fhdr), F_UNLCK);
-
-    close(fd);
+// What the board keeps beside a post's record when the record changed: the
+// search cache expires, and search.svc gets the score.
+void
+post_record_changed(const char *direct, int ent, const fileheader_t *fhdr)
+{
     if (currstat != RMAIL && currbid > 0 && !(currmode & MODE_DIGEST)) {
 	boardheader_t *bp = getbcache(currbid);
 	if (bp) {
 	    syncnow();
 	    bp->SRexpire = time4_next(bp->SRexpire, now);
 	}
-	search_svc_hint_comment(direct, currbid, ent, fhdr.score);
+	search_svc_hint_comment(direct, currbid, ent, fhdr->score);
     }
-    return 0;
+}
+
+// The bof reference of the post fhdr at position ent of direct, and the
+// actor (the current user), for calling bof.
+static bof_post_ref_t
+bof_ref(const char *direct, int ent, const fileheader_t *fhdr)
+{
+    bof_post_ref_t ref = {
+        .community = currboard, .bbs_dir = direct, .bbs_index = ent,
+        .bbs_header = fhdr,
+    };
+    return ref;
+}
+
+static bof_actor_t
+bof_me(void)
+{
+    bof_actor_t actor = { .name = cuser.userid, .from = fromhost };
+    return actor;
 }
 
 static void
@@ -1974,9 +1956,17 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     // substitute_ref_record(direct, fhdr, ent);
-    int changed = modify_dir_lite(direct, ent, fhdr->filename, fhdr->modified,
-                                  save_title, NULL, NULL, 0, &fhdr->multi,
-                                  0, 0) == 0;
+    bof_actor_t me = bof_me();
+    int32_t money = fhdr->multi.money;
+    bof_edit_post_t req = {
+        .post = bof_ref(direct, ent, fhdr), .name = save_title,
+        .bbs_modified = fhdr->modified, .bbs_money = &money,
+    };
+    fileheader_t updated;
+    bof_post_response_t res = { .bbs_header = &updated };
+    int changed = bof_edit_post(&me, &req, &res) == BOF_OK;
+    if (changed)
+        post_record_changed(direct, ent, &updated);
     if (!changed && fee > 0) {
         pay(-fee, "%s 看板修改標題失敗，退還扣除的稿費: %s", currboard, save_title);
         fee = 0;
@@ -2843,9 +2833,18 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         pay_if_enough(fee, "%s 看板修改此標題扣除稿費: %s", currboard, tmpfhdr.title) < 0) {
         short_fee = 1;
     } else {
-        changed = modify_dir_lite(direct, ent, fhdr->filename, 0, tmpfhdr.title,
-                                  tmpfhdr.owner, tmpfhdr.date, 0,
-                                  &tmpfhdr.multi, 0, 0) == 0;
+        bof_actor_t me = bof_me();
+        int32_t money = tmpfhdr.multi.money;
+        bof_edit_post_t req = {
+            .post = bof_ref(direct, ent, fhdr), .name = tmpfhdr.title,
+            .bbs_owner = tmpfhdr.owner, .bbs_date = tmpfhdr.date,
+            .bbs_money = &money,
+        };
+        fileheader_t updated;
+        bof_post_response_t res = { .bbs_header = &updated };
+        changed = bof_edit_post(&me, &req, &res) == BOF_OK;
+        if (changed)
+            post_record_changed(direct, ent, &updated);
         if (!changed && fee > 0)
             pay(-fee, "%s 看板修改標題失敗，退還扣除的稿費: %s", currboard, tmpfhdr.title);
     }
@@ -4020,19 +4019,25 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
         return DONOTHING;
 
     do {
-        if (fhdr->filemode & mode_mask) {
-            // clear
-            if ((ret = modify_dir_lite(direct, ent, fhdr->filename, 0, NULL,
-                                       NULL, NULL, 0, NULL, 0, mode_mask)) != 0)
-                break;
-            fhdr->filemode &= ~mode_mask;
-        } else {
-            // set
-            if ((ret = modify_dir_lite(direct, ent, fhdr->filename, 0, NULL,
-                                       NULL, NULL, 0, NULL, mode_mask, 0)) != 0)
-                break;
-            fhdr->filemode |= mode_mask;
+        bof_actor_t me = bof_me();
+        bof_bbs_set_post_modes_t req = { .post = bof_ref(direct, ent, fhdr) };
+        fileheader_t updated;
+        bof_post_response_t res = { .bbs_header = &updated };
+        int set = !(fhdr->filemode & mode_mask);
+
+        if (set)
+            req.enable = mode_mask;
+        else
+            req.disable = mode_mask;
+        if (bof_bbs_set_post_modes(&me, &req, &res) != BOF_OK) {
+            ret = -1;
+            break;
         }
+        post_record_changed(direct, ent, &updated);
+        if (set)
+            fhdr->filemode |= mode_mask;
+        else
+            fhdr->filemode &= ~mode_mask;
     } while (0);
 
     if (ret < 0) {

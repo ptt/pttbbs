@@ -54,6 +54,14 @@ get_backend(void)
  * ------------------------------------------------------------------------ */
 
 bof_error_t
+bof_edit_post(const bof_actor_t *actor, const bof_edit_post_t *req,
+              bof_post_response_t *out)
+{
+    bof_post_response_t local = { 0 };
+    return WRITE(edit_post, out ? out : &local, actor, req);
+}
+
+bof_error_t
 bof_delete_post(const bof_actor_t *actor, const bof_delete_post_t *req,
                 bof_post_result_t *out)
 {
@@ -67,4 +75,13 @@ bof_remove_post(const bof_actor_t *actor, const bof_remove_post_t *req,
 {
     bof_post_result_t local = { 0 };
     return WRITE(remove_post, out ? out : &local, actor, req);
+}
+
+bof_error_t
+bof_bbs_set_post_modes(const bof_actor_t *actor,
+                       const bof_bbs_set_post_modes_t *req,
+                       bof_post_response_t *out)
+{
+    bof_post_response_t local = { 0 };
+    return WRITE(set_post_modes, out ? out : &local, actor, req);
 }

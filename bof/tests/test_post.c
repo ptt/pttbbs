@@ -176,6 +176,61 @@ test_remove_post(void)
 }
 
 static void
+test_edit_post(void)
+{
+    fileheader_t recs[8], updated;
+    bof_actor_t me = { .name = "sysop" };
+    bof_post_response_t res = { .bbs_header = &updated };
+    int32_t money = 0;
+
+    EXPECT_INT(read_dir(recs, 8), 3);
+    // The tombstones of the earlier tests are at 1..3: use the second
+    // set of posts made here.
+    make_post("M.1700000005.A.005", "frank", "to edit", 0);
+    EXPECT_INT(read_dir(recs, 8), 4);
+    bof_edit_post_t req = {
+        .post = ref(recs, 4), .name = "edited", .bbs_modified = 1700000099,
+        .bbs_owner = "grace", .bbs_money = &money,
+    };
+    EXPECT_OK(bof_edit_post(&me, &req, &res));
+    EXPECT_STR(updated.title, "edited");
+    EXPECT_STR(updated.owner, "grace");
+    EXPECT_INT(updated.modified, 1700000099);
+    EXPECT_INT(read_dir(recs, 8), 4);
+    EXPECT_STR(recs[3].title, "edited");
+    EXPECT_STR(recs[3].date, " 1/01");   // unchanged
+
+    // Marks: set and clear filemode bits.
+    bof_bbs_set_post_modes_t mark = {
+        .post = ref(recs, 4), .enable = FILE_MARKED | FILE_SOLVED,
+    };
+    EXPECT_OK(bof_bbs_set_post_modes(&me, &mark, &res));
+    EXPECT_INT(updated.filemode, FILE_MARKED | FILE_SOLVED);
+    bof_bbs_set_post_modes_t unmark = {
+        .post = ref(recs, 4), .disable = FILE_SOLVED,
+    };
+    EXPECT_OK(bof_bbs_set_post_modes(&me, &unmark, &res));
+    EXPECT_INT(read_dir(recs, 8), 4);
+    EXPECT_INT(recs[3].filemode, FILE_MARKED);
+    bof_bbs_set_post_modes_t none = { .post = ref(recs, 4) };
+    EXPECT_INT(bof_bbs_set_post_modes(&me, &none, &res),
+               BOF_ERR_INVALID_BODY_FIELD);
+
+    // A stale record.
+    fileheader_t other = recs[0];
+    bof_post_ref_t r = ref(recs, 4);
+    r.bbs_header = &other;
+    bof_edit_post_t stale = { .post = r, .name = "x" };
+    EXPECT_INT(bof_edit_post(&me, &stale, &res), BOF_ERR_COULDNT_FIND_POST);
+
+    // The score stays within MAX_DISPLAY_SCORE.
+    EXPECT_INT(bof_files_modify_record(DIRPATH, 4, "M.1700000005.A.005", 0,
+                                       NULL, NULL, NULL, MAX_DISPLAY_SCORE + 5,
+                                       NULL, 0, 0, &updated), 0);
+    EXPECT_INT(updated.score, MAX_DISPLAY_SCORE);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -211,6 +266,7 @@ main(void)
     setup();
     RUN(test_delete_post);
     RUN(test_remove_post);
+    RUN(test_edit_post);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

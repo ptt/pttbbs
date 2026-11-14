@@ -13,6 +13,95 @@
 
 #include "../bof_int.h"
 
+int
+bof_files_update_record(const char *direct, int ent, const char *fhdr_name,
+                        void (*change)(fileheader_t *, const void *),
+                        const void *ctx, fileheader_t *out)
+{
+    int fd;
+    off_t sz = dashs(direct);
+    fileheader_t fhdr;
+
+    // prevent black holes
+    if (ent <= 0 || sz < (off_t)sizeof(fileheader_t) * ent ||
+        (fd = open(direct, O_RDWR)) < 0)
+        return -1;
+
+    // also check if fhdr->filename is same.
+    // let sz = base offset
+    sz = (sizeof(fileheader_t) * (ent - 1));
+    if (lseek(fd, sz, SEEK_SET) < 0 ||
+        read(fd, &fhdr, sizeof(fhdr)) != sizeof(fhdr) ||
+        strcmp(fhdr.filename, fhdr_name) != 0)
+    {
+        close(fd);
+        return -1;
+    }
+
+    change(&fhdr, ctx);
+
+    if (lseek(fd, sz, SEEK_SET) < 0 ||
+        write(fd, &fhdr, sizeof(fhdr)) != sizeof(fhdr)) {
+        close(fd);
+        return -1;
+    }
+    close(fd);
+    if (out)
+        *out = fhdr;
+    return 0;
+}
+
+struct record_changes {
+    time4_t modified;
+    const char *title, *owner, *date;
+    int score_delta;
+    const void *multi;
+    uint16_t enable_modes, disable_modes;
+};
+
+static void
+apply_record_changes(fileheader_t *fhdr, const void *ctx)
+{
+    const struct record_changes *c = ctx;
+
+    if (c->modified != 0)
+        fhdr->modified = c->modified;
+    if (c->enable_modes)
+        fhdr->filemode |= c->enable_modes;
+    if (c->disable_modes)
+        fhdr->filemode &= ~c->disable_modes;
+    if (c->title && *c->title)
+        mb_to_storage(c->title, fhdr->title, sizeof(fhdr->title));
+    if (c->owner && *c->owner)
+        mb_to_storage(c->owner, fhdr->owner, sizeof(fhdr->owner));
+    if (c->date && *c->date)
+        mb_to_storage(c->date, fhdr->date, sizeof(fhdr->date));
+    if (c->multi)
+        memcpy(&fhdr->multi, c->multi, sizeof(fhdr->multi));
+    if (c->score_delta) {
+        int score = fhdr->score + c->score_delta;
+        if (score > MAX_DISPLAY_SCORE) score = MAX_DISPLAY_SCORE;
+        else if (score < -MAX_DISPLAY_SCORE) score = -MAX_DISPLAY_SCORE;
+        fhdr->score = score;
+    }
+}
+
+int
+bof_files_modify_record(const char *direct, int ent, const char *fhdr_name,
+                        time4_t modified, const char *title,
+                        const char *owner, const char *date, int score_delta,
+                        const void *multi, uint16_t enable_modes,
+                        uint16_t disable_modes, fileheader_t *out)
+{
+    struct record_changes c = {
+        .modified = modified, .title = title, .owner = owner, .date = date,
+        .score_delta = score_delta, .multi = multi,
+        .enable_modes = enable_modes, .disable_modes = disable_modes,
+    };
+    return bof_files_update_record(direct, ent, fhdr_name,
+                                   apply_record_changes, &c, out);
+}
+
 void
 bof_files_set_tombstone(fileheader_t *fhdr, const char *newtitle,
                         const char *deleter)

@@ -66,3 +66,50 @@ bof_fs_remove_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     return drop_post(actor, &req->post, req->bbs_keep_record,
                      title, req->reason, out);
 }
+
+// The record of post at its position, changed as asked; out gets it.
+static bof_error_t
+change_record(const bof_post_ref_t *post, int32_t modified,
+              const char *title, const char *owner,
+              const char *date, const int32_t *money,
+              uint16_t enable, uint16_t disable,
+              bof_post_response_t *out)
+{
+    const fileheader_t *fh = post->bbs_header;
+    fileheader_t updated;
+    int32_t multi;
+
+    if (!post->bbs_dir || !fh || post->bbs_index <= 0 || !fh->filename[0])
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if (money)
+        multi = *money;
+    if (bof_files_modify_record(post->bbs_dir, post->bbs_index, fh->filename,
+                                modified, title, owner, date, 0,
+                                money ? &multi : NULL, enable, disable,
+                                &updated) != 0)
+        return BOF_ERR_COULDNT_FIND_POST;
+    if (out && out->bbs_header)
+        *out->bbs_header = updated;
+    return BOF_OK;
+}
+
+bof_error_t
+bof_fs_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                 const bof_edit_post_t *req, bof_post_response_t *out)
+{
+    return change_record(&req->post, req->bbs_modified, req->name,
+                         req->bbs_owner, req->bbs_date,
+                         req->bbs_money, 0, 0, out);
+}
+
+bof_error_t
+bof_fs_bbs_set_post_modes(void *ctx GCC_UNUSED,
+                          const bof_actor_t *actor GCC_UNUSED,
+                          const bof_bbs_set_post_modes_t *req,
+                          bof_post_response_t *out)
+{
+    if (!req->enable && !req->disable)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    return change_record(&req->post, 0, NULL, NULL, NULL, NULL,
+                         req->enable, req->disable, out);
+}

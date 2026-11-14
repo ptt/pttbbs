@@ -26,8 +26,11 @@ extern "C" {
 #define BOF_FS_WRITE(name, req_t, out_t) \
     bof_error_t bof_fs_##name(void *ctx, const bof_actor_t *actor, \
                               const req_t *req, out_t *out)
+BOF_FS_WRITE(edit_post, bof_edit_post_t, bof_post_response_t);
 BOF_FS_WRITE(delete_post, bof_delete_post_t, bof_post_result_t);
 BOF_FS_WRITE(remove_post, bof_remove_post_t, bof_post_result_t);
+BOF_FS_WRITE(bbs_set_post_modes, bof_bbs_set_post_modes_t,
+             bof_post_response_t);
 #undef BOF_FS_WRITE
 
 #ifdef __cplusplus

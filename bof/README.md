@@ -102,7 +102,8 @@ if (err != BOF_OK)
 |---|---|---|
 | Errors | `couldnt_find_post`, ... | `bof_error_t`, `bof_error_name()` |
 | People | `person`, `local_user` | `bof_person_id_t`, `bof_actor_t` |
-| Posts | `DeletePost`, `RemovePost` | `bof_delete_post()`, `bof_remove_post()` |
+| Posts | `EditPost`, `DeletePost`, `RemovePost` | `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()` |
+| BBS only | - | `bof_bbs_set_post_modes()` |
 
 The API grows one feature at a time, as `mbbsd` moves onto it.
 

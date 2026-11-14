@@ -140,6 +140,42 @@ bof_error_t bof_remove_post(const bof_actor_t *actor,
                             const bof_remove_post_t *req,
                             bof_post_result_t *out);
 
+/* What changing a post gives back (Lemmy's PostResponse has the post view;
+ * PTT callers keep the record of the post they show). */
+typedef struct bof_post_response_t {
+    /* If not NULL, gets the updated record of the post. */
+    struct fileheader_t *bbs_header;
+} bof_post_response_t;
+
+/* Lemmy's EditPost. The body of a post is still written by the editor of
+ * the UI; this changes its record. */
+typedef struct bof_edit_post_t {
+    bof_post_ref_t post;
+    const char *name;          /* the new title; NULL or "": unchanged */
+    /* PTT, for sysops and the editor: NULL or 0 leaves them unchanged. */
+    int32_t bbs_modified;      /* when the content was last changed */
+    const char *bbs_owner;     /* the author shown in the list */
+    const char *bbs_date;      /* the date shown in the list */
+    const int32_t *bbs_money;  /* fileheader_t.multi */
+} bof_edit_post_t;
+
+bof_error_t bof_edit_post(const bof_actor_t *actor,
+                          const bof_edit_post_t *req,
+                          bof_post_response_t *out);
+
+/* PTT: marks of a post that Lemmy does not have: FILE_MARKED (m, kept),
+ * FILE_SOLVED (L) and FILE_SUSPICIOUS. Discourse has "solved"; none of
+ * them is in Lemmy or Reddit. */
+typedef struct bof_bbs_set_post_modes_t {
+    bof_post_ref_t post;
+    uint16_t enable;           /* filemode bits to set */
+    uint16_t disable;          /* filemode bits to clear */
+} bof_bbs_set_post_modes_t;
+
+bof_error_t bof_bbs_set_post_modes(const bof_actor_t *actor,
+                                   const bof_bbs_set_post_modes_t *req,
+                                   bof_post_response_t *out);
+
 #ifdef __cplusplus
 }
 #endif
