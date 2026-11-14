@@ -551,6 +551,9 @@ int bcrypt_checkpass(const char *pass, const char *goodhash);
 #include "thttp.h"
 
 /* 2fa.c */
+/* HMAC-SHA1 (RFC 2104) of msg under key. */
+void hmac_sha1(const uint8_t *key, size_t key_len,
+               const uint8_t *msg, size_t msg_len, uint8_t output[20]);
 /* Generate 2FA 6-digit code for a timestamp. code_out size >= 7. */
 int generate_2fa(const uint8_t *secret, size_t secret_len, uint64_t timestamp, uint32_t step_seconds, char code_out[7]);
 /* Generate 16-character Base32 random secret key. secret_base32 size >= 17. */

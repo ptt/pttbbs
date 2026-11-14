@@ -4097,29 +4097,79 @@ mark_suspicious(int ent, fileheader_t * fhdr, const char *direct)
    return change_post_mode(ent, fhdr, direct, FILE_SUSPICIOUS);
 }
 
-// The ID of an anonymous author shown to this user: the same for the same
-// author within a connection and a (local) day, but can not be linked
-// across connections, days or viewers without the per-connection key.
-static uint32_t
-anon_display_id(uint32_t anon_uid)
-{
-    static uint64_t key;
-    static bool has_key;
-    struct tm tm;
-    uint64_t x;
+#define ANONID_KEY_LEN 16
 
-    if (!has_key) {
-	must_getrandom(&key, sizeof(key));
-	has_key = true;
+// Reads the site key of the anonymous IDs, creating it on first use.
+static bool
+load_anonid_key(uint8_t key[ANONID_KEY_LEN])
+{
+    static bool logged;
+    int fd = open(FN_ANONID_KEY, O_RDONLY), err, cerr = 0;
+    ssize_t n = -1;
+
+    if (fd < 0 && errno == ENOENT) {
+	char tmp[] = FN_ANONID_KEY ".XXXXXX";
+
+	// Synced aside and linked in, so readers (even after a crash) see all
+	// of it or none. mkstemp() creates it with mode 0600.
+	if ((fd = mkstemp(tmp)) < 0) {
+	    cerr = errno;
+	} else {
+	    must_getrandom(key, ANONID_KEY_LEN);
+	    errno = EIO;  // for a short write
+	    if (write(fd, key, ANONID_KEY_LEN) != ANONID_KEY_LEN ||
+		fsync(fd) != 0 ||
+		// EEXIST: another session won
+		(link(tmp, FN_ANONID_KEY) != 0 && errno != EEXIST))
+		cerr = errno;
+	    close(fd);
+	    unlink(tmp);
+	}
+	fd = open(FN_ANONID_KEY, O_RDONLY);
     }
-    localtime4_r(&now, &tm);
-    x = key ^ ((uint64_t)anon_uid << 32) ^
-	(uint64_t)(tm.tm_year * 366 + tm.tm_yday);
-    // splitmix64 finalizer
-    x ^= x >> 30; x *= 0xbf58476d1ce4e5b9ULL;
-    x ^= x >> 27; x *= 0x94d049bb133111ebULL;
-    x ^= x >> 31;
-    return (uint32_t)x;
+    if (fd >= 0) {
+	n = read(fd, key, ANONID_KEY_LEN);
+	err = errno;
+	close(fd);
+    } else {
+	err = cerr ? cerr : errno;
+    }
+    if (n == ANONID_KEY_LEN)
+	return true;
+    // Not replaced here: a new key would change every ID.
+    if (!logged) {
+	logged = true;
+	log_filef("log/anonid.log", "%s: %s\n", FN_ANONID_KEY,
+		  n < 0 ? strerror(err) : "too short");
+    }
+    return false;
+}
+
+// The ID of an anonymous author in 'Q': every viewer sees the same ID for
+// one author's posts on one board and day. Without the site key it can't
+// be linked across boards or days, or traced to the author.
+static bool
+anon_display_id(const fileheader_t *fhdr, int bid, uint32_t *id)
+{
+    static uint8_t key[ANONID_KEY_LEN];
+    static bool has_key;
+    time4_t posted = get_fhdr_stamp_ts(fhdr->filename);
+    struct tm tm;
+    char msg[64];
+    uint8_t mac[20];
+    int len;
+
+    if (!has_key && !(has_key = load_anonid_key(key)))
+	return false;
+    // The day it was posted, not the day it is read.
+    localtime4_r(&posted, &tm);
+    len = snprintf(msg, sizeof(msg), "%u %d %04d%02d%02d",
+		   (unsigned)fhdr->multi.anon_uid, bid,
+		   tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+    hmac_sha1(key, sizeof(key), (const uint8_t *)msg, len, mac);
+    *id = (uint32_t)mac[0] << 24 | (uint32_t)mac[1] << 16 |
+	  (uint32_t)mac[2] << 8 | mac[3];
+    return true;
 }
 
 static int
@@ -4204,10 +4254,14 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 #endif
 
     if(fhdr->filemode & FILE_ANONYMOUS) {
+	uint32_t id;
+
 	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
 	 * see do_post_article() */
-	prints("│ 匿名管理編號: %u (同一人號碼會一樣)",
-	       anon_display_id(fhdr->multi.anon_uid));
+	if (anon_display_id(fhdr, currbid, &id))
+	    prints("│ 匿名管理編號: %u (同一人同一天在本板發文，號碼會一樣)", id);
+	else
+	    prints("│ 匿名管理編號: 無法取得");
     } else if (fhdr->filemode & FILE_PETITION) {
         const boardheader_t *brd = getbcache(currbid);
         uint32_t bp = brd ? brd->petition_limit_badpost : 0,
