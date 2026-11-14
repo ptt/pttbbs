@@ -42,8 +42,8 @@ do_petition_reply(const fileheader_t * fhdr)
 {
     char            genbuf[256];
     char            reason[36]="";
-    char            fpath[80];
-    char            oldfpath[80];
+    char            fpath[PATHLEN];
+    char            oldfpath[PATHLEN];
     char            opnion[10];
     char           *ptr, *uid;
     FILE           *fo,*fi;

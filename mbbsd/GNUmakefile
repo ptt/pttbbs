@@ -48,9 +48,9 @@ endif
 # common libraries
 #######################################################################
 
-LDFLAGS += -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
+LDFLAGS += -L$(SRCROOT)/bof -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
 	   -L$(SRCROOT)/common/osdep
-LDLIBS  := -lcmbbs -lcmsys -losdep $(LDLIBS)
+LDLIBS  := -lbof -lcmbbs -lcmsys -losdep $(LDLIBS)
 
 ifdef WITH_OUTRPT
 CFLAGS += -DDBG_OUTRPT

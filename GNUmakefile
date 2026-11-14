@@ -1,4 +1,4 @@
-SUBDIRS:=	common mbbsd util service
+SUBDIRS:=	common bof mbbsd util service
 
 # Local services
 SUBDIRS+=$(wildcard service-private)
@@ -7,7 +7,8 @@ SUBDIRS+=$(wildcard service-private)
 
 all: $(SUBDIRS)
 
-mbbsd: common
+bof: common
+mbbsd: common bof
 util: common
 service: common
 service-private: common
