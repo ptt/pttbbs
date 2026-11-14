@@ -100,6 +100,18 @@ int bof_files_delete_content(const char *direct, const struct fileheader_t *fh,
                              size_t sz_backup_path, const char *reason,
                              const char *deleter, const char *host);
 
+/* Removes the records of direct that selected() selects, except those
+ * with any of keep_modes, calling removed() for each. With keep_records,
+ * each becomes a tombstone (by deleter, see bof_files_set_tombstone()) in
+ * place; otherwise the list is rewritten without them and their files are
+ * unlinked (archive them first, see bof_files_delete_content()). index is
+ * 1-based. Returns how many were removed, or -1. */
+int bof_files_prune(const char *direct, uint16_t keep_modes, int keep_records,
+                    int (*selected)(const struct fileheader_t *fh, int index,
+                                    void *ctx),
+                    void (*removed)(const struct fileheader_t *fh, void *ctx),
+                    void *ctx, const char *deleter);
+
 #ifdef __cplusplus
 }
 #endif

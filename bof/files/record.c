@@ -238,3 +238,100 @@ bof_files_delete_content(const char *direct, const fileheader_t *fh,
         return DELETE_FILE_CONTENT_FAILED;
     return backup_failed;
 }
+
+/* ------------------------------------------------------------------------
+ * Removing many posts of a list at once
+ * ------------------------------------------------------------------------ */
+
+// Opens fname for writing, replacing a stale one (left by a crash) that is
+// more than an hour old.
+static int
+force_open(const char *fname)
+{
+    time4_t expire = time4_add(time4(NULL), -3600);
+
+    if (time4_gt(dasht4(fname), expire))
+        return -1;
+    unlink(fname);
+    return OpenCreate(fname, O_WRONLY | O_TRUNC);
+}
+
+int
+bof_files_prune(const char *direct, uint16_t keep_modes, int keep_records,
+                int (*selected)(const fileheader_t *fh, int index, void *ctx),
+                void (*removed)(const fileheader_t *fh, void *ctx),
+                void *ctx, const char *deleter)
+{
+    fileheader_t fhdr;
+    char path[PATHLEN], newfn[PATHLEN], oldfn[PATHLEN], lockfn[PATHLEN];
+    int fdr, fdw, fd, index, count = 0;
+
+    if (keep_records) {
+        // Tombstones in place, so positions don't change.
+        if ((fd = open(direct, O_RDONLY)) == -1)
+            return -1;
+        for (index = 1; read_fileheader(fd, &fhdr) == 1; index++) {
+            if ((fhdr.filemode & keep_modes) || !selected(&fhdr, index, ctx))
+                continue;
+            if (bof_files_tombstone(direct, index, &fhdr, NULL, deleter) == 0) {
+                count++;
+                if (removed)
+                    removed(&fhdr, ctx);
+            }
+        }
+        close(fd);
+        return count;
+    }
+
+    snprintf(newfn, sizeof(newfn), "%s.new", direct);
+    snprintf(oldfn, sizeof(oldfn), "%s.old", direct);
+    snprintf(lockfn, sizeof(lockfn), "%s.lock", direct);
+
+    if ((fd = OpenCreate(lockfn, O_RDWR | O_APPEND)) == -1)
+        return -1;
+    flock(fd, LOCK_EX);
+
+    if ((fdr = open(direct, O_RDONLY)) == -1) {
+        flock(fd, LOCK_UN);
+        close(fd);
+        return -1;
+    }
+    if (((fdw = OpenCreate(newfn, O_WRONLY | O_EXCL)) == -1) &&
+        ((fdw = force_open(newfn)) == -1)) {
+        close(fdr);
+        flock(fd, LOCK_UN);
+        close(fd);
+        return -1;
+    }
+
+    for (index = 1;
+         read(fdr, &fhdr, sizeof(fileheader_t)) == sizeof(fileheader_t);
+         index++) {
+        if ((fhdr.filemode & keep_modes) || !selected(&fhdr, index, ctx)) {
+            if (write(fdw, &fhdr, sizeof(fileheader_t)) == -1) {
+                close(fdr);
+                close(fdw);
+                unlink(newfn);
+                flock(fd, LOCK_UN);
+                close(fd);
+                return -1;
+            }
+        } else {
+            setdirpath(path, direct, fhdr.filename);
+            unlink(path);
+            count++;
+            if (removed)
+                removed(&fhdr, ctx);
+        }
+    }
+    close(fdr);
+    close(fdw);
+    if (Rename(direct, oldfn) == -1 || Rename(newfn, direct) == -1) {
+        flock(fd, LOCK_UN);
+        close(fd);
+        return -1;
+    }
+    flock(fd, LOCK_UN);
+    close(fd);
+    return count;
+}

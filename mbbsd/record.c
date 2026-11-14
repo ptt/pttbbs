@@ -8,8 +8,6 @@
 
 #define BUFSIZE 512
 
-#define safewrite       write
-
 int
 get_sum_records(const char *fpath, int size)
 {
@@ -38,135 +36,52 @@ get_sum_records(const char *fpath, int size)
     return ans / 1024;
 }
 
-/* rocker.011022: 避免lock檔開啟時不正常斷線,造成永久lock */
-int
-force_open(const char *fname)
+// What delete_range() and safe_delete_range() remove: the records in
+// [id1, id2], or (with id1 == 0) the tagged ones.
+typedef struct {
+    int id1, id2;
+} range_t;
+
+static int
+range_selected(const fileheader_t *fh, int index, void *ctx)
 {
-    int             fd;
-    time4_t          expire;
-
-    expire = time4_add(now, -3600);	/* lock 存在超過一個小時就是有問題! */
-
-    if (time4_gt(dasht4(fname), expire))
-	return -1;
-    unlink(fname);
-    fd = OpenCreate(fname, O_WRONLY | O_TRUNC);
-
-    return fd;
+    const range_t *r = ctx;
+    if (r->id1)
+        return index >= r->id1 && index <= r->id2;
+    return FindTaggedItem(fh) != NULL;
 }
 
-/* new/old/lock file processing */
-typedef struct nol_t {
-    char            newfn[PATHLEN];
-    char            oldfn[PATHLEN];
-    char            lockfn[PATHLEN];
-}               nol_t;
-
 static void
-nolfilename(nol_t * n, const char *fpath)
+range_removed(const fileheader_t *fh, void *ctx GCC_UNUSED)
 {
-    SNPRINTF(n->newfn, "%s.new", fpath);
-    SNPRINTF(n->oldfn, "%s.old", fpath);
-    SNPRINTF(n->lockfn, "%s.lock", fpath);
+    RemoveTagItem(fh);
+}
+
+// Marked, pinned and digest records are kept; in mail, FILE_BOTTOM is
+// FILE_MULTI and FILE_DIGEST is FILE_REPLIED.
+static uint16_t
+range_keep_modes(void)
+{
+    return currstat == RMAIL ? FILE_MARKED :
+        (FILE_MARKED | FILE_BOTTOM | FILE_DIGEST);
 }
 
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 void safe_delete_range(const char *fpath, int id1, int id2)
 {
-    int     fd, i;
-    fileheader_t    fhdr;
-    char            fullpath[STRLEN], *t;
-    STRLCPY(fullpath, fpath);
-    t = strrchr(fullpath, '/');
-    assert(t);
-    t++;
-    if( (fd = open(fpath, O_RDONLY)) == -1 )
-	return;
-    for( i = 1 ; read_fileheader(fd, &fhdr) == 1 ; ++i ){
-	strlcpy(t, fhdr.filename, sizeof(fullpath) - (t - fullpath));
-	/* rocker.011018: add new tag delete */
-	if (!((fhdr.filemode & FILE_MARKED) ||	/* 標記 */
-	      ((fhdr.filemode & FILE_BOTTOM) && (currstat != RMAIL)) || /* pinned; FILE_MULTI in mail */
-	      (fhdr.filemode & FILE_DIGEST) ||	/* 文摘 */
-	      (id1 && (i < id1 || i > id2)) ||	/* range */
-	      (!id1 && !FindTaggedItem(&fhdr)))) /* TagList */
-	    safe_article_delete(i, &fhdr, fpath, NULL);
-    }
-    close(fd);
+    range_t r = { id1, id2 };
+    // Only boards; FILE_BOTTOM is always kept there.
+    bof_files_prune(fpath, FILE_MARKED | FILE_BOTTOM | FILE_DIGEST, 1,
+                    range_selected, NULL, &r, cuser.userid);
 }
 #endif
 
 int
 delete_range(const char *fpath, int id1, int id2)
 {
-    fileheader_t    fhdr;
-    nol_t           my;
-    char            fullpath[STRLEN], *t;
-    int             fdr, fdw, fd;
-    int             count, dcount=0;
-
-    nolfilename(&my, fpath);
-
-    if ((fd = OpenCreate(my.lockfn, O_RDWR | O_APPEND)) == -1)
-	return -1;
-
-    flock(fd, LOCK_EX);
-
-    if ((fdr = open(fpath, O_RDONLY)) == -1) {
-	flock(fd, LOCK_UN);
-	close(fd);
-	return -1;
-    }
-    if (
-	((fdw = OpenCreate(my.newfn, O_WRONLY | O_EXCL)) == -1) &&
-	((fdw = force_open(my.newfn)) == -1)) {
-	close(fdr);
-	flock(fd, LOCK_UN);
-	close(fd);
-	return -1;
-    }
-    count = 1;
-    STRLCPY(fullpath, fpath);
-    t = strrchr(fullpath, '/');
-    assert(t);
-    t++;
-
-    while (read(fdr, &fhdr, sizeof(fileheader_t)) == sizeof(fileheader_t)) {
-	strlcpy(t, fhdr.filename, sizeof(fullpath) - (t - fullpath));
-
-	/* rocker.011018: add new tag delete */
-	if (
-	    (fhdr.filemode & FILE_MARKED) ||	/* 標記 */
-	    ((fhdr.filemode & FILE_BOTTOM) && (currstat != RMAIL)) || /* pinned; FILE_MULTI in mail */
-	    ((fhdr.filemode & FILE_DIGEST) && (currstat != RMAIL) )||
-	    /* 文摘 , FILE_DIGEST is used as REPLIED in mail menu.*/
-	    (id1 && (count < id1 || count > id2)) ||	/* range */
-	    (!id1 && !FindTaggedItem(&fhdr))) {	/* TagList */
-	    if ((safewrite(fdw, &fhdr, sizeof(fileheader_t)) == -1)) {
-		close(fdr);
-		close(fdw);
-		unlink(my.newfn);
-		flock(fd, LOCK_UN);
-		close(fd);
-		return -1;
-	    }
-	} else {
-            unlink(fullpath);
-            dcount++;
-            RemoveTagItem(&fhdr);
-	}
-	++count;
-    }
-    close(fdr);
-    close(fdw);
-    if (Rename(fpath, my.oldfn) == -1 || Rename(my.newfn, fpath) == -1) {
-	flock(fd, LOCK_UN);
-	close(fd);
-	return -1;
-    }
-    flock(fd, LOCK_UN);
-    close(fd);
-    return dcount;
+    range_t r = { id1, id2 };
+    return bof_files_prune(fpath, range_keep_modes(), 0, range_selected,
+                           range_removed, &r, cuser.userid);
 }
 
 void

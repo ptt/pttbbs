@@ -278,6 +278,52 @@ test_lock_feature_score(void)
     EXPECT_INT(recs[3].score, 0);
 }
 
+static int
+select_titles_starting_with_p(const fileheader_t *fh, int index GCC_UNUSED,
+                              void *ctx GCC_UNUSED)
+{
+    return fh->title[0] == 'p';
+}
+
+static void
+count_removed(const fileheader_t *fh GCC_UNUSED, void *ctx)
+{
+    (*(int *)ctx)++;
+}
+
+static void
+test_prune(void)
+{
+    fileheader_t recs[16];
+    int removed = 0;
+
+    EXPECT_INT(read_dir(recs, 16), 4);
+    make_post("M.1700000006.A.006", "u", "prune one", 0);
+    make_post("M.1700000007.A.007", "u", "prune kept", FILE_MARKED);
+    make_post("M.1700000008.A.008", "u", "prune two", 0);
+    make_post("M.1700000009.A.009", "u", "stays", 0);
+    EXPECT_INT(read_dir(recs, 16), 8);
+
+    // Tombstones in place: the marked one is kept.
+    EXPECT_INT(bof_files_prune(DIRPATH, FILE_MARKED, 1,
+                               select_titles_starting_with_p, count_removed,
+                               &removed, "sysop"), 2);
+    EXPECT_INT(removed, 2);
+    EXPECT_INT(read_dir(recs, 16), 8);
+    EXPECT(strncmp(recs[4].filename, FN_SAFEDEL, strlen(FN_SAFEDEL)) == 0);
+    EXPECT_STR(recs[5].filename, "M.1700000007.A.007");
+    EXPECT(strncmp(recs[6].filename, FN_SAFEDEL, strlen(FN_SAFEDEL)) == 0);
+
+    // Dropping records: the list is rewritten, the files go.
+    make_post("M.1700000010.A.010", "u", "prune three", 0);
+    EXPECT_INT(bof_files_prune(DIRPATH, FILE_MARKED, 0,
+                               select_titles_starting_with_p, NULL, NULL,
+                               "sysop"), 1);
+    EXPECT(!exists(BDIR "/M.1700000010.A.010"));
+    EXPECT_INT(read_dir(recs, 16), 8);
+    EXPECT_STR(recs[7].filename, "M.1700000009.A.009");
+}
+
 static void
 test_tombstone_titles(void)
 {
@@ -316,6 +362,7 @@ main(void)
     RUN(test_remove_post);
     RUN(test_edit_post);
     RUN(test_lock_feature_score);
+    RUN(test_prune);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();
