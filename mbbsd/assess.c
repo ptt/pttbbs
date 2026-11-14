@@ -59,7 +59,6 @@ apply_badpost(const char *userid, const fileheader_t *fhdr,
 	int rpt_bid = getbnum(BAD_POST_RECORD);
 	if (rpt_bid > 0) {
 	    fileheader_t report_fh;
-	    char rptdir[PATHLEN];
 
 	    setbpath(rptpath, BAD_POST_RECORD);
 	    stampfile(rptpath, &report_fh);
@@ -71,8 +70,7 @@ apply_badpost(const char *userid, const fileheader_t *fhdr,
 	    file_appendf(rptpath, "\n°h¤å­ì¦]: %s\n", genbuf);
 	    file_append(rptpath, "\n");
 
-	    setbdir(rptdir, BAD_POST_RECORD);
-	    append_fileheader(rptdir, &report_fh);
+	    PostAddRecord(BAD_POST_RECORD, &report_fh, now);
 
 	    touchbtotal(rpt_bid);
 	}

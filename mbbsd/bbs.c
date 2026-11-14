@@ -933,7 +933,7 @@ log_crosspost_in_allpost(const char *brd, const fileheader_t *postfile) {
     }
     SNPRINTF(fh.title, "%s %-*.*s(%s)", str_forward, len, len, genbuf, brd);
 
-    if (append_fileheader(TEMP_BDIR(BN_ALLPOST), &fh) != -1) {
+    if (PostAddRecord(BN_ALLPOST, &fh, now) != -1) {
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
@@ -1000,7 +1000,7 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
 
     fh.filemode = FILE_LOCAL;
     fh.modified = now;
-    if (append_fileheader(TEMP_BDIR(brd), &fh) != -1) {
+    if (PostAddRecord(brd, &fh, now) != -1) {
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
@@ -2288,7 +2288,7 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	/*
 	 * Cross fs有問題 else { unlink(xfpath); link(fname, xfpath); }
 	 */
-	append_fileheader(TEMP_BDIR(xboard), &xfile);
+	PostAddRecord(xboard, &xfile, now);
 	setbtotal(xbid);
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 

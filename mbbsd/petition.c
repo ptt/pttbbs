@@ -427,8 +427,7 @@ do_petition(int type)
     STRLCPY(petitionfile.owner, cuser.userid);
     STRLCPY(petitionfile.title, title);
     petitionfile.filemode |= FILE_PETITION;
-    setbdir(genbuf, currboard);
-    if (append_fileheader(genbuf, &petitionfile) != -1)
+    if (PostAddRecord(currboard, &petitionfile, now) != -1)
 	setbtotal(currbid);
     do_petition_reply(&petitionfile);
     return FULLUPDATE;

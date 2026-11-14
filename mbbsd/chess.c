@@ -804,8 +804,7 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 	info->actions->genlog(info, fp, result);
 	fclose(fp);
 
-	setbdir(fname, info->constants->log_board);
-	append_fileheader(fname, &log_header);
+	PostAddRecord(info->constants->log_board, &log_header, now);
 
 	setbtotal(bid);
     }

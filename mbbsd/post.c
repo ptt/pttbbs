@@ -1,5 +1,9 @@
 #include "bbs.h"
 
+// Adds the record of a new post (its file already written) to the list of a
+// board, through bof. Every post that goes into a board does: posts,
+// crossposts (and their notes in ALLPOST), petitions and posts by the
+// system.
 int
 PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime GCC_UNUSED)
 {
