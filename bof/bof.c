@@ -19,6 +19,7 @@ static const char *const bof_error_names[BOF_ERR_MAX] = {
     [BOF_ERR_NOT_A_MODERATOR] = "not_a_moderator",
     [BOF_ERR_NO_POST_EDIT_ALLOWED] = "no_post_edit_allowed",
     [BOF_ERR_LOCKED] = "locked",
+    [BOF_ERR_BBS_STORAGE_NOT_SUPPORTED] = "bbs_storage_not_supported",
 };
 
 const char *

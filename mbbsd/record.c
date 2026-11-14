@@ -172,45 +172,13 @@ delete_range(const char *fpath, int id1, int id2)
 void
 set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
 {
-    if (newtitle && *newtitle)
-    {
-	SNPRINTF(fhdr->title, "%s", newtitle);
-    }
-    else if (fhdr->filemode & FILE_ANONYMOUS ||
-	!fhdr->owner[0] ||
-	(fhdr->owner[0] == '-' && fhdr->owner[1] == 0) )
-    {
-	// not putting owner because we can't know
-	// if it is deleted by BM or owner.
-	SNPRINTF(fhdr->title, "%s", STR_SAFEDEL_TITLE);
-    }
-    else if ( strcmp(fhdr->owner, cuser.userid) == 0 )
-    {
-	// i'm the one to delete it
-	SNPRINTF(fhdr->title, "%s [%s]", STR_SAFEDEL_TITLE, fhdr->owner);
-    }
-    else // removed by BM, system, SYSOP, or other services...
-	// maybe not revealing the names would be better.
-    {
-	SNPRINTF(fhdr->title, "%s <%s>", STR_SAFEREMOVE_TITLE, fhdr->owner);
-    }
-    // SNPRINTF(fhdr->title, "%s", STR_SAFEDEL_TITLE);
-#ifdef FN_SAFEDEL_PREFIX_LEN
-    strncpy(fhdr->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN);
-#else
-    STRLCPY(fhdr->filename, FN_SAFEDEL);
-#endif
-    STRLCPY(fhdr->owner, "-");
-    fhdr->modified = now;
+    bof_files_set_tombstone(fhdr, newtitle, cuser.userid);
 }
 
 int
 safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, const char *newtitle)
 {
-    fileheader_t newfhdr;
-    memcpy(&newfhdr, fhdr, sizeof(fileheader_t));
-    set_safedel_fhdr(&newfhdr, newtitle);
-    return substitute_fileheader(direct, fhdr, &newfhdr, ent);
+    return bof_files_tombstone(direct, ent, fhdr, newtitle, cuser.userid);
 }
 
 int
@@ -265,86 +233,9 @@ delete_file_content2(const char *direct, const fileheader_t *fh,
                      const char *backup_direct,
                      char *backup_path, size_t sz_backup_path,
                      const char *reason) {
-    char fpath[PATHLEN];
-    fileheader_t backup = { {0} };
-    int backup_failed = DELETE_FILE_CONTENT_SUCCESS;
-
-    if(!is_valid_fileheader(fh) || !fh->filename[0] || !direct)
-        return DELETE_FILE_CONTENT_FAILED;
-
-#ifdef FN_SAFEDEL
-    if (
-#ifdef FN_SAFEDEL_PREFIX_LEN
-            strncmp(fh->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) == 0 ||
-#endif
-            strcmp(fh->filename, FN_SAFEDEL) == 0 ||
-#endif
-        0)
-        return DELETE_FILE_CONTENT_SUCCESS;
-
-    if (backup_path) {
-        assert(backup_direct);
-        assert(sz_backup_path > 0);
-        *backup_path = 0;
-    }
-
-    // solve source file name
-    setdirpath(fpath, direct, fh->filename);
-    if (!dashf(fpath))
-        return DELETE_FILE_CONTENT_BACKUP_FAILED;
-
-    // FIXME some announcements were made by sym-links, especial for those
-    // in mail. we should ignore them.
-    if (backup_direct &&
-        !dashl(fpath) &&
-        strncmp(fh->owner, RECYCLE_BIN_OWNER, strlen(RECYCLE_BIN_OWNER)) != 0) {
-
-        // FIXME maybe for non-board files we should do this by simply touching
-        // file instead of full log.
-        if (reason && *reason)
-            file_appendf(fpath, "\n" STR_POST_MARK "§R°£­ì¦]: %s", reason);
-        file_appendf(fpath, "\n" STR_POST_MARK "Deleted by: %s (%s) %s\n",
-                  cuser.userid, fromhost, Cdatelite(&now));
-
-        // TODO or only memcpy(&backup, fh, sizeof(backup)); ?
-        STRLCPY(backup.owner, fh->owner);
-        STRLCPY(backup.date, fh->date);
-        STRLCPY(backup.title, fh->title);
-        STRLCPY(backup.filename, fh->filename);
-
-        if (backup_direct != direct &&
-            strcmp(backup_direct, direct) != 0) {
-            // need to create a new file entry.
-            char *slash = NULL;
-            char bakpath[PATHLEN];
-
-            STRLCPY(bakpath, backup_direct);
-            slash = strrchr(bakpath, '/');
-            if (slash)
-                *slash = 0;
-            if (stampfile_u(bakpath, &backup) == 0 &&
-                Rename(fpath, bakpath) == 0) {
-                STRLCPY(fpath, bakpath);
-            } else {
-                backup_direct = NULL;
-                backup_failed = 1;
-            }
-        }
-
-        // now, always backup according to fpath
-        if (backup_direct) {
-            fileheader_mem_to_storage(&backup);
-            if (!timecapsule_archive_new_revision(
-                        fpath, &backup, sizeof(backup),
-                        backup_path, sz_backup_path))
-                backup_failed = DELETE_FILE_CONTENT_BACKUP_FAILED;
-        }
-    }
-
-    // the file should be already in time capsule
-    if (*fpath && unlink(fpath) != 0)
-        return DELETE_FILE_CONTENT_FAILED;
-    return backup_failed;
+    return bof_files_delete_content(direct, fh, backup_direct, backup_path,
+                                    sz_backup_path, reason, cuser.userid,
+                                    fromhost);
 }
 
 int

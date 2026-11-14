@@ -1,7 +1,8 @@
 /*
  * bof_files.h - the files of a BBS in bof (Birds Of Feather): how bof keeps
  * things in the files of a classic PTT BBS (.DIR, boards/, the time
- * capsule), as primitives (bof/files/) with no actor or rules.
+ * capsule), as primitives (bof/files/) with no actor or rules, for the
+ * files backend (bof_fs.h, bof/fs/) and its cache in other backends.
  *
  * Copyright (c) 2026 Hung-Te Lin (piaip) <hungte@gmail.com>
  * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0-only
@@ -31,7 +32,7 @@ enum {
     RECTYPE_DEFAULT = RECTYPE_GOOD,
 };
 
-/* What deleting the content of a post returns. */
+/* What bof_files_delete_content() returns. */
 #define DELETE_FILE_CONTENT_SUCCESS (0)
 #define DELETE_FILE_CONTENT_FAILED  (-1)
 #define DELETE_FILE_CONTENT_BACKUP_FAILED  (1)
@@ -50,6 +51,31 @@ int timecapsule_archive_new_revision(const char *filename,
                                      char *archived_path, size_t sz_archived_path);
 int timecapsule_get_archive_blobs(const char *filename, int idx, int nblobs,
                                   void *blobsptr, size_t szblob);
+
+
+/* Posts in the files of a board (bof/files/record.c). */
+struct fileheader_t;
+
+/* Turns the record of a post into the record left for it when it is
+ * deleted (by deleter, as the creator if deleter is its owner) or removed:
+ * titled title, or by default as deleted or removed. */
+void bof_files_set_tombstone(struct fileheader_t *fh, const char *title,
+                             const char *deleter);
+
+/* Replaces the record of fh at position ent of direct with its tombstone.
+ * Returns 0 on success. */
+int bof_files_tombstone(const char *direct, int ent,
+                        const struct fileheader_t *fh, const char *title,
+                        const char *deleter);
+
+/* Removes the content of the post fh listed in direct, first appending the
+ * reason and who deleted it (deleter from host), and archiving it under
+ * backup_direct (if not NULL; then backup_path, if not NULL, gets where).
+ * Returns DELETE_FILE_CONTENT_SUCCESS, _FAILED or _BACKUP_FAILED. */
+int bof_files_delete_content(const char *direct, const struct fileheader_t *fh,
+                             const char *backup_direct, char *backup_path,
+                             size_t sz_backup_path, const char *reason,
+                             const char *deleter, const char *host);
 
 #ifdef __cplusplus
 }

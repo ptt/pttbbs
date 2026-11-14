@@ -792,19 +792,6 @@ do_select(void)
     return NEWDIRECT;
 }
 
-static int
-cancelpost(const char *direct, const fileheader_t *fh,
-           int not_owned GCC_UNUSED, char *newpath, size_t sznewpath,
-           const char *reason) {
-    int ret = 0;
-
-    ret = delete_file_content2(direct, fh, TEMP_BDIR(currboard), newpath, sznewpath, reason);
-    if (!IS_DELETE_FILE_CONTENT_OK(ret))
-        return ret;
-
-    return ret;
-}
-
 static void
 do_deleteCrossPost(const fileheader_t *fh, char bname[])
 {
@@ -3777,22 +3764,36 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             }
         }
 
-	if ((IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
-            (custom_title || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
-            !(currmode & MODE_DIGEST) &&
-            !safe_article_delete(ent, fhdr, direct,
-                                 newtitle[0] ? newtitle :
-                                 // Anonymous: set_safedel_fhdr() can't tell
-                                 // removed from deleted by the author.
-                                 (not_owned && is_anon) ?
-                                 STR_SAFEREMOVE_TITLE : NULL)) ||
-            !delete_fileheader(direct, fhdr, ent)) {
+	// Boards with many readers keep a record of the post in the list.
+	int keep_record = IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+	    (custom_title || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
+	    !(currmode & MODE_DIGEST);
+	bof_actor_t actor = { .name = cuser.userid, .from = fromhost };
+	bof_post_ref_t ref = {
+	    .community = currboard, .bbs_dir = direct, .bbs_index = ent,
+	    .bbs_header = fhdr,
+	};
+	bof_post_result_t res;
+	bof_error_t err;
+	if (not_owned) {
+	    bof_remove_post_t req = {
+		.post = ref, .removed = 1, .reason = log_reason,
+		.bbs_keep_record = keep_record, .bbs_title = newtitle,
+	    };
+	    err = bof_remove_post(&actor, &req, &res);
+	} else {
+	    bof_delete_post_t req = {
+		.post = ref, .deleted = 1,
+		.bbs_keep_record = keep_record, .bbs_title = newtitle,
+	    };
+	    err = bof_delete_post(&actor, &req, &res);
+	}
+	if (err == BOF_OK) {
             // Right after the .DIR change.
 	    setbtotal(currbid);
 
-            // The reason is appended to the post kept as removed.
-            del_ret = cancelpost(direct, fhdr, not_owned,
-                                 newpath, sizeof(newpath), log_reason);
+            del_ret = res.bbs_content_result;
+            STRLCPY(newpath, res.bbs_archived_path);
             // delete the file reference in BN_ALLPOST, or delete all related
             // posts if we (SYSOP) are working in a special board like
             // BN_NEWIDPOST.

@@ -36,6 +36,7 @@ flowchart LR
     end
     subgraph BOF["BoF"]
         api["Lemmy-shaped API: posts, comments"]
+        virt["storage virtualization: one backend, checked requests"]
     end
     subgraph STORE["Storage backends"]
         files["BBS files (.DIR, boards/, time capsule)"]
@@ -44,8 +45,9 @@ flowchart LR
     mbbsd --> api
     web --> api
     lemmy --> api
-    api --> files
-    api --> svc
+    api --> virt
+    virt --> files
+    virt --> svc
 ```
 
 ## Design principles
@@ -66,9 +68,17 @@ flowchart LR
 - **In-process and fast.** For a telnet UI, BoF is a C library linked into
   the program, not a remote service: a key press must not wait for IPC.
   Gateways for other clients may expose the same API over the network.
-- **Many backends, one API.** The first backend is the files of a classic
-  PTT BBS; services such as `post.svc` (Pebble and SQLite) come next. The
-  user interface does not know or care which one it talks to.
+- **One backend at a time, one API.** Below the API, the storage
+  virtualization ([`include/bof_storage.h`](../include/bof_storage.h))
+  calls one backend: the files of a classic BBS (`bof/fs/`), or a service
+  such as `post.svc` (Pebble and SQLite; `bof/ps/`, where post.svc is). A
+  backend may be made of others: post.svc's keeps posts in post.svc and
+  the files of the boards as its cache, by calling the files backend
+  itself ([`include/bof_fs.h`](../include/bof_fs.h)), so the two stay in
+  step in one place rather than by a fan-out of writes. What the backend
+  cannot do gives `bbs_storage_not_supported`. The checks of the actor
+  and of the request are the API's (`bof/`), the same for any backend.
+  The user interface does not know or care which backend it is.
 - **Private stays private.** The real person behind an anonymous post,
   IP addresses and hidden boards are never exposed through BoF views.
 
@@ -92,7 +102,7 @@ if (err != BOF_OK)
 |---|---|---|
 | Errors | `couldnt_find_post`, ... | `bof_error_t`, `bof_error_name()` |
 | People | `person`, `local_user` | `bof_person_id_t`, `bof_actor_t` |
-| Posts | `DeletePost`, `RemovePost`, ... | `bof_delete_post()`, `bof_remove_post()`, ... |
+| Posts | `DeletePost`, `RemovePost` | `bof_delete_post()`, `bof_remove_post()` |
 
 The API grows one feature at a time, as `mbbsd` moves onto it.
 
@@ -102,12 +112,12 @@ BoF is new. It is being introduced into PTT BBS step by step, each step
 keeping the BBS working exactly as before:
 
 1. **Skeleton** -- library, error names, tests. *(done)*
-2. **Posts** -- delete, remove, edit, lock, pin (feature), mark; `mbbsd` no
-   longer writes `.DIR` itself.
+2. **Posts** -- all the writes of posts on boards *(done)*; digests stay in
+   `mbbsd`, as Lemmy has none.
 3. **Comments and votes.**
 4. **Listings** -- the post list.
-5. **Storage virtualization** -- the files backend behind it, then the
-   `post.svc` backend.
+5. **Storage virtualization** -- the files backend behind it *(done)*;
+   the `post.svc` backend next.
 6. **Communities** -- boards and moderators.
 7. **People** -- accounts in a database, with Lemmy person IDs.
 8. **Gateways** for Lemmy clients.
@@ -136,12 +146,14 @@ make -C bof         # builds libbof.a
 make -C bof test    # runs the tests
 ```
 
-The sources are in two parts:
+The sources are in three parts:
 
 | Directory | What | Header |
 |---|---|---|
-| `bof/` | The core: the API, its checks, error names (`bof.c`) | [`include/bof.h`](../include/bof.h) |
+| `bof/` | The core: the API, its checks and the backend in use (`storage.c`), error names (`bof.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h) |
 | `bof/files/` | The files of a BBS, as primitives with no actor or rules: records of lists, the content of posts, the line of a comment, aggregate boards, the time capsule | [`include/bof_files.h`](../include/bof_files.h) |
+| `bof/fs/` | The files backend (`bof_storage_files`): the calls of the API done with the files | [`include/bof_fs.h`](../include/bof_fs.h) |
+| `bof/ps/` | The post.svc backend, in pttbbs.cmd where post.svc is: post.svc, with the files backend as its cache | |
 
 BoF sources are plain ASCII C (Big5 texts are macros in
 `include/common.h`); they use the shared headers in `include/` and the

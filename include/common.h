@@ -103,6 +103,9 @@
 #ifndef STR_SAFEREMOVE_TITLE
 #define STR_SAFEREMOVE_TITLE "(本文已被移除)"
 #endif
+// The label of the reason appended to a deleted post (bof keeps its sources
+// ASCII, so its Big5 text is here).
+#define STR_DELETE_REASON   "刪除原因"
 #define FN_EDITHISTORY  ".history"
 
 #ifndef SAFE_ARTICLE_DELETE_NUSER

@@ -49,6 +49,8 @@ typedef enum bof_error_t {
     BOF_ERR_NOT_A_MODERATOR,        /* not_a_moderator */
     BOF_ERR_NO_POST_EDIT_ALLOWED,   /* no_post_edit_allowed */
     BOF_ERR_LOCKED,                 /* locked */
+    /* bbs_storage_not_supported: not by the storage backend */
+    BOF_ERR_BBS_STORAGE_NOT_SUPPORTED,
     BOF_ERR_MAX
 } bof_error_t;
 
@@ -74,6 +76,69 @@ typedef struct bof_actor_t {
     const char *name;          /* BBS userid */
     const char *from;          /* where from (host), for logs; may be NULL */
 } bof_actor_t;
+
+/* ------------------------------------------------------------------------
+ * Posts
+ * ------------------------------------------------------------------------ */
+
+struct fileheader_t;
+
+/* Room for the paths bof gives back. */
+#define BOF_PATH_MAX 256
+
+/* Where a post is. Lemmy names a post by its ID (post.id); posts kept in
+ * the files of a board have none yet, so they are named by their board
+ * and, as the UI last saw them, their record in a list and its position.
+ * bof checks that the record there is still the same post. */
+typedef struct bof_post_ref_t {
+    const char *community;                  /* board name */
+    const char *bbs_dir;                    /* the list (.DIR, or the digest's) */
+    int bbs_index;                          /* 1-based position in bbs_dir */
+    const struct fileheader_t *bbs_header;  /* the record there */
+} bof_post_ref_t;
+
+/* Lemmy's DeletePost: the creator deletes the post. */
+typedef struct bof_delete_post_t {
+    bof_post_ref_t post;
+    int deleted;            /* must be 1: restoring is not supported yet */
+    /* PTT: keep a record (with bbs_title) in the list instead of dropping
+     * it, as boards with many readers do. */
+    int bbs_keep_record;
+    const char *bbs_title;  /* NULL or "": the default for deleted posts */
+} bof_delete_post_t;
+
+/* Lemmy's RemovePost: a moderator removes the post, for a reason. */
+typedef struct bof_remove_post_t {
+    bof_post_ref_t post;
+    int removed;            /* must be 1: restoring is not supported yet */
+    const char *reason;     /* also appended to the archived post */
+    int bbs_keep_record;    /* as in bof_delete_post_t */
+    const char *bbs_title;  /* NULL or "": the default for removed posts */
+} bof_remove_post_t;
+
+
+/* What changing a post did, as far as the files tell (Lemmy's PostResponse
+ * has the post view; PTT callers need where its content went). */
+typedef struct bof_post_result_t {
+    /* Where the content was archived ("" if it was not), e.g. to mail it
+     * back to its author. */
+    char bbs_archived_path[BOF_PATH_MAX];
+    /* DELETE_FILE_CONTENT_SUCCESS, _FAILED (the content could not be
+     * removed) or _BACKUP_FAILED (removed, but not archived). */
+    int bbs_content_result;
+} bof_post_result_t;
+
+/* Deletes a post (DeletePost) or removes it (RemovePost): drops its record
+ * from the list (or replaces it with a record titled as deleted or
+ * removed), and moves its content to the archive, noting who did it. The
+ * record must still be at post.bbs_index (BOF_ERR_COULDNT_FIND_POST
+ * otherwise). Other boards (ALLPOST) and caches are the caller's. */
+bof_error_t bof_delete_post(const bof_actor_t *actor,
+                            const bof_delete_post_t *req,
+                            bof_post_result_t *out);
+bof_error_t bof_remove_post(const bof_actor_t *actor,
+                            const bof_remove_post_t *req,
+                            bof_post_result_t *out);
 
 #ifdef __cplusplus
 }
