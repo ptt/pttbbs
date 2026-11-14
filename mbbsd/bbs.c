@@ -3364,13 +3364,31 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
                 continue;
             }
 
+            // Posts of a board are removed through bof (archived in the
+            // board, as backup_direct is direct for boards).
+            if (is_board) {
+                bof_actor_t me = bof_me();
+                bof_remove_post_t req = {
+                    .post = bof_ref(direct, id, fh), .removed = 1,
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-            if (use_safe_delete &&
-                safe_article_delete(id, fh, direct, NULL) == 0) {
-                id++;
-            }
-            else
+                    .bbs_keep_record = use_safe_delete,
 #endif
+                };
+                bof_post_result_t res;
+                if (bof_remove_post(&me, &req, &res) != BOF_OK) {
+                    ret = -1;
+                    break;
+                }
+                if (res.bbs_record_kept)
+                    id++;
+                if (!IS_DELETE_FILE_CONTENT_OK(res.bbs_content_result)) {
+                    ret = -1;
+                    break;
+                }
+                cdeleted++;
+                continue;
+            }
+
             if (delete_fileheader(direct, fh, id) == 0) {
                 // no need to add id
             } else {

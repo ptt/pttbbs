@@ -129,6 +129,9 @@ typedef struct bof_post_result_t {
     /* DELETE_FILE_CONTENT_SUCCESS, _FAILED (the content could not be
      * removed) or _BACKUP_FAILED (removed, but not archived). */
     int bbs_content_result;
+    /* The record was kept in the list as a tombstone (so positions after
+     * it did not move), rather than dropped. */
+    int bbs_record_kept;
 } bof_post_result_t;
 
 /* Deletes a post (DeletePost) or removes it (RemovePost): drops its record

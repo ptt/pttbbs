@@ -108,6 +108,7 @@ test_delete_post(void)
     bof_delete_post_t req = { .post = ref(recs, 1), .deleted = 1 };
     EXPECT_OK(bof_delete_post(&alice, &req, &res));
     EXPECT_INT(res.bbs_content_result, DELETE_FILE_CONTENT_SUCCESS);
+    EXPECT_INT(res.bbs_record_kept, 0);
     EXPECT(!exists(BDIR "/M.1700000001.A.001"));
     EXPECT(res.bbs_archived_path[0] && exists(res.bbs_archived_path));
     if (res.bbs_archived_path[0]) {
@@ -150,6 +151,7 @@ test_remove_post(void)
         .bbs_keep_record = 1,
     };
     EXPECT_OK(bof_remove_post(&mod, &req, &res));
+    EXPECT_INT(res.bbs_record_kept, 1);
     EXPECT_INT(read_dir(recs, 8), 3);
     EXPECT(strncmp(recs[0].filename, FN_SAFEDEL, strlen(FN_SAFEDEL)) == 0);
     EXPECT_STR(recs[0].owner, "-");

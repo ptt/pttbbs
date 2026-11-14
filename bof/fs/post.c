@@ -27,10 +27,11 @@ drop_post(const bof_actor_t *actor, const bof_post_ref_t *post,
     if (!post->bbs_dir || !fh || post->bbs_index <= 0 || !fh->filename[0])
         return BOF_ERR_INVALID_BODY_FIELD;
 
-    if (!(keep_record &&
-          bof_files_tombstone(post->bbs_dir, post->bbs_index, fh, title,
-                              deleter) == 0) &&
-        delete_fileheader(post->bbs_dir, fh, post->bbs_index) != 0)
+    if (keep_record &&
+        bof_files_tombstone(post->bbs_dir, post->bbs_index, fh, title,
+                            deleter) == 0)
+        out->bbs_record_kept = 1;
+    else if (delete_fileheader(post->bbs_dir, fh, post->bbs_index) != 0)
         return BOF_ERR_COULDNT_FIND_POST;
 
     out->bbs_content_result = bof_files_delete_content(
