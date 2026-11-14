@@ -54,6 +54,14 @@ get_backend(void)
  * ------------------------------------------------------------------------ */
 
 bof_error_t
+bof_create_post(const bof_actor_t *actor, const bof_create_post_t *req,
+                bof_post_response_t *out)
+{
+    bof_post_response_t local = { 0 };
+    return WRITE(create_post, out ? out : &local, actor, req);
+}
+
+bof_error_t
 bof_edit_post(const bof_actor_t *actor, const bof_edit_post_t *req,
               bof_post_response_t *out)
 {
@@ -109,4 +117,16 @@ bof_bbs_reset_post_score(const bof_actor_t *actor,
 {
     bof_post_response_t local = { 0 };
     return WRITE(reset_post_score, out ? out : &local, actor, req);
+}
+
+/* ------------------------------------------------------------------------
+ * Comments
+ * ------------------------------------------------------------------------ */
+
+bof_error_t
+bof_create_comment(const bof_actor_t *actor, const bof_create_comment_t *req,
+                   bof_comment_response_t *out)
+{
+    bof_comment_response_t local = { 0 };
+    return WRITE(create_comment, out ? out : &local, actor, req);
 }

@@ -325,6 +325,57 @@ test_prune(void)
 }
 
 static void
+test_create_post_and_comment(void)
+{
+    fileheader_t recs[16], fh, updated;
+    bof_actor_t me = { .name = "henry" };
+    bof_post_response_t pres = { .bbs_header = &updated };
+    bof_comment_response_t cres = { .bbs_header = &updated };
+    FILE *fp;
+    int n;
+
+    // CreatePost lists a file the editor wrote.
+    n = read_dir(recs, 16);
+    memset(&fh, 0, sizeof(fh));
+    strlcpy(fh.filename, "M.1700000011.A.011", sizeof(fh.filename));
+    strlcpy(fh.owner, "henry", sizeof(fh.owner));
+    strlcpy(fh.title, "new post", sizeof(fh.title));
+    fp = fopen(BDIR "/M.1700000011.A.011", "w");
+    fputs("body\n", fp);
+    fclose(fp);
+    bof_create_post_t post = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_header = &fh,
+    };
+    EXPECT_OK(bof_create_post(&me, &post, &pres));
+    EXPECT_INT(read_dir(recs, 16), n + 1);
+    EXPECT_STR(recs[n].title, "new post");
+
+    // A push appends its line and votes up; a boo votes down.
+    bof_create_comment_t push = {
+        .post = ref(recs, n + 1), .content = "push line\n", .bbs_vote = 1,
+        .bbs_lock = 1,
+    };
+    EXPECT_OK(bof_create_comment(&me, &push, &cres));
+    EXPECT_INT(updated.score, 1);
+    EXPECT(updated.modified != 0);
+    EXPECT_INT(cres.bbs_file_size, strlen("body\npush line\n"));
+    EXPECT_INT(read_dir(recs, 16), n + 1);
+    EXPECT_INT(recs[n].score, 1);
+    bof_create_comment_t boo = {
+        .post = ref(recs, n + 1), .content = "boo line\n", .bbs_vote = -1,
+    };
+    EXPECT_OK(bof_create_comment(&me, &boo, &cres));
+    EXPECT_INT(updated.score, 0);
+
+    // A post without its file.
+    unlink(BDIR "/M.1700000011.A.011");
+    EXPECT_INT(read_dir(recs, 16), n + 1);
+    bof_create_comment_t gone = { .post = ref(recs, n + 1), .content = "x\n" };
+    EXPECT_INT(bof_create_comment(&me, &gone, &cres),
+               BOF_ERR_COULDNT_FIND_POST);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -363,6 +414,7 @@ main(void)
     RUN(test_edit_post);
     RUN(test_lock_feature_score);
     RUN(test_prune);
+    RUN(test_create_post_and_comment);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

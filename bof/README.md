@@ -102,7 +102,8 @@ if (err != BOF_OK)
 |---|---|---|
 | Errors | `couldnt_find_post`, ... | `bof_error_t`, `bof_error_name()` |
 | People | `person`, `local_user` | `bof_person_id_t`, `bof_actor_t` |
-| Posts | `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
+| Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
+| Comments | `CreateComment` (+ `CreatePostLike` for a push or boo) | `bof_create_comment()` |
 | BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()` |
 
 The API grows one feature at a time, as `mbbsd` moves onto it.
@@ -115,7 +116,7 @@ keeping the BBS working exactly as before:
 1. **Skeleton** -- library, error names, tests. *(done)*
 2. **Posts** -- all the writes of posts on boards *(done)*; digests stay in
    `mbbsd`, as Lemmy has none.
-3. **Comments and votes.**
+3. **Comments** *(done)*.
 4. **Listings** -- the post list.
 5. **Storage virtualization** -- the files backend behind it *(done)*;
    the `post.svc` backend next.

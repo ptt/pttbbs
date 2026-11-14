@@ -204,3 +204,16 @@ bof_fs_bbs_reset_post_score(void *ctx GCC_UNUSED,
         *out->bbs_header = updated;
     return BOF_OK;
 }
+
+bof_error_t
+bof_fs_create_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                   const bof_create_post_t *req, bof_post_response_t *out)
+{
+    if (!req->bbs_dir || !req->bbs_header || !req->bbs_header->filename[0])
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if (append_fileheader(req->bbs_dir, req->bbs_header) == -1)
+        return BOF_ERR_COULDNT_CREATE_POST;
+    if (out && out->bbs_header)
+        *out->bbs_header = *req->bbs_header;
+    return BOF_OK;
+}

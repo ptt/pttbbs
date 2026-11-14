@@ -49,6 +49,9 @@ typedef enum bof_error_t {
     BOF_ERR_NOT_A_MODERATOR,        /* not_a_moderator */
     BOF_ERR_NO_POST_EDIT_ALLOWED,   /* no_post_edit_allowed */
     BOF_ERR_LOCKED,                 /* locked */
+    BOF_ERR_COULDNT_CREATE_POST,    /* couldnt_create_post */
+    BOF_ERR_COULDNT_CREATE_COMMENT, /* couldnt_create_comment */
+    BOF_ERR_BBS_READ_ONLY,          /* bbs_read_only: the files are read only */
     /* bbs_storage_not_supported: not by the storage backend */
     BOF_ERR_BBS_STORAGE_NOT_SUPPORTED,
     BOF_ERR_MAX
@@ -140,12 +143,25 @@ bof_error_t bof_remove_post(const bof_actor_t *actor,
                             const bof_remove_post_t *req,
                             bof_post_result_t *out);
 
+/* Lemmy's CreatePost. The UI's editor still writes the file of the post
+ * (named as bbs_header->filename, in the directory of bbs_dir); this
+ * lists it. */
+typedef struct bof_create_post_t {
+    const char *community;                  /* board name */
+    const char *bbs_dir;                    /* the list (.DIR) to add it to */
+    const struct fileheader_t *bbs_header;  /* its record */
+} bof_create_post_t;
+
 /* What changing a post gives back (Lemmy's PostResponse has the post view;
  * PTT callers keep the record of the post they show). */
 typedef struct bof_post_response_t {
     /* If not NULL, gets the updated record of the post. */
     struct fileheader_t *bbs_header;
 } bof_post_response_t;
+
+bof_error_t bof_create_post(const bof_actor_t *actor,
+                            const bof_create_post_t *req,
+                            bof_post_response_t *out);
 
 /* Lemmy's EditPost. The body of a post is still written by the editor of
  * the UI; this changes its record. */
@@ -210,6 +226,39 @@ typedef struct bof_bbs_reset_post_score_t {
 bof_error_t bof_bbs_reset_post_score(const bof_actor_t *actor,
                                      const bof_bbs_reset_post_score_t *req,
                                      bof_post_response_t *out);
+
+/* ------------------------------------------------------------------------
+ * Comments
+ * ------------------------------------------------------------------------ */
+
+/* Lemmy's CreateComment. A PTT board keeps the comments of a post as lines
+ * appended to its file, and a push or boo also votes on the post (as
+ * Lemmy's CreatePostLike would). */
+typedef struct bof_create_comment_t {
+    bof_post_ref_t post;
+    const char *content;    /* the comment, as the lines for the file */
+    int bbs_vote;           /* +1 (push), -1 (boo) or 0 (arrow) */
+    /* Lock the file while appending (it may be being edited), trying
+     * again for a while; bbs_on_wait (if not NULL) is called before each
+     * wait with the tries left. */
+    int bbs_lock;
+    void (*bbs_on_wait)(int tries_left, void *ctx);
+    void *bbs_wait_ctx;
+} bof_create_comment_t;
+
+typedef struct bof_comment_response_t {
+    /* If not NULL, gets the updated record of the post. */
+    struct fileheader_t *bbs_header;
+    /* The size of the file after the comment (a token for live updates). */
+    int64_t bbs_file_size;
+} bof_comment_response_t;
+
+/* Errors: couldnt_find_post (no file), bbs_read_only,
+ * couldnt_create_comment (the file stayed locked), couldnt_update_post
+ * (appended, but the record of the post has changed meanwhile). */
+bof_error_t bof_create_comment(const bof_actor_t *actor,
+                               const bof_create_comment_t *req,
+                               bof_comment_response_t *out);
 
 #ifdef __cplusplus
 }

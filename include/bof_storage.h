@@ -40,6 +40,9 @@ typedef struct bof_storage_ops_t {
     const char *name;
 
     /* Posts. */
+    bof_error_t (*create_post)(void *ctx, const bof_actor_t *actor,
+                               const bof_create_post_t *req,
+                               bof_post_response_t *out);
     bof_error_t (*edit_post)(void *ctx, const bof_actor_t *actor,
                              const bof_edit_post_t *req,
                              bof_post_response_t *out);
@@ -61,6 +64,11 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*reset_post_score)(void *ctx, const bof_actor_t *actor,
                                     const bof_bbs_reset_post_score_t *req,
                                     bof_post_response_t *out);
+
+    /* Comments. */
+    bof_error_t (*create_comment)(void *ctx, const bof_actor_t *actor,
+                                  const bof_create_comment_t *req,
+                                  bof_comment_response_t *out);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

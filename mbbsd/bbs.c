@@ -66,23 +66,6 @@ query_file_money(const fileheader_t *pfh)
     return pfh->multi.money;
 }
 
-// lite weight version to update dir files
-int
-modify_dir_lite(
-	const char *direct, int ent, const char *fhdr_name, time4_t modified,
-        const char *title, const char *owner, const char *date,
-        char comment, void *multi, uint16_t enable_modes, uint16_t disable_modes)
-{
-    fileheader_t fhdr;
-
-    if (bof_files_modify_record(direct, ent, fhdr_name, modified, title,
-                                owner, date, comment, multi, enable_modes,
-                                disable_modes, &fhdr) != 0)
-	return -1;
-    post_record_changed(direct, ent, &fhdr);
-    return 0;
-}
-
 // What the board keeps beside a post's record when the record changed: the
 // search cache expires, and search.svc gets the score.
 void
