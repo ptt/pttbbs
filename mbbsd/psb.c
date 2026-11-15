@@ -951,11 +951,28 @@ cmd_bar_find_hotspot_key(int y, int x, const cmd_layer_t *layers) {
     return hs ? hs->key : 0;
 }
 
+// The keys to show in the bar for cmd, from a layer (so the cmds after it
+// end with the terminator), if it starts a run of digit keys to the same
+// function, as "1-9" or "0-9"; or NULL to show its own key.
+static const char *
+cmd_bar_digit_range(const cmd_t *cmd)
+{
+    if (cmd->key != '0' && cmd->key != '1')
+        return NULL;
+    // Stops at the terminator (key 0) before reading past it.
+    for (int i = 1; cmd->key + i <= '9'; i++) {
+        if (cmd[i].key != cmd->key + i || cmd[i].func != cmd->func)
+            return NULL;
+    }
+    return cmd->key == '0' ? "0-9" : "1-9";
+}
+
 static bool
 cmd_bar_place(int r, int row_bit, const cmd_t *cmd,
               const cmd_t *row_cmds[][64], int *row_cmd_count, int *avail_cols, bool is_inline) {
-    int w = is_inline ? ((row_cmd_count[r] == 0 ? 1 : 0) + cmd_bar_cmd_raw_width(cmd, NULL))
-                      : cmd_bar_cmd_width(cmd, row_bit, NULL);
+    const char *keys = cmd_bar_digit_range(cmd);
+    int w = is_inline ? ((row_cmd_count[r] == 0 ? 1 : 0) + cmd_bar_cmd_raw_width(cmd, keys))
+                      : cmd_bar_cmd_width(cmd, row_bit, keys);
     if (w > avail_cols[r] || row_cmd_count[r] >= 64)
         return false;
     row_cmds[r][row_cmd_count[r]++] = cmd;
@@ -1158,7 +1175,8 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
 
             for (int i = 0; i < row_cmd_count[r]; i++) {
                 bool need_sp = is_inline ? (i == 0) : true;
-                cmd_bar_draw_cmd_ex(b_lines, VS_FOOTER, row_cmds[r][i], NULL, need_sp);
+                cmd_bar_draw_cmd_ex(b_lines, VS_FOOTER, row_cmds[r][i],
+                                    cmd_bar_digit_range(row_cmds[r][i]), need_sp);
             }
 
             if (n_right_cmds > 0) {
@@ -1188,7 +1206,8 @@ vs_cmd_bar(int row_type, const char *prompt, const cmd_layer_t *cmd_layers) {
 
                 for (int i = 0; i < row_cmd_count[r]; i++) {
                     bool need_sp = (i > 0 || (r == 0 && sub_prompt[0] && sub_prompt[strlen(sub_prompt) - 1] != ' '));
-                    cmd_bar_draw_cmd_ex(line, active_rows[r], row_cmds[r][i], NULL, need_sp);
+                    cmd_bar_draw_cmd_ex(line, active_rows[r], row_cmds[r][i],
+                                        cmd_bar_digit_range(row_cmds[r][i]), need_sp);
                 }
             }
         }
