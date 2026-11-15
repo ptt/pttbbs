@@ -97,8 +97,10 @@ void modlog_police(const char *bname, const char *reason, const modlog_t *m);
 int modlog_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
 int modlog_ask_reason_unlogged(int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
 int modlog_police_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
-int modlog_ask_reason_choice(const char *bname, int y, char *reason, size_t sz,
-                             const char * const *choices, int nchoices) EXCLUDES_ABORT_BLOCK;
+int modlog_ask_reason_list(const char *bname, int y, char *reason, size_t sz,
+                           const char *title, const char *fn,
+                           const char * const *defaults,
+                           int ndefaults) EXCLUDES_ABORT_BLOCK;
 int modlog_preview(int y, const char *bname, const char *reason,
                    const modlog_t *m);
 int modlog_police_preview(int y, const char *bname, const char *reason,
@@ -109,7 +111,6 @@ int modlog_edit(const char *bname);
 
 /* assess */
 int inc_badpost(const char *, int num);
-int badpost_reasons(const char * const **reasons);
 void apply_badpost(const char *userid, const fileheader_t *fhdr, const char *newpath, const char *reason);
 int reassign_badpost(const char *userid);
 

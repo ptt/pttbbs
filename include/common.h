@@ -38,6 +38,7 @@
 #define FN_MUTED_ANNOUNCE "muted.announce"  // 禁言公告
 #define FN_MODLOG "modlog"  // 管理紀錄 (板主可編輯)
 #define FN_MODLOG_AUDIT "modlog.audit"  // 管理稽核紀錄 (板主不可修改)
+#define FN_REMOVE_REASONS "remove.reasons"  // 板主自訂的常用移除理由，一行一個
 #define FN_USER_MUTED_HISTORY "muted.history"  // 使用者禁言歷史記錄
 #define FN_BADPOST_HISTORY "badpost.history"  // 劣文歷史記錄
 #define FN_POLL_VOTERS  "can_vote"

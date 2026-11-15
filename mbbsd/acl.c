@@ -1012,77 +1012,61 @@ modlog_police(const char *bname, const char *reason, const modlog_t *m)
 
 #define MODLOG_ASK_LINES (7)
 
-// Asks at line y for the reason, with how it will be recorded below it.
-// With choices, they are listed above the prompt to pick one by number,
-// or the one after them to type it.
-// Returns the line where how it will be recorded starts, for the preview
-// to replace it, or -1 if no reason was given.
+// If the lines from line y don't fit above line bottom, moves them up to
+// end there, over what is on the screen (e.g. lists): darkens that, with a
+// bar between. Returns the line to start them.
 static int
-modlog_ask_reason_as(const char *bname, int y, char *reason, size_t sz,
-                     bool anonymous, bool police,
-                     const char * const *choices, int nchoices)
+modlog_ask_fit(int y, int lines, int bottom)
 {
-    const char *role = modlog_role(bname, anonymous);
-    int lines = MODLOG_ASK_LINES + (choices ? 1 : 0);
-    int yp;
-
-    if (sz > MODLOG_REASON_LEN)
-        sz = MODLOG_REASON_LEN;
-    // If it doesn't fit, ask at the bottom over what is on the screen
-    // (e.g. lists): darken that, with a bar between.
-    if (y > b_lines - lines) {
-        y = b_lines - lines;
+    if (y > bottom - lines) {
+        y = bottom - lines;
         grayout(0, y - 2, GRAYOUT_DARK);
         move(y - 1, 0);
         outs(ANSI_REVERSE);
         vbar(" 輸入理由");
     }
-    // A blank line, the choices, the prompt, a blank line and what will be
-    // recorded.
-    move(y, 0); clrtoln(y + lines);
-    yp = y + 1;
-    if (choices) {
-        move(yp++, 0);
-        for (int i = 0; i < nchoices; i++)
-            prints("%d.%s ", i + 1, choices[i]);
-        prints("%d.其他 (q)取消", nchoices + 1);
-    }
-    mvouts(yp + 2, 0, "此理由會與執行者的資訊一起被記入下列紀錄：");
-    move(yp + 3, 0);
+    return y;
+}
+
+// Tells, in the 3 lines from line y, where the reason will be recorded.
+static void
+modlog_print_how(int y, const char *bname, bool anonymous, bool police)
+{
+    const char *role = modlog_role(bname, anonymous);
+
+    mvouts(y, 0, "此理由會與執行者的資訊一起被記入下列紀錄：");
+    move(y + 1, 0);
     prints(police ?
            "- 看板管理紀錄(自動公告，可編輯)不寫理由，您的身份會顯示為[%s]" :
            "- 在看板管理紀錄(自動公告，可編輯)您的身份會顯示為[%s]", role);
-    move(yp + 4, 0);
+    move(y + 2, 0);
     if (anonymous)
         prints("- 看板管理稽核紀錄(管理者才可看，不可編輯)一樣顯示為[%s]",
                role);
     else
         prints("- 看板管理稽核紀錄(管理者才可看，不可編輯)另記錄執行者[%s]"
                "與來源IP", cuser.userid);
+}
+
+// Asks at line y for the reason, with how it will be recorded below it.
+// Returns the line where how it will be recorded starts, for the preview
+// to replace it, or -1 if no reason was given.
+static int
+modlog_ask_reason_as(const char *bname, int y, char *reason, size_t sz,
+                     bool anonymous, bool police)
+{
+    int yp;
+
+    if (sz > MODLOG_REASON_LEN)
+        sz = MODLOG_REASON_LEN;
+    y = modlog_ask_fit(y, MODLOG_ASK_LINES, b_lines);
+    // A blank line, the prompt, a blank line and what will be recorded.
+    move(y, 0); clrtoln(y + MODLOG_ASK_LINES);
+    yp = y + 1;
+    modlog_print_how(yp + 2, bname, anonymous, police);
 
     reason[0] = '\0';
-    if (choices) {
-        char ans[3];
-        while (1) {
-            getdata(yp, 0, "請選擇理由: ", ans, sizeof(ans), LCECHO);
-            if (!ans[0] || ans[0] == 'q')
-                break;
-            int i = ans[0] - '1';
-            if (i >= 0 && i < nchoices) {
-                strlcpy(reason, choices[i], sz);
-                move(yp, 0); clrtoeol();
-                prints("理由: %s", reason);
-                break;
-            }
-            if (i == nchoices) {
-                getdata(yp, 0, "請輸入理由(空白取消): ", reason, sz, DOECHO);
-                break;
-            }
-            bell();
-        }
-    } else {
-        getdata(yp, 0, "請輸入理由(空白取消): ", reason, sz, DOECHO);
-    }
+    getdata(yp, 0, "請輸入理由(空白取消): ", reason, sz, DOECHO);
     trim(reason);
     move(yp + 5, 0); clrtobot();
     if (!*reason) {
@@ -1100,7 +1084,7 @@ modlog_ask_reason_as(const char *bname, int y, char *reason, size_t sz,
 int
 modlog_ask_reason(const char *bname, int y, char *reason, size_t sz)
 {
-    return modlog_ask_reason_as(bname, y, reason, sz, false, false, NULL, 0);
+    return modlog_ask_reason_as(bname, y, reason, sz, false, false);
 }
 
 // Asks at line y for a reason that is not put in the modlog, e.g. for posts
@@ -1119,13 +1103,301 @@ modlog_ask_reason_unlogged(int y, char *reason, size_t sz)
     return y + 3;
 }
 
-// modlog_ask_reason() picking one of the choices (or typing one).
-int
-modlog_ask_reason_choice(const char *bname, int y, char *reason, size_t sz,
-                         const char * const *choices, int nchoices)
+// The usual reasons a board keeps in a file, one per line, for
+// modlog_ask_reason_list() to pick by number. Lines past these are kept
+// but not shown.
+#define MODLOG_LIST_MAX (9)
+// A blank line, the title, the reasons, the line to type another, a blank
+// line and what will be recorded.
+#define MODLOG_LIST_LINES (2 + MODLOG_LIST_MAX + 2 + 3)
+
+// Reads the first MODLOG_LIST_MAX lines of path into reasons. Returns
+// false if there is no such file.
+static bool
+modlog_read_reasons(const char *path,
+                    char reasons[MODLOG_LIST_MAX][MODLOG_REASON_LEN])
 {
-    return modlog_ask_reason_as(bname, y, reason, sz, false, false, choices,
-                                nchoices);
+    char line[ANSILINELEN];
+    FILE *fp = fopen(path, "r");
+    int i = 0;
+
+    if (!fp)
+        return false;
+    while (i < MODLOG_LIST_MAX && fgets(line, sizeof(line), fp)) {
+        // The rest of a line too long for the buffer.
+        if (!strchr(line, '\n')) {
+            int c;
+            while ((c = fgetc(fp)) != EOF && c != '\n')
+                ;
+        }
+        storage_to_mb(line, line, sizeof(line));
+        modlog_strip(line);
+        trim(line);
+        strlcpy(reasons[i], line, MODLOG_REASON_LEN);
+        mbs_safe_trim(reasons[i]);
+        i++;
+    }
+    fclose(fp);
+    return true;
+}
+
+// Writes reasons to path as its first MODLOG_LIST_MAX lines, keeping the
+// lines after them. Returns 0 on success.
+static int
+modlog_write_reasons(const char *path,
+                     char reasons[MODLOG_LIST_MAX][MODLOG_REASON_LEN])
+{
+    char tmp[PATHLEN], line[ANSILINELEN];
+    FILE *in, *out;
+    int n, skipped = 0, ret = 0;
+
+    snprintf(tmp, sizeof(tmp), "%s.%d", path, (int)getpid());
+    if (!(out = fopen(tmp, "w")))
+        return -1;
+    // Skip the lines replaced, to copy those after them.
+    if ((in = fopen(path, "r")) != NULL) {
+        while (skipped < MODLOG_LIST_MAX && fgets(line, sizeof(line), in)) {
+            if (strchr(line, '\n'))
+                skipped++;
+        }
+    }
+    // All of them if lines follow, to keep their places; otherwise up to
+    // the last one given.
+    int c = in ? fgetc(in) : EOF;
+    if (c != EOF) {
+        ungetc(c, in);
+        n = MODLOG_LIST_MAX;
+    } else {
+        for (n = MODLOG_LIST_MAX; n > 0 && !*reasons[n - 1]; n--)
+            ;
+    }
+    for (int i = 0; i < n; i++) {
+        mb_to_storage(reasons[i], line, sizeof(line));
+        fprintf(out, "%s\n", line);
+    }
+    while (in && fgets(line, sizeof(line), in))
+        fputs(line, out);
+    if (in)
+        fclose(in);
+    if (fclose(out) != 0 || Rename(tmp, path) != 0)
+        ret = -1;
+    if (ret)
+        unlink(tmp);
+    return ret;
+}
+
+// What the keys of modlog_ask_reason_list() work on.
+typedef struct {
+    char (*reasons)[MODLOG_REASON_LEN];
+    const char *path;   // where the reasons are saved
+    char *reason;       // the reason picked, empty until then
+    size_t sz;
+    int cur;            // the reason highlighted
+    int yp;             // the line of the first reason
+    int yo;             // the line to type another
+} reason_list_t;
+
+static int
+reason_list_cmd_num(cmd_ctx_t *ctx)
+{
+    reason_list_t *rl = (reason_list_t *)ctx->priv;
+    rl->cur = ctx->key - '1';
+    return 0;
+}
+
+static int
+reason_list_cmd_up(cmd_ctx_t *ctx)
+{
+    reason_list_t *rl = (reason_list_t *)ctx->priv;
+    rl->cur = (rl->cur + MODLOG_LIST_MAX - 1) % MODLOG_LIST_MAX;
+    return 0;
+}
+
+static int
+reason_list_cmd_down(cmd_ctx_t *ctx)
+{
+    reason_list_t *rl = (reason_list_t *)ctx->priv;
+    rl->cur = (rl->cur + 1) % MODLOG_LIST_MAX;
+    return 0;
+}
+
+static int
+reason_list_cmd_edit(cmd_ctx_t *ctx)
+{
+    reason_list_t *rl = (reason_list_t *)ctx->priv;
+    char buf[MODLOG_REASON_LEN], prompt[8];
+    char *r = rl->reasons[rl->cur];
+
+    snprintf(prompt, sizeof(prompt), "> %d. ", rl->cur + 1);
+    move(rl->yp + rl->cur, 0); clrtoeol();
+    getdata_str(rl->yp + rl->cur, 0, prompt, buf, rl->sz, DOECHO, r);
+    trim(buf);
+    if (strcmp(buf, r) != 0) {
+        strlcpy(r, buf, MODLOG_REASON_LEN);
+        if (modlog_write_reasons(rl->path, rl->reasons) != 0)
+            vmsg("無法儲存理由，請稍候再試。");
+    }
+    return 0;
+}
+
+// Picks the reason highlighted, or edits it if there is none, as e.
+static int
+reason_list_cmd_pick(cmd_ctx_t *ctx)
+{
+    reason_list_t *rl = (reason_list_t *)ctx->priv;
+    if (!*rl->reasons[rl->cur])
+        return reason_list_cmd_edit(ctx);
+    strlcpy(rl->reason, rl->reasons[rl->cur], rl->sz);
+    return 0;
+}
+
+static int
+reason_list_cmd_other(cmd_ctx_t *ctx)
+{
+    reason_list_t *rl = (reason_list_t *)ctx->priv;
+    getdata(rl->yo, 0, "請輸入理由(空白返回): ", rl->reason, rl->sz, DOECHO);
+    trim(rl->reason);
+    move(rl->yo, 0); clrtoeol();
+    return 0;
+}
+
+static int
+reason_list_cmd_quit(cmd_ctx_t *ctx)
+{
+    ctx->quit = true;
+    return 0;
+}
+
+static int
+reason_list_cmd_help(cmd_ctx_t *ctx)
+{
+    screen_backup_t old_screen;
+
+    scr_dump(&old_screen);
+    int sel_key = cmd_show_help_layers(ctx->caption, ctx->active_layers);
+    scr_restore(&old_screen);
+    if (sel_key > 0 && sel_key != ctx->key) {
+        ctx->key = sel_key;
+        ctx->redispatch = true;
+    }
+    return 0;
+}
+
+// Clicking a reason highlights it (and picks it, as Enter).
+static void
+reason_list_on_select(cmd_ctx_t *ctx, int new_curr)
+{
+    reason_list_t *rl = (reason_list_t *)ctx->priv;
+    if (new_curr >= 0 && new_curr < MODLOG_LIST_MAX)
+        rl->cur = new_curr;
+}
+
+static const cmd_t reason_list_cmds[] = {
+    { KEY_ENTER, "確定", "使用反白的理由(空的則編輯)", reason_list_cmd_pick, 0,
+      CMD_PRIO_MAX },
+    { KEY_LF, NULL, NULL, reason_list_cmd_pick, 0, CMD_PRIO_NONE },
+    { 'e', "編輯並儲存", "編輯反白的理由，存為看板的常用理由",
+      reason_list_cmd_edit, 0, CMD_PRIO_HIGH },
+    { 'E', NULL, NULL, reason_list_cmd_edit, 0, CMD_PRIO_NONE },
+    { 'o', "其他(不儲存)", "輸入只用這一次的理由", reason_list_cmd_other, 0,
+      CMD_PRIO_HIGH },
+    { 'O', NULL, NULL, reason_list_cmd_other, 0, CMD_PRIO_NONE },
+    { '1', "選擇", "反白第 1-9 個理由", reason_list_cmd_num, 0,
+      CMD_PRIO_NAV },
+    { '2', NULL, NULL, reason_list_cmd_num, 0, CMD_PRIO_NONE },
+    { '3', NULL, NULL, reason_list_cmd_num, 0, CMD_PRIO_NONE },
+    { '4', NULL, NULL, reason_list_cmd_num, 0, CMD_PRIO_NONE },
+    { '5', NULL, NULL, reason_list_cmd_num, 0, CMD_PRIO_NONE },
+    { '6', NULL, NULL, reason_list_cmd_num, 0, CMD_PRIO_NONE },
+    { '7', NULL, NULL, reason_list_cmd_num, 0, CMD_PRIO_NONE },
+    { '8', NULL, NULL, reason_list_cmd_num, 0, CMD_PRIO_NONE },
+    { '9', NULL, NULL, reason_list_cmd_num, 0, CMD_PRIO_NONE },
+    { KEY_UP, NULL, "反白上一個理由", reason_list_cmd_up, 0, CMD_PRIO_NONE },
+    { 'k', NULL, NULL, reason_list_cmd_up, 0, CMD_PRIO_NONE },
+    { KEY_DOWN, NULL, "反白下一個理由", reason_list_cmd_down, 0,
+      CMD_PRIO_NONE },
+    { 'j', NULL, NULL, reason_list_cmd_down, 0, CMD_PRIO_NONE },
+    { 'q', "取消", "不輸入理由，取消操作", reason_list_cmd_quit, 0,
+      CMD_PRIO_QUIT },
+    { 'Q', NULL, NULL, reason_list_cmd_quit, 0, CMD_PRIO_NONE },
+    { KEY_ESC, NULL, NULL, reason_list_cmd_quit, 0, CMD_PRIO_NONE },
+    { 'h', "說明", "顯示按鍵說明", reason_list_cmd_help, 0, CMD_PRIO_USAGE },
+    { 'H', NULL, NULL, reason_list_cmd_help, 0, CMD_PRIO_NONE },
+    { '?', NULL, NULL, reason_list_cmd_help, 0, CMD_PRIO_NONE },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+// Asks for the reason of a moderation action on the board like
+// modlog_ask_reason(), picking one of the usual reasons the board keeps
+// in its file fn (or defaults if there is none), listed below title.
+// Moderators may edit them, which is saved to fn, or type another for
+// this time only. The keys are in the action bar, with h for help.
+// Returns the line for modlog_preview(), or -1 if no reason was given.
+int
+modlog_ask_reason_list(const char *bname, int y, char *reason, size_t sz,
+                       const char *title, const char *fn,
+                       const char * const *defaults, int ndefaults)
+{
+    static const cmd_layer_t layers[] = {
+        { reason_list_cmds, NULL },
+        { NULL, NULL }
+    };
+    static const char caption[] = "選擇理由";
+    char reasons[MODLOG_LIST_MAX][MODLOG_REASON_LEN] = {{0}};
+    char path[PATHLEN];
+    reason_list_t rl = { reasons, path, reason, sz, 0, 0, 0 };
+
+    if (sz > MODLOG_REASON_LEN)
+        rl.sz = sz = MODLOG_REASON_LEN;
+    setbfile(path, bname, fn);
+    if (!modlog_read_reasons(path, reasons)) {
+        for (int i = 0; i < ndefaults && i < MODLOG_LIST_MAX; i++)
+            strlcpy(reasons[i], defaults[i], sizeof(reasons[i]));
+    }
+
+    // Above the action bar.
+    y = modlog_ask_fit(y, MODLOG_LIST_LINES, b_lines - 1);
+    move(y, 0); clrtobot();
+    mvouts(y + 1, 0, title);
+    rl.yp = y + 2;
+    rl.yo = rl.yp + MODLOG_LIST_MAX;
+    modlog_print_how(rl.yo + 2, bname, false, false);
+
+    reason[0] = '\0';
+    while (!*reason) {
+        for (int i = 0; i < MODLOG_LIST_MAX; i++) {
+            // Also marked with '>', for monochrome terminals.
+            move(rl.yp + i, 0); clrtoeol();
+            prints(i == rl.cur ? ANSI_REVERSE "> %d. %s " ANSI_RESET :
+                   "  %d. %s ", i + 1, *reasons[i] ? reasons[i] : "(空)");
+        }
+        vs_cmd_bar(VS_FOOTER, caption, layers);
+        move(rl.yp + rl.cur, 0);
+
+        cmd_ctx_t cctx = {
+            .key = vkey(),
+            .curr = rl.cur,
+            .total = MODLOG_LIST_MAX,
+            .header_lines = rl.yp,
+            .visible_rows = MODLOG_LIST_MAX,
+            .on_select = reason_list_on_select,
+            .priv = &rl,
+        };
+        cmd_dispatch_layers(layers, &cctx, caption);
+        if (cctx.quit)
+            break;
+    }
+
+    // Only the reason picked is left, with how it will be recorded.
+    move(y, 0); clrtobot();
+    if (!*reason) {
+        vmsg("未輸入理由，取消操作。");
+        return -1;
+    }
+    move(y + 1, 0);
+    prints("理由: %s", reason);
+    modlog_print_how(y + 3, bname, false, false);
+    return y + 3;
 }
 
 // modlog_ask_reason() for actions recorded by modlog_police().
@@ -1133,7 +1405,7 @@ int
 modlog_police_ask_reason(const char *bname, int y, char *reason, size_t sz)
 {
     return modlog_ask_reason_as(bname, y, reason, sz,
-                                modlog_as_police(bname), true, NULL, 0);
+                                modlog_as_police(bname), true);
 }
 
 int

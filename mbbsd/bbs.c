@@ -3509,6 +3509,12 @@ mail_removed_post(const char *author, const char *bname, const char *title,
     return 0;
 }
 
+// The usual reasons of removing posts, for boards without
+// FN_REMOVE_REASONS.
+static const char * const remove_reasons_default[] = {
+    "廣告", "不當用辭", "人身攻擊", "違反板規", "清理看板",
+};
+
 // What del_post() puts in the modlog, also previewed before confirming.
 static void
 del_post_modlog(modlog_t *log, int as_badpost, const fileheader_t *fh)
@@ -3602,26 +3608,43 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     // TODO use macro for the duration
     int bp_old = bp_can &&
         time4_diff(now, get_fhdr_stamp_ts(fhdr->filename)) > 7 * DAY_SECONDS;
-    if (bp_can && !bp_old) {
-        getdata(y++, 0, "惡退文章?(y/N/q取消)[N] ", genbuf, 3, LCECHO);
-        if (genbuf[0] == 'q')
-            return FULLUPDATE;
-        as_badpost = (genbuf[0] == 'y');
-    }
 
     if (by_mod) {
-        // The reason of a bad post is the reason of deleting it.
-        if (as_badpost) {
-            const char * const *choices;
-            int n = badpost_reasons(&choices);
-            y = modlog_ask_reason_choice(bp->brdname, y, log_reason,
-                                         sizeof(log_reason), choices, n);
-        } else {
-            y = modlog_ask_reason(bp->brdname, y, log_reason,
-                                  sizeof(log_reason));
-        }
+        // The reason of removing it first, as removing is what is done
+        // every time; marking it as a bad post is an extra, asked after.
+        // The reason of a bad post is the reason of removing it.
+        // Picked from the usual reasons the board keeps (like the removal
+        // reasons of Reddit), or else remove_reasons_default.
+        y = modlog_ask_reason_list(bp->brdname, y, log_reason,
+                                   sizeof(log_reason),
+                                   bp_can && !bp_old ?
+                                   "請選取移除或退文的理由：" :
+                                   "請選取移除的理由：",
+                                   FN_REMOVE_REASONS, remove_reasons_default,
+                                   ARRAY_SIZE(remove_reasons_default));
         if (y < 0)
             return FULLUPDATE;
+        // bp_can implies by_mod (not owned, not in the digest).
+        if (bp_can) {
+            // Over how the reason will be recorded, shown again below.
+            move(y, 0); clrtobot();
+            if (bp_old) {
+                outs(ANSI_COLOR(1;33) "退文設定: 文章超過一週 (跳過)"
+                     ANSI_RESET);
+            } else {
+                getdata(y, 0, "同時惡退此文?(y/N/q取消)[N] ", genbuf, 3,
+                        LCECHO);
+                if (genbuf[0] == 'q')
+                    return FULLUPDATE;
+                as_badpost = (genbuf[0] == 'y');
+                // The answer, in place of the question.
+                move(y, 0); clrtoeol();
+                outs(as_badpost ?
+                     ANSI_COLOR(1;31) "退文設定: 惡退" ANSI_RESET :
+                     ANSI_COLOR(1;32) "退文設定: 一般刪文，非退文" ANSI_RESET);
+            }
+            y += 2;
+        }
         // What will be recorded, before confirming.
         del_post_modlog(&log, as_badpost, &log_fh);
         y = modlog_preview(y, bp->brdname, log_reason, &log) + 1;
@@ -3778,14 +3801,12 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                      BN_BUGREPORT "報告" ANSI_RESET "\n");
             }
 	    // badpost assignment, asked before deleting
-	    if (!bp_can) {
+	    if (!as_badpost) {
 	    } else if (!IS_DELETE_FILE_CONTENT_OK(del_ret) || !*newpath) {
                 // got error in file deletion (already deleted, also skip badpost)
                 outs("退文設定: 已刪或刪除錯誤 (跳過)\n");
                 as_badpost = 0;
-	    } else if (bp_old) {
-		outs("退文設定: 文章超過一週 (跳過)\n");
-	    } else if (as_badpost) {
+	    } else {
 		apply_badpost(getuserid(tusernum), fhdr, newpath, log_reason);
 		outs("原文已隨退文通知寄到作者的信箱。\n");
 	    }

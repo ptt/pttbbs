@@ -30,19 +30,6 @@ inc_badpost(const char *userid, int num) {
     return xuser.badpost;
 }
 
-static char * const badpost_reason[] = {
-    "廣告", "不當用辭", "人身攻擊"
-};
-
-
-// The usual reasons of bad posts, for modlog_ask_reason_choice().
-int
-badpost_reasons(const char * const **reasons)
-{
-    *reasons = (const char * const *)badpost_reason;
-    return (int)ARRAY_SIZE(badpost_reason);
-}
-
 // Records a bad post with the given reason, without asking anything.
 void
 apply_badpost(const char *userid, const fileheader_t *fhdr,
