@@ -34,7 +34,7 @@
 #define FN_REJECT       "reject"
 #define FN_WATER        "water"         // 舊水桶
 #define FN_MUTED        "muted"        // 禁言/水桶名單
-#define FN_MUTED_HISTORY "muted.history"  // 禁言歷史記錄
+#define FN_MUTED_HISTORY "muted.history"  // 看板禁言歷史 (由 modlog.audit 產生)
 #define FN_MUTED_ANNOUNCE "muted.announce"  // 禁言公告
 #define FN_MODLOG "modlog"  // 管理紀錄 (板主可編輯)
 #define FN_MODLOG_AUDIT "modlog.audit"  // 管理稽核紀錄 (板主不可修改)

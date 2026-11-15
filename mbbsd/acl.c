@@ -19,6 +19,12 @@
 // prompt.
 #define MUTE_CONFIRM_LINES          (14)
 #define UNMUTE_CONFIRM_LINES        (13)
+// The actions of muting and unmuting in the modlog, which the board mute
+// history (FN_MUTED_HISTORY) is made of.
+#define MODLOG_MUTE                 "暫停發言"
+#define MODLOG_UNMUTE               "開放發言"
+
+static void muted_history_view(const char *bname);
 
 static void
 bakuman_make_tag_filename(const char *who, const char *object, char object_type,
@@ -242,7 +248,7 @@ ui_mute_user_for_board(const char *uid, const char *board) {
            uid, datebuf,
            reason);
     modlog_t log;
-    modlog_init(&log, "暫停發言: %s %d天", uid, days);
+    modlog_init(&log, MODLOG_MUTE ": %s %d天", uid, days);
     int yc = modlog_preview(y + 5, board, reason, &log);
     // Shown with the confirmation, as asking the reason clears below it.
     if (days > KEEP_DAYS_REGGED) {
@@ -335,7 +341,7 @@ ui_unmute_user_for_board(const char *uid, const char *board) {
     if (yr < 0)
         return -1;
     modlog_t log;
-    modlog_init(&log, "開放發言: %s 原剩%d天", uid,
+    modlog_init(&log, MODLOG_UNMUTE ": %s 原剩%d天", uid,
                 time4_days_remaining(expire, now));
     int yc = modlog_preview(yr, board, reason, &log);
     mvouts(yc + 1, 0, ANSI_COLOR(1;32) "會寄信通知使用者" ANSI_RESET);
@@ -434,7 +440,7 @@ edit_muted_list_for_board(const char *board) {
         "         - 平時用(A)新增並設好期限後就不用再去管設了哪些人\n"
         "         - 除非想提前解除或發現設錯，此時可用(D)先刪除然後再用(A)重新設定\n"
         "         - 想確認是否設錯或查某個使用者是不是仍在禁言中，可用(S)來檢查\n"
-        "           另外也可用(L)檢視看板管理稽核紀錄\n"
+        "           另外也可用(L)列出設定歷史\n"
         "         - 沒有[永久禁言]的設定，若有需要請設個 50年之類的大數字\n"
         "         - 新增/解除會寄信通知使用者，另外請注意" ANSI_COLOR(1;33)
                    "帳號被砍後禁言會自動解除\n" ANSI_RESET
@@ -445,7 +451,7 @@ edit_muted_list_for_board(const char *board) {
         );
 
         getdata(1, 0, "(A)增加 (D)提前清除 (S)查詢帳號 "
-                      "(L)列出設定歷史 "
+                      "(L)設定歷史 "
                       "[Q]結束? ",
                 ans, 2, LCECHO);
         move(2, 0); clrtobot();
@@ -484,7 +490,7 @@ edit_muted_list_for_board(const char *board) {
                 break;
 
             case 'l':
-                modlog_view(board, 1);
+                muted_history_view(board);
                 break;
 
             default:
@@ -1415,6 +1421,133 @@ modlog_view(const char *bname, int secure)
                                         FN_MODLOG), YEA | MORE_FROM_END) == -1)
         vmsg("目前尚無管理紀錄。");
     return 0;
+}
+
+// The board mute history (FN_MUTED_HISTORY) is made from the audit record
+// (FN_MODLOG_AUDIT): only the records of muting and unmuting, colored like
+// the mute history used to be. It is made again when the audit record is
+// newer. Records from before the modlog (if not converted by
+// upgrade/convert_modlog_audit_mutes.py) are copied as they are.
+
+// The action of the modlog record started by line ("MM/DD/YYYY HH:MM role
+// action..."), or NULL if line does not start one.
+static const char *
+modlog_record_action(const char *line)
+{
+    static const char shape[] = "99/99/9999 99:99 ";
+    const char *p;
+
+    for (size_t i = 0; i < sizeof(shape) - 1; i++) {
+        if (shape[i] == '9' ? !isdigit((unsigned char)line[i]) :
+            line[i] != shape[i])
+            return NULL;
+    }
+    p = strchr(line + sizeof(shape) - 1, ' ');
+    return p ? p + 1 : NULL;
+}
+
+// Whether line starts a record of muting or unmuting from the mute history
+// before the modlog, e.g. "date ID 暫停 UID 發言，期限為 7 天" (colored).
+static bool
+is_legacy_mute_record(const char *line)
+{
+    char s[ANSILINELEN];
+
+    strlcpy(s, line, sizeof(s));
+    strip_control_sequence(s, s);
+    return strstr(s, " 發言，期限為 ") || strstr(s, " 的禁言限制 (距原期限");
+}
+
+// Writes the line of a record to out, with the account after the action
+// (or after "執行: ") colored by color.
+static void
+muted_history_put(FILE *out, const char *line, const char *after,
+                  const char *color)
+{
+    const char *p = strstr(line, after);
+    size_t n;
+
+    if (!p) {
+        fputs(line, out);
+        return;
+    }
+    p += strlen(after);
+    n = strcspn(p, " \n");
+    fprintf(out, "%.*s%s%.*s" ANSI_RESET "%s", (int)(p - line), line, color,
+            (int)n, p, p + n);
+}
+
+// Makes path (of PATHLEN), the board mute history, from the audit record
+// unless it is newer already. Returns 0 if it has any record.
+static int
+muted_history_update(const char *bname, char *path)
+{
+    char audit[PATHLEN], tmp[PATHLEN], line[ANSILINELEN];
+    struct stat sa, sh;
+    FILE *in, *out;
+    bool keep = false, cont = false;
+    int n = 0;
+
+    setbfile(audit, bname, FN_MODLOG_AUDIT);
+    setbfile(path, bname, FN_MUTED_HISTORY);
+    if (stat(audit, &sa) != 0)
+        return -1;
+    if (stat(path, &sh) == 0 &&
+        (sh.st_mtim.tv_sec > sa.st_mtim.tv_sec ||
+         (sh.st_mtim.tv_sec == sa.st_mtim.tv_sec &&
+          sh.st_mtim.tv_nsec > sa.st_mtim.tv_nsec)))
+        return sh.st_size > 0 ? 0 : -1;
+
+    if (!(in = fopen(audit, "r")))
+        return -1;
+    snprintf(tmp, sizeof(tmp), "%s.%d", path, (int)getpid());
+    if (!(out = fopen(tmp, "w"))) {
+        fclose(in);
+        return -1;
+    }
+    while (fgets(line, sizeof(line), in)) {
+        const char *action;
+        // The rest of a line too long for the buffer goes with it.
+        bool rest = cont;
+        cont = !strchr(line, '\n');
+        if (rest || line[0] == ' ') {
+            if (!keep)
+                continue;
+            if (!rest && str_starts_with(line, MODLOG_INDENT "執行: "))
+                muted_history_put(out, line, "執行: ", ANSI_COLOR(1;33));
+            else
+                fputs(line, out);
+        } else if ((action = modlog_record_action(line))) {
+            bool mute = str_starts_with(action, MODLOG_MUTE ": ");
+            keep = mute || str_starts_with(action, MODLOG_UNMUTE ": ");
+            if (!keep)
+                continue;
+            n++;
+            muted_history_put(out, line,
+                              mute ? MODLOG_MUTE ": " : MODLOG_UNMUTE ": ",
+                              mute ? ANSI_COLOR(1;31) : ANSI_COLOR(1;32));
+        } else if ((keep = is_legacy_mute_record(line))) {
+            n++;
+            fputs(line, out);
+        }
+    }
+    fclose(in);
+    if (fclose(out) != 0 || Rename(tmp, path) != 0) {
+        unlink(tmp);
+        return -1;
+    }
+    return n > 0 ? 0 : -1;
+}
+
+// Shows the board mute history, the newest at the bottom.
+static void
+muted_history_view(const char *bname)
+{
+    char path[PATHLEN];
+
+    if (muted_history_update(bname, path) != 0 ||
+        more(path, YEA | MORE_FROM_END) == -1)
+        vmsg("目前尚無禁言紀錄。");
 }
 
 // Moderators may freely change the public modlog, but the audit
