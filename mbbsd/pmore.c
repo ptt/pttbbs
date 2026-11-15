@@ -100,7 +100,6 @@
 #define PMORE_USE_DBCS_WRAP          1  // safe wrap for DBCS.
 #define PMORE_USE_ASCII_MOVIE        1  // support ascii movie
 #define PMORE_USE_REPLYKEY_HINTS     1  // prompt user the keys to reply/commenting
-#define PMORE_HAVE_SYNCNOW           1  // system needs calling sync API
 #define PMORE_HAVE_VKEY              1  // input system is vkey compatible
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS 1  // does not return for all unknown keys
 #define PMORE_USE_INTERNAL_HELP      0  // display pmore internal help
@@ -261,8 +260,6 @@
  // #undef PMORE_USE_INTERNAL_HELP
  #undef PMORE_USE_REPLYKEY_HINTS
  #define PMORE_USE_REPLYKEY_HINTS 0
- #undef PMORE_HAVE_SYNCNOW
- #define PMORE_HAVE_SYNCNOW 0
  #undef PMORE_HAVE_VKEY
  #define PMORE_HAVE_VKEY 0
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS
@@ -3729,10 +3726,6 @@ mf_movieWaitKey(struct timeval *ptv, int dorefresh)
     // now, maybe something for read (sel > 0)
     // or time out (sel == 0)
     // or weird error (sel < 0)
-
-    // sync clock(now) if timeout.
-    if (PMORE_HAVE_SYNCNOW && sel == 0)
-        syncnow();
 
     return (sel == 0) ? MOVIE_KEY_NONE : 1;
 }
