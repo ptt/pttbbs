@@ -15,6 +15,23 @@ This file is encoded in UTF-8.
 >   ```
 
 ---
+## modlog: 舊禁言紀錄改為 modlog 格式
+
+從舊看板禁言歷史 (`muted.history`) 搬進 `modlog.audit` 的紀錄，改寫成 modlog 的格式，
+讓整份稽核紀錄格式一致。禁言名單的 (L) 會從 `modlog.audit` 挑出禁言紀錄，重新產生
+`boards/B/BOARD/muted.history` 來顯示 (`modlog.audit` 較新時才重做)，沒有轉換的舊紀錄也會照原樣列出。
+
+建議停掉所有 mbbsd 後執行，先以 dry-run 模擬確認：
+
+```bash
+./upgrade/convert_modlog_audit_mutes.py --dry-run --verbose
+./upgrade/convert_modlog_audit_mutes.py --keep
+```
+
+> - 執行者的帳號會保留在 `執行:`；但舊紀錄沒寫執行時的角色 (板主、小組長、站長…) 與來源 IP，所以角色一律顯示為「管理人員」，`執行:` 後面沒有 IP。時間只留到分。
+> - `--keep` 會把原檔留成 `modlog.audit.orig`；可重複執行，已轉換的不會再動。
+
+---
 ## modlog: 看板管理紀錄
 
 板主、小組長、站長在看板上的管理動作與看板設定變更，改記入看板目錄下的
