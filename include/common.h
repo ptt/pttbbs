@@ -361,6 +361,7 @@ _Static_assert(USHM_SIZE <= (1 << FRIEND_ONLINE_SLOT_BITS),
 #define EDITFLAG_KIND_MAILLIST	(0x00000080)
 #define EDITFLAG_WARN_NOSELFDEL	(0x00000100)
 // #define EDITFLAG_ALLOW_LOCAL    (0x00000200)
+#define EDITFLAG_UNLIMITED	(0x00000400) // no limit of lines (e.g. modlog)
 #define EDIT_ABORTED	-1
 
 /* ----------------------------------------------------- */

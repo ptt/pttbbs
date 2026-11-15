@@ -1671,7 +1671,8 @@ read_tmpbuf(int n)
     const char     *tmpf;
     char            ans[4] = "y";
 
-    if (curr_buf->totaln >= EDIT_LINE_LIMIT)
+    if (curr_buf->totaln >= EDIT_LINE_LIMIT &&
+        !(curr_buf->flags & EDITFLAG_UNLIMITED))
     {
 	vmsg("檔案已超過最大限制，無法再讀入暫存檔。");
 	return;
@@ -4194,14 +4195,15 @@ edit_cmd_enter(cmd_ctx_t *ctx)
     edit_ctx_t *ec = (edit_ctx_t *)ctx->priv;
 
     block_cancel();
-    if (curr_buf->totaln >= EDIT_LINE_LIMIT)
+    // Files like the modlog may have any number of lines.
+    if (ec->flags & EDITFLAG_UNLIMITED) {
+    } else if (curr_buf->totaln >= EDIT_LINE_LIMIT)
     {
         vmsg("檔案已超過最大限制，無法再增加行數。");
         return PSB_OK;
     }
-
 #ifdef MAX_EDIT_LINE
-    if (curr_buf->totaln ==
+    else if (curr_buf->totaln ==
             ((ec->flags & EDITFLAG_ALLOWLARGE) ?
              MAX_EDIT_LINE_LARGE : MAX_EDIT_LINE))
     {
