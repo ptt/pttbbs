@@ -95,26 +95,31 @@
  */
 #define PMORE_PRELOAD_SIZE (64*1024L)   // on busy system set smaller or undef
 
-#define PMORE_USE_OPT_SCROLL            // optimized scroll
-#define PMORE_USE_DBCS_WRAP             // safe wrap for DBCS.
-#define PMORE_USE_ASCII_MOVIE           // support ascii movie
-#define PMORE_USE_REPLYKEY_HINTS        // prompt user the keys to reply/commenting
-#define PMORE_HAVE_SYNCNOW              // system needs calling sync API
-#define PMORE_HAVE_VKEY                 // input system is vkey compatible
-#define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
-// #define PMORE_USE_INTERNAL_HELP      // display pmore internal help
-//#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
-#define PMORE_ACCURATE_WRAPEND 1        // try more harder to find file end in wrap mode
-#define PMORE_AUTOEXIT_FIRSTPAGE        // when prompt=NA, show only page 1
-#define PMORE_TRADITIONAL_FULLCOL       // to work with traditional ascii arts
-#define PMORE_OVERRIDE_TIME             // override time format if possible
-#define PMORE_EXPAND_ESC_STAR           // expand ^[*s style TWBBS variable expansion.
+// The features below are 1 (enabled) or 0 (disabled), never left undefined.
+#define PMORE_USE_OPT_SCROLL         1  // optimized scroll
+#define PMORE_USE_DBCS_WRAP          1  // safe wrap for DBCS.
+#define PMORE_USE_ASCII_MOVIE        1  // support ascii movie
+#define PMORE_USE_REPLYKEY_HINTS     1  // prompt user the keys to reply/commenting
+#define PMORE_HAVE_SYNCNOW           1  // system needs calling sync API
+#define PMORE_HAVE_VKEY              1  // input system is vkey compatible
+#define PMORE_IGNORE_UNKNOWN_NAVKEYS 1  // does not return for all unknown keys
+#define PMORE_USE_INTERNAL_HELP      0  // display pmore internal help
+#define PMORE_RESTRICT_ANSI_MOVEMENT 0  // user cannot use ANSI escapes to move
+#define PMORE_ACCURATE_WRAPEND       1  // try more harder to find file end in wrap mode
+#define PMORE_AUTOEXIT_FIRSTPAGE     1  // when prompt=NA, show only page 1
+#define PMORE_TRADITIONAL_FULLCOL    1  // to work with traditional ascii arts
+#define PMORE_OVERRIDE_TIME          1  // override time format if possible
+#define PMORE_EXPAND_ESC_STAR        1  // expand ^[*s style TWBBS variable expansion.
+#define PMORE_NO_FORCE_CLRTOEOL      0  // do not force clrtoeol by ANSI escapes
 
 // if you are working with a terminal without ANSI control,
-// you are using a poor term (define PMORE_USING_POOR_TERM).
+// you are using a poor term (set PMORE_USING_POOR_TERM to 1).
 #ifndef USE_PFTERM                      // pfterm is a good terminal system.
-#define PMORE_USING_POOR_TERM
-#define PMORE_WORKAROUND_CLRTOEOL       // try to work with poor terminal sys
+#define PMORE_USING_POOR_TERM        1
+#define PMORE_WORKAROUND_CLRTOEOL    1  // try to work with poor terminal sys
+#else
+#define PMORE_USING_POOR_TERM        0
+#define PMORE_WORKAROUND_CLRTOEOL    0
 #endif // USE_PFTERM
 // -------------------------------------------------------------- </FEATURES>
 
@@ -255,15 +260,22 @@
  // environments and features
  // #undef PMORE_USE_INTERNAL_HELP
  #undef PMORE_USE_REPLYKEY_HINTS
+ #define PMORE_USE_REPLYKEY_HINTS 0
  #undef PMORE_HAVE_SYNCNOW
+ #define PMORE_HAVE_SYNCNOW 0
  #undef PMORE_HAVE_VKEY
+ #define PMORE_HAVE_VKEY 0
  #undef PMORE_IGNORE_UNKNOWN_NAVKEYS
+ #define PMORE_IGNORE_UNKNOWN_NAVKEYS 0
  #undef PMORE_AUTOEXIT_FIRSTPAGE
+ #define PMORE_AUTOEXIT_FIRSTPAGE 0
  #ifndef  SHOW_USER_IN_TEXT
  # undef  PMORE_EXPAND_ESC_STAR
+ # define PMORE_EXPAND_ESC_STAR 0
  #endif // !SHOW_USER_IN_TEXT
  // disable CLRTOEOL workaround: old M3 may has problem with FORCE_CLRTOEOL... you can comment this if your system is OK with it.
- #define PMORE_NO_FORCE_CLRTOEOL
+ #undef PMORE_NO_FORCE_CLRTOEOL
+ #define PMORE_NO_FORCE_CLRTOEOL 1
  // use m3 style separator [none]: comment these if you like Maple2.36/SOB/PTT style
  #undef MFDISP_SEP_DEFAULT
  #define MFDISP_SEP_DEFAULT MFDISP_SEP_NONE
@@ -417,8 +429,8 @@ static int debug = 0;
 //   and usually messed up when output ANSI quoted string.
 // - A workaround is suggested by kcwu:
 //   https://opensvn.csie.org/traccgi/pttbbs/trac.cgi/changeset/519
-// - If you have problem using this workaround, define PMORE_NO_FORCE_CLRTOEOL
-#ifndef PMORE_NO_FORCE_CLRTOEOL
+// - If you have problem using this workaround, set PMORE_NO_FORCE_CLRTOEOL to 1
+#if !PMORE_NO_FORCE_CLRTOEOL
 # define FORCE_CLRTOEOL() outs(ANSI_CLRTOEND)
 #else
 # define FORCE_CLRTOEOL() clrtoeol()
@@ -433,17 +445,15 @@ static int debug = 0;
 MFFPROTO void
 pmore_clrtoeol(int y, int x)
 {
-#ifdef PMORE_WORKAROUND_CLRTOEOL
-    int i;
     move(y, x);
-    for (i = x; i < t_columns; i++)
-        outc(' ');
-    clrtoeol();
-    move(y, x); // this is required, due to outc().
-#else
-    move(y, x);
-    clrtoeol();
-#endif
+    if (PMORE_WORKAROUND_CLRTOEOL) {
+        for (int i = x; i < t_columns; i++)
+            outc(' ');
+        clrtoeol();
+        move(y, x); // this is required, due to outc().
+    } else {
+        clrtoeol();
+    }
 }
 
 MFFPROTO void
@@ -643,7 +653,7 @@ enum MFSEARCH_DIRECTION {
 
 // --------------------------------------------- <Optional Modules>
 
-#if defined(PMORE_EXPAND_ESC_STAR) && !defined(HAVE_EXPAND_ESC_STAR)
+#if PMORE_EXPAND_ESC_STAR && !defined(HAVE_EXPAND_ESC_STAR)
 //
 // support TWBBS ESC*s style variables.
 // if return value > 1, pmore will show warning message.
@@ -682,9 +692,9 @@ expand_esc_star(char *buf, const char *src, int szbuf)
     return 0;
 }
 
-#endif // defined(PMORE_EXPAND_ESC_STAR) && !defined(HAVE_EXPAND_ESC_STAR)
+#endif // PMORE_EXPAND_ESC_STAR && !defined(HAVE_EXPAND_ESC_STAR)
 
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
 enum _MFDISP_MOVIE_MODES {
     MFDISP_MOVIE_UNKNOWN= 0,
     MFDISP_MOVIE_DETECTED,
@@ -766,7 +776,9 @@ MFFPROTO int mf_movieMaskedInput(int c);
 #define MOVIE_KEY_BS2 (0x7f)
 #endif
 
-#endif
+#else // PMORE_USE_ASCII_MOVIE
+#define MOVIE_IS_PLAYING() (0)
+#endif // PMORE_USE_ASCII_MOVIE
 // --------------------------------------------- </Optional Modules>
 
 // used by mf_attach
@@ -1387,7 +1399,7 @@ mf_parseHeaders()
         // now, postprocess p.
         pmore_str_strip_ansi(p);
 
-#ifdef PMORE_OVERRIDE_TIME
+#if PMORE_OVERRIDE_TIME
         // (deprecated: too many formats for newsgroup)
         // try to see if this is a valid time line
         // use strptime to convert
@@ -1486,10 +1498,8 @@ MFDISP_URL_LIMIT(int col, unsigned char *p, int maxcol)
 
     if (linew <= maxcol + 2)
         return maxcol + 2;
-#ifdef PMORE_TRADITIONAL_FULLCOL
-    if (linew <= t_columns)
+    if (PMORE_TRADITIONAL_FULLCOL && linew <= t_columns)
         return t_columns;
-#endif
     return maxcol + 1;
 }
 
@@ -1520,7 +1530,7 @@ static char *override_attr = NULL;
 
 static void PMORE_UINAV_FORWARDPAGE(void);
 
-#ifdef PMORE_EXPAND_ESC_STAR
+#if PMORE_EXPAND_ESC_STAR
 static void
 mf_display_handle_esc_star(int *xprefix_ptr, int *col_ptr, int maxcol,
                            char **override_attr_ptr, char **override_msg_ptr)
@@ -1565,7 +1575,7 @@ mf_display_handle_esc_star(int *xprefix_ptr, int *col_ptr, int maxcol,
 }
 #endif
 
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
 static void
 mf_movie_handle_sync_playing(int promptend, int *flExit_ptr, int *retval_ptr)
 {
@@ -1624,19 +1634,13 @@ mf_display()
     MFDISP_FORCEUPDATE2BOT();
     outs(ANSI_RESET); // Ensure the term attributes are not changed by others.
 
-#ifdef PMORE_USE_OPT_SCROLL
-
-#if defined(PMORE_USE_ASCII_MOVIE) && !defined(PMORE_USING_POOR_TERM)
     // For movies, maybe clear() is better.
     // Let's enable for good terminals (which does not need workarounds)
-    if (MOVIE_IS_PLAYING())
-    {
-        clear(); move(0, 0);
-    } else
-#endif // PMORE_USE_ASCII_MOVIE && (!PMORE_USING_POOR_TERM)
+    bool movie_clear = !PMORE_USING_POOR_TERM && MOVIE_IS_PLAYING();
 
     /* process scrolling */
-    if (mf.oldlineno >= 0 && mf.oldlineno != mf.lineno)
+    if (PMORE_USE_OPT_SCROLL && !movie_clear &&
+        mf.oldlineno >= 0 && mf.oldlineno != mf.lineno)
     {
         int scrll = mf.lineno - mf.oldlineno, i;
         int reverse = (scrll > 0 ? 0 : 1);
@@ -1688,7 +1692,6 @@ mf_display()
         // return;      // uncomment if you want to observe scrolling
     }
     else
-#endif
         clear(), move(0, 0);
 
     mf.dispe = mf.disps;
@@ -1720,9 +1723,8 @@ mf_display()
         int predicted_linewidth = -1;
         int xprefix = mf.xpos;
 
-#ifdef PMORE_USE_DBCS_WRAP
+        // Always NULL without PMORE_USE_DBCS_WRAP.
         unsigned char *dbcs_incomplete = NULL;
-#endif
 
         currline = mf.lineno + lines;
         col = 0;
@@ -1746,7 +1748,7 @@ mf_display()
             pmore_clrtoeol(lines, 0);
         }
 
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
         if (mfmovie.mode == MFDISP_MOVIE_PLAYING_OLD &&
                 mfmovie.compat24)
         {
@@ -1965,21 +1967,22 @@ mf_display()
                         default:
                             if (ANSI_IN_MOVECMD(c))
                             {
-#ifdef PMORE_RESTRICT_ANSI_MOVEMENT
-                                c = 's'; // "save cursor pos"
-#else // PMORE_RESTRICT_ANSI_MOVEMENT
-                                // some user cannot live without this.
-                                // make them happy.
-                                newline_default = newline = MFDISP_NEWLINE_MOVE;
-#ifdef PMORE_USE_ASCII_MOVIE
-                                // relax for movies
-                                if (!MOVIE_IS_PLAYING())
-#endif // PMORE_USE_ASCII_MOVIE
+                                if (PMORE_RESTRICT_ANSI_MOVEMENT)
                                 {
-                                    override_attr = ANSI_COLOR(1;37;41);
-                                    override_msg = PMORE_MSG_WARN_MOVECMD;
+                                    c = 's'; // "save cursor pos"
                                 }
-#endif // PMORE_RESTRICT_ANSI_MOVEMENT
+                                else
+                                {
+                                    // some user cannot live without this.
+                                    // make them happy.
+                                    newline_default = newline = MFDISP_NEWLINE_MOVE;
+                                    // relax for movies
+                                    if (!MOVIE_IS_PLAYING())
+                                    {
+                                        override_attr = ANSI_COLOR(1;37;41);
+                                        override_msg = PMORE_MSG_WARN_MOVECMD;
+                                    }
+                                }
                                 needMove2bot = 1;
                             }
                             outc(c);
@@ -1998,9 +2001,7 @@ mf_display()
                          */
                     }
                     else if (sr.search_str && srlen < 0 &&  // support search
-#ifdef PMORE_USE_DBCS_WRAP
                             dbcs_incomplete == NULL &&
-#endif
                             sr.cmpfunc((char*)mf.dispe,
                                 (char*)sr.search_str, sr.len) == 0)
                     {
@@ -2009,7 +2010,7 @@ mf_display()
                             flResetColor = 1;
                     }
 
-#ifdef PMORE_EXPAND_ESC_STAR // support TWBBS ESC*s style variables.
+#if PMORE_EXPAND_ESC_STAR // support TWBBS ESC*s style variables.
                     //
                     // Please define your own expand_esc_star by
                     //
@@ -2212,13 +2213,12 @@ mf_display()
                             {
                                 canOutput = 1;  // indicator space
                             }
-#ifdef PMORE_TRADITIONAL_FULLCOL
-                            else if (col + off < t_columns)
+                            else if (PMORE_TRADITIONAL_FULLCOL &&
+                                     col + off < t_columns)
                             {
                                 canOutput = 1;
                                 newline = MFDISP_NEWLINE_MOVE;
                             }
-#endif
                         }
 
                         if (canOutput)
@@ -2243,17 +2243,18 @@ mf_display()
                             }
                             else
                             {
-#ifdef PMORE_USE_DBCS_WRAP
-                                if (mf.xpos > 0 && xprefix == 0 && dbcs_incomplete && col <= text_start_col)
+                                if (PMORE_USE_DBCS_WRAP)
                                 {
-                                    c = ' ';
-                                }
+                                    if (mf.xpos > 0 && xprefix == 0 && dbcs_incomplete && col <= text_start_col)
+                                    {
+                                        c = ' ';
+                                    }
 
-                                if (dbcs_incomplete)
-                                    dbcs_incomplete = NULL;
-                                else if (PMORE_MB_LEADING(c))
-                                    dbcs_incomplete = mf.dispe;
-#endif
+                                    if (dbcs_incomplete)
+                                        dbcs_incomplete = NULL;
+                                    else if (PMORE_MB_LEADING(c))
+                                        dbcs_incomplete = mf.dispe;
+                                }
                                 if (xprefix > 0)
                                     xprefix --;
                                 else
@@ -2282,8 +2283,7 @@ mf_display()
                             breaknow = 1;
                             wrapping = 1;
                             mf.wraplines ++;
-#ifdef PMORE_USE_DBCS_WRAP
-                            if (dbcs_incomplete)
+                            if (PMORE_USE_DBCS_WRAP && dbcs_incomplete)
                             {
                                 mf.dispe = dbcs_incomplete;
                                 dbcs_incomplete = NULL;
@@ -2316,7 +2316,6 @@ mf_display()
                                     outs(ansicmd);
                                 }
                             }
-#endif
                         }
                     }
                 }
@@ -2556,7 +2555,7 @@ mf_display_footer(
 MFPROTO void pmore_Preference();
 MFPROTO void pmore_QuickRawModePref();
 
-#ifdef PMORE_USE_INTERNAL_HELP
+#if PMORE_USE_INTERNAL_HELP
 void pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx));
 #endif
 
@@ -2641,7 +2640,7 @@ MFFPROTO int
 mf_goEnd(void)
 {
     mf_goBottom();
-    if (!IS_ENABLED(PMORE_ACCURATE_WRAPEND))
+    if (!PMORE_ACCURATE_WRAPEND)
         return 0;
     mf_display();
     if (mf_viewedAll())
@@ -2885,7 +2884,7 @@ pmore_cmd_rawmode(cmd_ctx_t *ctx GCC_UNUSED)
 }
 
 
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
 MFPROTO int
 pmore_cmd_movie(cmd_ctx_t *ctx GCC_UNUSED)
 {
@@ -2923,7 +2922,7 @@ pmore_cmd_movie(cmd_ctx_t *ctx GCC_UNUSED)
 }
 #endif
 
-#ifdef PMORE_USE_INTERNAL_HELP
+#if PMORE_USE_INTERNAL_HELP
 MFPROTO int
 pmore_cmd_help(cmd_ctx_t *ctx)
 {
@@ -2981,7 +2980,7 @@ const cmd_t pmore_cmds[] = {
     { 'o', "選項設定", "調整 pmore 瀏覽偏好設定", pmore_cmd_pref, 0, CMD_PRIO_NORM },
     { 'O', NULL, NULL, pmore_cmd_pref, 0, CMD_PRIO_NONE },
     { '\\', "色彩顯示模式", "切換 ANSI 色彩顯示模式", pmore_cmd_rawmode, 0, CMD_PRIO_NORM },
-#ifdef PMORE_USE_INTERNAL_HELP
+#if PMORE_USE_INTERNAL_HELP
     { 'h', "說明", "顯示 pmore 操作說明", pmore_cmd_help, 0, CMD_PRIO_LOW },
     { 'H', NULL, NULL, pmore_cmd_help, 0, CMD_PRIO_NONE },
     { '?', NULL, NULL, pmore_cmd_help, 0, CMD_PRIO_NONE },
@@ -2990,7 +2989,7 @@ const cmd_t pmore_cmds[] = {
 };
 
 const cmd_t pmore_movie_cmds[] = {
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
     { 'p', "播放動畫", "重新播放 ANSI 動畫", pmore_cmd_movie, 0, CMD_PRIO_NORM },
     { 'P', NULL, NULL, pmore_cmd_movie, 0, CMD_PRIO_NONE },
 #endif
@@ -3030,7 +3029,7 @@ _pmore2(
     MmappedFile bkmf;
     MF_PrettyFormattedHeader bkfh;
 
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
     RESET_MOVIE();
 #endif
 
@@ -3080,7 +3079,7 @@ _pmore2(
 
         if (promptend == PMORE_AUTO_EXIT)
         {
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
             if (mfmovie.mode == MFDISP_MOVIE_DETECTED)
             {
                 /* quick auto play */
@@ -3091,10 +3090,10 @@ _pmore2(
                 mf_movieNextFrame();
                 MFDISP_DIRTY();
 
-#ifdef PMORE_AUTOEXIT_FIRSTPAGE
                 // XXX a special case is 'random one frame then stop'.
                 // let's workaround for it.
-                if (mfmovie.mode == MFDISP_MOVIE_YES)
+                if (PMORE_AUTOEXIT_FIRSTPAGE &&
+                    mfmovie.mode == MFDISP_MOVIE_YES)
                 {
                     // re-display the page again!
                     mfmovie.mode = MFDISP_MOVIE_PLAYING;
@@ -3105,15 +3104,12 @@ _pmore2(
                     RESET_MOVIE();
                     break;
                 }
-#endif
                 continue;
 
             } else if (mfmovie.mode != MFDISP_MOVIE_PLAYING)
 #endif
-#ifndef PMORE_AUTOEXIT_FIRSTPAGE
-            if (mf_viewedAll())
-#endif // PMORE_AUTOEXIT_FIRSTPAGE
-            break;
+            if (PMORE_AUTOEXIT_FIRSTPAGE || mf_viewedAll())
+                break;
         }
 
         move(b_lines, 0);
@@ -3123,7 +3119,7 @@ _pmore2(
         // TODO prompt BBS Lua status here.
 #endif // USE_BBSLUA
 
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
         switch (mfmovie.mode)
         {
             case MFDISP_MOVIE_UNKNOWN:
@@ -3263,9 +3259,8 @@ _pmore2(
             };
             if (pmore_dispatch_cmds(pmore_cmds, &cctx) == PSB_NA &&
                 pmore_dispatch_cmds(pmore_movie_cmds, &cctx) == PSB_NA) {
-#ifndef PMORE_IGNORE_UNKNOWN_NAVKEYS
-                return ch;
-#endif
+                if (!PMORE_IGNORE_UNKNOWN_NAVKEYS)
+                    return ch;
             }
             retval = pctx.retval;
             invalidate = cctx.redraw;
@@ -3475,7 +3470,7 @@ pmore_Preference()
 #endif // HAVE_GRAYOUT
 
     // workaround some poor terms: their clrtobot() refresh is buggy.
-#ifdef PMORE_USING_POOR_TERM
+    if (PMORE_USING_POOR_TERM)
     {
         int i = ystart;
         move(i, 0); clrtobot();
@@ -3485,7 +3480,6 @@ pmore_Preference()
             outs(" \n");
         }
     }
-#endif // PMORE_USING_POOR_TERM
 
     while (1)
     {
@@ -3554,7 +3548,7 @@ pmore_Preference()
     }
 }
 
-#ifdef PMORE_USE_INTERNAL_HELP
+#if PMORE_USE_INTERNAL_HELP
 
 // apply system colors if defined
 #ifndef HLP_CATEGORY_COLOR
@@ -3592,7 +3586,7 @@ static const char
 },
 * const hlp_sys[] = {
     "【其它】", NULL,
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
     "  播放動畫    ", "p",
 #endif
     "  選項設定    ", "o",
@@ -3658,7 +3652,7 @@ pmore_Help(void *ctx, int (*help_handler)(int y, void *ctx))
 
 // ---------------------------------------------------- Extra modules
 
-#ifdef PMORE_USE_ASCII_MOVIE
+#if PMORE_USE_ASCII_MOVIE
 void
 mf_float2tv(float f, struct timeval *ptv)
 {
@@ -3691,13 +3685,11 @@ mf_movieWaitKey(struct timeval *ptv, int dorefresh)
     do {
         // Check if something already in input queue,
         // detemine if ok to break.
-#ifdef PMORE_HAVE_VKEY
-        while (vkey_is_typeahead())
+        while (PMORE_HAVE_VKEY && vkey_is_typeahead())
         {
             if (!mf_movieMaskedInput((c = vkey())))
                 return c;
         }
-#endif // PMORE_HAVE_VKEY
 
         // wait for real user interaction
         FD_ZERO(&readfds);
@@ -3739,10 +3731,8 @@ mf_movieWaitKey(struct timeval *ptv, int dorefresh)
     // or weird error (sel < 0)
 
     // sync clock(now) if timeout.
-#ifdef PMORE_HAVE_SYNCNOW
-    if (sel == 0)
+    if (PMORE_HAVE_SYNCNOW && sel == 0)
         syncnow();
-#endif // PMORE_HAVE_SYNCNOW
 
     return (sel == 0) ? MOVIE_KEY_NONE : 1;
 }
