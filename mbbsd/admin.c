@@ -896,8 +896,6 @@ b_gen_brdname_validator(const vform_field_t *field GCC_UNUSED, const void *val_p
     if (orig_bh && orig_bh->brdname[0]) {
         if (strcmp(orig_bh->brdname, val) == 0)
             return NULL;
-        if (!HasUserPerm(PERM_BOARDS))
-            return "只有看板總管才能修改看板名稱";
     }
     if (getbnum(val))
         return "錯誤: 此新看板名已存在";
