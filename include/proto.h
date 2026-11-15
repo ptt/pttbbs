@@ -117,6 +117,7 @@ int reassign_badpost(const char *userid);
 /* bbs */
 int is_file_owner(const fileheader_t *, const userec_t*);
 int is_file_owner_id(const fileheader_t *fhdr, const char *userid);
+int get_post_author_uid(const fileheader_t *fhdr);
 void delete_allpost(const char *userid);
 int del_range(int ent, const fileheader_t *fhdr, const char *direct, const char *backup_direct, const char *modlog_board);
 int mail_removed_post(const char *author, const char *bname, const char *title, const char *reason, const char *path);

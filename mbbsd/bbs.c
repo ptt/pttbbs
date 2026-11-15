@@ -54,6 +54,24 @@ is_file_owner_id(const fileheader_t *fhdr, const char *userid) {
     return is_file_owner(fhdr, &xuser);
 }
 
+// The account that wrote fhdr, or 0 if it is gone: expired IDs and their
+// user slots are given to new accounts, which must not get the mail, fees
+// or bad posts of the old posts.
+int
+get_post_author_uid(const fileheader_t *fhdr)
+{
+    userec_t xuser;
+    time4_t posted = get_fhdr_stamp_ts(fhdr->filename);
+    // An anonymous post keeps its author in multi.anon_uid.
+    int uid = (fhdr->filemode & FILE_ANONYMOUS) ?
+        (int)fhdr->multi.anon_uid : searchuser(fhdr->owner, NULL);
+
+    if (uid <= 0 || passwd_query(uid, &xuser) < 0 || !xuser.userid[0] ||
+        !posted || time4_lt(posted, xuser.firstlogin))
+        return 0;
+    return uid;
+}
+
 /* query money by fileheader pointer.
  * return <0 if money is not valid.
  */
@@ -3581,12 +3599,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         return DONOTHING;
 
     is_anon = (fhdr->filemode & FILE_ANONYMOUS);
-    if(is_anon)
-	/* When the file is anonymous posted, fhdr->multi.anon_uid is author.
-	 * see do_post_article() */
-        tusernum = fhdr->multi.anon_uid;
-    else
-        tusernum = searchuser(fhdr->owner, NULL);
+    tusernum = get_post_author_uid(fhdr);
 
     not_owned = (tusernum == usernum ? 0: 1);
     if (!CBRD_IS_BM() &&

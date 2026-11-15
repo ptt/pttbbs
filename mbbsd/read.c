@@ -53,7 +53,6 @@ typedef struct {
     struct {
         fileheader_t fh;
         int recno;
-        int uid;    // author, or <= 0 if unknown
     } *items;
     int n, max, recno;
 } tag_prune_list_t;
@@ -77,9 +76,6 @@ _iter_collect_tagged(void *ptr, void *opt) {
         return 0;
     l->items[l->n].fh = *fh;
     l->items[l->n].recno = l->recno;
-    /* An anonymous post keeps its author in multi.anon_uid. */
-    l->items[l->n].uid = (fh->filemode & FILE_ANONYMOUS) ?
-        (int)fh->multi.anon_uid : searchuser(fh->owner, NULL);
     l->n++;
     return 0;
 }
@@ -173,7 +169,7 @@ TagPruner(int bid)
     // Mail them back before the files are deleted.
     int mailed = 0;
     for (int i = 0; mail_back && i < list.n; i++) {
-        int uid = list.items[i].uid;
+        int uid = get_post_author_uid(&list.items[i].fh);
         if (uid <= 0 || uid == usernum)
             continue;
         if (mail_removed_post(getuserid(uid), bp->brdname,
