@@ -803,10 +803,10 @@ void set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle);
 #ifndef _BBS_UTIL_C_
 void safe_delete_range(const char *fpath, int id1, int id2);
 #endif
+#endif
 int safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, 
                         const char *newtitle);
 int safe_article_delete_range(const char *direct, int from, int to);
-#endif
 int delete_file(const char *dirname, int size, int ent, int (*filecheck)());
 int delete_range(const char *fpath, int id1, int id2);
 int search_rec(const char* dirname, int (*filecheck)());

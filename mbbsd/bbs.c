@@ -3527,10 +3527,29 @@ del_post_modlog(modlog_t *log, int as_badpost, const fileheader_t *fh)
     modlog_add_post(log, fh);
 }
 
+// The title of a post removed by a moderator, kept in its place: as
+// set_safedel_fhdr() makes it (b_quick_acl() takes the author from it), with
+// the reason. Anonymous authors are not shown.
+static void
+removed_post_title(char *buf, size_t sz, const fileheader_t *fh, int is_anon,
+                   const char *why)
+{
+    if (is_anon)
+        snprintf(buf, sz, "%s%s%s", STR_SAFEREMOVE_TITLE, *why ? ": " : "",
+                 why);
+    else
+        snprintf(buf, sz, "%s <%s>%s%s", STR_SAFEREMOVE_TITLE, fh->owner,
+                 *why ? ": " : "", why);
+    mbs_safe_trim(buf);
+}
+
 static int
 del_post(int ent, fileheader_t * fhdr, char *direct)
 {
-    char	    reason[PROPER_TITLE_LEN] = "";
+    // The title kept in place of a post removed by a moderator (empty for
+    // the default of set_safedel_fhdr()), and whether R changed it.
+    char	    newtitle[TTLEN + 1] = "";
+    bool            custom_title = false;
     char            genbuf[100], newpath[PATHLEN] = "";
     int             not_owned, is_anon, tusernum, del_ret = 0, as_badpost = 0;
     boardheader_t  *bp;
@@ -3621,9 +3640,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         // reasons of Reddit), or else remove_reasons_default.
         y = modlog_ask_reason_list(bp->brdname, y, log_reason,
                                    sizeof(log_reason),
-                                   bp_can && !bp_old ?
-                                   "請選取移除或退文的理由：" :
-                                   "請選取移除的理由：",
+                                   "請選取理由：(在選項上按e可修改預設值, 也可按o輸入一次性理由)" ,
                                    FN_REMOVE_REASONS, remove_reasons_default,
                                    ARRAY_SIZE(remove_reasons_default));
         if (y < 0)
@@ -3660,40 +3677,34 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
         y += 2;
     }
 
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-    // query if user really wants to delete it
-    if (not_owned && !is_anon && fhdr->owner[0])
+    // Removing a post of someone else: show the title kept in its place,
+    // with the reason. R edits it and removes the post without asking
+    // again, as moderators may change the title any time.
+    if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+        not_owned && fhdr->owner[0] && !(currmode & MODE_DIGEST))
     {
-	// manager (bm, sysop, police)
-	do {
-	    getdata(y, 0, "請確定移除(Y/N/R自訂移除後標題)?[N]", genbuf, 3,
-		    LCECHO);
-
-	    // for y/n, skip.
-	    if (genbuf[0] != 'r')
-		break;
-
-	    // build reason string (based on STR_SAFEDEL_TITLE)
-	    SNPRINTF(reason, "(已被%s移除) <%s>",
-		    cuser.userid, fhdr->owner);
-	    getdata_str(y + 1, 0, " >> 請輸入移除後要顯示的標題: □ ",
-		    reason, sizeof(reason), DOECHO, reason);
-
-	    if (!reason[0])
-	    {
-		vmsg("未輸入標題，放棄移除。");
-		genbuf[0] = 'n';
-		break;
-	    }
-
-	    // confirm again!
-	    getdata(y + 2, 0, "請再次確定是否要用上述標題移除(Y/N)?[N]",
-		    genbuf, 3, LCECHO);
-
-	    // since the default y/n is same to MSG_DEL_NY, we reuse the genbuf[0] here.
-	} while (0);
+	removed_post_title(newtitle, sizeof(newtitle), fhdr, is_anon,
+			   log_reason);
+	move(y, 0); clrtobot();
+	if (bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) {
+	    outs("預計移除後的標題：\n  ");
+	    outs(newtitle);
+	} else {
+	    outs("移除後不保留標題，按 R 可修改標題並保留。");
+	}
+	getdata(y + 2, 0, "請確定移除(Y/N/R修改標題)?[N]", genbuf, 3, LCECHO);
+	if (genbuf[0] == 'r') {
+	    char buf[TTLEN + 1];
+	    getdata_str(y + 2, 0, "新標題: ", buf, sizeof(buf), DOECHO,
+			newtitle);
+	    trim(buf);
+	    // Empty for the default title.
+	    if (*buf)
+		STRLCPY(newtitle, buf);
+	    custom_title = true;
+	    genbuf[0] = 'y';
+	}
     } else
-#endif
     {
 	getdata(y, 0, MSG_DEL_NY, genbuf, 3, LCECHO);
     }
@@ -3769,23 +3780,22 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             }
         }
 
-	if(
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-	   ((reason[0] || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
+	if ((IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+            (custom_title || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
             !(currmode & MODE_DIGEST) &&
             !safe_article_delete(ent, fhdr, direct,
-                                 reason[0] ? reason :
+                                 newtitle[0] ? newtitle :
                                  // Anonymous: set_safedel_fhdr() can't tell
                                  // removed from deleted by the author.
                                  (not_owned && is_anon) ?
                                  STR_SAFEREMOVE_TITLE : NULL)) ||
-#endif
             !delete_fileheader(direct, fhdr, ent)) {
             // Right after the .DIR change.
 	    setbtotal(currbid);
 
+            // The reason is appended to the post kept as removed.
             del_ret = cancelpost(direct, fhdr, not_owned,
-                                 newpath, sizeof(newpath), reason);
+                                 newpath, sizeof(newpath), log_reason);
             // delete the file reference in BN_ALLPOST, or delete all related
             // posts if we (SYSOP) are working in a special board like
             // BN_NEWIDPOST.
@@ -3814,9 +3824,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		apply_badpost(getuserid(tusernum), fhdr, newpath, log_reason);
 		outs("原文已隨退文通知寄到作者的信箱。\n");
 	    }
-            if (*newpath && *reason) {
-                file_appendf(newpath, STR_POST_MARK "Delete Reason: %s\n", reason);
-            }
             if (by_mod) {
                 del_post_modlog(&log, as_badpost, &log_fh);
                 modlog(bp->brdname, log_reason, &log);

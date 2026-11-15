@@ -204,7 +204,6 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
     fhdr->modified = now;
 }
 
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 int
 safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, const char *newtitle)
 {
@@ -254,7 +253,6 @@ safe_article_delete_range(const char *direct, int from, int to)
     }
     return -1;
 }
-#endif
 
 // Delete and archive the physical (except header) of file
 //
