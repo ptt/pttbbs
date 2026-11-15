@@ -420,7 +420,9 @@ more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
     int  i = 0, abort = 0, showall = 0, colorize = 0, vk = 0;
     int  lpos[PAGER_MAXLINES] = {0}; // line position
     char buf [ANSILINELEN];
+    bool from_end = (promptend & MORE_FROM_END) != 0;
 
+    promptend &= ~MORE_FROM_END;
     if (!fp) return -1;
     clear();
 
@@ -440,6 +442,8 @@ more_ex(const char *fpath, int promptend, const more_hooks_t *hooks)
 	   fgets(buf, sizeof(buf), fp) != NULL)
 	lpos[++lines] = ftell(fp);
     rewind(fp);
+    if (from_end && lines > t_lines-1)
+	lineno = lines-(t_lines-1);
 
     while (!abort)
     {

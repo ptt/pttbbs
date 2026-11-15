@@ -652,6 +652,10 @@ void m_sob_brd(char *bname,char *fromdir);
 #endif
 
 /* pager (more) */
+/* The promptend of more(), more_ex(), more_inmemory(), pmore() and pmore2*()
+ * is YEA or NA, or'ed with this to open at the last page, e.g. for logs that
+ * grow at their end. */
+#define MORE_FROM_END   (0x100)
 int more(const char *fpath, int promptend) EXCLUDES_ABORT_BLOCK;
 /* Readers (posts, mails, the announce) use more_ex() with these. */
 struct live_ctx;

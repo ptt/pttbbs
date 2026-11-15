@@ -104,7 +104,7 @@
 #define PMORE_IGNORE_UNKNOWN_NAVKEYS    // does not return for all unknown keys
 // #define PMORE_USE_INTERNAL_HELP      // display pmore internal help
 //#define PMORE_RESTRICT_ANSI_MOVEMENT  // user cannot use ANSI escapes to move
-#define PMORE_ACCURATE_WRAPEND          // try more harder to find file end in wrap mode
+#define PMORE_ACCURATE_WRAPEND 1        // try more harder to find file end in wrap mode
 #define PMORE_AUTOEXIT_FIRSTPAGE        // when prompt=NA, show only page 1
 #define PMORE_TRADITIONAL_FULLCOL       // to work with traditional ascii arts
 #define PMORE_OVERRIDE_TIME             // override time format if possible
@@ -2632,6 +2632,25 @@ typedef struct {
 } pmore_exec_ctx_t;
 
 /*
+ * Moves to the last page (the End key). In wrap mode mf.maxdisps may stop
+ * short of the end, so with PMORE_ACCURATE_WRAPEND the page is shown to find
+ * out, and moved again if needed. Returns whether the screen already shows the
+ * last page (so it needs no redraw).
+ */
+MFFPROTO int
+mf_goEnd(void)
+{
+    mf_goBottom();
+    if (!IS_ENABLED(PMORE_ACCURATE_WRAPEND))
+        return 0;
+    mf_display();
+    if (mf_viewedAll())
+        return 1;
+    mf_goBottom();
+    return 0;
+}
+
+/*
  * For the caller's live mode, which takes over the screen after leaving pmore:
  * show the last page and give on_live the screen row below its content (live
  * output continues there, then scrolls), the file size shown and the comment
@@ -2732,16 +2751,7 @@ pmore_cmd_home(cmd_ctx_t *ctx GCC_UNUSED)
 MFPROTO int
 pmore_cmd_end(cmd_ctx_t *ctx)
 {
-    mf_goBottom();
-#ifdef PMORE_ACCURATE_WRAPEND
-    mf_display();
-    ctx->redraw = false;
-    if (mf_viewedAll())
-        return 0;
-
-    mf_goBottom();
-    ctx->redraw = true;
-#endif
+    ctx->redraw = !mf_goEnd();
     return 0;
 }
 
@@ -3006,8 +3016,10 @@ _pmore2(
     int flExit = 0, retval = 0;
     int ch = 0;
     int invalidate = 1;
+    bool from_end = (promptend & MORE_FROM_END) != 0;
 
     assert(cb);
+    promptend &= ~MORE_FROM_END;
 
     /* simple re-entrant hack
      * I don't want to write pointers everywhere,
@@ -3045,6 +3057,9 @@ _pmore2(
     }
 
     clear();
+
+    if (from_end)
+        mf_goEnd();
 
     /* The caller may leave at once, e.g. to go straight to its live mode. */
     if (cb->start && (retval = cb->start(ctx)) != 0)

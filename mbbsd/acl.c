@@ -1140,7 +1140,7 @@ int
 modlog_view(const char *bname, int secure)
 {
     if (more(TEMP_BFILE(bname, secure ? FN_MODLOG_AUDIT :
-                                        FN_MODLOG), YEA) == -1)
+                                        FN_MODLOG), YEA | MORE_FROM_END) == -1)
         vmsg("目前尚無管理紀錄。");
     return 0;
 }
