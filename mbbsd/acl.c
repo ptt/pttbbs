@@ -1550,23 +1550,87 @@ muted_history_view(const char *bname)
         vmsg("目前尚無禁言紀錄。");
 }
 
+// The largest public modlog that may be edited, as the editor keeps it all
+// in memory (the EDIT_SIZE_LIMIT of the editor).
+#define MODLOG_EDIT_SIZE_LIMIT (65536 * 1024)
+
+// Whether the file a has the same content as the first n bytes of b.
+static bool
+file_is_prefix(const char *a, const char *b, off_t n)
+{
+    char ba[8192], bb[8192];
+    FILE *fa = fopen(a, "r"), *fb = fopen(b, "r");
+    bool same = fa && (fb || n == 0);
+    size_t ra;
+
+    while (same && (ra = fread(ba, 1, sizeof(ba), fa)) > 0) {
+        if ((off_t)ra > n || fread(bb, 1, ra, fb) != ra ||
+            memcmp(ba, bb, ra) != 0)
+            same = false;
+        n -= ra;
+    }
+    if (n != 0)
+        same = false;
+    if (fa)
+        fclose(fa);
+    if (fb)
+        fclose(fb);
+    return same;
+}
+
 // Moderators may freely change the public modlog, but the audit
-// record keeps that they did.
+// record keeps that they did. It may have any number of lines. A copy is
+// edited, and the records appended to the modlog meanwhile (which only
+// appends) are put after it, so they are not lost.
 int
 modlog_edit(const char *bname)
 {
-    struct stat st0, st1;
+    struct stat st;
+    char tmp[PATHLEN];
+    off_t size0 = 0;
     AUTO_BFILE(fpath, bname, FN_MODLOG);
-    int had0 = (stat(fpath, &st0) == 0);
 
-    if (veditfile(fpath) < 0)
+    if (stat(fpath, &st) == 0) {
+        if (st.st_size > MODLOG_EDIT_SIZE_LIMIT) {
+            vmsg("管理紀錄太大，無法編輯。");
+            return 0;
+        }
+        size0 = st.st_size;
+    }
+    snprintf(tmp, sizeof(tmp), "%s.edit.%d", fpath, (int)getpid());
+    if (size0 > 0 ? Copy(fpath, tmp) < 0 : unlink(tmp) < 0 && errno != ENOENT) {
+        vmsg("無法編輯管理紀錄，請稍候再試。");
         return 0;
+    }
+    if (vedit2(tmp, NA, NULL, EDITFLAG_UNLIMITED) < 0 ||
+        file_is_prefix(tmp, fpath, size0)) {
+        unlink(tmp);
+        return 0;
+    }
 
-    int had1 = (stat(fpath, &st1) == 0);
-    if (had0 == had1 && (!had1 ||
-        (st0.st_ino == st1.st_ino && st0.st_size == st1.st_size &&
-         st0.st_mtime == st1.st_mtime)))
+    // What was recorded while editing, on lines of its own.
+    if (stat(fpath, &st) == 0 && st.st_size > size0) {
+        if (dashs(tmp) > 0) {
+            int fd = open(tmp, O_RDWR);
+            char c = '\n';
+            if (fd >= 0) {
+                if (lseek(fd, -1, SEEK_END) >= 0 && read(fd, &c, 1) == 1 &&
+                    c != '\n')
+                    write(fd, "\n", 1);
+                close(fd);
+            }
+        }
+        if (AppendTail(fpath, tmp, (int)size0) < 0) {
+            unlink(tmp);
+            vmsg("無法儲存管理紀錄，請稍候再試。");
+            return 0;
+        }
+    }
+    if (Rename(tmp, fpath) < 0) {
+        unlink(tmp);
+        vmsg("無法儲存管理紀錄，請稍候再試。");
         return 0;
+    }
 
     syncnow();
     file_appendf(TEMP_BFILE(bname, FN_MODLOG_AUDIT),
