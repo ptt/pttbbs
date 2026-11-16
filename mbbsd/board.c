@@ -904,6 +904,18 @@ bcfg_set_comment_readonly(cmd_ctx_t *ctx)
 }
 #endif
 
+#if IS_ENABLED(CONFIG_RATING)
+static int
+bcfg_set_score(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    cx->bp->brdattr ^= BRD_SCORE;
+    cx->touched = 1;
+    ctx->reload = true;
+    return 0;
+}
+#endif
+
 static int
 bcfg_set_norecommend(cmd_ctx_t *ctx)
 {
@@ -1327,6 +1339,9 @@ static const BConfigItem bconfig_items[] = {
 #endif
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_no_downvote, bcfg_set_no_downvote },
+#endif
+#if IS_ENABLED(CONFIG_RATING)
+    { 'z', "文章評分 (推噓與推文分開)", ANSI_COLOR(1) "開放" ANSI_RESET, "不開放", BRD_SCORE, PERM_BM, NULL, bcfg_set_score },
 #endif
     { 'f', "快速連推文章", NULL, NULL, 0, PERM_BM, bcfg_get_fastrecmd, bcfg_set_fastrecmd },
     { 'i', "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_COMMENT_SHOWIP, PERM_BM, NULL, bcfg_set_commentshowip },

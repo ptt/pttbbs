@@ -52,7 +52,20 @@ static const bof_storage_ops_t counting_ops = {
     .find_post = kept_find_post,
 };
 
-// A backend that takes any change of a board.
+// A backend that keeps one vote, and takes any change of a board.
+static bof_error_t
+one_post_like(void *ctx GCC_UNUSED, const bof_list_post_likes_t *req GCC_UNUSED,
+              bof_list_post_likes_response_t *out)
+{
+    memset(out->post_likes, 0, sizeof(*out->post_likes));
+    strlcpy(out->post_likes[0].creator, "voter",
+            sizeof(out->post_likes[0].creator));
+    strlcpy(out->post_likes[0].bbs_from, "10.0.0.9",
+            sizeof(out->post_likes[0].bbs_from));
+    out->count = out->bbs_total = 1;
+    return BOF_OK;
+}
+
 static bof_error_t
 count_remove_community(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
                        const bof_remove_community_t *req GCC_UNUSED,
@@ -73,6 +86,7 @@ count_rename_community(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED
 static const bof_storage_ops_t board_ops = {
     .name = "boards",
     .find_post = kept_find_post,
+    .list_post_likes = one_post_like,
     .remove_community = count_remove_community,
     .rename_community = count_rename_community,
 };
@@ -413,18 +427,25 @@ test_muted(void)
 }
 
 // Changing boards is for admins, group leads (removing) and group
-// operators (renaming). Uses the groups of test_group_roles().
+// operators (renaming); where votes came from, for admins. Uses the groups
+// of test_group_roles().
 static void
-test_admins(void)
+test_admins_and_privacy(void)
 {
     bof_person_t user = person("user", PERM_BASIC | PERM_LOGINOK, 1600000000);
     bof_person_t lead = person("lead", PERM_BASIC | PERM_LOGINOK, 1700000000);
     bof_person_t op = person("op", PERM_BASIC | PERM_LOGINOK, 1600000000);
+    bof_person_t sysop = person("sysop", PERM_BASIC | PERM_SYSOP, 1500000000);
     bof_actor_t me = { .name = "user", .bbs_person = &user };
     bof_remove_community_t rm = { .community = "Leaf", .removed = 1 };
     bof_bbs_rename_community_t rn = { .community = "Leaf", .new_name = "Leaf2" };
+    fileheader_t post;
+    bof_post_like_t like;
+    bof_list_post_likes_t lr = { .limit = 1 };
+    bof_list_post_likes_response_t lres = { .post_likes = &like };
 
     op.bbs_local_user = (uint64_t)1600000000 << 32 | 6;
+    sysop.admin = 1;
     bcache[3].brdattr = BRD_GROUPBOARD;
     bcache[4].moderators[0].unum = 0;
     // Found by name too: in the order of names.
@@ -445,6 +466,17 @@ test_admins(void)
     EXPECT_OK(bof_remove_community(&me, &rm, NULL));
     EXPECT_INT(writes, 2);
 
+    memset(&post, 0, sizeof(post));
+    strlcpy(post.filename, "M.1700000000.A.000", sizeof(post.filename));
+    lr.post.community = "Leaf";
+    lr.post.bbs_header = &post;
+    me.bbs_person = &user;
+    EXPECT_OK(bof_list_post_likes(&me, &lr, &lres));
+    EXPECT_STR(like.creator, "voter");
+    EXPECT_STR(like.bbs_from, "");
+    me.bbs_person = &sysop;
+    EXPECT_OK(bof_list_post_likes(&me, &lr, &lres));
+    EXPECT_STR(like.bbs_from, "10.0.0.9");
     bof_storage_reset();
 }
 
@@ -457,7 +489,7 @@ main(void)
     RUN(test_rules);
     RUN(test_muted);
     RUN(test_group_roles);
-    RUN(test_admins);
+    RUN(test_admins_and_privacy);
     free(SHM);
     return bof_test_report();
 }

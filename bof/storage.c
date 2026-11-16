@@ -585,6 +585,28 @@ bof_create_post_like(const bof_actor_t *actor,
     return WRITE(create_post_like, out ? out : &local, actor, req);
 }
 
+bof_error_t
+bof_list_post_likes(const bof_actor_t *actor,
+                    const bof_list_post_likes_t *req,
+                    bof_list_post_likes_response_t *out)
+{
+    const bof_person_t *p = person_of(actor);
+    bof_error_t err;
+
+    if (!req || req->page < 0 || req->limit <= 0 || !out || !out->post_likes)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    out->count = out->bbs_total = 0;
+    GATE_POST(bof_list_post_likes_t, post);
+    CHECK(actor, req->post.community, MAY_READ, NULL);
+    if ((err = READ(list_post_likes, req, out)) != BOF_OK)
+        return err;
+    // Where the votes came from is private.
+    if (p && !p->admin && !(p->bbs_perms & PERM_SYSOP))
+        for (int i = 0; i < out->count; i++)
+            out->post_likes[i].bbs_from[0] = '\0';
+    return BOF_OK;
+}
+
 /* ------------------------------------------------------------------------
  * Comments
  * ------------------------------------------------------------------------ */

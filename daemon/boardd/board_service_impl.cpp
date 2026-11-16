@@ -110,12 +110,19 @@ Status BoardServiceImpl::Board(ServerContext * /*context*/,
   return Status::OK;
 }
 
-Post AsPost(size_t index, const fileheader_t &fh) {
+// With ratings (CONFIG_RATING), boards that rate posts (BRD_SCORE) list
+// (and search by) their score as their ratings, and other boards the number
+// of comments, as mbbsd lists them; else the score.
+bool RatingsByComments(const boardheader_t *bp) {
+  return IS_ENABLED(CONFIG_RATING) && bp && !(bp->brdattr & BRD_SCORE);
+}
+
+Post AsPost(const boardheader_t *bp, size_t index, const fileheader_t &fh) {
   Post p;
   p.set_index(index);
   p.set_filename(fh.filename);
   p.set_raw_date(strings::b2u(fh.date));
-  p.set_num_ratings(fh.score);
+  p.set_num_ratings(RatingsByComments(bp) ? fh.comments : fh.score);
   p.set_filemode(fh.filemode);
   p.set_owner(strings::b2u(fh.owner));
   p.set_title(strings::b2u(fh.title));
@@ -142,7 +149,7 @@ Status BoardServiceImpl::List(ServerContext * /*context*/,
         paths::bfile(bp->brdname, FN_DIR), req->offset(), length, &fhs);
     for (auto &fh : fhs) {
       mbs_safe_trim(fh.title);
-      AsPost(offset++, fh).Swap(rep->add_posts());
+      AsPost(bp, offset++, fh).Swap(rep->add_posts());
     }
   }
   // Bottoms.
@@ -158,7 +165,7 @@ Status BoardServiceImpl::List(ServerContext * /*context*/,
       if (fhs.empty())
         continue;
       mbs_safe_trim(fhs[0].title);
-      AsPost(offset, fhs[0]).Swap(rep->add_bottoms());
+      AsPost(bp, offset, fhs[0]).Swap(rep->add_bottoms());
     }
   }
   return Status::OK;
@@ -248,7 +255,8 @@ void SetPredicateKeyword(fileheader_predicate_t *pred,
   strlcpy(pred->keyword, strings::u2b(utf8_str).c_str(), sizeof(pred->keyword));
 }
 
-Status SetPredicate(const SearchFilter &filter, fileheader_predicate_t *pred) {
+Status SetPredicate(const SearchFilter &filter, const boardheader_t *bp,
+                    fileheader_predicate_t *pred) {
   memset(pred, 0, sizeof(*pred));
   switch (filter.type()) {
     case SearchFilter::TYPE_EXACT_TITLE:
@@ -267,9 +275,16 @@ Status SetPredicate(const SearchFilter &filter, fileheader_predicate_t *pred) {
       break;
 
     case SearchFilter::TYPE_RATING:
-      pred->mode = RS_SCORE;
-      pred->score = filter.number_data();
-      SetPredicateKeyword(pred, std::to_string(pred->score));
+      if (RatingsByComments(bp)) {
+        pred->mode = RS_COMMENTS;
+        pred->comments = filter.number_data();
+        pred->score = pred->comments;
+        SetPredicateKeyword(pred, std::to_string(pred->comments));
+      } else {
+        pred->mode = RS_SCORE;
+        pred->score = filter.number_data();
+        SetPredicateKeyword(pred, std::to_string(pred->score));
+      }
       break;
 
     case SearchFilter::TYPE_MONEY:
@@ -315,7 +330,7 @@ Status BoardServiceImpl::Search(ServerContext * /*context*/,
   fileheader_predicate_t preds[MAX_SEARCH_PREDICATES];
   int num_preds = 0;
   for (const auto &filter : req->filter()) {
-    RETURN_ON_FAIL(SetPredicate(filter, &preds[num_preds++]));
+    RETURN_ON_FAIL(SetPredicate(filter, bp, &preds[num_preds++]));
   }
 
   std::string dir_path = paths::bfile(bp->brdname, FN_DIR);
@@ -361,7 +376,7 @@ Status BoardServiceImpl::Search(ServerContext * /*context*/,
       if (!fh.filename[0] || !is_valid_fileheader(&fh))
         continue;
       mbs_safe_trim(fh.title);
-      AsPost(recno - 1, fh).Swap(rep->add_posts());
+      AsPost(bp, recno - 1, fh).Swap(rep->add_posts());
     }
     if (fd != -1) {
       close(fd);

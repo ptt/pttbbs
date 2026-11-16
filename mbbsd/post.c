@@ -105,3 +105,41 @@ CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
 
     return 0;
 }
+
+// Votes on a post apart from comments (Lemmy's CreatePostLike, for
+// CONFIG_RATING): vote is +1, -1 or 0 to take it back. fhdr gets the new
+// score. Returns 0, 1 if the vote did not change the score (the same vote
+// again), -2 if the storage keeps votes only with comments (the files
+// backend: bbs_storage_not_supported), or -1.
+int
+VotePostRecord(const char *board, const char *direct, fileheader_t *fhdr,
+               int ent, int vote)
+{
+    bof_actor_t me = mbbsd_actor(board, false);
+    bof_create_post_like_t req = {
+        .post = {
+            .community = board, .bbs_dir = direct, .bbs_index = ent,
+            .bbs_header = fhdr,
+        },
+        .score = vote,
+    };
+    fileheader_t updated = *fhdr;
+    bof_post_like_response_t res = { .bbs_header = &updated };
+    bof_error_t err = bof_create_post_like(&me, &req, &res);
+
+    if (err == BOF_ERR_BBS_STORAGE_NOT_SUPPORTED)
+        return -2;
+    if (err != BOF_OK)
+        return -1;
+    if (res.bbs_score_delta == 0 && vote != 0)
+        return 1;
+    if (ent > 0) {
+        *fhdr = updated;
+    } else {
+        int v = (int)fhdr->score + res.bbs_score_delta;
+        fhdr->score = v < -32768 ? -32768 : v > 32767 ? 32767 : v;
+    }
+    if (direct && ent > 0)
+        post_record_changed(direct, ent, fhdr);
+    return 0;
+}

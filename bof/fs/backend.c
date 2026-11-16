@@ -47,6 +47,8 @@ const bof_storage_ops_t bof_storage_files = {
     // Comments in files keep no revisions of their own.
     .get_comment_revisions = NULL,
     .list_reports = bof_fs_list_reports,
+    // Votes are kept only with comments in files.
+    .list_post_likes = NULL,
     .post_version_matches = bof_fs_post_version_matches,
     .refresh_post = bof_fs_refresh_post,
     // A record of the files has no room for an ID.

@@ -127,6 +127,9 @@ typedef struct bof_storage_ops_t {
         bof_get_comment_revisions_response_t *out);
     bof_error_t (*list_reports)(void *ctx, const bof_list_reports_t *req,
                                 bof_list_reports_response_t *out);
+    bof_error_t (*list_post_likes)(void *ctx,
+                                   const bof_list_post_likes_t *req,
+                                   bof_list_post_likes_response_t *out);
     /* 1 if the post still has the content of ver, else 0. */
     int (*post_version_matches)(void *ctx, const bof_post_ref_t *post,
                                 const bof_post_version_t *ver);

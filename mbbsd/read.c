@@ -919,6 +919,15 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 		     keyword, 7, LCECHO) ||
 	    (pred->score = atoi(keyword)) == 0)
 	    return READ_REDRAW;
+    } else if (sr_mode & RS_COMMENTS) {
+	if (currstat == RMAIL ||
+	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
+		     "增加條件 推文數: " :
+		     "搜尋推文數高於多少的文章: ",
+		     keyword, 7, NUMECHO) ||
+	    (pred->comments = atoi(keyword)) <= 0)
+	    return READ_REDRAW;
+	pred->score = pred->comments;
     } else if (sr_mode & RS_MONEY) {
 	if (currstat == RMAIL ||
 	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
@@ -1419,7 +1428,12 @@ static int
 read_cmd_search_comment(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    read_apply_mode(cx, ctx, select_read(cx, RS_SCORE));
+    // With ratings (CONFIG_RATING), boards that do not rate posts list
+    // (and so search) the number of comments.
+    const boardheader_t *bp = IS_ENABLED(CONFIG_RATING) && currbid > 0 ?
+                              getbcache(currbid) : NULL;
+    read_apply_mode(cx, ctx, select_read(cx, bp && !(bp->brdattr & BRD_SCORE) ?
+                                         RS_COMMENTS : RS_SCORE));
     return 0;
 }
 

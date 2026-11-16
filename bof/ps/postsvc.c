@@ -411,6 +411,56 @@ ps_create_post_like(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 }
 
 static bof_error_t
+ps_list_post_likes(void *ctx GCC_UNUSED, const bof_list_post_likes_t *req,
+                   bof_list_post_likes_response_t *out)
+{
+    const bof_post_ref_t *post = &req->post;
+    int first = (req->page > 0 ? req->page - 1 : 0) * req->limit;
+    char cmd[256], *r, *line;
+    int total = 0;
+
+    if (!valid(post))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // LIST_POST_LIKES_FILE <community> <file>: OK <n>, then a line per vote:
+    // <name> TAB <person_id> TAB <score> TAB <time> TAB <ip>.
+    snprintf(cmd, sizeof(cmd), "LIST_POST_LIKES_FILE %s %s\n", post->community,
+             post->bbs_header->filename);
+    r = svc_call(cmd, NULL, 0, NULL, 0);
+    if (!r || sscanf(r, "OK %d", &total) != 1) {
+        free(r);
+        return BOF_ERR_COULDNT_FIND_POST;
+    }
+    line = strchr(r, '\n');
+    for (int i = 0; line && *++line && i < total; i++) {
+        char *next = strchr(line, '\n');
+        if (next)
+            *next = '\0';
+        if (i >= first && out->count < req->limit) {
+            bof_post_like_t *v = &out->post_likes[out->count];
+            char name[16] = "", from[40] = "";
+            unsigned long long id = 0;
+            long long when = 0;
+            int score = 0;
+
+            if (sscanf(line, "%15[^\t]\t%llu\t%d\t%lld\t%39s", name, &id,
+                       &score, &when, from) >= 4) {
+                memset(v, 0, sizeof(*v));
+                strlcpy(v->creator, name, sizeof(v->creator));
+                v->bbs_local_user = id;
+                v->score = score;
+                v->published = (int32_t)when;
+                strlcpy(v->bbs_from, from, sizeof(v->bbs_from));
+                out->count++;
+            }
+        }
+        line = next;
+    }
+    out->bbs_total = total;
+    free(r);
+    return BOF_OK;
+}
+
+static bof_error_t
 ps_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
              const bof_edit_post_t *req, bof_post_response_t *out)
 {
@@ -1497,6 +1547,7 @@ const bof_storage_ops_t bof_storage_postsvc = {
     .write_modlog = bof_fs_write_modlog,
     .note_modlog_edit = bof_fs_note_modlog_edit,
     .list_reports = bof_fs_list_reports,
+    .list_post_likes = ps_list_post_likes,
     // Read from the cache.
     .get_posts = bof_fs_get_posts,
     .get_post = bof_fs_get_post,

@@ -67,7 +67,7 @@ message Post {
     uint32 index = 1;
     string filename = 2;
     string raw_date = 3;
-    int32 num_ratings = 4;
+    int32 num_ratings = 4;      // as mbbsd lists them: with CONFIG_RATING, the score on BRD_SCORE boards and the comments on others; else the score
     int32 filemode = 5;
     string owner = 6;
     string title = 7;

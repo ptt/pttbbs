@@ -294,6 +294,61 @@ test_votes(void)
 }
 
 static void
+test_list_post_likes(void)
+{
+    fileheader_t fh = make_post("M.310.A.AAA"), recs[8];
+    int n = read_dir(recs, 8);
+    bof_post_like_t likes[2];
+    bof_list_post_likes_t req = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = n,
+            .bbs_header = &fh,
+        },
+        .limit = 2,
+    };
+    bof_list_post_likes_response_t res = { .post_likes = likes };
+    bof_person_t user = { .name = "alice" };
+    bof_actor_t person = alice;
+
+    forget();
+    reply("LIST_POST_LIKES_FILE", "OK 3\n"
+          "alice\t42\t1\t1700000000\t10.0.0.1\n"
+          "bob\t43\t-1\t1700000001\t10.0.0.2\n"
+          "carol\t44\t0\t1700000002\t-");
+    EXPECT_OK(bof_list_post_likes(&alice, &req, &res));
+    EXPECT(received("LIST_POST_LIKES_FILE " BOARD " M.310.A.AAA"));
+    EXPECT_INT(res.bbs_total, 3);
+    EXPECT_INT(res.count, 2);
+    EXPECT_STR(likes[0].creator, "alice");
+    EXPECT_INT(likes[0].bbs_local_user, 42);
+    EXPECT_INT(likes[0].score, 1);
+    EXPECT_INT(likes[0].published, 1700000000);
+    EXPECT_STR(likes[0].bbs_from, "10.0.0.1");
+    EXPECT_INT(likes[1].score, -1);
+
+    // The second page.
+    req.page = 2;
+    EXPECT_OK(bof_list_post_likes(&alice, &req, &res));
+    EXPECT_INT(res.count, 1);
+    EXPECT_STR(likes[0].creator, "carol");
+    EXPECT_INT(likes[0].score, 0);
+
+    // Where they came from is for admins only. (Without a board cache, the
+    // board cannot be found for a person: only the files backend is tried
+    // here for that.)
+    person.bbs_person = &user;
+    req.page = 1;
+    EXPECT_INT(bof_list_post_likes(&person, &req, &res),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+
+    // Votes kept with comments only: not in the files.
+    bof_storage_set(&bof_storage_files, NULL);
+    EXPECT_INT(bof_list_post_likes(&alice, &req, &res),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    bof_storage_set(&bof_storage_postsvc, NULL);
+}
+
+static void
 test_body_and_refresh(void)
 {
     fileheader_t fh = make_post("M.400.A.AAA");
@@ -735,6 +790,7 @@ main(void)
     RUN(test_create_post);
     RUN(test_comments);
     RUN(test_votes);
+    RUN(test_list_post_likes);
     RUN(test_body_and_refresh);
     RUN(test_purge);
     RUN(test_delete_and_remove);

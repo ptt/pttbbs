@@ -239,6 +239,8 @@ int PostAddRecord(const char *board, fileheader_t *fhdr,
                   const char *content_path);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
+int VotePostRecord(const char *board, const char *direct, fileheader_t *fhdr,
+                   int ent, int vote);
 void post_record_changed(const char *direct, int ent, const fileheader_t *fhdr);
 void post_file_of(const char *board, const fileheader_t *fh, char *path, size_t sz);
 

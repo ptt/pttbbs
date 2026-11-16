@@ -685,6 +685,37 @@ bof_error_t bof_create_post_like(const bof_actor_t *actor,
                                  const bof_create_post_like_t *req,
                                  bof_post_like_response_t *out);
 
+/* Lemmy's ListPostLikes: who voted on a post and how, page by page, where
+ * the backend keeps votes apart from comments (post.svc); the files backend
+ * gives bbs_storage_not_supported. Unlike Lemmy, which shows them only to
+ * moderators and admins, anyone who may read the board sees them, as
+ * anyone sees the pushes and boos of a post on PTT; where a vote came from
+ * (bbs_from) is private, for admins only (left empty for an actor with a
+ * person who is not one). */
+typedef struct bof_post_like_t {
+    char creator[16];          /* the BBS userid (Lemmy's creator.name) */
+    uint64_t bbs_local_user;   /* the account (see bof_actor_t) */
+    int score;                 /* +1, -1, or 0: taken back */
+    int32_t published;         /* when */
+    char bbs_from[40];         /* where from (an IP) */
+} bof_post_like_t;
+
+typedef struct bof_list_post_likes_t {
+    bof_post_ref_t post;
+    int page;                  /* 1-based, of limit each; 0: the first */
+    int limit;
+} bof_list_post_likes_t;
+
+typedef struct bof_list_post_likes_response_t {
+    bof_post_like_t *post_likes;   /* by the caller, room for limit */
+    int count;
+    int bbs_total;                 /* of all pages */
+} bof_list_post_likes_response_t;
+
+bof_error_t bof_list_post_likes(const bof_actor_t *actor,
+                                const bof_list_post_likes_t *req,
+                                bof_list_post_likes_response_t *out);
+
 /* PTT: whether the content of a post is still of version ver (see
  * bof_bbs_get_post_body()), to tell early that an edit would fail. */
 int bof_bbs_post_version_matches(const bof_post_ref_t *post,
