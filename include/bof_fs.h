@@ -8,7 +8,7 @@
  * The operations of bof_storage_files (bof/fs/): the calls of bof.h of
  * the same names (without bof_fs_), with the context of the backend
  * first. A backend that keeps the files of the boards as its cache (as
- * post.svc's does, bof/ps/ in pttbbs.cmd) calls them to keep the cache in
+ * post.svc's does, bof/ps/) calls them to keep the cache in
  * step, or uses them as its own operations where the files are what it
  * has. Lower than these, the primitives of the files themselves are in
  * bof_files.h.

@@ -75,10 +75,9 @@ what BoF does only in part. See `README.md` for what BoF is.
   Reddit list such feeds without copies.
 - `readmarks.c` is from PTT BBS and only under the GPL version 2; rewrite
   it to have all of BoF under both licenses.
-- **The post.svc backend** (`bof_storage_postsvc`, `bof/ps/` in
-  pttbbs.cmd): done, with the files of the boards as its cache (post.svc
-  writes the articles; the backend updates `.DIR` with the files backend,
-  `include/bof_fs.h`). Still to do: tests against a running post.svc, and
+- **The post.svc backend** (`bof_storage_postsvc`, `bof/ps/`): done, with
+  the files of the boards as its cache (post.svc writes the articles; the
+  backend updates `.DIR` with the files backend, `include/bof_fs.h`). Still to do: tests against a running post.svc, and
   a tool to bring the cache in step again from what it logs
   (`BOF_STORAGE_LOG`; post.svc has `sync-dir`).
 - **The read records** (`readmarks.c`) are kept by BoF for the person in

@@ -179,9 +179,9 @@ keeping the BBS working exactly as before:
 4. **Listings** -- the post list and read records *(done)*.
 5. **Storage virtualization** -- the files backend behind it *(done)*;
    `pttbbs.conf` picks the default backend (`BOF_DEFAULT_STORAGE`). The
-   `post.svc` backend lives where `post.svc` does (pttbbs.cmd): post.svc
-   is the database, and the files of the boards are its cache, which BoF
-   reads directly.
+   `post.svc` backend (`bof/ps/`) is there, off unless a site turns
+   post.svc on: post.svc is the database, and the files of the boards are
+   its cache, which BoF reads directly.
 6. **Communities** -- boards and moderators: read *(done)*; changing them
    next.
 7. **People** -- accounts read *(done)*; in a database, with Lemmy person
@@ -219,7 +219,7 @@ The sources are in three parts:
 | `bof/` | The core: the API, its checks and the backend in use (`storage.c`), communities and persons (`people.c`), the rules of the BBS (`policy.c`), the records of the modlog (`modlog.c`), the read records (`readmarks.c`), error names (`bof.c`), opening for gateways (`gateway.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h), [`include/bof_gateway.h`](../include/bof_gateway.h) |
 | `bof/files/` | The files of a BBS, as primitives with no actor or rules: records of lists, the content of posts, the line of a comment, aggregate boards, the time capsule | [`include/bof_files.h`](../include/bof_files.h) |
 | `bof/fs/` | The files backend (`bof_storage_files`): the calls of the API done with the files | [`include/bof_fs.h`](../include/bof_fs.h) |
-| `bof/ps/` | The post.svc backend, in pttbbs.cmd where post.svc is: post.svc, with the files backend as its cache | |
+| `bof/ps/` | The post.svc backend (`bof_storage_postsvc`): post.svc, with the files backend as its cache; not the default | [`include/bof_storage.h`](../include/bof_storage.h) |
 
 BoF sources are plain ASCII C (Big5 texts are macros in
 `include/common.h`); they use the shared headers in `include/` and the

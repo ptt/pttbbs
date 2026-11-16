@@ -10,9 +10,9 @@ FILES_SRCS:=	files/comment.c files/content.c files/crosspost.c \
 		files/record.c files/timecap.c
 FS_SRCS:=	fs/backend.c fs/comment.c fs/content.c fs/crosspost.c \
 		fs/listing.c fs/modlog.c fs/post.c fs/report.c
-# Other backends live where their services are, e.g. post.svc's in
-# bof/ps/ of pttbbs.cmd; whatever is there is built in.
-PS_SRCS:=	$(sort $(wildcard ps/*.c))
+# The post.svc backend (bof_storage_postsvc); the default backend stays
+# the files one unless pttbbs.conf says otherwise.
+PS_SRCS:=	ps/postsvc.c
 SRCS:=	$(CORE_SRCS) $(FILES_SRCS) $(FS_SRCS) $(PS_SRCS)
 LIB:=	libbof.a
 # For programs other than the BBS (gateways): BoF, a way to open it, and
@@ -21,7 +21,8 @@ GATEWAY_LIB:=	libbof_gateway.a
 OBJS:=	$(SRCS:.c=.o)
 
 TESTS:=	tests/test_bof tests/test_post tests/test_modlog tests/test_readmarks \
-		tests/test_storage tests/test_people tests/test_gateway
+		tests/test_storage tests/test_people tests/test_gateway \
+		tests/test_postsvc
 TEST_LDFLAGS:=	-L. -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
 		-L$(SRCROOT)/common/osdep
 TEST_LDLIBS:=	-lbof -lcmbbs -lcmsys -losdep $(LDLIBS)
