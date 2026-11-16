@@ -570,70 +570,9 @@ void delete_board_link(boardheader_t *bh, int bid)
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     STRLCPY(bname, bh->brdname);
     memset(bh, 0, sizeof(boardheader_t));
-    substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
-    reset_board(bid);
+    save_board_header(bid, bh);
     sort_bcache();
     log_usies("DelLink", bname);
-}
-
-int dir_cmp(const void *a, const void *b)
-{
-    const fileheader_t *fa = a, *fb = b;
-    return time4_cmp(get_fhdr_stamp_ts(fa->filename),
-                     get_fhdr_stamp_ts(fb->filename));
-}
-
-void merge_dir(const char *dir1, const char *dir2, int isoutter)
-{
-     int i, pn, sn;
-     fileheader_t *fh;
-     char *p1, *p2, file1[PATHLEN], file2[PATHLEN];
-     STRLCPY(file1, dir1);
-     STRLCPY(file2, dir2);
-     if((p1=strrchr(file1,'/')))
-	 p1 ++;
-     else
-	 p1 = file1;
-     if((p2=strrchr(file2,'/')))
-	 p2 ++;
-     else
-	 p2 = file2;
-
-     pn=get_num_records(dir1, sizeof(fileheader_t));
-     sn=get_num_records(dir2, sizeof(fileheader_t));
-     if(!sn) return;
-     fh= (fileheader_t *)malloc( (pn+sn)*sizeof(fileheader_t));
-     get_fileheaders(dir1, fh, 1, pn);
-     get_fileheaders(dir2, fh+pn, 1, sn);
-     if(isoutter)
-         {
-             for(i=0; i<sn; i++)
-               if(fh[pn+i].owner[0])
-                   STRLCAT(fh[pn+i].owner, ".");
-         }
-     qsort(fh, pn+sn, sizeof(fileheader_t), dir_cmp);
-     AUTO_STR(bakdir, "%s.bak", dir1);
-     Rename(dir1, bakdir);
-     for(i=1; i<=pn+sn; i++ )
-        {
-         if(!fh[i-1].filename[0]) continue;
-         if(i == pn+sn ||  strcmp(fh[i-1].filename, fh[i].filename))
-	 {
-                fh[i-1].score = 0;
-		fh[i-1].filemode |= 1;
-                append_fileheader(dir1, &fh[i-1]);
-		strcpy(p1, fh[i-1].filename);
-                if(!dashf(file1))
-		      {
-			  strcpy(p2, fh[i-1].filename);
-			  Copy(file2, file1);
-		      }
-	 }
-         else
-                fh[i].filemode |= fh[i-1].filemode;
-        }
-
-     free(fh);
 }
 
 /* A board or link that still has board bid as its group, or 0. */
@@ -1031,21 +970,22 @@ edit_board_general_form(boardheader_t *bh, int bid)
     newbh.gid = getbcache(bid)->gid;
 
     if (name_changed) {
-        char src[60], tar[60];
-        setbpath(src, bh->brdname);
-        setbpath(tar, newbh.brdname);
-        Rename(src, tar);
-
-        setapath(src, bh->brdname);
-        setapath(tar, newbh.brdname);
-        Rename(src, tar);
+        // Through BoF: the directories, and the community where the backend
+        // keeps one. If it cannot, nothing is renamed.
+        bof_actor_t me = mbbsd_actor(bh->brdname, false);
+        bof_bbs_rename_community_t req = {
+            .community = bh->brdname, .new_name = newbh.brdname,
+        };
+        if (bof_bbs_rename_community(&me, &req) != BOF_OK) {
+            vmsg("系統無法更名，已取消，請通知系統管理員");
+            return 0;
+        }
     }
 
     setup_man(&newbh, bh);
     assert(0 <= bid - 1 && bid - 1 < MAX_BOARD);
     memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
-    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
-    reset_board(bid);
+    save_board_header(bid, &newbh);
     sort_bcache();
     log_usies("SetBoard", newbh.brdname);
 
@@ -1172,8 +1112,7 @@ m_mod_board(char *bname)
 	    // its group.
 	    newbh.gid = getbcache(bid)->gid;
 	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
-	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
-	    reset_board(bid);
+	    save_board_header(bid, &newbh);
 	    sort_bcache();
 	    log_usies("SetBoardAttr", newbh.brdname);
 	    // the group flag decides which permission the moderators need
@@ -1224,8 +1163,7 @@ m_mod_board(char *bname)
 	    // its group.
 	    newbh.gid = getbcache(bid)->gid;
 	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
-	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
-	    reset_board(bid);
+	    save_board_header(bid, &newbh);
 	    sort_bcache();
 	    log_usies("SetBoardPerm", newbh.brdname);
 
@@ -1268,8 +1206,7 @@ m_mod_board(char *bname)
 		// its group.
 		newbh.gid = getbcache(bid)->gid;
 		memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
-		substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
-		reset_board(bid);
+		save_board_header(bid, &newbh);
 		sort_bcache();
 		log_usies("SetBoard", newbh.brdname);
 
@@ -1325,20 +1262,27 @@ m_mod_board(char *bname)
 	break;
     case 's':
 	if (HasUserPerm(PERM_BOARDS)) {
-	  char bpath[PATHLEN];
 	  if (vans(TEMPFORMAT(STRLEN, "確定要重建 %s 的文章索引嗎？[y/N] ", bh.brdname)) != 'y')
 	      break;
-	  setbpath(bpath, bh.brdname);
-	  AUTO_STR(cmd, BBSHOME "/bin/buildir %s &", bpath);
-	  system(cmd);
+	  bof_actor_t me = mbbsd_actor(bh.brdname, false);
+	  bof_bbs_rebuild_community_t req = { .community = bh.brdname };
+	  bof_bbs_rebuild_community_response_t res;
+	  bof_error_t err = bof_bbs_rebuild_community(&me, &req, &res);
+	  if (err != BOF_OK) {
+	      vmsg(err == BOF_ERR_COULDNT_FIND_COMMUNITY ?
+		   "系統沒有此看板的資料，未重建" : "重建失敗，請通知系統管理員");
+	      break;
+	  }
+	  if (!res.in_background)
+	      touchbtotal(bid);
 	  bof_modlog_t log;
 	  modlog(bh.brdname, NULL, bof_modlog_init(&log, "重建文章索引"));
-	  vmsg("已開始在背景重建文章索引");
+	  vmsg(res.in_background ? "已開始在背景重建文章索引" : "文章索引已重建");
 	}
 	break;
     case 'c':
 	if (HasUserPerm(PERM_BOARDS)) {
-	    char frombname[BRDNAME_SIZE], fromdir[PATHLEN];
+	    char frombname[BRDNAME_SIZE];
 	    move(10, 0);
 	    clrtoeol();
 	    CompleteBoard("請輸入要合併的看板名稱(按空白鍵自動搜尋): ", frombname);
@@ -1351,15 +1295,26 @@ m_mod_board(char *bname)
 	    if (vans(TEMPFORMAT(STRLEN, "確定要把 %s 的文章合併到 %s 嗎？[y/N] ",
 			    frombname, bname)) != 'y')
 		break;
-            setbdir(genbuf, bname);
-            setbdir(fromdir, frombname);
-            merge_dir(genbuf, fromdir, 0);
+	    bof_actor_t me = mbbsd_actor(bname, false);
+	    bof_bbs_merge_communities_t req = { .from = frombname, .to = bname };
+	    bof_bbs_merge_communities_response_t res;
+	    if (bof_bbs_merge_communities(&me, &req, &res) != BOF_OK) {
+		vmsg("看板合併失敗，請通知系統管理員");
+		break;
+	    }
 	    touchbtotal(bid);
+	    touchbtotal(getbnum(frombname));
 	    bof_modlog_t log;
 	    bof_modlog_set_field(bof_modlog_init(&log, "合併看板文章"), "來源看板", "%s",
 			     frombname);
 	    modlog(bname, NULL, &log);
-	    vmsg("看板合併完畢");
+	    if (res.collisions > 0)
+		vmsgf("看板合併完畢: %d 篇，%d 篇檔名重複未合併", res.moved,
+		      res.collisions);
+	    else if (res.moved >= 0)
+		vmsgf("看板合併完畢: %d 篇", res.moved);
+	    else
+		vmsg("看板合併完畢");
 	}
 	break;
     case 'b':
@@ -1379,8 +1334,7 @@ m_mod_board(char *bname)
 	    // its group.
 	    newbh.gid = getbcache(bid)->gid;
 	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
-	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
-	    reset_board(bid);
+	    save_board_header(bid, &newbh);
 	    log_usies("SetBoardBvote", newbh.brdname);
 	    if (newbh.npolls != bh.npolls) {
 		bof_modlog_t log;
@@ -1412,8 +1366,7 @@ m_mod_board(char *bname)
 	    // its group.
 	    newbh.gid = getbcache(bid)->gid;
 	    memcpy(newbh.bottom, getbcache(bid)->bottom, sizeof(newbh.bottom));
-	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
-	    reset_board(bid);
+	    save_board_header(bid, &newbh);
 	    log_usies("ViolateLawSet", newbh.brdname);
 	    bof_modlog_t log;
 	    bof_modlog_set_change(bof_modlog_init(&log, "修改看板設定"), "文章金錢獎勵",
@@ -1440,26 +1393,29 @@ m_mod_board(char *bname)
 	}
 	else {
 	    strlcpy(bname, bh.brdname, sizeof(bh.brdname));
-	    char bpath[PATHLEN], apath[PATHLEN];
-	    setbpath(bpath, bname);
-	    setapath(apath, bname);
-	    AUTO_STR(cmd, "/bin/tar zcvf tmp/board_%s.tgz %s %s >/dev/null 2>&1",
-		    bname, bpath, apath);
-	    system(cmd);
-	    RmTree(bpath);
-	    RmTree(apath);
+	    // Through BoF (Lemmy's RemoveCommunity): its files go, and a backend
+	    // that keeps posts of its own keeps them. If it cannot, the board
+	    // stays.
+	    bof_actor_t me = mbbsd_actor(bname, false);
+	    bof_remove_community_t req = { .community = bname, .removed = 1 };
+	    bof_remove_community_response_t res;
+	    if (bof_remove_community(&me, &req, &res) != BOF_OK) {
+		vmsg("系統無法刪除看板，請通知系統管理員");
+		break;
+	    }
 	    // The links to it can be in other groups, so the notice counts them.
 	    int links = delete_links_to(bid);
-	    char note[STRLEN] = "請注意刪除的合法性";
+	    char note[STRLEN * 2] = "請注意刪除的合法性";
 	    if (links)
 		snprintf(note, sizeof(note), "請注意刪除的合法性\n"
 			 "一併刪除連到此看板的連結 %d 個。", links);
+	    if (res.bbs_posts_kept)
+		strlcat(note, "\n系統仍保留文章紀錄。", sizeof(note));
 	    memset(&bh, 0, sizeof(bh));
 	    SNPRINTF(bh.desc, "%s 看板 %s 刪除", bname, cuser.userid);
 	    post_msg(BN_SECURITY, bh.desc, note, "[系統安全局]");
 	    assert(0<=bid-1 && bid-1<MAX_BOARD);
-	    substitute_record(FN_BOARD, &bh, sizeof(bh), bid);
-	    reset_board(bid);
+	    save_board_header(bid, &bh);
             sort_bcache();
 	    log_usies("DelBoard", bh.desc);
 	    vmsg("刪板完畢");
@@ -1607,15 +1563,13 @@ static int add_board_record(const boardheader_t *board)
 	return ADD_BOARD_GROUP_GONE;
     if ((bid = free_board_slot()) > 0) {
 	assert(0<=bid-1 && bid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, board, sizeof(boardheader_t), bid);
-	reset_board(bid);
+	if (create_board_header(bid, board) != 0)
+	    return -1;
         sort_bcache();
     } else if (SHM->Bnumber >= MAX_BOARD) {
 	return -1;
-    } else if (append_record(FN_BOARD, (fileheader_t *)board, sizeof(boardheader_t)) == -1) {
+    } else if (create_board_header(0, board) != 0) {
 	return -1;
-    } else {
-	addbrd_touchcache();
     }
     return 0;
 }

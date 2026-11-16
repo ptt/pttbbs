@@ -78,6 +78,9 @@ int main(void)
     int numboards;
 
     time4_t now=time(NULL); 
+    // BoF works in BBSHOME, as the BBS does.
+    if (chdir(BBSHOME) != 0)
+	exit(1);
     attach_SHM();
     resolve_boards();
     numboards = num_boards();
@@ -213,12 +216,11 @@ int main(void)
             printf("board %s: %s -> %s\n",
                     allbrd[i].brdname, old_bm, new_bm);
 
-            memcpy(bp->moderators, allbrd[i].moderators, sizeof(bp->moderators));
-	    if (substitute_record(BBSHOME"/"FN_BOARD, &allbrd[i], 
-			sizeof(boardheader_t), i+1) == -1) {
+            // Through BoF: .BRD, the board cache, and the backend.
+            bof_edit_community_t ed = { .bbs_id = i + 1, .bbs_header = &allbrd[i] };
+	    if (bof_edit_community(NULL, &ed) != BOF_OK) {
 		printf("Update Board Failed: %s\n", allbrd[i].brdname);
 	    }
-	    reset_board(i+1);
 	}
     }
     qsort(lostbms, j, sizeof(lostbm), bmlostdays_cmp);

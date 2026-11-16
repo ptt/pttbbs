@@ -123,6 +123,26 @@ getutmpmode(void)
  * section - board
  */
 
+// Writes the board header of slot bid (.BRD and the board cache) through
+// BoF, which also tells the backend. 0, or -1.
+int
+save_board_header(int bid, const boardheader_t *bh)
+{
+    bof_actor_t me = mbbsd_user_actor();
+    bof_edit_community_t req = { .bbs_id = bid, .bbs_header = bh };
+    return bof_edit_community(&me, &req) == BOF_OK ? 0 : -1;
+}
+
+// The same for a new board: into the free slot bid, or with bid 0 after
+// the last slot. 0, or -1.
+int
+create_board_header(int bid, const boardheader_t *bh)
+{
+    bof_actor_t me = mbbsd_user_actor();
+    bof_create_community_t req = { .bbs_id = bid, .bbs_header = bh };
+    return bof_create_community(&me, &req, NULL) == BOF_OK ? 0 : -1;
+}
+
 void
 invalid_board_permission_cache(const char *board) {
     boardheader_t *bp = NULL;
@@ -131,7 +151,7 @@ invalid_board_permission_cache(const char *board) {
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     bp = getbcache(bid);
     bp->perm_reload = now;
-    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), bid);
+    save_board_header(bid, bp);
 }
 
 

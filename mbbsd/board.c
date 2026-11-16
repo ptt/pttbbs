@@ -1073,7 +1073,7 @@ bcfg_set_post_logins(cmd_ctx_t *ctx)
     bp->post_limit_logins = (uint8_t)(temp / 10);
     cx->touched = 1;
     assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
-    modify_boardheader(bp, currbid);
+    save_board_header(currbid, bp);
     log_usies("SetBoard", bp->brdname);
     vmsg("已更新發文登入次數限制。");
     return 0;
@@ -1101,7 +1101,7 @@ bcfg_set_post_badpost(cmd_ctx_t *ctx)
     bp->post_limit_badpost = (temp == 255) ? 0 : (uint8_t)(255 - temp);
     cx->touched = 1;
     assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
-    modify_boardheader(bp, currbid);
+    save_board_header(currbid, bp);
     log_usies("SetBoard", bp->brdname);
     vmsg("已更新發文退文篇數限制。");
     return 0;
@@ -1135,7 +1135,7 @@ bcfg_set_petition_limits(cmd_ctx_t *ctx)
                PETITION_LIMITS_NOTICE);
     cx->touched = 1;
     assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
-    modify_boardheader(bp, currbid);
+    save_board_header(currbid, bp);
     log_usies("SetBoard", bp->brdname);
     vmsg("已更新預設連署限制。");
     return 0;
@@ -1398,7 +1398,7 @@ bconfig_commit(bconfig_ctx_t *cx)
     boardheader_t cur;
     if (get_boardheader(&cur, currbid) > 0)
         memcpy(cx->bp->bottom, cur.bottom, sizeof(cx->bp->bottom));
-    modify_boardheader(cx->bp, currbid);
+    save_board_header(currbid, cx->bp);
     log_usies("SetBoard", cx->bp->brdname);
     cx->touched = 0;
 }
@@ -1722,7 +1722,7 @@ b_config(void)
 
     if (cx.touched) {
         assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
-        modify_boardheader(bp, currbid);
+        save_board_header(currbid, bp);
         log_usies("SetBoard", bp->brdname);
     }
 
@@ -2830,9 +2830,7 @@ paste_taged_brds(int gid)
 		}
 		bh->gid = gid;
 		assert(0<=bid-1 && bid-1<MAX_BOARD);
-		substitute_record(FN_BOARD, bh,
-				  sizeof(boardheader_t), bid);
-		reset_board(bid);
+		save_board_header(bid, bh);
 		log_usies("SetBoardGID", bh->brdname);
 		// a group moved to or from the root needs another permission
 		board_enable_moderator_perms(bh);

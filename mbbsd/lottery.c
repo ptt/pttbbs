@@ -584,7 +584,7 @@ stop_gamble(void)
     if (bp->endgamble) {
 	bp->endgamble = 0;
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+	save_board_header(currbid, bp);
     }
     return 1;
 }
@@ -828,7 +828,7 @@ hold_gamble(void)
 	if (bp->endgamble) {
 	    bp->endgamble = 0;
 	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+	    save_board_header(currbid, bp);
 
 	}
 	return FULLUPDATE;
@@ -879,7 +879,7 @@ hold_gamble(void)
     if (bp->endgamble) {
 	bp->endgamble = 0;
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+	save_board_header(currbid, bp);
     }
     lottery_form_t form = { .price = 100 };
     if (vform_run(&lottery_form_def, &form, NULL) <= 0)
@@ -956,7 +956,7 @@ hold_gamble(void)
 	if (bp->endgamble != endgamble) {
 	    bp->endgamble = endgamble;
 	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+	    save_board_header(currbid, bp);
 	}
 	bof_modlog_t log;
 	modlog(currboard, NULL, bof_modlog_init(&log, "Á|¿ì¼Ö³z"));

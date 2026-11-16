@@ -913,7 +913,15 @@ new_register(void)
     }
 
     // The uid may be from a deleted account that was not cleaned up.
-    remove_user_from_bms(0, newuser.userid);
+    {
+        bof_actor_t me = mbbsd_user_actor();
+        bof_bbs_remove_moderator_t req = {
+            .bbs_usernum = searchuser(newuser.userid, NULL),
+            .name = newuser.userid,
+        };
+        if (req.bbs_usernum > 0)
+            bof_bbs_remove_moderator(&me, &req, NULL);
+    }
 
     // Mark register complete after the user has been created.
     if (email_verified) {

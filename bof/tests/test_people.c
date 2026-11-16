@@ -52,6 +52,31 @@ static const bof_storage_ops_t counting_ops = {
     .find_post = kept_find_post,
 };
 
+// A backend that takes any change of a board.
+static bof_error_t
+count_remove_community(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                       const bof_remove_community_t *req GCC_UNUSED,
+                       bof_remove_community_response_t *out GCC_UNUSED)
+{
+    writes++;
+    return BOF_OK;
+}
+
+static bof_error_t
+count_rename_community(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                       const bof_bbs_rename_community_t *req GCC_UNUSED)
+{
+    writes++;
+    return BOF_OK;
+}
+
+static const bof_storage_ops_t board_ops = {
+    .name = "boards",
+    .find_post = kept_find_post,
+    .remove_community = count_remove_community,
+    .rename_community = count_rename_community,
+};
+
 int bof_test_failures;
 
 // A board cache of two boards, as the BBS keeps it in shared memory.
@@ -387,6 +412,42 @@ test_muted(void)
         fprintf(stderr, "could not remove %s\n", dir);
 }
 
+// Changing boards is for admins, group leads (removing) and group
+// operators (renaming). Uses the groups of test_group_roles().
+static void
+test_admins(void)
+{
+    bof_person_t user = person("user", PERM_BASIC | PERM_LOGINOK, 1600000000);
+    bof_person_t lead = person("lead", PERM_BASIC | PERM_LOGINOK, 1700000000);
+    bof_person_t op = person("op", PERM_BASIC | PERM_LOGINOK, 1600000000);
+    bof_actor_t me = { .name = "user", .bbs_person = &user };
+    bof_remove_community_t rm = { .community = "Leaf", .removed = 1 };
+    bof_bbs_rename_community_t rn = { .community = "Leaf", .new_name = "Leaf2" };
+
+    op.bbs_local_user = (uint64_t)1600000000 << 32 | 6;
+    bcache[3].brdattr = BRD_GROUPBOARD;
+    bcache[4].moderators[0].unum = 0;
+    // Found by name too: in the order of names.
+    SHM->Bnumber = 5;
+    SHM->bsorted[0][2] = 4;     // Leaf
+    SHM->bsorted[0][3] = 3;     // Sub
+    SHM->bsorted[0][4] = 2;     // Top
+    bof_storage_reset();
+    bof_storage_set(&board_ops, NULL);
+    writes = 0;
+
+    EXPECT_INT(bof_remove_community(&me, &rm, NULL), BOF_ERR_NOT_AN_ADMIN);
+    EXPECT_INT(bof_bbs_rename_community(&me, &rn), BOF_ERR_NOT_AN_ADMIN);
+    me.bbs_person = &op;
+    EXPECT_INT(bof_remove_community(&me, &rm, NULL), BOF_ERR_NOT_AN_ADMIN);
+    EXPECT_OK(bof_bbs_rename_community(&me, &rn));
+    me.bbs_person = &lead;
+    EXPECT_OK(bof_remove_community(&me, &rm, NULL));
+    EXPECT_INT(writes, 2);
+
+    bof_storage_reset();
+}
+
 int
 main(void)
 {
@@ -396,6 +457,7 @@ main(void)
     RUN(test_rules);
     RUN(test_muted);
     RUN(test_group_roles);
+    RUN(test_admins);
     free(SHM);
     return bof_test_report();
 }

@@ -21,7 +21,6 @@ void delete_board_link(boardheader_t *bh, int bid);
 int group_exists(int gid);
 int make_board_link(const char *bname, int gid);
 int make_board_link_interactively(int gid);
-void merge_dir(const char *dir1, const char *dir2, int isoutter);
 void test_banip_conf(const char *filename);
 
 /* angel */
@@ -173,6 +172,8 @@ int  getuser(const char *userid, userec_t *xuser);
 int searchnewuser(int mode);
 int count_logins(int uid, int show);
 void invalid_board_permission_cache(const char *board);
+int save_board_header(int bid, const boardheader_t *bh);
+int create_board_header(int bid, const boardheader_t *bh);
 int is_board_moderator(int);
 int apply_boards(int (*func)(boardheader_t *));
 int haspostperm(const char *bname);

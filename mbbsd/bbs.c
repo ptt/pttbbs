@@ -2540,7 +2540,7 @@ do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *dir
 	}
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+	save_board_header(currbid, bp);
 	log_usies("SetBoard", bp->brdname);
 	vmsg("修改完成！");
 	return FULLUPDATE;
@@ -2560,7 +2560,7 @@ do_limitedit(int ent GCC_UNUSED, fileheader_t * fhdr GCC_UNUSED, const char *dir
 	}
 
 	assert(0<=currbid-1 && currbid-1<MAX_BOARD);
-	substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+	save_board_header(currbid, bp);
 	log_usies("SetBoard", bp->brdname);
 	vmsg("修改完成！");
 	return FULLUPDATE;
@@ -4377,7 +4377,7 @@ b_note_edit_bname(int bid)
        bnote_lastbid = -1;
 
        assert(0<=bid-1 && bid-1<MAX_BOARD);
-       substitute_record(FN_BOARD, fh, sizeof(boardheader_t), bid);
+       save_board_header(bid, fh);
     }
     return 0;
 }
@@ -4510,7 +4510,7 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
         bp->bottom[MAX_BOTTOM_POSTS - 1] = 0;
     }
 
-    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
+    save_board_header(currbid, bp);
     setbottomtotal(currbid);
     syncnow();
     bp->SRexpire = time4_next(bp->SRexpire, now);
@@ -4520,27 +4520,52 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
 static int
 good_post(int ent, fileheader_t * fhdr, const char *direct)
 {
+    int digest_it = !(fhdr->filemode & FILE_DIGEST);
 
     if ((currmode & MODE_DIGEST) || !CBRD_IS_BM())
 	return DONOTHING;
 
-    if(vans(fhdr->filemode & FILE_DIGEST ?
-              "取消看板文摘?(Y/n)" : "收入看板文摘?(Y/n)") == 'n')
+    if(vans(digest_it ?
+              "收入看板文摘?(Y/n)" : "取消看板文摘?(Y/n)") == 'n')
 	return READ_REDRAW;
 
-    if (fhdr->filemode & FILE_DIGEST) {
-	fhdr->filemode = (fhdr->filemode & ~FILE_DIGEST);
-	if (!strcmp(currboard, BN_NOTE) ||
-	    !strcmp(currboard, BN_LAW)
-	    )
-	{
-            int unum = searchuser(fhdr->owner, NULL);
-            if (unum > 0) {
-                pay_as_uid(unum, 1000, "取消 %s 看板文摘", currboard);
-            }
-            fhdr->multi.money -= 1000;
-	}
+    // The record changes through BoF, as the backend keeps the marks and
+    // money of posts. ent may be a stale remapped index in MODE_SELECT: BoF
+    // finds the record again by its file name.
+    bof_actor_t me = bof_me();
+    bof_bbs_set_post_modes_t req = { .post = bof_ref(direct, ent, fhdr) };
+    fileheader_t updated;
+    bof_post_response_t res = { .bbs_header = &updated };
+    if (digest_it) {
+	req.enable = FILE_DIGEST;
+	req.disable = FILE_MARKED;
     } else {
+	req.disable = FILE_DIGEST;
+    }
+    if (bof_bbs_set_post_modes(&me, &req, &res) != BOF_OK) {
+	vmsg("設定失敗，請重進看板後再試一次。");
+	return FULLUPDATE;
+    }
+
+    if (!strcmp(currboard, BN_NOTE) ||
+	!strcmp(currboard, BN_LAW)
+	)
+    {
+	int32_t money = updated.multi.money + (digest_it ? 1000 : -1000);
+	bof_edit_post_t ereq = {
+	    .post = bof_ref(direct, ent, &updated), .bbs_money = &money,
+	};
+	bof_edit_post(&me, &ereq, &res);
+	int unum = searchuser(fhdr->owner, NULL);
+	if (unum > 0) {
+	    if (digest_it)
+		pay_as_uid(unum, -1000, "被選入 %s 看板文摘", currboard);
+	    else
+		pay_as_uid(unum, 1000, "取消 %s 看板文摘", currboard);
+	}
+    }
+
+    if (digest_it) {
 	fileheader_t    digest;
 	char           *ptr, buf[PATHLEN];
 
@@ -4565,22 +4590,9 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	Copy(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_fileheader(buf, &digest);
-
-	fhdr->filemode = (fhdr->filemode & ~FILE_MARKED) | FILE_DIGEST;
-	if (!strcmp(currboard, BN_NOTE) ||
-	    !strcmp(currboard, BN_LAW)
-	    )
-	{
-            int unum = searchuser(fhdr->owner, NULL);
-            if (unum > 0) {
-                pay_as_uid(unum, -1000, "被選入 %s 看板文摘", currboard);
-            }
-            fhdr->multi.money += 1000;
-	}
     }
-    /* ent may be a stale remapped index in MODE_SELECT; only write if the
-     * record still refers to the same file. */
-    substitute_ref_record(direct, fhdr, ent);
+    post_record_changed(direct, ent, &updated);
+    *fhdr = updated;
     return FULLUPDATE;
 }
 

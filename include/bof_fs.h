@@ -47,7 +47,19 @@ BOF_FS_WRITE(edit_comment, bof_edit_comment_t, bof_comment_response_t);
 BOF_FS_WRITE(remove_comment, bof_remove_comment_t, bof_comment_response_t);
 BOF_FS_WRITE(create_report, bof_create_report_t, bof_report_t);
 BOF_FS_WRITE(resolve_report, bof_resolve_report_t, bof_report_t);
+BOF_FS_WRITE(create_community, bof_create_community_t,
+             bof_create_community_response_t);
+BOF_FS_WRITE(remove_community, bof_remove_community_t,
+             bof_remove_community_response_t);
+BOF_FS_WRITE(merge_communities, bof_bbs_merge_communities_t,
+             bof_bbs_merge_communities_response_t);
+BOF_FS_WRITE(rebuild_community, bof_bbs_rebuild_community_t,
+             bof_bbs_rebuild_community_response_t);
 #undef BOF_FS_WRITE
+bof_error_t bof_fs_rename_community(void *ctx, const bof_actor_t *actor,
+                                    const bof_bbs_rename_community_t *req);
+bof_error_t bof_fs_edit_community(void *ctx, const bof_actor_t *actor,
+                                  const bof_edit_community_t *req);
 int bof_fs_write_modlog(void *ctx, const char *community,
                         const bof_actor_t *actor, const char *reason,
                         int reason_audit_only, const bof_modlog_t *m);

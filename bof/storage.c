@@ -13,6 +13,10 @@
 #include "bof_int.h"
 #include "bof_storage.h"
 
+// The board cache of the BBS (each process attaches it).
+extern SHM_t *SHM;
+extern boardheader_t *bcache;
+
 // The one backend; NULL until set (or first used: the default one).
 static const bof_storage_ops_t *backend;
 static void *backend_ctx;
@@ -899,4 +903,173 @@ bof_bbs_list_archived_posts(const bof_bbs_list_archived_posts_t *req,
         return BOF_ERR_INVALID_BODY_FIELD;
     out->count = out->bbs_total = 0;
     return READ(list_archived_posts, req, out);
+}
+
+/* ------------------------------------------------------------------------
+ * Communities: what the board header cannot say
+ * ------------------------------------------------------------------------ */
+
+// For an actor with a person: an admin (sysop) or board admin, or (where
+// group_roles allows) a group operator or lead of the community.
+static bof_error_t
+check_admin(const bof_actor_t *actor, const char *community, int group_roles)
+{
+    const bof_person_t *p = person_of(actor);
+    bof_community_t c;
+
+    if (!p || p->admin || (p->bbs_perms & (PERM_SYSOP | PERM_BOARDS)))
+        return BOF_OK;
+    if (group_roles && community &&
+        bof_get_community(community, &c) == BOF_OK &&
+        (bof_bbs_group_roles(p, &c) & group_roles))
+        return BOF_OK;
+    return BOF_ERR_NOT_AN_ADMIN;
+}
+
+#define CHECK_ADMIN(actor, community, group_roles) do {                     \
+    bof_error_t ca_ = check_admin((actor), (community), (group_roles));     \
+    if (ca_ != BOF_OK)                                                      \
+        return ca_;                                                         \
+} while (0)
+
+// Whether h may be written into slot bid: a board (or link) of a valid
+// name, or an empty slot (no name; mbbsd leaves a note in it).
+static int
+valid_header(int bid, const boardheader_t *h)
+{
+    if (bid < 1 || bid > MAX_BOARD || !h)
+        return 0;
+    return !h->brdname[0] || is_valid_brdname(h->brdname);
+}
+
+bof_error_t
+bof_edit_community(const bof_actor_t *actor, const bof_edit_community_t *req)
+{
+    const bof_person_t *p = person_of(actor);
+    bof_community_t c;
+
+    if (!req || !valid_header(req->bbs_id, req->bbs_header))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // Its moderators change the settings of a board, and the operators of
+    // its groups the rest of it, as admins do.
+    if (p) {
+        int found = bof_bbs_get_community_at(req->bbs_id, &c) == BOF_OK;
+        if (!(found && bof_bbs_may_moderate(p, &c)))
+            CHECK_ADMIN(actor, found ? c.name : NULL, BOF_BBS_GROUP_OP);
+    }
+    return CALL(edit_community, actor, req);
+}
+
+bof_error_t
+bof_create_community(const bof_actor_t *actor,
+                     const bof_create_community_t *req,
+                     bof_create_community_response_t *out)
+{
+    bof_create_community_response_t local = { 0 };
+
+    if (!req || (req->bbs_id && !valid_header(req->bbs_id, req->bbs_header)) ||
+        !req->bbs_header || !is_valid_brdname(req->bbs_header->brdname))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    CHECK_ADMIN(actor, NULL, 0);
+    if (out)
+        memset(out, 0, sizeof(*out));
+    return WRITE(create_community, out ? out : &local, actor, req);
+}
+
+bof_error_t
+bof_bbs_remove_moderator(const bof_actor_t *actor,
+                         const bof_bbs_remove_moderator_t *req, int *count)
+{
+    int changed = 0;
+
+    if (!req || req->bbs_usernum <= 0)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    CHECK_ADMIN(actor, NULL, 0);
+    for (int bid = 1; SHM && bid <= num_boards(); bid++) {
+        boardheader_t bh = *getbcache(bid);
+        bof_edit_community_t ed = { .bbs_id = bid, .bbs_header = &bh };
+        int m, kept = 0, found = 0;
+
+        if (!bh.brdname[0])
+            continue;
+        for (m = 0; m < MAX_BMs && !found; m++)
+            found = bh.moderators[m].unum == req->bbs_usernum;
+        if (!found)
+            continue;
+        for (m = 0; m < MAX_BMs; m++) {
+            if (bh.moderators[m].unum <= 0 ||
+                bh.moderators[m].unum == req->bbs_usernum)
+                continue;
+            if (kept != m)
+                bh.moderators[kept] = bh.moderators[m];
+            kept++;
+        }
+        for (; kept < MAX_BMs; kept++)
+            memset(&bh.moderators[kept], 0, sizeof(bh.moderators[kept]));
+        log_filef("log/removebm.log", "[%s] %s\n",
+                  req->name ? req->name : "?", bh.brdname);
+        if (CALL(edit_community, actor, &ed) == BOF_OK)
+            changed++;
+    }
+    if (count)
+        *count = changed;
+    return BOF_OK;
+}
+
+bof_error_t
+bof_remove_community(const bof_actor_t *actor,
+                     const bof_remove_community_t *req,
+                     bof_remove_community_response_t *out)
+{
+    bof_remove_community_response_t local = { 0 };
+
+    if (!req || !req->community || !is_valid_brdname(req->community) ||
+        req->removed != 1 || (req->reason && !plain_text(req->reason)))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    CHECK_ADMIN(actor, req->community, BOF_BBS_GROUP_LEAD);
+    if (out)
+        memset(out, 0, sizeof(*out));
+    return WRITE(remove_community, out ? out : &local, actor, req);
+}
+
+bof_error_t
+bof_bbs_rename_community(const bof_actor_t *actor,
+                         const bof_bbs_rename_community_t *req)
+{
+    if (!req || !req->community || !req->new_name ||
+        !is_valid_brdname(req->community) || !is_valid_brdname(req->new_name))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    CHECK_ADMIN(actor, req->community, BOF_BBS_GROUP_OP);
+    return CALL(rename_community, actor, req);
+}
+
+bof_error_t
+bof_bbs_merge_communities(const bof_actor_t *actor,
+                          const bof_bbs_merge_communities_t *req,
+                          bof_bbs_merge_communities_response_t *out)
+{
+    bof_bbs_merge_communities_response_t local = { 0 };
+
+    if (!req || !req->from || !req->to || !is_valid_brdname(req->from) ||
+        !is_valid_brdname(req->to) || strcasecmp(req->from, req->to) == 0)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    CHECK_ADMIN(actor, req->to, 0);
+    if (out)
+        memset(out, 0, sizeof(*out));
+    return WRITE(merge_communities, out ? out : &local, actor, req);
+}
+
+bof_error_t
+bof_bbs_rebuild_community(const bof_actor_t *actor,
+                          const bof_bbs_rebuild_community_t *req,
+                          bof_bbs_rebuild_community_response_t *out)
+{
+    bof_bbs_rebuild_community_response_t local = { 0 };
+
+    if (!req || !req->community || !is_valid_brdname(req->community))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    CHECK_ADMIN(actor, req->community, 0);
+    if (out)
+        memset(out, 0, sizeof(*out));
+    return WRITE(rebuild_community, out ? out : &local, actor, req);
 }

@@ -614,6 +614,106 @@ test_cache_failure_pages_and_addresses(void)
     bcache = NULL;
 }
 
+static int
+dir_exists(const char *path)
+{
+    struct stat st;
+    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+static void
+test_communities(void)
+{
+    bof_bbs_rename_community_t rn = { .community = "Old", .new_name = "New" };
+    bof_remove_community_t rm = { .community = "Gone", .removed = 1 };
+    bof_remove_community_response_t rmres;
+    bof_bbs_merge_communities_t mg = { .from = "Old", .to = BOARD };
+    bof_bbs_merge_communities_response_t mgres;
+    bof_bbs_rebuild_community_t rb = { .community = BOARD };
+    bof_bbs_rebuild_community_response_t rbres;
+
+    // A board header goes into .BRD, then post.svc is told of the slot; if
+    // post.svc does not take it, .BRD has it all the same.
+    boardheader_t bh = { 0 };
+    bof_edit_community_t ed = { .bbs_id = 1, .bbs_header = &bh };
+    bof_create_community_t cr = { .bbs_header = &bh };
+    bof_create_community_response_t crres;
+    strlcpy(bh.brdname, BOARD, sizeof(bh.brdname));
+    // A board cache, as the BBS keeps it in shared memory.
+    SHM = calloc(1, sizeof(SHM_t));
+    bcache = SHM->bcache;
+    forget();
+    reply("EDIT_COMMUNITY", "OK 5");
+    EXPECT_OK(bof_create_community(&alice, &cr, &crres));
+    EXPECT_INT(crres.bbs_id, 1);
+    EXPECT(received("EDIT_COMMUNITY 1"));
+    forget();
+    reply("EDIT_COMMUNITY", "ERR down");
+    strlcpy(bh.desc, "edited", sizeof(bh.desc));
+    EXPECT_OK(bof_edit_community(&alice, &ed));
+    EXPECT(received("EDIT_COMMUNITY 1"));
+    EXPECT_STR(getbcache(1)->desc, "edited");
+    free(SHM);
+    SHM = NULL;
+
+    mkdir("boards/O", 0755);
+    mkdir("boards/O/Old", 0755);
+    mkdir("boards/N", 0755);
+    mkdir("boards/G", 0755);
+    mkdir("boards/G/Gone", 0755);
+    mkdir("tmp", 0755);
+
+    // post.svc first: if it cannot, nothing is renamed.
+    forget();
+    reply("RENAME_COMMUNITY", "ERR community name already in use");
+    EXPECT_INT(bof_bbs_rename_community(&alice, &rn),
+               BOF_ERR_COULDNT_UPDATE_COMMUNITY);
+    EXPECT(dir_exists("boards/O/Old"));
+    reply("RENAME_COMMUNITY", "OK 7");
+    EXPECT_OK(bof_bbs_rename_community(&alice, &rn));
+    EXPECT(received("RENAME_COMMUNITY Old New"));
+    EXPECT(dir_exists("boards/N/New") && !dir_exists("boards/O/Old"));
+    // The directories cannot be renamed: the community is put back.
+    forget();
+    mkdir("boards/O/Old", 0755);
+    EXPECT_INT(bof_bbs_rename_community(&alice, &rn),
+               BOF_ERR_COULDNT_UPDATE_COMMUNITY);
+    EXPECT(received("RENAME_COMMUNITY New Old"));
+
+    // Removed by the site: post.svc keeps the posts, the files go.
+    forget();
+    reply("REMOVE_COMMUNITY", "ERR down");
+    EXPECT_INT(bof_remove_community(&alice, &rm, &rmres),
+               BOF_ERR_COULDNT_UPDATE_COMMUNITY);
+    EXPECT(dir_exists("boards/G/Gone"));
+    reply("REMOVE_COMMUNITY", "OK 9");
+    rm.reason = "closed";
+    EXPECT_OK(bof_remove_community(&alice, &rm, &rmres));
+    EXPECT(received("REMOVE_COMMUNITY Gone 42 closed"));
+    EXPECT_INT(rmres.bbs_posts_kept, 1);
+    EXPECT(!dir_exists("boards/G/Gone"));
+
+    // Merged in post.svc, then both boards made again from it.
+    forget();
+    reply("MERGE_COMMUNITY", "OK 3 1");
+    reply("SYNC_DIR", "OK 0 0 0 0 0 0 0");
+    EXPECT_OK(bof_bbs_merge_communities(&alice, &mg, &mgres));
+    EXPECT_INT(mgres.moved, 3);
+    EXPECT_INT(mgres.collisions, 1);
+    EXPECT(received("SYNC_DIR " BOARD " 0 rebuild"));
+    EXPECT(received("SYNC_DIR Old 0 rebuild"));
+
+    forget();
+    EXPECT_OK(bof_bbs_rebuild_community(&alice, &rb, &rbres));
+    EXPECT_INT(rbres.in_background, 0);
+    reply("SYNC_DIR", "ERR unknown community: Test");
+    EXPECT_INT(bof_bbs_rebuild_community(&alice, &rb, &rbres),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+    reply("SYNC_DIR", "ERR disk full");
+    EXPECT_INT(bof_bbs_rebuild_community(&alice, &rb, &rbres),
+               BOF_ERR_COULDNT_UPDATE_COMMUNITY);
+}
+
 int
 main(void)
 {
@@ -643,6 +743,7 @@ main(void)
     RUN(test_create_named_and_from_body);
     RUN(test_ids_and_revisions);
     RUN(test_cache_failure_pages_and_addresses);
+    RUN(test_communities);
 
     bof_storage_reset();
     snprintf(cmd, sizeof(cmd), "rm -rf '%s'", dir);

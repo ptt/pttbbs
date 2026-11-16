@@ -64,6 +64,7 @@ typedef enum bof_error_t {
     BOF_ERR_BANNED_FROM_COMMUNITY,  /* banned_from_community (muted) */
     BOF_ERR_BBS_NOT_ALLOWED,        /* bbs_not_allowed: by a BBS rule */
     BOF_ERR_NOT_AN_ADMIN,           /* not_an_admin */
+    BOF_ERR_COULDNT_UPDATE_COMMUNITY, /* couldnt_update_community */
     BOF_ERR_MAX
 } bof_error_t;
 
@@ -204,6 +205,130 @@ bof_error_t bof_list_communities(const bof_list_communities_t *req,
  * Errors: couldnt_find_community, bbs_storage_not_supported (the files
  * backend). */
 bof_error_t bof_bbs_community_id(const char *name, bof_community_id_t *id);
+
+/* Changing communities. For an actor with a person, the calls check that
+ * it is an admin (sysop) or a board admin (PERM_BOARDS), or as noted
+ * (not_an_admin). */
+
+struct boardheader_t;
+
+/* Lemmy's EditCommunity: PTT gives the whole board header (boardheader_t,
+ * as the caller made it) of slot bbs_id (1-based) of .BRD, and bof writes
+ * it into .BRD and the board cache, and tells the backend (post.svc mirrors
+ * the slot). The caller keeps what else goes with it (sorting the board
+ * cache, ...). The slot may also hold what is not a community: a link to a
+ * board, or no board (no name), when a board or link is deleted. The
+ * moderators of the board may do it too. Errors: invalid_body_field,
+ * couldnt_update_community. */
+typedef struct bof_edit_community_t {
+    int bbs_id;
+    const struct boardheader_t *bbs_header;
+} bof_edit_community_t;
+
+bof_error_t bof_edit_community(const bof_actor_t *actor,
+                               const bof_edit_community_t *req);
+
+/* Lemmy's CreateCommunity: as bof_edit_community(), into a free slot the
+ * caller chose (bbs_id), or with bbs_id 0 into a new slot after the last;
+ * *out gets the slot. */
+typedef struct bof_create_community_t {
+    int bbs_id;                /* 0: a new slot */
+    const struct boardheader_t *bbs_header;
+} bof_create_community_t;
+
+typedef struct bof_create_community_response_t {
+    int bbs_id;
+} bof_create_community_response_t;
+
+bof_error_t bof_create_community(const bof_actor_t *actor,
+                                 const bof_create_community_t *req,
+                                 bof_create_community_response_t *out);
+
+/* PTT: takes an account off the moderators of every board, as Lemmy drops
+ * the moderator rows (AddModToCommunity, added: false) of a deleted
+ * person: for an account deleted, whose usernum goes to a new account.
+ * They are matched by usernum alone (the account may be gone already);
+ * each board changed is written as bof_edit_community() does, and noted in
+ * log/removebm.log with name. *count (if not NULL) gets how many. */
+typedef struct bof_bbs_remove_moderator_t {
+    int bbs_usernum;
+    const char *name;          /* the BBS userid, for the log */
+} bof_bbs_remove_moderator_t;
+
+bof_error_t bof_bbs_remove_moderator(const bof_actor_t *actor,
+                                     const bof_bbs_remove_moderator_t *req,
+                                     int *count);
+
+/* What the board header cannot say goes through the calls below, which
+ * change the posts and files of the boards, in the backend first: if it
+ * fails, nothing is changed, and the caller must not change the header
+ * either. */
+
+/* Lemmy's RemoveCommunity: the site takes a board down (it is deleted). Its
+ * files go (kept as tmp/board_<name>.tgz); a backend that keeps posts of
+ * its own keeps them (bbs_posts_kept), and records who removed it and why,
+ * as Lemmy's modlog does. Group leads of the board may do it too, as on
+ * PTT. Unlike Lemmy, removed must be 1: a removed board cannot come back,
+ * as its name is free for a new board right away (Lemmy keeps the name of
+ * a removed community taken). */
+typedef struct bof_remove_community_t {
+    const char *community;
+    int removed;               /* must be 1 */
+    const char *reason;        /* may be NULL */
+} bof_remove_community_t;
+
+typedef struct bof_remove_community_response_t {
+    int bbs_posts_kept;        /* the backend still has its posts */
+} bof_remove_community_response_t;
+
+bof_error_t bof_remove_community(const bof_actor_t *actor,
+                                 const bof_remove_community_t *req,
+                                 bof_remove_community_response_t *out);
+
+/* PTT: renames a board (its directories, and its community where the
+ * backend keeps one). Lemmy and Reddit never rename a community; Discourse
+ * changes the slug of a category. Group operators of the board may do it
+ * too. Errors: couldnt_find_community, couldnt_update_community (e.g. the
+ * new name is taken), invalid_body_field. */
+typedef struct bof_bbs_rename_community_t {
+    const char *community;
+    const char *new_name;
+} bof_bbs_rename_community_t;
+
+bof_error_t bof_bbs_rename_community(const bof_actor_t *actor,
+                                     const bof_bbs_rename_community_t *req);
+
+/* PTT: moves the posts of board from into board to (Discourse moves topics
+ * between categories; Lemmy and Reddit cannot), except those whose file
+ * name to already has. Both lists are made again. */
+typedef struct bof_bbs_merge_communities_t {
+    const char *from;
+    const char *to;
+} bof_bbs_merge_communities_t;
+
+typedef struct bof_bbs_merge_communities_response_t {
+    int moved;                 /* posts moved; -1 if not known */
+    int collisions;            /* posts left, their file names taken */
+} bof_bbs_merge_communities_response_t;
+
+bof_error_t bof_bbs_merge_communities(
+    const bof_actor_t *actor, const bof_bbs_merge_communities_t *req,
+    bof_bbs_merge_communities_response_t *out);
+
+/* PTT: makes the list of a board (.DIR) again: from its files, or from the
+ * backend where the files are its cache. Errors: couldnt_find_community
+ * (the backend does not know the board), couldnt_update_community. */
+typedef struct bof_bbs_rebuild_community_t {
+    const char *community;
+} bof_bbs_rebuild_community_t;
+
+typedef struct bof_bbs_rebuild_community_response_t {
+    int in_background;         /* started, not done yet */
+} bof_bbs_rebuild_community_response_t;
+
+bof_error_t bof_bbs_rebuild_community(
+    const bof_actor_t *actor, const bof_bbs_rebuild_community_t *req,
+    bof_bbs_rebuild_community_response_t *out);
 
 /* ------------------------------------------------------------------------
  * The rules of the BBS (who may do what)

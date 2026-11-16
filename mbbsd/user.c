@@ -20,7 +20,12 @@ int
 kill_user(int num, const char *userid)
 {
     if (!userid || num <= 0) return -1;
-    return purge_user_account(num, userid, "KILL ");
+    int ret = purge_user_account(num, userid, "KILL ");
+    // Its uid will go to a new account, which must not be a moderator.
+    bof_actor_t me = mbbsd_user_actor();
+    bof_bbs_remove_moderator_t req = { .bbs_usernum = num, .name = userid };
+    bof_bbs_remove_moderator(&me, &req, NULL);
+    return ret;
 }
 
 // New accounts get fewer free mails and stricter content checks.

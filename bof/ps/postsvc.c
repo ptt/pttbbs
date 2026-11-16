@@ -40,11 +40,11 @@ bof_postsvc_set_socket(const char *path)
 // IPC
 
 // Sends hdr and the payloads, and reads the whole response (to EOF, as
-// post.svc closes the connection) into a buffer to free(). Returns NULL if
-// post.svc cannot be reached.
+// post.svc closes the connection) into a buffer to free(), waiting up to
+// timeout_ms for each read. Returns NULL if post.svc cannot be reached.
 static char *
-svc_call(const char *hdr, const void *p1, size_t l1, const void *p2,
-         size_t l2)
+svc_call_wait(const char *hdr, const void *p1, size_t l1, const void *p2,
+              size_t l2, int timeout_ms)
 {
     size_t cap = 4096, len = 0;
     char *buf;
@@ -59,8 +59,7 @@ svc_call(const char *hdr, const void *p1, size_t l1, const void *p2,
         close(s);
         return NULL;
     }
-    while ((n = svc_read(s, buf + len, cap - len - 1,
-                         POSTSVC_TIMEOUT_MS)) > 0) {
+    while ((n = svc_read(s, buf + len, cap - len - 1, timeout_ms)) > 0) {
         len += n;
         if (cap - len < 1024) {
             char *nb = realloc(buf, cap * 2);
@@ -73,6 +72,13 @@ svc_call(const char *hdr, const void *p1, size_t l1, const void *p2,
     close(s);
     buf[len] = '\0';
     return buf;
+}
+
+static char *
+svc_call(const char *hdr, const void *p1, size_t l1, const void *p2,
+         size_t l2)
+{
+    return svc_call_wait(hdr, p1, l1, p2, l2, POSTSVC_TIMEOUT_MS);
 }
 
 // Whether a response is OK; frees it, after copying it to resp if given.
@@ -1288,6 +1294,183 @@ ps_list_post_revisions(void *ctx GCC_UNUSED,
     return BOF_OK;
 }
 
+// --------------------------------------------------------------------------
+// Communities. The board headers stay in .BRD, which post.svc mirrors:
+// told of each slot written (EDIT_COMMUNITY), and all of it when it starts.
+// What a header cannot say goes to post.svc first, then to the files of
+// the board, its cache.
+
+// Merging and rebuilding boards go through all of their posts.
+#define POSTSVC_SLOW_TIMEOUT_MS (10 * 60 * 1000)
+
+// Sends a one line command about a community, waiting up to timeout_ms;
+// 1 if OK (the first line of the response in resp). What post.svc did not
+// do is logged, with its response, for the operators.
+static int community_cmd(char *resp, size_t sz, int timeout_ms,
+                         const char *fmt, ...) GCC_CHECK_FORMAT(4, 5);
+
+static int
+community_cmd(char *resp, size_t sz, int timeout_ms, const char *fmt, ...)
+{
+    char cmd[512];
+    va_list ap;
+    int n, ok;
+    char *r;
+
+    va_start(ap, fmt);
+    n = vsnprintf(cmd, sizeof(cmd), fmt, ap);
+    va_end(ap);
+    if (n < 0 || n >= (int)sizeof(cmd))
+        return 0;
+    r = svc_call_wait(cmd, NULL, 0, NULL, 0, timeout_ms);
+    ok = r && strncmp(r, "OK", 2) == 0;
+    if (!ok) {
+        const char *why = r && *r ? r : "no response";
+        time4_t now = time4(NULL);
+        file_appendf(BOF_STORAGE_LOG, "%s postsvc %.*s: %.*s\n",
+                     Cdatelite(&now), (int)strcspn(cmd, "\r\n"), cmd,
+                     (int)strcspn(why, "\r\n"), why);
+    }
+    if (resp && sz) {
+        strlcpy(resp, r ? r : "", sz);
+        resp[strcspn(resp, "\r\n")] = '\0';
+    }
+    free(r);
+    return ok;
+}
+
+// Tells post.svc to mirror slot bid of .BRD (EDIT_COMMUNITY <bid>). .BRD
+// has it already: if post.svc does not take it, it is logged; post.svc
+// takes all of .BRD again when it starts (or with post.ctl import-boards).
+static void
+mirror_slot(int bid)
+{
+    community_cmd(NULL, 0, POSTSVC_TIMEOUT_MS, "EDIT_COMMUNITY %d\n", bid);
+}
+
+static bof_error_t
+ps_edit_community(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                  const bof_edit_community_t *req)
+{
+    bof_error_t err = bof_fs_edit_community(NULL, actor, req);
+
+    if (err == BOF_OK)
+        mirror_slot(req->bbs_id);
+    return err;
+}
+
+static bof_error_t
+ps_create_community(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                    const bof_create_community_t *req,
+                    bof_create_community_response_t *out)
+{
+    bof_create_community_response_t res = { 0 };
+    bof_error_t err = bof_fs_create_community(NULL, actor, req, &res);
+
+    if (err == BOF_OK)
+        mirror_slot(res.bbs_id);
+    if (out)
+        *out = res;
+    return err;
+}
+
+static bof_error_t
+ps_remove_community(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                    const bof_remove_community_t *req,
+                    bof_remove_community_response_t *out)
+{
+    char resp[128], *reason = to_svc(req->reason);
+    bof_error_t err;
+    int ok;
+
+    if (!reason)
+        return BOF_ERR_UNKNOWN;
+    // REMOVE_COMMUNITY <community> <mod_person_id> [<reason>]: OK <id>, or
+    // OK 0 if post.svc does not know it. The reason is the rest of the line.
+    ok = community_cmd(resp, sizeof(resp), POSTSVC_TIMEOUT_MS,
+                       "REMOVE_COMMUNITY %s %" PRIu64 " %.*s\n",
+                       req->community, uid(actor),
+                       (int)strcspn(reason, "\r\n"), reason);
+    free(reason);
+    if (!ok)
+        return BOF_ERR_COULDNT_UPDATE_COMMUNITY;
+    err = bof_fs_remove_community(NULL, actor, req, out);
+    if (err != BOF_OK && err != BOF_ERR_COULDNT_FIND_COMMUNITY)
+        cache_failed("remove_community", req->community, "-", err);
+    if (out)
+        out->bbs_posts_kept = strcmp(resp, "OK 0") != 0;
+    return BOF_OK;
+}
+
+static bof_error_t
+ps_rename_community(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                    const bof_bbs_rename_community_t *req)
+{
+    char resp[128];
+    bof_error_t err;
+
+    // RENAME_COMMUNITY <old> <new>: OK <id>, or OK 0 if post.svc does not
+    // know it; ERR if the new name is taken.
+    if (!community_cmd(resp, sizeof(resp), POSTSVC_TIMEOUT_MS,
+                       "RENAME_COMMUNITY %s %s\n", req->community,
+                       req->new_name))
+        return BOF_ERR_COULDNT_UPDATE_COMMUNITY;
+    if ((err = bof_fs_rename_community(NULL, actor, req)) != BOF_OK &&
+        strcmp(resp, "OK 0") != 0) {
+        // The board and its community must not part: put it back.
+        community_cmd(NULL, 0, POSTSVC_TIMEOUT_MS, "RENAME_COMMUNITY %s %s\n",
+                      req->new_name, req->community);
+    }
+    return err;
+}
+
+// Makes the list and articles of a board again from post.svc.
+static bof_error_t
+rebuild(const char *community)
+{
+    char resp[128];
+
+    if (community_cmd(resp, sizeof(resp), POSTSVC_SLOW_TIMEOUT_MS,
+                      "SYNC_DIR %s 0 rebuild\n", community))
+        return BOF_OK;
+    return strstr(resp, "unknown community") ?
+        BOF_ERR_COULDNT_FIND_COMMUNITY : BOF_ERR_COULDNT_UPDATE_COMMUNITY;
+}
+
+static bof_error_t
+ps_merge_communities(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                     const bof_bbs_merge_communities_t *req,
+                     bof_bbs_merge_communities_response_t *out)
+{
+    char resp[128];
+    int moved = -1, collisions = 0;
+
+    // MERGE_COMMUNITY <from> <to>: OK <moved> <collisions>.
+    if (!community_cmd(resp, sizeof(resp), POSTSVC_SLOW_TIMEOUT_MS,
+                       "MERGE_COMMUNITY %s %s\n", req->from, req->to))
+        return BOF_ERR_COULDNT_UPDATE_COMMUNITY;
+    sscanf(resp, "OK %d %d", &moved, &collisions);
+    // post.svc has them; the cache of both boards is made again (what fails
+    // is logged, and sync-dir makes it later).
+    rebuild(req->to);
+    rebuild(req->from);
+    if (out) {
+        out->moved = moved;
+        out->collisions = collisions;
+    }
+    return BOF_OK;
+}
+
+static bof_error_t
+ps_rebuild_community(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                     const bof_bbs_rebuild_community_t *req,
+                     bof_bbs_rebuild_community_response_t *out)
+{
+    if (out)
+        out->in_background = 0;
+    return rebuild(req->community);
+}
+
 const bof_storage_ops_t bof_storage_postsvc = {
     .name = "postsvc",
     .create_post = ps_create_post,
@@ -1332,4 +1515,10 @@ const bof_storage_ops_t bof_storage_postsvc = {
     .list_post_revisions = ps_list_post_revisions,
     // The recycle bin is the time capsule of the cache.
     .list_archived_posts = bof_fs_list_archived_posts,
+    .edit_community = ps_edit_community,
+    .create_community = ps_create_community,
+    .remove_community = ps_remove_community,
+    .rename_community = ps_rename_community,
+    .merge_communities = ps_merge_communities,
+    .rebuild_community = ps_rebuild_community,
 };

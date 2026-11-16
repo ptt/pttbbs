@@ -102,7 +102,7 @@ if (err != BOF_OK)
 |---|---|---|
 | Errors | `couldnt_find_post`, ... | `bof_error_t`, `bof_error_name()` |
 | People | `person`, `local_user`, `GetPersonDetails` | `bof_person_id_t`, `bof_actor_t`, `bof_person_t`, `bof_get_person()` |
-| Communities | `community`, `GetCommunity`, `ListCommunities` | `bof_community_t`, `bof_get_community()`, `bof_list_communities()`, `bof_bbs_community_id()` |
+| Communities | `community`, `GetCommunity`, `ListCommunities`, `CreateCommunity`, `EditCommunity`, `RemoveCommunity` | `bof_community_t`, `bof_get_community()`, `bof_list_communities()`, `bof_bbs_community_id()`, `bof_create_community()` and `bof_edit_community()` (with the whole board header, `boardheader_t`), `bof_remove_community()`; renaming, merging and rebuilding boards: `bof_bbs_rename_community()` (as Discourse renames a category), `bof_bbs_merge_communities()` (as Discourse moves topics), `bof_bbs_rebuild_community()` |
 | Rules | checked in each call (bans, locked posts, moderators) | `bof_bbs_can_read()` (`bof_bbs_can_read_at()` for the lists of boards), `bof_bbs_can_post()`, `bof_bbs_can_comment()`, `bof_bbs_is_moderator()`, `bof_bbs_may_moderate()` (with Discourse's category moderators: `bof_bbs_group_roles()`); checked by the API for an actor with `bbs_person` |
 | IDs | `post.id`, `comment.id` (post.svc's: a serial; the post and floor) | `bof_post_id_t`, `bof_comment_id()`, `bof_bbs_get_post_id()`, `bof_bbs_get_post_key()`, `bof_bbs_find_post()` |
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()`; restoring from the archive is `bof_bbs_restore_post()` (as Discourse's recover), not `deleted: false` / `removed: false` |
@@ -159,6 +159,8 @@ uses BoF the same way `mbbsd` does:
 | Lemmy | BoF |
 |---|---|
 | `GET /community`, `/community/list` | `bof_get_community()`, `bof_list_communities()` |
+| `POST /community`, `PUT /community` | `bof_create_community()`, `bof_edit_community()` |
+| `POST /community/remove` | `bof_remove_community()` |
 | `GET /user` | `bof_get_person()` |
 | `GET /post/list`, `/post` | `bof_get_posts()`, `bof_get_post()`, `bof_bbs_get_post_file()` |
 | `POST /post`, `PUT /post`, `/post/delete`, `/post/remove`, `/post/lock`, `/post/feature` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
@@ -180,10 +182,12 @@ keeping the BBS working exactly as before:
 5. **Storage virtualization** -- the files backend behind it *(done)*;
    `pttbbs.conf` picks the default backend (`BOF_DEFAULT_STORAGE`). The
    `post.svc` backend (`bof/ps/`) is there, off unless a site turns
-   post.svc on: post.svc is the database, and the files of the boards are
+   post.svc on (`CONFIG_POST_SVC`): post.svc is the database, and the files of the boards are
    its cache, which BoF reads directly.
-6. **Communities** -- boards and moderators: read *(done)*; changing them
-   next.
+6. **Communities** -- boards and moderators: read *(done)*; the board
+   headers (`.BRD`) written through BoF, and removing, renaming, merging and
+   rebuilding boards *(done)*; `mbbsd` and the utilities (`util/`) write
+   `.BRD` only through BoF.
 7. **People** -- accounts read *(done)*; in a database, with Lemmy person
    IDs, next.
 8. **Gateways** for Lemmy clients.

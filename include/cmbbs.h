@@ -173,8 +173,10 @@ void passwd_unlock(void);
 int  passwd_update_money(int num);
 int  passwd_update_diff(int num, const userec_t *orig_mem, userec_t *buf);
 int  passwd_update(int num, userec_t *buf);
+// The moderators of boards are not changed: callers take the account off
+// them through BoF (bof_bbs_remove_moderator()), before its uid goes to a
+// new account.
 int  purge_user_account(int unum, const char *userid, const char *action_tag);
-int  remove_user_from_bms(int unum, const char *userid);
 int  passwd_query (int num, userec_t *buf);
 int  passwd_load_user(const char *userid, userec_t *buf);
 int  passwd_apply (void *data, int (*fptr)(void *, int, userec_t *));

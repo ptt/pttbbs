@@ -131,9 +131,8 @@ poll_repair_count(boardheader_t *fhp, int pos)
     if (fhp->npolls == n)
         return;
     fhp->npolls = n;
-    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+    if (save_board_header(pos, fhp) == -1)
         outs(ERR_BOARD_UPDATE);
-    reset_board(pos);
 }
 
 // A file for the report of a poll, aside (it is posted through bof).
@@ -465,10 +464,8 @@ b_closepolls(void)
 
     for (fhp = bcache, pos = 1, total = num_boards(); pos <= total; fhp++, pos++) {
 	if (fhp->npolls && b_close(fhp)) {
-	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+	    if (save_board_header(pos, fhp) == -1)
 		outs(ERR_BOARD_UPDATE);
-	    else
-		reset_board(pos);
 	}
     }
 
@@ -583,9 +580,8 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
 	poll_unlink_files(vbuf, bname);
 	fhp->npolls = poll_count(bname);
 
-	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+	if (save_board_header(pos, fhp) == -1)
 	    outs(ERR_BOARD_UPDATE);
-	reset_board(pos);
 	modlog(bname, log_reason, &log);
     } else if (genbuf[0] == 'b') {
 	getdata(b_lines - 1, 0, "確定要提早開票嗎？開票後無法恢復 (Y/N) [N] ",
@@ -598,10 +594,9 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
 	modlog(bname, NULL, &log);
 	b_result_one(vbuf, fhp, &total);
 	fhp->npolls = poll_count(bname);
-	if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+	if (save_board_header(pos, fhp) == -1)
 	    outs(ERR_BOARD_UPDATE);
 
-	reset_board(pos);
 	vmsg("已提早開票");
     }
     return FULLUPDATE;
@@ -815,7 +810,7 @@ poll_maintain(const char *bname)
 	    }
 	    // 0, unless a poll was opened meanwhile
 	    fhp->npolls = poll_count(bname);
-	    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+	    if (save_board_header(pos, fhp) == -1)
 		outs(ERR_BOARD_UPDATE);
 	    modlog(bname, log_reason, &log);
 
@@ -978,9 +973,8 @@ poll_maintain(const char *bname)
     // stays counted, so that b_closepolls(), which skips boards whose npolls
     // is 0, gets to close it.
     fhp->npolls = poll_count(bname);
-    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+    if (save_board_header(pos, fhp) == -1)
 	outs(ERR_BOARD_UPDATE);
-    reset_board(pos);
 
     outs("\n請依序輸入選項, 按 ENTER 完成設定");
     num = 0;
@@ -1028,9 +1022,8 @@ poll_maintain(const char *bname)
 
     fhp->npolls = poll_count(bname);
 
-    if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
+    if (save_board_header(pos, fhp) == -1)
 	outs(ERR_BOARD_UPDATE);
-    reset_board(pos);
     bof_modlog_t log;
     bof_modlog_set_field(bof_modlog_init(&log, "舉辦投票"), "投票", "%s", ptitle);
     modlog(bname, NULL, &log);

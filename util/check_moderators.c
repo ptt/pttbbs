@@ -213,8 +213,8 @@ static void scan_and_clean_boards(uint8_t *user_roles, board_stats_t *stats,
 
             if (write_mode) {
                 memcpy(bh.moderators, new_mods, sizeof(bh.moderators));
-                if (modify_boardheader(&bh, bid) == 0) {
-                    reset_board(bid);
+                bof_edit_community_t ed = { .bbs_id = bid, .bbs_header = &bh };
+                if (bof_edit_community(NULL, &ed) == BOF_OK) {
                     log_filef("log/check_moderators.log",
                               "[Board %s] Cleaned moderators: '%s' -> '%s'\n",
                               bh.brdname,

@@ -60,11 +60,15 @@ what BoF does only in part. See `README.md` for what BoF is.
 
 ### Others
 - **GetSiteMetadata** (previews of links): not for a terminal BBS.
-- **Communities** (boards), beyond reading them (GetCommunity,
-  ListCommunities): CreateCommunity, EditCommunity,
-  FollowCommunity (favorites), BlockCommunity, AddModToCommunity,
-  BanFromCommunity (muting), TransferCommunity; mbbsd still changes the
-  board header and the board cache (SHM) itself.
+- **Communities** (boards), beyond GetCommunity, ListCommunities,
+  CreateCommunity, EditCommunity and RemoveCommunity: FollowCommunity
+  (favorites), BlockCommunity, AddModToCommunity, BanFromCommunity
+  (muting), TransferCommunity. EditCommunity takes the whole board header
+  as mbbsd made it, not Lemmy's fields. AddModToCommunity (added:
+  false) is done only for deleted accounts (bof_bbs_remove_moderator());
+  mbbsd still sets the moderators in the board header.
+  RemoveCommunity with `removed: false` cannot be done: the name of a
+  removed board is free for a new one right away.
 - **Persons**, beyond reading one (GetPersonDetails): BlockPerson (the BBS
   reject list), BanPerson, accounts in a database (person IDs).
 - **Federation** (ActivityPub): `ap_id`, `actor_id`, inboxes.

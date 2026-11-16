@@ -792,6 +792,15 @@
 #define GUEST_URL ""
 #endif
 
+/* CONFIG_POST_SVC: post.svc keeps the posts, comments and votes, and the
+ * files of the boards are its cache: BoF uses its backend
+ * (bof_storage_postsvc) unless pttbbs.conf names another. Everything goes
+ * through BoF, which tells post.svc of the board headers it writes (.BRD).
+ * Off by default: the files are all there is. */
+#if IS_ENABLED(CONFIG_POST_SVC) && !defined(BOF_DEFAULT_STORAGE)
+#define BOF_DEFAULT_STORAGE bof_storage_postsvc
+#endif
+
 /* The records of posts read (bof/readmarks.c): the effective size of the
  * file of a person and the posts kept per board; pttbbs.conf may set both.
  * BRC_MAXSIZE must not exceed 64KB. */

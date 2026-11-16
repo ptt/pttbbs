@@ -152,6 +152,26 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*list_archived_posts)(
         void *ctx, const bof_bbs_list_archived_posts_t *req,
         bof_bbs_list_archived_posts_response_t *out);
+
+    /* Communities: the board header, and what it cannot say (see bof.h). */
+    bof_error_t (*edit_community)(void *ctx, const bof_actor_t *actor,
+                                  const bof_edit_community_t *req);
+    bof_error_t (*create_community)(void *ctx, const bof_actor_t *actor,
+                                    const bof_create_community_t *req,
+                                    bof_create_community_response_t *out);
+    bof_error_t (*remove_community)(void *ctx, const bof_actor_t *actor,
+                                    const bof_remove_community_t *req,
+                                    bof_remove_community_response_t *out);
+    bof_error_t (*rename_community)(void *ctx, const bof_actor_t *actor,
+                                    const bof_bbs_rename_community_t *req);
+    bof_error_t (*merge_communities)(
+        void *ctx, const bof_actor_t *actor,
+        const bof_bbs_merge_communities_t *req,
+        bof_bbs_merge_communities_response_t *out);
+    bof_error_t (*rebuild_community)(
+        void *ctx, const bof_actor_t *actor,
+        const bof_bbs_rebuild_community_t *req,
+        bof_bbs_rebuild_community_response_t *out);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

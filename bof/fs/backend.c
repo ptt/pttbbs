@@ -58,4 +58,10 @@ const bof_storage_ops_t bof_storage_files = {
     .get_post_revision_file = bof_fs_get_post_revision_file,
     .list_post_revisions = bof_fs_list_post_revisions,
     .list_archived_posts = bof_fs_list_archived_posts,
+    .edit_community = bof_fs_edit_community,
+    .create_community = bof_fs_create_community,
+    .remove_community = bof_fs_remove_community,
+    .rename_community = bof_fs_rename_community,
+    .merge_communities = bof_fs_merge_communities,
+    .rebuild_community = bof_fs_rebuild_community,
 };

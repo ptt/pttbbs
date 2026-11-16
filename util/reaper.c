@@ -3,6 +3,15 @@
 #include "bbs.h"
 #include "var.h"
 
+// Takes a deleted account off the moderators of the boards (through BoF),
+// before its uid goes to a new account.
+static void
+remove_moderator(int unum, const char *userid)
+{
+    bof_bbs_remove_moderator_t req = { .bbs_usernum = unum, .name = userid };
+    bof_bbs_remove_moderator(NULL, &req, NULL);
+}
+
 
 #undef MAX_GUEST_LIFE
 #undef MAX_LIFE
@@ -89,9 +98,11 @@ int check(void *data GCC_UNUSED, int n, userec_t *u) {
 		{
 		    syslog(LOG_NOTICE, "kill user(%d): %s %s", unum, u->userid, buf);
 		    purge_user_account(unum, u->userid, "CLEAN(EXPIRE)");
+		    remove_moderator(unum, u->userid);
 		} else {
 		    syslog(LOG_NOTICE, "clean user(%d): %s %s", n+1, u->userid, buf);
 		    purge_user_account(n+1, u->userid, "CLEAN(CLEAR)");
+		    remove_moderator(n+1, u->userid);
 		}
 	    }
 	}
