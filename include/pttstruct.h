@@ -482,6 +482,7 @@ typedef struct water_t {
     char    userid[IDLEN + 1];
     int     top, count;
     msgque_t        msg[MAX_REVIEW];
+    char            last_write[STRLEN]; // "To xxx: ..." sent last, kept out of msg[]
     userinfo_t      *uin;     // Ptt:這可以取代alive
 } water_t;
 

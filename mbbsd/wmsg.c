@@ -149,7 +149,7 @@ wmsg_render_history_section(const water_t *w, int start_row, int max_rows, int s
     int i = wmsg_render_history_list(w, y, max_rows, selected_idx, msg_bg);
     y += i;
 
-    const char *last_write = (w == &water[0]) ? t_last_write : w->msg[5].last_call_in;
+    const char *last_write = (w == &water[0]) ? t_last_write : w->last_write;
 
     if (last_write && last_write[0]) {
         move(y, 0);
@@ -363,7 +363,7 @@ ofo_reply_wmsg(water_t *tw, int ch)
 
     if (getdata_buf(0, 0, genbuf, msg, WMSG_INPUT_SIZE, DOECHO)) {
         if (my_write(tw->pid, msg, tw->userid, confirm_mode, tw->uin))
-            STRLCPY(tw->msg[5].last_call_in, t_last_write);
+            STRLCPY(tw->last_write, t_last_write);
     }
 }
 
@@ -764,7 +764,7 @@ my_write(pid_t pid, const char *prompt, const char *id, int flag, userinfo_t *pu
         dummy_msg.uslot = get_utmp_slot(uin);
         water_t *target_slot = swater_get_slot(&dummy_msg);
         if (target_slot)
-            STRLCPY(target_slot->msg[5].last_call_in, t_last_write);
+            STRLCPY(target_slot->last_write, t_last_write);
     }
 
     clrtoeol();
@@ -939,7 +939,7 @@ wmsg_handle_ctrl_r_default(int ch)
         if (target_pid == 0 && w->pid != 0) {
             target_pid = w->pid;
             STRLCPY(target_id, w->userid);
-            last_call_in = w->msg[5].last_call_in;
+            last_call_in = w->last_write;
         }
 
         if (target_pid == 0)
