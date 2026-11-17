@@ -414,7 +414,8 @@ vkey_get_context(void)
 #define VKEY_SET_PEEK(c)    (vkctx.peek_ch = (c))
 #define VKEY_RESET_PEEK()   (VKEY_SET_PEEK(KEY_INCOMPLETE))
 
-/* This may be called multiple times when we do vkey_purge. */
+/* Resets the whole context, including the IPC handler: call it only once,
+ * before login. vkey_purge() resets just the input state. */
 VKEY_PROTO void
 vkey_init()
 {
@@ -696,7 +697,12 @@ vkey_purge()
     cin_clear_buffer();
     VKEY_RESET_PEEK();
 
-    vkey_init();
+    // Reset only the input state. vkey_init() would also wipe the IPC
+    // handler (after which every wmsg, talk request and live comment read
+    // from ipc.svc is silently dropped until the next login), the attached
+    // fd and the pending events.
+    cin_init();
+    memset(&vkctx.vtkbd, 0, sizeof(vkctx.vtkbd));
 }
 
 // vim:ts=4:sw=4:et
