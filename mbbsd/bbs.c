@@ -834,7 +834,13 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
 
     // Ptt: protect original fh
     // because getindex safe_article_delete will change fh in some case
-    if( (i=getindex(bdir, &newfh, 0))>0)
+    // Found by AID: getindex() only bisects by the time stamp, so it may
+    // miss when the .DIR is not in order, or find another file with the same
+    // stamp; search_dir_by_aidu() matches the whole AID and scans the .DIR if
+    // bisecting fails.
+    i = search_dir_by_aidu(bdir, fn2aidu(fh->filename), 0, NULL,
+                           SEARCH_SRC_UNKNOWN);
+    if (i > 0)
     {
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
         if(bp && bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
