@@ -359,8 +359,9 @@ kick_all(const char *user)
 void
 violate_law(userec_t * u, int unum)
 {
-    // The reasons of tickets, whether the posts in BN_ALLPOST are deleted
-    // by default, and whether to ask who reported it.
+    // The reasons of tickets, whether to delete the posts of the user in
+    // BN_ALLPOST (and so on the boards they were posted to), and whether to
+    // ask who reported it.
     static const struct {
         const char *reason;
         bool allpost, ask;
@@ -399,15 +400,7 @@ violate_law(userec_t * u, int unum)
     } else {
         return;
     }
-    // Deleting the account deletes the posts anyway.
-    if (ans[0] != '9') {
-        getdata(8, 0, allpost ? "刪除此使用者在 " BN_ALLPOST " 的文章? [Y/n] " :
-                                "刪除此使用者在 " BN_ALLPOST " 的文章? [y/N] ",
-                ans2, 3, LCECHO);
-        if (ans2[0])
-            allpost = (ans2[0] == 'y');
-    }
-    getdata(9, 0, MSG_SURE_NY, ans2, 3, LCECHO);
+    getdata(8, 0, MSG_SURE_NY, ans2, 3, LCECHO);
     if (*ans2 != 'y')
 	return;
     if (ans[0] == '9') {
