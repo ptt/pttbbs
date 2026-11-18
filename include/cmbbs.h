@@ -194,8 +194,6 @@ int append_fileheader(const char *fpath, const fileheader_t *record);
 int modify_fileheader(const char *fpath, const fileheader_t *rptr, int id);
 int substitute_fileheaders(const char *fpath, const fileheader_t *rptr, size_t count, int id);
 int apply_fileheader(const char *fpath, int (*fptr)(void *item, void *optarg), void *arg);
-int getindex_m(const char *direct, fileheader_t *fhdr, int end, int isloadmoney);
-int getindex(const char *direct, fileheader_t *fhdr, int end);
 int substitute_ref_record(const char *direct, fileheader_t *fhdr, int ent);
 int substitute_fileheader(const char *dir_path, const void *srcptr, const void *destptr, int id);
 int delete_fileheader(const char *dir_path, const void *rptr, int id);

@@ -828,16 +828,8 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
     AUTO_BFILE(file, bname, fh->filename);
     memcpy(&newfh, fh, sizeof(fileheader_t));
 
-    // XXX TODO FIXME This (finding file by getindex) sucks. getindex checks
-    // only timestamp by binary search, but that is not always true in current
-    // system.
-
-    // Ptt: protect original fh
-    // because getindex safe_article_delete will change fh in some case
-    // Found by AID: getindex() only bisects by the time stamp, so it may
-    // miss when the .DIR is not in order, or find another file with the same
-    // stamp; search_dir_by_aidu() matches the whole AID and scans the .DIR if
-    // bisecting fails.
+    // Found by AID, which matches the whole AID (not only the time stamp)
+    // and scans the .DIR if bisecting fails, as the .DIR may not be in order.
     i = search_dir_by_aidu(bdir, fn2aidu(fh->filename), 0, NULL,
                            SEARCH_SRC_UNKNOWN);
     if (i > 0)
@@ -851,8 +843,7 @@ do_deleteCrossPost(const fileheader_t *fh, char bname[])
 	setbtotal(bid);
     }
 
-    // the getindex is not stable. in order to prevent leaving files,
-    // no matter what, delete the file.
+    // Delete the file even if its header was not found, so no file is left.
     delete_file_content2(bdir, fh, bdir, NULL, 0, "Cross-Post(系統警察刪除)");
     unlink(file);
 }
@@ -1409,7 +1400,7 @@ do_post_article(int edflags)
     STRLCPY(postfile.title, save_title);
 
     // Ptt: stamp file again to make it order
-    //      fix the bug that search failure in getindex
+    //      so searches bisecting the .DIR by time stamp can find it
     //      stampfile_u is used when you don't want to clear other fields
     STRLCPY(genbuf, fpath);
     setbpath(fpath, currboard);

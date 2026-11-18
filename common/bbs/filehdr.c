@@ -149,50 +149,6 @@ apply_fileheader(const char *fpath, int (*fptr)(void *item, void *optarg), void 
 }
 
 int
-getindex_m(const char *direct, fileheader_t *fhdr, int end, int isloadmoney)
-{
-    int fd = -1, begin = 1, i, s, times;
-    fileheader_t fh;
-    int stamp;
-    int n = get_num_records(direct, sizeof(fileheader_t));
-    if (end > n || end <= 0)
-        end = n;
-    stamp = get_fhdr_stamp_ts(fhdr->filename);
-    for (i = (begin + end) / 2, times = 0;
-         end >= begin && times < 20;
-         i = (begin + end) / 2, ++times) {
-        if (get_fileheader_keep(direct, &fh, i, &fd) == -1 ||
-            !fh.filename[0])
-            break;
-        s = get_fhdr_stamp_ts(fh.filename);
-        if (time4_gt(s, stamp))
-            end = i - 1;
-        else if (s == stamp) {
-            close(fd);
-            if (isloadmoney)
-                fhdr->multi.money = fh.multi.money;
-            return i;
-        } else
-            begin = i + 1;
-    }
-
-    if (times < 20) {
-        if (fd != -1)
-            close(fd);
-        return -i;
-    }
-    if (fd != -1)
-        close(fd);
-    return 0;
-}
-
-int
-getindex(const char *direct, fileheader_t *fhdr, int end)
-{
-    return getindex_m(direct, fhdr, end, 0);
-}
-
-int
 substitute_ref_record(const char *direct, fileheader_t *fhdr, int ent)
 {
     /* ent may be stale (e.g. remapped index in select mode); only write
