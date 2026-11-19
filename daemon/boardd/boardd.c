@@ -28,9 +28,10 @@ setup_program()
 int main(int argc, char *argv[])
 {
     int ch, run_as_daemon = 1;
+    int max_threads = BOARDD_DEFAULT_MAX_THREADS;
     const char *iface_ip = "127.0.0.1:5150";
 
-    while ((ch = getopt(argc, argv, "sDl:h")) != -1)
+    while ((ch = getopt(argc, argv, "sDl:t:h")) != -1)
 	switch (ch) {
 	    case 's':
 		fprintf(stderr,
@@ -43,9 +44,16 @@ int main(int argc, char *argv[])
 	    case 'l':
 		iface_ip = optarg;
 		break;
+	    case 't':
+		max_threads = atoi(optarg);
+		if (max_threads < 0) {
+		    fprintf(stderr, "Invalid max threads: %s\n", optarg);
+		    exit(EXIT_FAILURE);
+		}
+		break;
 	    case 'h':
 	    default:
-		fprintf(stderr, "Usage: %s [-D] [-l interface_ip:port]\n", argv[0]);
+		fprintf(stderr, "Usage: %s [-D] [-l interface_ip:port] [-t max_threads]\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
@@ -67,7 +75,7 @@ int main(int argc, char *argv[])
     char *ipport = strdup(iface_ip);
     char *ip = strtok(ipport, ":");
     char *port = strtok(NULL, ":");
-    start_grpc_server(ip, atoi(port));
+    start_grpc_server(ip, atoi(port), max_threads);
     free(ipport);
 
     return 0;

@@ -131,9 +131,15 @@ Status BoardServiceImpl::List(ServerContext * /*context*/,
   RETURN_ON_FAIL(ResolveRef(req->ref(), &bid, &bp));
   // Posts.
   if (req->include_posts()) {
+    // length comes from the client; negative used to read the whole .DIR one
+    // record at a time, which ties up a thread for a long time on big boards.
+    int length = req->length();
+    if (length < 0 || length > BOARDD_MAX_LIST_LENGTH) {
+      length = BOARDD_MAX_LIST_LENGTH;
+    }
     std::vector<fileheader_t> fhs;
     size_t offset = records::Get<fileheader_t>(
-        paths::bfile(bp->brdname, FN_DIR), req->offset(), req->length(), &fhs);
+        paths::bfile(bp->brdname, FN_DIR), req->offset(), length, &fhs);
     for (auto &fh : fhs) {
       mbs_safe_trim(fh.title);
       AsPost(offset++, fh).Swap(rep->add_posts());
@@ -320,6 +326,9 @@ Status BoardServiceImpl::Search(ServerContext * /*context*/,
   if (limit < 0) {
     limit = 0;
   }
+  if (limit > BOARDD_MAX_LIST_LENGTH) {
+    limit = BOARDD_MAX_LIST_LENGTH;
+  }
   const size_t num_records = records::Count<fileheader_t>(dir_path);
   if (static_cast<size_t>(limit) > num_records) {
     limit = static_cast<int>(num_records);
@@ -368,13 +377,19 @@ std::unique_ptr<BoardService::Service> CreateBoardService() {
   return std::unique_ptr<BoardService::Service>(new BoardServiceImpl());
 }
 
-void start_grpc_server(const char *host, unsigned short port) {
+void start_grpc_server(const char *host, unsigned short port,
+                       int max_threads) {
   auto service = CreateBoardService();
   auto address = std::string(host) + ":" + std::to_string(port);
 
   grpc::ServerBuilder builder;
   builder.AddListeningPort(address, grpc::InsecureServerCredentials());
   builder.RegisterService(service.get());
+  grpc::ResourceQuota quota("boardd");
+  if (max_threads > 0) {
+    quota.SetMaxThreads(max_threads);
+    builder.SetResourceQuota(quota);
+  }
 
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   std::cerr << "Serving at " << address << std::endl;
