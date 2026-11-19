@@ -14,3 +14,5 @@ tags
 !*.svc/
 !*.ctl/
 /service-private
+# mk/clang_src.py's files while compiling (left by a killed build).
+.clang_src.*

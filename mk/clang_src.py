@@ -13,6 +13,7 @@ Usage:
    clang_src.py -finput-charset=big5 -fexec-charset=utf8 - < in.c > out.c
 """
 
+import hashlib
 import os
 import re
 import subprocess
@@ -142,6 +143,47 @@ def transcode_c(data: bytes, input_charset: str, exec_charset: str) -> bytes:
         return data
 
 
+def compile_copy(cc_prefix: list[str], args: list[str], src_idx: int,
+                 code: bytes) -> int:
+    """Compile code in place of the source args[src_idx], from a copy:
+    beside the source, as the debug info names the copy's directory (and,
+    with -main-file-name, the source); with the same extension; named after
+    the output, as ccache hashes the input's path; and as old as the source,
+    as ccache distrusts files changed just now."""
+    src = args[src_idx]
+    head = args[:src_idx]
+    out = output_path(args)
+    if out is None:
+        # What the compiler would name it after the source.
+        stem = os.path.splitext(os.path.basename(src))[0]
+        out = stem + ".o" if "-c" in args else stem + ".s" if "-S" in args else "a.out"
+        head = head + ["-o", out]
+    # Unique to the output, as sources can share a directory and outputs a
+    # name (cgo's), and the same each build.
+    tag = hashlib.sha1(os.path.relpath(out, os.path.dirname(src) or ".").encode())
+    name = ".clang_src." + os.path.basename(out) + "." + tag.hexdigest()[:8] + \
+        os.path.splitext(src)[1]
+    try:
+        f = open(os.path.join(os.path.dirname(src), name), "wb")
+    except OSError:
+        # A read-only source (Go's runtime/cgo, say): next to the output,
+        # finding the source's #include "..." with -iquote.
+        f = open(os.path.join(os.path.dirname(out), name), "wb")
+        head = head + ["-iquote", os.path.dirname(src) or "."]
+    copy = f.name
+    with f:
+        f.write(code)
+    st = os.stat(src)
+    os.utime(copy, ns=(st.st_atime_ns, st.st_mtime_ns))
+    try:
+        return subprocess.run(
+            cc_prefix + head +
+            ["-Xclang", "-main-file-name", "-Xclang", os.path.basename(src), copy] +
+            args[src_idx + 1:]).returncode
+    finally:
+        os.unlink(copy)
+
+
 def is_source_file(arg: str) -> bool:
     return not arg.startswith("-") and arg.endswith((".c", ".cc", ".cpp"))
 
@@ -269,18 +311,16 @@ def main() -> int:
     transcoded_code = fix_stdin_line_markers(transcoded_code, src_file)
 
     # Step 3: Feed preprocessed stream back to clang
-    tail = args[src_idx + 1 :]
-    has_more_inputs = any(
-        not a.startswith("-") and (i == 0 or tail[i - 1] != "-o")
-        for i, a in enumerate(tail)
-    )
-    mid = ["-x", src_lang, "-"] + (["-x", "none"] if has_more_inputs else [])
-    if "-c" in args and not any(a == "-o" or a.startswith("-o") for a in args):
-        default_obj = os.path.splitext(os.path.basename(src_file))[0] + ".o"
-        mid = ["-o", default_obj] + mid
-    compile_args = args[:src_idx] + mid + tail
-    cc_proc = subprocess.run(cc_prefix + compile_args, input=transcoded_code)
-    return cc_proc.returncode
+    return compile_copy(cc_prefix, args, src_idx, transcoded_code)
+
+
+def output_path(args: list[str]) -> str | None:
+    for i, a in enumerate(args):
+        if a == "-o" and i + 1 < len(args):
+            return args[i + 1]
+        if a.startswith("-o") and len(a) > 2:
+            return a[2:]
+    return None
 
 
 if __name__ == "__main__":
