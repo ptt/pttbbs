@@ -161,8 +161,10 @@ def compile_copy(cc_prefix: list[str], args: list[str], src_idx: int,
     # Unique to the output, as sources can share a directory and outputs a
     # name (cgo's), and the same each build.
     tag = hashlib.sha1(os.path.relpath(out, os.path.dirname(src) or ".").encode())
-    name = ".clang_src." + os.path.basename(out) + "." + tag.hexdigest()[:8] + \
-        os.path.splitext(src)[1]
+    name = os.path.basename(out)
+    if not name.startswith(".clang_src."):    # compile_then_link's object
+        name = ".clang_src." + name
+    name += "." + tag.hexdigest()[:8] + os.path.splitext(src)[1]
     try:
         f = open(os.path.join(os.path.dirname(src), name), "wb")
     except OSError:
@@ -234,6 +236,14 @@ def main() -> int:
     src_indices = [idx for idx, a in enumerate(args) if is_source_file(a)]
     if not src_indices:
         os.execvp(cc_prefix[0], cc_prefix + args)
+
+    # ccache can't cache compiling and linking in one go (as util/ builds its
+    # programs): compile to an object through this wrapper, then link that.
+    if cc_prefix[0] == "ccache" and "-c" not in args and len(src_indices) == 1:
+        rc = compile_then_link(args, src_indices[0], raw_compiler,
+                               input_charset, exec_charset)
+        if rc is not None:
+            return rc
 
     # Extract preprocessor/compiler flags for the `-E` step.
     pp_flags = []
@@ -312,6 +322,76 @@ def main() -> int:
 
     # Step 3: Feed preprocessed stream back to clang
     return compile_copy(cc_prefix, args, src_idx, transcoded_code)
+
+
+# Options whose value is the next argument: for the compiler (passed to
+# both steps), or for the linker only. Others make compile_then_link decline.
+CC_VALUE_OPTS = ("-I", "-D", "-U", "-include", "-imacros", "-isystem", "-iquote",
+                 "-idirafter", "-x", "-Xclang", "-target", "-arch", "-isysroot",
+                 "--sysroot", "-MF", "-MT", "-MQ")
+LD_VALUE_OPTS = ("-o", "-Xlinker", "-z", "-framework", "-T", "-u", "-L", "-l")
+LD_ONLY = ("-shared", "-static", "-rdynamic", "-pie", "-no-pie")
+NOT_LINKING = ("-S", "-E", "-M", "-MM", "-fsyntax-only")
+
+
+def split_compile_link(args: list[str], src_idx: int):
+    """For a command that compiles args[src_idx] and links it: the arguments
+    to compile it alone, and to link (None for the object); None if the
+    command is not plainly that (an argument it doesn't know, say)."""
+    cc, ld, i = [], [], 0
+    while i < len(args):
+        a = args[i]
+        if i == src_idx:
+            ld.append(None)
+        elif a in NOT_LINKING or is_source_file(a):
+            return None
+        elif a in LD_VALUE_OPTS or a in CC_VALUE_OPTS:
+            if i + 1 == len(args):
+                return None
+            if a in CC_VALUE_OPTS:
+                cc += [a, args[i + 1]]
+            ld += [a, args[i + 1]]
+            i += 1
+        elif a.startswith(("-o", "-l", "-L", "-Wl,")) or a in LD_ONLY:
+            ld.append(a)
+        elif a.startswith("-"):
+            cc.append(a)
+            ld.append(a)
+        elif re.search(r"\.(o|a|so(\.[0-9]+)*|dylib)$", a):
+            ld.append(a)
+        else:
+            return None
+        i += 1
+    return cc, ld
+
+
+def compile_then_link(args: list[str], src_idx: int, raw_compiler: str,
+                      input_charset: str, exec_charset: str) -> int | None:
+    parts = split_compile_link(args, src_idx)
+    if parts is None:
+        return None
+    cc, ld = parts
+    out = output_path(args) or "a.out"
+    obj = os.path.join(os.path.dirname(out), ".clang_src." + os.path.basename(out) + ".o")
+    try:
+        rc = subprocess.run(
+            [sys.executable, os.path.abspath(__file__),
+             f"-finput-charset={input_charset}", f"-fexec-charset={exec_charset}",
+             "ccache", raw_compiler] + cc + ["-c", "-o", obj, args[src_idx]]).returncode
+        if rc:
+            return rc
+        link, seen_x = [], False
+        for a in ld:
+            if a is None:
+                # An earlier -x would apply to the object too.
+                link += ["-x", "none", obj] if seen_x else [obj]
+            else:
+                link.append(a)
+                seen_x = seen_x or a == "-x"
+        return subprocess.run([raw_compiler] + link).returncode
+    finally:
+        if os.path.exists(obj):
+            os.unlink(obj)
 
 
 def output_path(args: list[str]) -> str | None:
