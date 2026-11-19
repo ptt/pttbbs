@@ -1,3 +1,7 @@
+# For the config, read once here for every sub-make.
+SRCROOT:=	.
+include pttbbs.mk
+
 SUBDIRS:=	common bof mbbsd util service
 
 # Local services

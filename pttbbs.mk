@@ -22,10 +22,21 @@ CXX:=		ccache $(CXX)
 endif
 
 BBSCONF:=	$(SRCROOT)/pttbbs.conf
+# The macros pttbbs.conf defines as nothing or 1, for DEF_CHECK, and its
+# BBSHOME: read with one `$(CC) -E` per build (the top makefile includes
+# this too) instead of one per check in every makefile, and handed to the
+# sub-makes in the environment. Plain sed -E, as on BSD.
+ifneq ($(PTT_CONF_FILE),$(abspath $(BBSCONF)))
+PTT_CONF_DUMP:=	$(shell $(CC) -x c -E -dM -I$(SRCROOT)/include $(BBSCONF) 2>/dev/null | \
+		sed -n -E -e 's/^#define[[:blank:]]+BBSHOME[[:blank:]]+"([^"]*)".*/BBSHOME=\1/p' \
+		-e 's/^#define[[:blank:]]+([A-Za-z0-9_]+)([[:blank:]]+1)?[[:blank:]]*$$/\1/p')
+export PTT_CONF_ON:=	$(filter-out BBSHOME=%,$(PTT_CONF_DUMP))
+export CONF_BBSHOME:=	$(patsubst BBSHOME=%,%,$(filter BBSHOME=%,$(PTT_CONF_DUMP)))
+export PTT_CONF_FILE:=	$(abspath $(BBSCONF))
+endif
 # Helper to check if a feature flag is #defined in pttbbs.conf for GNU Make
-DEF_CHECK=	$(strip $(shell $(CC) -x c -E -dM -I$(SRCROOT)/include $(BBSCONF) 2>/dev/null | grep -qE "^#define[ \t]+$1([ \t]+1|[ \t]*$$)" && echo "YES"))
+DEF_CHECK=	$(if $(filter $1,$(PTT_CONF_ON)),YES)
 
-CONF_BBSHOME:=	$(strip $(shell $(CC) -x c -E -dM -I$(SRCROOT)/include $(BBSCONF) 2>/dev/null | sed -n 's/^#define[ \t]\+BBSHOME[ \t]\+"\([^"]*\)".*/\1/p'))
 BBSHOME?=	$(if $(CONF_BBSHOME),$(CONF_BBSHOME),$(HOME))
 
 ifeq ($(MB_IS_UTF8),)
