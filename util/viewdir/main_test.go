@@ -76,6 +76,36 @@ func TestParseDirFile(t *testing.T) {
 	}
 }
 
+func TestParseDirFileStopsAtNUL(t *testing.T) {
+	tmpDir, cleanup := setupTestDir(t)
+	defer cleanup()
+
+	// A tombstone written over a record keeps what was after the end of
+	// the new values: "-" over "SYSOP", ".deleted" over a longer file name.
+	var raw RawFileHeader
+	copy(raw.Filename[:], "M.1700000000.A.123")
+	copy(raw.Filename[:], ".deleted\x00")
+	copy(raw.Owner[:], "SYSOP")
+	copy(raw.Owner[:], "-\x00")
+	copy(raw.Title[:], "(deleted)\x00Old title")
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.LittleEndian, &raw)
+	dirPath := filepath.Join(tmpDir, ".DIR")
+	if err := os.WriteFile(dirPath, buf.Bytes(), 0644); err != nil {
+		t.Fatalf("Failed to write .DIR: %v", err)
+	}
+
+	articles, err := parseDirFile(dirPath)
+	if err != nil || len(articles) != 1 {
+		t.Fatalf("Failed to parse .DIR: %v, %d articles", err, len(articles))
+	}
+	a := articles[0]
+	if a.Filename != ".deleted" || a.Owner != "-" || a.Title != "(deleted)" {
+		t.Errorf("Got %q %q %q, want \".deleted\" \"-\" \"(deleted)\"",
+			a.Filename, a.Owner, a.Title)
+	}
+}
+
 func TestDetectEncoding(t *testing.T) {
 	os.Setenv("LANG", "zh_TW.Big5")
 	if enc := detectDefaultEncoding(); enc != "big5" {

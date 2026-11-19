@@ -185,8 +185,18 @@ func sanitizeDBCS(data []byte) []byte {
 	return out
 }
 
+// cString returns b up to its first NUL, as C reads a string field: what
+// is after it (e.g. what is left of a longer value written before) is not
+// part of the value.
+func cString(b []byte) []byte {
+	if i := bytes.IndexByte(b, 0); i >= 0 {
+		return b[:i]
+	}
+	return b
+}
+
 func decodeBig5(b []byte) string {
-	b = bytes.TrimRight(b, "\x00")
+	b = cString(b)
 	b = sanitizeDBCS(b)
 	return decodeBig5Raw(b)
 }
@@ -209,7 +219,7 @@ func parseDirFile(dirPath string) ([]ArticleHeader, error) {
 			continue
 		}
 
-		filename := string(bytes.TrimRight(raw.Filename[:], "\x00"))
+		filename := string(cString(raw.Filename[:]))
 		if filename == "" {
 			continue
 		}
