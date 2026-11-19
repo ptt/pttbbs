@@ -1445,8 +1445,40 @@ bconfig_cmd_hotkey(cmd_ctx_t *ctx) {
     return 0;
 }
 
+// Right only enters the lists and management pages, like entering a board;
+// it does not change settings, which takes Enter or the hotkey. Space
+// pages down as in other lists.
+static int
+bconfig_cmd_enter(cmd_ctx_t *ctx) {
+    assert(ctx->curr >= 0 && ctx->curr < (int)ARRAY_SIZE(bconfig_items));
+    const BConfigItem *item = &bconfig_items[ctx->curr];
+    if (item->viewer || item->getter == bcfg_get_edit_entry ||
+        item->getter == bcfg_get_enter_entry)
+        return bconfig_cmd_select(ctx);
+    return 0;
+}
+
 static const cmd_t bconfig_edit_cmds[];
 static const cmd_t bconfig_readonly_cmds[];
+
+// Hotkeys take either case, as they did before b_config used cmd_t. The
+// commands are lowercase, so an uppercase key is turned into the lowercase
+// one if that is a command here; other uppercase keys (e.g. P, N, Q) keep
+// their meaning.
+static int
+bconfig_on_key(PSB_CTX *psb) {
+    int key = psb->cmd.key;
+    if (key < 'A' || key > 'Z')
+        return PSB_NA;
+    int lower = key - 'A' + 'a';
+    for (const cmd_t *c = psb->cmds; c->key || c->func; c++) {
+        if (c->key == lower && psb_check_perm(c->permission)) {
+            psb->cmd.key = lower;
+            break;
+        }
+    }
+    return PSB_NA;
+}
 
 static int
 bconfig_cmd_toggle_edit(cmd_ctx_t *ctx) {
@@ -1475,8 +1507,7 @@ static const cmd_t bconfig_readonly_cmds[] = {
 
 static const cmd_t bconfig_edit_cmds[] = {
     { KEY_ENTER, "切換/執行", "切換選取的設定值或進入管理功能", bconfig_cmd_select, 0, CMD_PRIO_MAX, true },
-    { KEY_RIGHT, NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
-    { ' ', NULL, NULL, bconfig_cmd_select, 0, CMD_PRIO_NONE, true },
+    { KEY_RIGHT, NULL, NULL, bconfig_cmd_enter, 0, CMD_PRIO_NONE, true },
     { Ctrl('P'), NULL, "切換回唯讀檢視模式", bconfig_cmd_toggle_edit, 0, CMD_PRIO_NONE },
     { 'w', "禁言名單", "設定看板禁言名單(水桶)", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_HIGH, true },
     { 'v', "可見名單", "編輯看板可見會員名單", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NORM, true },
@@ -1629,6 +1660,7 @@ b_config(void)
         .header = bconfig_header,
         .renderer = bconfig_renderer,
         .cmds = bconfig_readonly_cmds,
+        .on_key = bconfig_on_key,
     };
     cx.psb = &ctx;
 
