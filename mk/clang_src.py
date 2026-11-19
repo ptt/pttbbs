@@ -271,7 +271,7 @@ def main() -> int:
     if input_charset == "big5":
         with open(src_file, "rb") as f:
             src_bytes = f.read()
-        pp_input = f'# 1 "{src_file}"\n'.encode() + big5_to_big5_c(src_bytes)
+        pp_input = big5_to_big5_c(src_bytes)
         pp_cmd = [
             raw_compiler,
             "-E",
