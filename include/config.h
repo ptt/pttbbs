@@ -682,6 +682,12 @@
 #define CONFIG_LOGIN_WAIT 1
 #endif
 
+/* A second's wait after saving in the editor, against floods (NO_SAVE_WAIT:
+ * test sites) */
+#if !defined(NO_SAVE_WAIT) && !defined(CONFIG_SAVE_WAIT)
+#define CONFIG_SAVE_WAIT 1
+#endif
+
 #if !defined(NO_CONST_CUSER) && !defined(CONFIG_CONST_CUSER)
 #define CONFIG_CONST_CUSER 1
 #endif

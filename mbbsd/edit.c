@@ -2349,7 +2349,7 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
     getdata(2, 0, "確定要儲存檔案嗎？ ", ans, 2, LCECHO);
 
     // avoid lots pots
-    if (ans[0] != 'a')
+    if (ans[0] != 'a' && IS_ENABLED(CONFIG_SAVE_WAIT))
 	sleep(1);
 
     switch (ans[0]) {
