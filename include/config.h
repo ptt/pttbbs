@@ -677,6 +677,11 @@
 #define CONFIG_ADJUST_CPU_LIMITS 1
 #endif
 
+/* Random waits at login (NO_LOGIN_WAIT: test sites, to log in at once) */
+#if !defined(NO_LOGIN_WAIT) && !defined(CONFIG_LOGIN_WAIT)
+#define CONFIG_LOGIN_WAIT 1
+#endif
+
 #if !defined(NO_CONST_CUSER) && !defined(CONFIG_CONST_CUSER)
 #define CONFIG_CONST_CUSER 1
 #endif

@@ -498,6 +498,31 @@ getotherlogin(int num)
     return ui;
 }
 
+// Waits a random time at login, so that logins of the same account, which
+// race each other in multi_user_check(), spread out. Not on test sites
+// (without CONFIG_LOGIN_WAIT).
+static void
+login_wait(useconds_t min_usec, useconds_t range_usec)
+{
+    if (IS_ENABLED(CONFIG_LOGIN_WAIT))
+	usleep(min_usec + arc4random_uniform(range_usec));
+}
+
+// After kicking the login ui (pid): 1~3 s, or on test sites until it has
+// saved its data and left the utmp, up to 3 s.
+static void
+kick_wait(const userinfo_t *ui, pid_t pid)
+{
+    int i;
+
+    if (IS_ENABLED(CONFIG_LOGIN_WAIT)) {
+	login_wait(1000000, 2000000); // 1~3s
+	return;
+    }
+    for (i = 0; i < 300 && pid > 0 && ui->pid == pid; i++)
+	usleep(10000);
+}
+
 static void
 multi_user_check(void)
 {
@@ -509,7 +534,7 @@ multi_user_check(void)
 
     // race condition here, sleep may help..?
     if (cuser.userlevel) {
-	usleep(arc4random_uniform(1000000)); // 0~1s
+	login_wait(0, 1000000); // 0~1s
 	ui = getotherlogin(1);
 	if(ui == NULL)
 	    return;
@@ -519,15 +544,18 @@ multi_user_check(void)
 	getdata(b_lines - 1, 0, "您想刪除其他重複登入的連線嗎？[Y/n] ",
 		genbuf, 3, LCECHO);
 
-	usleep(arc4random_uniform(5000000)); // 0~5s
+	login_wait(0, 5000000); // 0~5s
 	if (genbuf[0] != 'n') {
 	    do {
+		pid_t pid;
+
 		// scan again, old ui may be invalid
 		ui = getotherlogin(1);
 		if(ui==NULL)
 		    return;
-		if (ui->pid > 0) {
-		    if(kill(ui->pid, SIGHUP)<0) {
+		pid = ui->pid;
+		if (pid > 0) {
+		    if(kill(pid, SIGHUP)<0) {
 			perror("kill SIGHUP fail");
 			break;
 		    }
@@ -535,7 +563,7 @@ multi_user_check(void)
 		}  else {
 		    fprintf(stderr, "id=%s ui->pid=0\n", cuser.userid);
 		}
-		usleep(arc4random_uniform(2000000)+1000000); // 1~3s
+		kick_wait(ui, pid);
 	    } while(getotherlogin(3) != NULL);
 	} else {
 	    /* deny login if still have 3 */
