@@ -143,13 +143,26 @@ def transcode_c(data: bytes, input_charset: str, exec_charset: str) -> bytes:
         return data
 
 
+def compile_big5(cc_prefix: list[str], args: list[str], src_idx: int) -> int:
+    src = args[src_idx]
+    with open(src, "rb") as f:
+        data = f.read()
+    # Quick check first: no Big5 lead byte before a backslash at all.
+    escaped = big5_to_big5_c(data) if re.search(rb"[\x81-\xfe]\x5c", data) else data
+    if escaped == data:
+        os.execvp(cc_prefix[0], cc_prefix + args)
+    return compile_copy(cc_prefix, args, src_idx,
+                        b'#line 1 "' + c_string(src) + b'"\n' + escaped)
+
+
 def compile_copy(cc_prefix: list[str], args: list[str], src_idx: int,
                  code: bytes) -> int:
     """Compile code in place of the source args[src_idx], from a copy:
-    beside the source, as the debug info names the copy's directory (and,
-    with -main-file-name, the source); with the same extension; named after
-    the output, as ccache hashes the input's path; and as old as the source,
-    as ccache distrusts files changed just now."""
+    beside the source, for its #include "..." and as the debug info names
+    the copy's directory (and, with -main-file-name, the source); with the
+    same extension; named after the output, as ccache hashes the input's
+    path; and as old as the source, as ccache distrusts files changed just
+    now."""
     src = args[src_idx]
     head = args[:src_idx]
     out = output_path(args)
@@ -186,6 +199,11 @@ def compile_copy(cc_prefix: list[str], args: list[str], src_idx: int,
         os.unlink(copy)
 
 
+def c_string(s: str) -> bytes:
+    """s as the inside of a C string literal."""
+    return s.replace("\\", "\\\\").replace('"', '\\"').encode()
+
+
 def is_source_file(arg: str) -> bool:
     return not arg.startswith("-") and arg.endswith((".c", ".cc", ".cpp"))
 
@@ -193,7 +211,7 @@ def is_source_file(arg: str) -> bool:
 def fix_stdin_line_markers(code: bytes, src_file: str) -> bytes:
     """Replace '<stdin>' in preprocessor line directives with src_file."""
     pattern = re.compile(rb'(?m)^#(\s*line)?\s+(\d+)\s+"<stdin>"')
-    escaped_src = src_file.replace("\\", "\\\\").replace('"', '\\"').encode()
+    escaped_src = c_string(src_file)
 
     def repl(m: re.Match[bytes]) -> bytes:
         prefix = m.group(1) or b""
@@ -244,6 +262,13 @@ def main() -> int:
                                input_charset, exec_charset)
         if rc is not None:
             return rc
+
+    # Big5 to Big5 only escapes the source itself (headers go through as
+    # they are): compile it as it is, or, with something escaped, a copy
+    # next to it (for its #include "..."), so that ccache finds either from
+    # the source and its headers, without preprocessing.
+    if input_charset == "big5" and exec_charset == "big5" and len(src_indices) == 1:
+        return compile_big5(cc_prefix, args, src_indices[0])
 
     # Extract preprocessor/compiler flags for the `-E` step.
     pp_flags = []
