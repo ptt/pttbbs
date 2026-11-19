@@ -2884,6 +2884,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     int logIP = 0;
     int ymsg = b_lines -1;
     const char *reason = "權限不足";
+    bool forced = false;
 
     if (!fhdr || !fhdr->filename[0])
 	return DONOTHING;
@@ -2891,10 +2892,22 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     assert(0<=currbid-1 && currbid-1<MAX_BOARD);
     bp = getbcache(currbid);
 
-    if (bp->brdattr & BRD_NO_COMMENTS || fhdr->filename[0] == 'L' ||
+    if (fhdr->filename[0] == 'L' ||
         ((fhdr->filemode & FILE_MARKED) && (fhdr->filemode & FILE_SOLVED))) {
 	vmsg("抱歉, 禁止推薦");
 	return FULLUPDATE;
+    }
+    // Moderators (and up) may still comment on a board closed to comments,
+    // e.g. to reply with the result on a site board, without opening it
+    // to everyone and closing it again.
+    if (bp->brdattr & BRD_NO_COMMENTS) {
+	if (!psb_check_perm(PERM_BM | PERM_GROUP_OP | PERM_GROUP_LEAD)) {
+	    vmsg("抱歉, 禁止推薦");
+	    return FULLUPDATE;
+	}
+	if (vans("此板目前禁推，要以管理身份強制推文嗎？ [y/N]: ") != 'y')
+	    return FULLUPDATE;
+	forced = true;
     }
     if (!CheckPostPerm2(&reason))
     {
@@ -3189,6 +3202,14 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     if (CommentAddRecord(bp->brdname, direct, fhdr, ent, type, msg, buf) < 0)
         return DIRCHANGED;
+
+    if (forced) {
+	modlog_t log;
+	modlog_init(&log, "禁推時強制推文");
+	modlog_add_post(&log, fhdr);
+	modlog_add(&log, "推文", "%s %s", ctype[type], msg);
+	modlog(bp->brdname, NULL, &log);
+    }
 
     lastcomment = now;
     STRLCPY(lastcomment_fname, fhdr->filename);
