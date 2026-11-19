@@ -149,25 +149,28 @@ endif
 #######################################################################
 
 
+# Expanded where used (only by some daemons), not by every makefile that
+# includes this one: pkg-config takes about a second for grpc++.
+
 #libevent
-LIBEVENT_CFLAGS:=	$(shell (pkg-config --cflags libevent_pthreads || true) 2>/dev/null)
-LIBEVENT_LIBS_L:=	$(shell (pkg-config --libs-only-L libevent_pthreads || true) 2>/dev/null)
-LIBEVENT_LIBS_l:=	$(shell (pkg-config --libs-only-l libevent_pthreads || true) 2>/dev/null)
+LIBEVENT_CFLAGS=	$(shell (pkg-config --cflags libevent_pthreads || true) 2>/dev/null)
+LIBEVENT_LIBS_L=	$(shell (pkg-config --libs-only-L libevent_pthreads || true) 2>/dev/null)
+LIBEVENT_LIBS_l=	$(shell (pkg-config --libs-only-l libevent_pthreads || true) 2>/dev/null)
 
 # grpc++
-GRPCPP_CFLAGS:=		$(shell (pkg-config --cflags grpc++ || true) 2>/dev/null)
-GRPCPP_LIBS_L:=		$(shell (pkg-config --libs-only-L grpc++ || true) 2>/dev/null)
-GRPCPP_LIBS_l:=		$(shell (pkg-config --libs-only-l grpc++ || true) 2>/dev/null)
+GRPCPP_CFLAGS=		$(shell (pkg-config --cflags grpc++ || true) 2>/dev/null)
+GRPCPP_LIBS_L=		$(shell (pkg-config --libs-only-L grpc++ || true) 2>/dev/null)
+GRPCPP_LIBS_l=		$(shell (pkg-config --libs-only-l grpc++ || true) 2>/dev/null)
 
 # protobuf
-PROTOBUF_CFLAGS:=	$(shell (pkg-config --cflags protobuf || true) 2>/dev/null)
-PROTOBUF_LIBS_L:=	$(shell (pkg-config --libs-only-L protobuf || true) 2>/dev/null)
-PROTOBUF_LIBS_l:=	$(shell (pkg-config --libs-only-l protobuf || true) 2>/dev/null)
+PROTOBUF_CFLAGS=	$(shell (pkg-config --cflags protobuf || true) 2>/dev/null)
+PROTOBUF_LIBS_L=	$(shell (pkg-config --libs-only-L protobuf || true) 2>/dev/null)
+PROTOBUF_LIBS_l=	$(shell (pkg-config --libs-only-l protobuf || true) 2>/dev/null)
 
 # gflags
-GFLAGS_CFLAGS:=		$(shell (pkg-config --cflags gflags || true) 2>/dev/null)
-GFLAGS_LIBS_L:=		$(shell (pkg-config --libs-only-L gflags || true) 2>/dev/null)
-GFLAGS_LIBS_l:=		$(shell (pkg-config --libs-only-l gflags || true) 2>/dev/null)
+GFLAGS_CFLAGS=		$(shell (pkg-config --cflags gflags || true) 2>/dev/null)
+GFLAGS_LIBS_L=		$(shell (pkg-config --libs-only-L gflags || true) 2>/dev/null)
+GFLAGS_LIBS_l=		$(shell (pkg-config --libs-only-l gflags || true) 2>/dev/null)
 
 USE_MBBSD_CXX:=	$(call DEF_CHECK,USE_MBBSD_CXX)
 
