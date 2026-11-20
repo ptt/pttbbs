@@ -81,8 +81,10 @@ what BoF does only in part. See `README.md` for what BoF is.
   `include/bof_fs.h`). Still to do: tests against a running post.svc, and
   a tool to bring the cache in step again from what it logs
   (`BOF_STORAGE_LOG`; post.svc has `sync-dir`).
-- **The read records** (`readmarks.c`) are kept by BoF for the session,
-  not through the storage virtualization yet.
+- **The read records** (`readmarks.c`) are kept by BoF for the person in
+  session (a gateway switches it, `bof_bbs_read_marks_switch()`), in the
+  files of their homes, not through the storage virtualization yet
+  (Lemmy keeps `post_read` in its database).
 - **The UI and the files of posts**: mbbsd reads posts from the file
   `bof_bbs_get_post_file()` gives and writes new ones aside (`tmp/`),
   created by `bof_create_post()`; forwarding, quoting in a mail, copying

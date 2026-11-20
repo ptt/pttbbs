@@ -334,6 +334,27 @@ static void test_brcstore_filename(void) {
     printf("  -> PASS (path: %s)\n", path);
 }
 
+static void test_switch_person(void) {
+    printf("Testing switching the person in session (gateways)...\n");
+    setup_test();
+    rm_savable = 0;     // nothing written to the homes here
+    strcpy(rm_userid, "alice");
+    rm_login = now;
+    brc_currbid = 10;
+    brc_num = 1;
+
+    // The same person: kept as it is.
+    bof_bbs_read_marks_switch("ALICE", 0, now);
+    assert(brc_initialized && brc_currbid == 10);
+
+    // Another: the one before is finalized, the board entered forgotten.
+    bof_bbs_read_marks_switch("bob", 0, now - 10);
+    assert(!brc_initialized && brc_buf == NULL);
+    assert(brc_currbid == 0 && brc_num == 0);
+    assert(strcmp(rm_userid, "bob") == 0 && rm_login == now - 10);
+    printf("  -> PASS\n");
+}
+
 int main(void) {
     now = 1700000000;
     printf("Running comprehensive BRC on-demand compacting tests...\n");
@@ -346,6 +367,7 @@ int main(void) {
     test_recovery_after_compact();
     test_buffer_overflow_with_compact();
     test_brcstore_filename();
+    test_switch_person();
     printf("\nAll BRC on-demand compacting tests PASSED successfully!\n");
     return 0;
 }

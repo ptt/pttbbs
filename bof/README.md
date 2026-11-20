@@ -129,7 +129,10 @@ uses BoF the same way `mbbsd` does:
   the common library, the backend in use, the read records of a
   session): a server serializes its calls (one lock) or runs them in
   worker processes. The read records (`readmarks.c`) are those of one
-  person per process, not for a server yet.
+  person at a time: before the calls of a user, a gateway makes them its
+  person with `bof_bbs_read_marks_switch()`, which saves those of the
+  one before (keeping the calls of one person together saves loading
+  them again).
 - **IDs.** Lemmy's IDs are post.svc's, so a gateway needs it as the
   backend. A post ID gives its key (`bof_get_post_key()`), the key
   where it is now (`bof_bbs_find_post()`), which makes the

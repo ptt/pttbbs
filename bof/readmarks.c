@@ -770,3 +770,17 @@ bof_bbs_read_marks_set_person(const char *userid, int savable, time4_t login)
     rm_savable = savable;
     rm_login = login;
 }
+
+void
+bof_bbs_read_marks_switch(const char *userid, int savable, time4_t login)
+{
+    if (strcasecmp(rm_userid, userid ? userid : "") == 0 &&
+        rm_login == login && rm_savable == savable)
+        return;
+    // Save those of the person before, and forget the board entered.
+    bof_bbs_read_marks_finalize();
+    brc_currbid = 0;
+    brc_num = 0;
+    brc_needs_file_update = 0;
+    bof_bbs_read_marks_set_person(userid, savable, login);
+}

@@ -1030,6 +1030,13 @@ void bof_bbs_read_marks_finalize(void);   /* saves and releases */
 void bof_bbs_read_marks_release(void);
 /* Makes community the board read now. Returns how many records it has. */
 int bof_bbs_read_marks_enter(int community_id);
+/* For a gateway serving many persons one call at a time: makes userid the
+ * person in session, saving the records of the one before (finalize) if
+ * it was another; nothing if it is the same. Loading the records of a
+ * person on each switch costs a read of their file; a gateway may keep
+ * the calls of one person together (or one process per person). */
+void bof_bbs_read_marks_switch(const char *userid, int savable,
+                               int32_t login_time);
 
 /* Lemmy's MarkPostAsRead (read: true), for the post with file name fname
  * changed at modified, on the board entered. Returns -1 if community_id is
