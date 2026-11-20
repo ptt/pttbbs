@@ -340,6 +340,53 @@ test_group_roles(void)
     EXPECT_INT(bof_bbs_group_roles(&lead, &leaf), 0);
 }
 
+// Muting (muted/b_<board> in the home of the person): an expired one is no
+// longer in effect, and is removed.
+static void
+test_muted(void)
+{
+    char dir[] = "/tmp/bof_test_XXXXXX", cwd[PATHLEN], path[PATHLEN];
+    char cmd[PATHLEN * 2];
+    bof_community_t alpha;
+    bof_person_t p = person("muter", PERM_BASIC | PERM_LOGINOK | PERM_POST,
+                            1600000000);
+    FILE *fp;
+
+    if (!getcwd(cwd, sizeof(cwd)) || !mkdtemp(dir) || chdir(dir) != 0) {
+        EXPECT(!"setup");
+        return;
+    }
+    bof_get_community("Alpha", &alpha);
+    mkdir("home", 0755);
+    mkdir("home/m", 0755);
+    mkdir("home/m/muter", 0755);
+    mkdir("home/m/muter/" FN_MUTED, 0755);
+    snprintf(path, sizeof(path), "home/m/muter/" FN_MUTED "/b_Alpha");
+    EXPECT_INT(bof_bbs_muted_until(&p, &alpha), 0);
+
+    // Until a time to come: muted, and kept.
+    if ((fp = fopen(path, "w"))) {
+        fprintf(fp, "%u\nspam\n", (unsigned)time4(NULL) + 3600);
+        fclose(fp);
+    }
+    EXPECT(bof_bbs_muted_until(&p, &alpha) > 0);
+    EXPECT(access(path, F_OK) == 0);
+
+    // Expired: not muted, and the file goes.
+    if ((fp = fopen(path, "w"))) {
+        fprintf(fp, "%u\nspam\n", (unsigned)time4(NULL) - 3600);
+        fclose(fp);
+    }
+    EXPECT_INT(bof_bbs_muted_until(&p, &alpha), 0);
+    EXPECT(access(path, F_OK) != 0);
+
+    if (chdir(cwd) != 0)
+        EXPECT(!"chdir back");
+    snprintf(cmd, sizeof(cmd), "rm -rf '%s'", dir);
+    if (system(cmd) != 0)
+        fprintf(stderr, "could not remove %s\n", dir);
+}
+
 int
 main(void)
 {
@@ -347,6 +394,7 @@ main(void)
     RUN(test_communities);
     RUN(test_persons);
     RUN(test_rules);
+    RUN(test_muted);
     RUN(test_group_roles);
     free(SHM);
     return bof_test_report();

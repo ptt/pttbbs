@@ -87,15 +87,22 @@ bof_bbs_muted_until(const bof_person_t *p, const bof_community_t *c)
     if (!p || !c || !is_validuserid(p->name))
         return 0;
     // muted/b_<board> in the home of the person: the time it ends, then
-    // the reason. An expired one is no longer in effect.
+    // the reason. An expired one is no longer in effect, and is removed
+    // (as the BBS always did), so it is not read again at each check.
     sethomefile(path, p->name, FN_MUTED "/b_");
     strlcat(path, c->name, sizeof(path));
     if (!(fp = fopen(path, "r")))
         return 0;
-    if (fscanf(fp, "%u", &expire) != 1)
-        expire = 0;
+    int read_it = fscanf(fp, "%u", &expire) == 1;
     fclose(fp);
-    return time4_gt((time4_t)expire, time4(NULL)) ? (int32_t)expire : 0;
+    time4_t now = time4(NULL);
+    if (!read_it)
+        return 0;
+    if (time4_gt((time4_t)expire, now))
+        return (int32_t)expire;
+    if (time4_gt(now, (time4_t)expire))
+        unlink(path);
+    return 0;
 }
 
 bof_error_t
