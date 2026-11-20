@@ -48,7 +48,11 @@ static int post_result_file(const char *bname, const char *title, const char *fi
     STRLCPY(fhdr.title, title);
     STRLCPY(fhdr.owner, author);
     setbfile(dirfn, bname, FN_DIR);
-    if (append_fileheader(dirfn, &fhdr) != -1) {
+    bof_actor_t sys = { .name = author };
+    bof_create_post_t req = {
+        .community = bname, .bbs_dir = dirfn, .bbs_header = &fhdr,
+    };
+    if (bof_create_post(&sys, &req, NULL) == BOF_OK) {
         if ((bid = getbnum(bname)) > 0)
             setbtotal(bid);
     }

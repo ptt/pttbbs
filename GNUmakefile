@@ -13,7 +13,7 @@ all: $(SUBDIRS)
 
 bof: common
 mbbsd: common bof
-util: common
+util: common bof
 service: common
 service-private: common
 

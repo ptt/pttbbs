@@ -25,7 +25,11 @@ void keeplog(FILE *fin, char *board, char *title, char *owner) {
     
     STRLCPY(fhdr.owner, owner);
     setbfile(genbuf, board, FN_DIR);
-    append_fileheader(genbuf, &fhdr);
+    bof_actor_t sys = { .name = owner };
+    bof_create_post_t req = {
+        .community = board, .bbs_dir = genbuf, .bbs_header = &fhdr,
+    };
+    bof_create_post(&sys, &req, NULL);
     /* XXX: bid of cache.c's getbnum starts from 1 */
     if((bid = getbnum(board)) > 0)
 	touchbtotal(bid);

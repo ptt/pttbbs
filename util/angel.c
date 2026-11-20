@@ -237,7 +237,11 @@ int main(int argc, char *argv[]){
         fclose(fp);
         STRLCPY(fhdr.title, REPORT_SUBJECT);
         STRLCPY(fhdr.owner, REPORT_AUTHOR);
-        append_fileheader(output_dir, &fhdr);
+        bof_actor_t sys = { .name = REPORT_AUTHOR };
+        bof_create_post_t req = {
+            .community = target, .bbs_dir = output_dir, .bbs_header = &fhdr,
+        };
+        bof_create_post(&sys, &req, NULL);
         touchbtotal(bid);
     }
     return 0;

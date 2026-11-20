@@ -3184,8 +3184,17 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
     // TODO kcwu suggested to check only first/end and compare
     // timestamp. that's a good idea and more efficient.
     recs = (fileheader_t*) malloc ( num * sizeof(fileheader_t));
+    bof_get_posts_t greq = {
+        .community = currboard, .bbs_dir = direct, .bbs_start = num1,
+        .limit = num,
+    };
+    bof_get_posts_response_t gres = { .posts = recs };
+    // BoF keeps the posts of boards; the mailbox and the announcement
+    // areas are read as they are.
     if (!recs ||
-        get_fileheaders(direct, recs, num1, num) != num) {
+        (is_board ? bof_get_posts(&greq, &gres) != BOF_OK ||
+                        gres.count != num :
+                    get_fileheaders(direct, recs, num1, num) != num)) {
         free(recs);
         vmsg("無法取得指定範圍的資訊，請退出後稍候再試");
         return FULLUPDATE;

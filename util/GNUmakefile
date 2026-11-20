@@ -54,7 +54,8 @@ COMPILED_PROGS := $(CPROG_WITH_UTIL_BUILD) $(CPROG_WITHOUT_UTIL_BUILD) $(CPP_WIT
 
 PROGS := $(COMPILED_PROGS) $(SCRIPT_PROGS_BUILD)
 
-LDLIBS := $(SRCROOT)/common/bbs/libcmbbs.a \
+LDLIBS := $(SRCROOT)/bof/libbof.a \
+	  $(SRCROOT)/common/bbs/libcmbbs.a \
 	  $(SRCROOT)/common/sys/libcmsys.a \
 	  $(SRCROOT)/common/osdep/libosdep.a \
 	  $(LDLIBS)

@@ -12,6 +12,7 @@
 #include <common.h>
 #include <ansi.h>
 #include <var.h>
+#include <bof.h>
 
 #define ADJUST_M        6	/* adjust back 5 minutes */
 #define ACT_ELEMENTS    27
@@ -67,7 +68,13 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
     STRLCPY(fhdr.title, title);
     STRLCPY(fhdr.owner, "[¾ú¥v¦Ñ®v]");
     setbfile(genbuf, board, FN_DIR);
-    append_fileheader(genbuf, &fhdr);
+    {
+        bof_actor_t sys = { .name = fhdr.owner };
+        bof_create_post_t req = {
+            .community = board, .bbs_dir = genbuf, .bbs_header = &fhdr,
+        };
+        bof_create_post(&sys, &req, NULL);
+    }
     /* XXX: bid of cache.c's getbnum starts from 1 */
     if ((bid = getbnum(board)) > 0)
 	touchbtotal(bid);
