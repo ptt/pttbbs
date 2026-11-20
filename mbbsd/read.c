@@ -193,33 +193,13 @@ TagPruner(int bid)
     int nremoved = ntagged;
     if (bp && !(currmode & MODE_DIGEST)) {
         // Posts on a board: archived and removed by bof, leaving tombstones
-        // on boards with many readers.
-        bof_actor_t me = { .name = cuser.userid, .from = fromhost };
-        bof_remove_posts_t req = {
-            .community = bp->brdname, .bbs_dir = direct,
-            .bbs_selected = tag_selected,
-            .bbs_keep_modes = FILE_MARKED | FILE_BOTTOM | FILE_DIGEST,
-            .bbs_keep_record = IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
-                               bp->nuser >= SAFE_ARTICLE_DELETE_NUSER,
-            .reason = log_reason,
-        };
-        if (bof_remove_posts(&me, &req, &nremoved) != BOF_OK)
-            nremoved = -1;
-    } else {
-        // The mailbox and digests (not in bof): first, delete and backup
-        // all files, then the records.
-        apply_fileheader(direct, _iter_delete_tagged, direct);
-        delete_range(currdirect, 0, 0);
-    }
-
-    ClearTagList();
-    if (bp) {
-        if (log_it && nremoved >= 0) {
-            bof_modlog_t log;
+        // on boards with many readers, and put in the modlog.
+        bof_modlog_t log;
+        char *posts = NULL;
+        if (log_it) {
             tag_prune_modlog(&log, ntagged);
             // Which ones, in the audit record only.
-            char *posts = list.n > 0 ?
-                malloc((size_t)list.n * ANSILINELEN) : NULL;
+            posts = list.n > 0 ? malloc((size_t)list.n * ANSILINELEN) : NULL;
             if (posts) {
                 char *p = posts;
                 *p = '\0';
@@ -230,9 +210,28 @@ TagPruner(int bid)
                 }
                 log.audit_fields = posts;
             }
-            modlog(bp->brdname, log_reason, &log);
-            free(posts);
         }
+        bof_actor_t me = mbbsd_actor(bp->brdname, false);
+        bof_remove_posts_t req = {
+            .community = bp->brdname, .bbs_dir = direct,
+            .bbs_selected = tag_selected,
+            .bbs_keep_modes = FILE_MARKED | FILE_BOTTOM | FILE_DIGEST,
+            .bbs_keep_record = IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+                               bp->nuser >= SAFE_ARTICLE_DELETE_NUSER,
+            .reason = log_reason, .bbs_modlog = log_it ? &log : NULL,
+        };
+        if (bof_remove_posts(&me, &req, &nremoved) != BOF_OK)
+            nremoved = -1;
+        free(posts);
+    } else {
+        // The mailbox and digests (not in bof): first, delete and backup
+        // all files, then the records.
+        apply_fileheader(direct, _iter_delete_tagged, direct);
+        delete_range(currdirect, 0, 0);
+    }
+
+    ClearTagList();
+    if (bp) {
         free(list.items);
         if (nremoved < 0)
             vmsg("移除失敗，請重新進入看板後再試一次。");

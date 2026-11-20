@@ -210,6 +210,10 @@ typedef struct bof_remove_posts_t {
     uint16_t bbs_keep_modes;
     int bbs_keep_record;
     const char *reason;     /* may be NULL */
+    /* PTT: the record of this action for the modlog of the board, written
+     * when it is done (as Lemmy writes a mod_* row with the action), with
+     * the reason. NULL: not recorded (e.g. in the digest). */
+    const struct bof_modlog_t *bbs_modlog;
 } bof_remove_posts_t;
 
 bof_error_t bof_remove_posts(const bof_actor_t *actor,
@@ -234,6 +238,8 @@ typedef struct bof_edit_post_t {
     const char *bbs_owner;     /* the author shown in the list */
     const char *bbs_date;      /* the date shown in the list */
     const int32_t *bbs_money;  /* fileheader_t.multi */
+    /* PTT: for a change by moderators, as in bof_lock_post_t (no reason). */
+    const struct bof_modlog_t *bbs_modlog;
 } bof_edit_post_t;
 
 bof_error_t bof_edit_post(const bof_actor_t *actor,
@@ -259,6 +265,11 @@ bof_error_t bof_bbs_set_post_modes(const bof_actor_t *actor,
 typedef struct bof_lock_post_t {
     bof_post_ref_t post;
     int locked;
+    const char *reason;        /* may be NULL */
+    /* PTT: the record of this action for the modlog of the board, written
+     * when it is done (as Lemmy writes a mod_* row with the action), with
+     * the reason. NULL: not recorded (e.g. in the digest). */
+    const struct bof_modlog_t *bbs_modlog;
 } bof_lock_post_t;
 
 bof_error_t bof_lock_post(const bof_actor_t *actor,
@@ -278,10 +289,16 @@ bof_error_t bof_feature_post(const bof_actor_t *actor,
                              const bof_feature_post_t *req,
                              bof_post_response_t *out);
 
-/* PTT: sets the score of a post (its net votes in the list) back to 0.
- * Neither Lemmy nor Reddit lets moderators do this. */
+/* PTT: sets the score of a post (its net votes in the list) back to 0,
+ * noting who did it at the end of the post. Neither Lemmy nor Reddit lets
+ * moderators do this. */
 typedef struct bof_bbs_reset_post_score_t {
     bof_post_ref_t post;
+    const char *reason;        /* may be NULL */
+    /* PTT: the record of this action for the modlog of the board, written
+     * when it is done (as Lemmy writes a mod_* row with the action), with
+     * the reason. NULL: not recorded (e.g. in the digest). */
+    const struct bof_modlog_t *bbs_modlog;
 } bof_bbs_reset_post_score_t;
 
 bof_error_t bof_bbs_reset_post_score(const bof_actor_t *actor,
@@ -300,6 +317,10 @@ typedef struct bof_bbs_mask_post_t {
     bof_post_ref_t post;       /* bbs_index is not checked (may be 0) */
     const char *pattern;
     const char *reason;        /* may be NULL */
+    /* PTT: the record of this action for the modlog of the board, written
+     * when it is done (as Lemmy writes a mod_* row with the action), with
+     * the reason. NULL: not recorded (e.g. in the digest). */
+    const struct bof_modlog_t *bbs_modlog;
 } bof_bbs_mask_post_t;
 
 bof_error_t bof_bbs_mask_post(const bof_actor_t *actor,
@@ -382,6 +403,10 @@ typedef struct bof_remove_comment_t {
     const char *bbs_author;    /* the BBS userid who commented */
     const char *bbs_content;   /* what the comment says */
     const char *reason;        /* may be NULL */
+    /* PTT: the record of this action for the modlog of the board, written
+     * when it is done (as Lemmy writes a mod_* row with the action), with
+     * the reason. NULL: not recorded (e.g. in the digest). */
+    const struct bof_modlog_t *bbs_modlog;
 } bof_remove_comment_t;
 
 /* Errors: couldnt_find_post (no file), couldnt_find_comment (no such line,
@@ -413,6 +438,9 @@ typedef struct bof_modlog_t {
      * first_lines as the first fields. */
     char first[511];
     char first_lines[511 * 2];
+    /* The action is also recorded in the police log: the reason is only in
+     * the audit record. */
+    int reason_audit_only;
 } bof_modlog_t;
 
 /* Format checks (the BBS is built with gcc or clang). */

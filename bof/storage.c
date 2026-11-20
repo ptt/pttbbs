@@ -64,6 +64,15 @@ modlog_write_all(const char *community, const bof_actor_t *actor,
     return 0;
 }
 
+// Writes the record of a moderation action, once it is done.
+static void
+modlog_done(const char *community, const bof_actor_t *actor,
+            const char *reason, const bof_modlog_t *m)
+{
+    if (m && actor && community)
+        modlog_write_all(community, actor, reason, 0, m);
+}
+
 /* ------------------------------------------------------------------------
  * Posts
  * ------------------------------------------------------------------------ */
@@ -81,7 +90,10 @@ bof_edit_post(const bof_actor_t *actor, const bof_edit_post_t *req,
               bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
-    return WRITE(edit_post, out ? out : &local, actor, req);
+    bof_error_t err = WRITE(edit_post, out ? out : &local, actor, req);
+    if (err == BOF_OK)
+        modlog_done(req->post.community, actor, NULL, req->bbs_modlog);
+    return err;
 }
 
 bof_error_t
@@ -105,7 +117,11 @@ bof_remove_posts(const bof_actor_t *actor, const bof_remove_posts_t *req,
                  int *count)
 {
     int local;
-    return WRITE(remove_posts, count ? count : &local, actor, req);
+    bof_error_t err = WRITE(remove_posts, count ? count : &local, actor,
+                            req);
+    if (err == BOF_OK)
+        modlog_done(req->community, actor, req->reason, req->bbs_modlog);
+    return err;
 }
 
 bof_error_t
@@ -113,7 +129,10 @@ bof_lock_post(const bof_actor_t *actor, const bof_lock_post_t *req,
               bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
-    return WRITE(lock_post, out ? out : &local, actor, req);
+    bof_error_t err = WRITE(lock_post, out ? out : &local, actor, req);
+    if (err == BOF_OK)
+        modlog_done(req->post.community, actor, req->reason, req->bbs_modlog);
+    return err;
 }
 
 bof_error_t
@@ -139,7 +158,10 @@ bof_bbs_reset_post_score(const bof_actor_t *actor,
                          bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
-    return WRITE(reset_post_score, out ? out : &local, actor, req);
+    bof_error_t err = WRITE(reset_post_score, out ? out : &local, actor, req);
+    if (err == BOF_OK)
+        modlog_done(req->post.community, actor, req->reason, req->bbs_modlog);
+    return err;
 }
 
 bof_error_t
@@ -147,7 +169,10 @@ bof_bbs_mask_post(const bof_actor_t *actor, const bof_bbs_mask_post_t *req,
                   bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
-    return WRITE(mask_post, out ? out : &local, actor, req);
+    bof_error_t err = WRITE(mask_post, out ? out : &local, actor, req);
+    if (err == BOF_OK)
+        modlog_done(req->post.community, actor, req->reason, req->bbs_modlog);
+    return err;
 }
 
 bof_error_t
@@ -176,7 +201,10 @@ bof_remove_comment(const bof_actor_t *actor, const bof_remove_comment_t *req,
                    bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
-    return WRITE(remove_comment, out ? out : &local, actor, req);
+    bof_error_t err = WRITE(remove_comment, out ? out : &local, actor, req);
+    if (err == BOF_OK)
+        modlog_done(req->post.community, actor, req->reason, req->bbs_modlog);
+    return err;
 }
 
 /* ------------------------------------------------------------------------

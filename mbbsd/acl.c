@@ -631,6 +631,12 @@ modlog_format(const char *bname, bool anonymous, bool police,
     return bof_modlog_format(&actor, reason, police, m, msg, amsg);
 }
 
+bof_actor_t
+mbbsd_actor(const char *bname, bool police)
+{
+    return modlog_actor(bname, police && modlog_as_police(bname));
+}
+
 static void
 modlog_write(const char *bname, bool anonymous, bool police,
              const char *reason, const bof_modlog_t *m)

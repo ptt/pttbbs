@@ -2492,10 +2492,10 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
     char ans[3];
     getdata(y, 0, "確定要移除嗎？ (y/N) ", ans, sizeof(ans), LCECHO);
     if (ans[0] == 'y') {
-        if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason) != 0)
+        // bof also puts it in the modlog.
+        if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason,
+                                       MODLOG_FOR_POSTS() ? &log : NULL) != 0)
             vmsg("刪除失敗。可能原文已被修改。");
-        else if (MODLOG_FOR_POSTS())
-            modlog(key->board, reason, &log);
     }
     return 0;
 }

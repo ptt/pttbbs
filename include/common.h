@@ -113,6 +113,8 @@
 #define STR_MASKED_LINE     "[部份違規文字已刪除]"
 #define STR_MASK_NOTE       "%s 於 %s 刪除部份違規文字,原因: %s\n"
 #define STR_MASK_PATTERN    "違規文字樣式: %s\n"
+// The note at the end of a post whose score was reset (by, when).
+#define STR_SCORE_RESET_NOTE "%s 於 %s 將推薦值歸零\n"
 // The texts of modlog records: the quotes around what a record is about,
 // and the labels of a post, who did it and the reason; and the note in the
 // audit record of an edit of the public modlog. Fields are indented by

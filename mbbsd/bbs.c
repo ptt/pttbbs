@@ -113,8 +113,7 @@ bof_ref(const char *direct, int ent, const fileheader_t *fhdr)
 static bof_actor_t
 bof_me(void)
 {
-    bof_actor_t actor = { .name = cuser.userid, .from = fromhost };
-    return actor;
+    return mbbsd_actor(currboard, false);
 }
 
 static void
@@ -2663,7 +2662,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
         bof_edit_post_t req = {
             .post = bof_ref(direct, ent, fhdr), .name = tmpfhdr.title,
             .bbs_owner = tmpfhdr.owner, .bbs_date = tmpfhdr.date,
-            .bbs_money = &money,
+            .bbs_money = &money, .bbs_modlog = by_mod ? &log : NULL,
         };
         fileheader_t updated;
         bof_post_response_t res = { .bbs_header = &updated };
@@ -2684,8 +2683,6 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     }
     if (fee > 0)
         vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
-    if (by_mod)
-        modlog(currboard, NULL, &log);
     LOG_IF(LOG_CONF_EDIT_TITLE,
            log_filef("log/edit_title.log",
                      "%s(%d) %s %s=>%s %s=>%s %s => %s\n",
@@ -3680,6 +3677,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		apply_badpost(getuserid(tusernum), fhdr, newpath, log_reason);
 		outs("原文已隨退文通知寄到作者的信箱。\n");
 	    }
+            // Not by bof_remove_post(): the record tells a bad post, which
+            // is known only now (not when the content could not be kept).
             if (by_mod) {
                 del_post_modlog(&log, as_badpost, &log_fh);
                 modlog(bp->brdname, log_reason, &log);
@@ -3769,6 +3768,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char genbuf[PATHLEN] = "";
     int i;
+    bof_modlog_t log;
     boardheader_t *bp = NULL;
 
     if (currstat == RMAIL)
@@ -3803,8 +3803,8 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	    modlog_ask_reason_unlogged(y, genbuf, MODLOG_REASON_LEN);
 	if (y < 0)
 	    return FULLUPDATE;
-	bof_modlog_t log;
 	bof_modlog_add_post(bof_modlog_init(&log, "鎖定文章"), fhdr);
+	log.reason_audit_only = 1;
 	if (MODLOG_FOR_POSTS())
 	    y = modlog_police_preview(y, currboard, genbuf, &log) + 1;
 	char ans[3];
@@ -3824,14 +3824,12 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         }
 
         post_policelog2(currboard, fhdr->title, "鎖文", genbuf, 1, fn1);
-        if (MODLOG_FOR_POSTS())
-            modlog_police(currboard, genbuf, &log);
 
     } else if (fhdr->filename[0]=='L') {
 	int y = show_post_line(modlog_form(currboard, "解除鎖定文章"), NULL,
 			       ent, fhdr) + 1;
-	bof_modlog_t log;
 	bof_modlog_add_post(bof_modlog_init(&log, "解除鎖定文章"), fhdr);
+	log.reason_audit_only = 1;
 	if (MODLOG_FOR_POSTS())
 	    y = modlog_police_preview(y, currboard, NULL, &log) + 1;
 	char ans[3];
@@ -3839,17 +3837,18 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (ans[0] != 'y')
 	    return FULLUPDATE;
         post_policelog(currboard, fhdr->title, "鎖文", genbuf, 0);
-        if (MODLOG_FOR_POSTS())
-            modlog_police(currboard, NULL, &log);
     } else {
         vmsg("無法進行鎖定或解除。");
         return FULLUPDATE;
     }
-    // bof renames the record (M <-> L) and the file (M <-> X).
-    bof_actor_t me = bof_me();
+    // bof renames the record (M <-> L) and the file (M <-> X), and puts
+    // it in the modlog (as police, also recorded in BN_POLICELOG).
+    bof_actor_t me = mbbsd_actor(currboard, true);
     bof_lock_post_t req = {
         .post = bof_ref(direct, ent, &orig),
         .locked = orig.filename[0] == 'M',
+        .reason = genbuf,  // "" to unlock
+        .bbs_modlog = MODLOG_FOR_POSTS() ? &log : NULL,
     };
     bof_post_response_t res = { .bbs_header = fhdr };
     if (bof_lock_post(&me, &req, &res) != BOF_OK) {
@@ -3926,7 +3925,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     if (!CBRD_IS_BM())
 	return DONOTHING;
 
-    char log_reason[MODLOG_REASON_LEN];
+    char log_reason[MODLOG_REASON_LEN] = "";
     bof_modlog_t log;
     bof_modlog_init(&log, "推薦值 (%d) 歸零", (int)fhdr->score);
     bof_modlog_add_post(&log, fhdr);
@@ -3941,8 +3940,12 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     getdata(y, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
+    // bof notes it in the post and the modlog.
     bof_actor_t me = bof_me();
-    bof_bbs_reset_post_score_t req = { .post = bof_ref(direct, ent, fhdr) };
+    bof_bbs_reset_post_score_t req = {
+        .post = bof_ref(direct, ent, fhdr), .reason = log_reason,
+        .bbs_modlog = MODLOG_FOR_POSTS() ? &log : NULL,
+    };
     bof_post_response_t res = { .bbs_header = fhdr };
     if (bof_bbs_reset_post_score(&me, &req, &res) != BOF_OK)
         return FULLUPDATE;
@@ -3953,12 +3956,6 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 	    bp->SRexpire = time4_next(bp->SRexpire, now);
 	}
     }
-    AUTO_DIRPATH(fn, direct, fhdr->filename);
-    if (dashf(fn))
-        file_appendf(fn, STR_REF_MARK "%s 於 %s 將推薦值歸零\n", cuser.userid,
-                  Cdatelite(&now));
-    if (MODLOG_FOR_POSTS())
-        modlog(currboard, log_reason, &log);
     return FULLUPDATE;
 }
 
@@ -4619,7 +4616,7 @@ mask_post_content(int ent, fileheader_t * fhdr,
     bof_actor_t me = bof_me();
     bof_bbs_mask_post_t req = {
         .post = bof_ref(direct, ent, fhdr), .pattern = pattern,
-        .reason = reason,
+        .reason = reason, .bbs_modlog = MODLOG_FOR_POSTS() ? &log : NULL,
     };
     switch (bof_bbs_mask_post(&me, &req, NULL)) {
     case BOF_OK:
@@ -4632,8 +4629,6 @@ mask_post_content(int ent, fileheader_t * fhdr,
         return FULLUPDATE;
     }
 
-    if (MODLOG_FOR_POSTS())
-        modlog(currboard, reason, &log);
     // 理論上要改 fhdr->modified, 不過在目前一團亂的同步機制下，多作多錯。
     vmsg("違規文字已刪除。");
     return FULLUPDATE;

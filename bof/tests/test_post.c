@@ -638,6 +638,53 @@ test_remove_posts(void)
 }
 
 static void
+test_modlog_with_actions(void)
+{
+    fileheader_t recs[64], updated;
+    bof_actor_t mod = { .name = "boss", .from = "here", .bbs_role = "BM" };
+    bof_post_response_t res = { .bbs_header = &updated };
+    bof_modlog_t log;
+    char buf[8192];
+    int n;
+
+    make_post("M.1700000071.A.071", "pat", "to lock", 0);
+    n = read_dir(recs, 64);
+    bof_modlog_add_post(bof_modlog_init(&log, "lock"), &recs[n - 1]);
+    log.reason_audit_only = 1;
+    bof_lock_post_t lock = {
+        .post = ref(recs, n), .locked = 1, .reason = "flame",
+        .bbs_modlog = &log,
+    };
+    EXPECT_OK(bof_lock_post(&mod, &lock, &res));
+    slurp(BDIR "/" FN_MODLOG, buf, sizeof(buf));
+    EXPECT(strstr(buf, " BM lock\n") != NULL);
+    EXPECT(strstr(buf, "flame") == NULL);
+    slurp(BDIR "/" FN_MODLOG_AUDIT, buf, sizeof(buf));
+    EXPECT(strstr(buf, "flame") != NULL);
+    EXPECT(strstr(buf, "boss (here)") != NULL);
+
+    // Not recorded when it fails.
+    lock.post.bbs_index = n + 10;
+    bof_modlog_init(&log, "never");
+    EXPECT(bof_lock_post(&mod, &lock, &res) != BOF_OK);
+    EXPECT(strstr(slurp(BDIR "/" FN_MODLOG, buf, sizeof(buf)), "never") ==
+           NULL);
+
+    // Resetting the score notes it in the post too.
+    make_post("M.1700000072.A.072", "pat", "scored", 0);
+    n = read_dir(recs, 64);
+    bof_modlog_init(&log, "reset");
+    bof_bbs_reset_post_score_t reset = {
+        .post = ref(recs, n), .reason = "votes bought", .bbs_modlog = &log,
+    };
+    EXPECT_OK(bof_bbs_reset_post_score(&mod, &reset, &res));
+    EXPECT(strstr(slurp(BDIR "/M.1700000072.A.072", buf, sizeof(buf)),
+                  "boss") != NULL);
+    EXPECT(strstr(slurp(BDIR "/" FN_MODLOG, buf, sizeof(buf)),
+                  " BM reset: votes bought\n") != NULL);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -682,6 +729,7 @@ main(void)
     RUN(test_mask_post);
     RUN(test_crosspost);
     RUN(test_remove_posts);
+    RUN(test_modlog_with_actions);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

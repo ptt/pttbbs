@@ -215,13 +215,14 @@ reset_score(fileheader_t *fhdr, const void *ctx GCC_UNUSED)
 }
 
 bof_error_t
-bof_fs_bbs_reset_post_score(void *ctx GCC_UNUSED,
-                            const bof_actor_t *actor GCC_UNUSED,
+bof_fs_bbs_reset_post_score(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                             const bof_bbs_reset_post_score_t *req,
                             bof_post_response_t *out)
 {
     const bof_post_ref_t *post = &req->post;
     fileheader_t updated;
+    char path[PATHLEN];
+    time4_t now = time4(NULL);
 
     if (!valid_ref(post))
         return BOF_ERR_INVALID_BODY_FIELD;
@@ -231,6 +232,12 @@ bof_fs_bbs_reset_post_score(void *ctx GCC_UNUSED,
         return BOF_ERR_COULDNT_FIND_POST;
     if (out && out->bbs_header)
         *out->bbs_header = updated;
+    // Readers of the post see who did it.
+    setdirpath(path, post->bbs_dir, post->bbs_header->filename);
+    if (dashf(path))
+        file_appendf(path, STR_REF_MARK STR_SCORE_RESET_NOTE,
+                     actor && actor->name ? actor->name : "",
+                     Cdatelite(&now));
     return BOF_OK;
 }
 

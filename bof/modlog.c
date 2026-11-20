@@ -50,6 +50,7 @@ bof_modlog_init(bof_modlog_t *m, const char *fmt, ...)
     m->audit_fields = NULL;
     m->first[0] = '\0';
     m->first_lines[0] = '\0';
+    m->reason_audit_only = 0;
     return m;
 }
 
@@ -283,6 +284,7 @@ bof_modlog_format(const bof_actor_t *actor, const char *reason,
         strlcpy(why, reason, sizeof(why));
         modlog_strip(why);
     }
+    reason_audit_only |= m->reason_audit_only;
     // The audit record also has who did it and from where, unless they
     // are hidden there too.
     snprintf(by, sizeof(by), "%s (%s)", actor->name ? actor->name : "",

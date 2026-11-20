@@ -208,9 +208,10 @@ int CommentsGetCount(void *ctx)
 }
 
 // Removes comment i from the file of the post (see bof_remove_comment()),
-// then marks it deleted in commentd. Returns 0, -2 if the file has no such
-// comment (e.g. it was edited), or -1.
-int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
+// with log (if not NULL) in the modlog, then marks it deleted in commentd.
+// Returns 0, -2 if the file has no such comment (e.g. it was edited), or -1.
+int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason,
+                               const bof_modlog_t *log)
 {
     CommentsCtx *c = (CommentsCtx *)ctx;
     const CommentBodyReq *req = CommentsRead(ctx, i);
@@ -221,7 +222,7 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
 
     STRLCPY(fh.filename, c->key.file);
     AUTO_BDIR(dir, c->key.board);
-    bof_actor_t me = { .name = cuser.userid, .from = fromhost };
+    bof_actor_t me = mbbsd_actor(c->key.board, false);
     bof_remove_comment_t rm = {
         .post = {
             .community = c->key.board, .bbs_dir = dir,
@@ -232,6 +233,7 @@ int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
         .bbs_author = req->userid,
         .bbs_content = req->msg,
         .reason = reason,
+        .bbs_modlog = log,
     };
     switch (bof_remove_comment(&me, &rm, NULL)) {
     case BOF_OK:

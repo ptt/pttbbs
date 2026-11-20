@@ -62,6 +62,9 @@ int edit_user_acl_for_board(const char *uid, const char *board);
 // Records are built with bof_modlog_*() (bof.h); these write them as the
 // current user.
 void modlog(const char *bname, const char *reason, const bof_modlog_t *m);
+// The current user as the actor of bof calls on the board, as shown in its
+// modlog; police: for actions also recorded in BN_POLICELOG.
+bof_actor_t mbbsd_actor(const char *bname, bool police);
 void modlog_police(const char *bname, const char *reason, const bof_modlog_t *m);
 // Posts in the digest (g) are copies: changes to them are not recorded.
 #define MODLOG_FOR_POSTS() (!(currmode & MODE_DIGEST))
@@ -217,7 +220,8 @@ void *CommentsOpen(const char *board, const char *file);
 int CommentsClose(void *ctx);
 int CommentsGetCount(void *ctx);
 const struct CommentBodyReq *CommentsRead(void *ctx, int i);
-int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason);
+int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason,
+                               const bof_modlog_t *log);
 const struct CommentKeyReq *CommentsGetKeyReq(void *ctx);
 #endif
 
