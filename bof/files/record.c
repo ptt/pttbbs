@@ -276,6 +276,7 @@ force_open(const char *fname)
 
 int
 bof_files_prune(const char *direct, uint16_t keep_modes, int keep_records,
+                int durable,
                 int (*selected)(const fileheader_t *fh, int index, void *ctx),
                 void (*removed)(const fileheader_t *fh, void *ctx),
                 void *ctx, const char *deleter)
@@ -343,8 +344,9 @@ bof_files_prune(const char *direct, uint16_t keep_modes, int keep_records,
         }
     }
     close(fdr);
-    // On disk before it takes the place of the list.
-    if (fsync(fdw) != 0) {
+    // On disk before it takes the place of the list, where asked: it
+    // holds the lock of the list, which the BBS waits for.
+    if (durable && fsync(fdw) != 0) {
         close(fdw);
         unlink(newfn);
         flock(fd, LOCK_UN);

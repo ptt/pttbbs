@@ -488,7 +488,10 @@ read_post_at(const char *direct, int recno, fileheader_t *fh, int *pfd)
         .community = currboard, .bbs_dir = direct, .bbs_index = recno,
         .bbs_fd = pfd,
     };
-    bof_get_post_response_t res = { .bbs_header = fh };
+    // Not zeroed: called for each record of a list scanned one by one, and
+    // bof sets all of it.
+    bof_get_post_response_t res;
+    res.bbs_header = fh;
     return bof_get_post(&req, &res) == BOF_OK;
 }
 

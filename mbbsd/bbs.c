@@ -418,7 +418,8 @@ char* get_board_restriction_reason(int bid, size_t sz_msg, char *msg)
 
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     bp = getbcache(bid);
-    if (bof_get_community(bp->brdname, &c) != BOF_OK ||
+    // By its place: no search by name, nor the ID, which it does not need.
+    if (bof_bbs_get_community_at(bid, &c) != BOF_OK ||
         bof_bbs_post_restriction(&me, &c, NULL) == BOF_OK)
 	return NULL;
     // In the words of the BBS, with the numbers.

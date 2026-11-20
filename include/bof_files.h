@@ -114,9 +114,12 @@ int bof_files_delete_content(const char *direct, const struct fileheader_t *fh,
  * with any of keep_modes, calling removed() for each. With keep_records,
  * each becomes a tombstone (by deleter, see bof_files_set_tombstone()) in
  * place; otherwise the list is rewritten without them and their files are
- * unlinked (archive them first, see bof_files_delete_content()). index is
- * 1-based. Returns how many were removed, or -1. */
+ * unlinked (archive them first, see bof_files_delete_content()), the new
+ * list synced to the disk before it takes the place of the old one only if
+ * durable (as expire does; it holds the lock of the list meanwhile). index
+ * is 1-based. Returns how many were removed, or -1. */
 int bof_files_prune(const char *direct, uint16_t keep_modes, int keep_records,
+                    int durable,
                     int (*selected)(const struct fileheader_t *fh, int index,
                                     void *ctx),
                     void (*removed)(const struct fileheader_t *fh, void *ctx),

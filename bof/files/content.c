@@ -82,7 +82,7 @@ bof_files_replace_post(const char *path, const char *new_path,
                        const bof_post_version_t *ver, int keep_revision,
                        const char *rev_note, int *saved)
 {
-    struct stat st_src, st_now;
+    struct stat st_pre, st_src, st_now;
     uint64_t hash;
     bof_error_t err = BOF_OK;
     int fd_src, fd_dest, rev = 0;
@@ -95,11 +95,20 @@ bof_files_replace_post(const char *path, const char *new_path,
         return errno == EROFS ? BOF_ERR_BBS_READ_ONLY : BOF_ERR_UNKNOWN;
     }
 
-    // Under the lock nothing is appended (comments lock it too), so the
-    // content checked is what gets replaced, with what follows it.
-    flock(fd_src, LOCK_EX);
-    if (fstat(fd_src, &st_src) != 0 ||
+    // The content is checked before the lock, which comments wait for:
+    // a post is only appended to (comments, notes) or replaced by a new
+    // file (as here), so what was checked stays as long as it is the same
+    // file, no shorter, under the lock. Under the lock nothing is appended
+    // (comments lock it too), so what gets replaced is what was checked,
+    // with what follows it.
+    if (fstat(fd_src, &st_pre) != 0 || st_pre.st_size < (off_t)ver->size ||
         hash_fd(fd_src, ver->size, &hash) != 0 || hash != ver->hash) {
+        err = BOF_ERR_COULDNT_UPDATE_POST;
+        goto out_unlocked;
+    }
+    flock(fd_src, LOCK_EX);
+    if (fstat(fd_src, &st_src) != 0 || st_src.st_dev != st_pre.st_dev ||
+        st_src.st_ino != st_pre.st_ino || st_src.st_size < (off_t)ver->size) {
         err = BOF_ERR_COULDNT_UPDATE_POST;
         goto out;
     }
@@ -143,9 +152,10 @@ bof_files_replace_post(const char *path, const char *new_path,
     }
 
 out:
+    flock(fd_src, LOCK_UN);
+out_unlocked:
     if (fd_dest >= 0)
         close(fd_dest);
-    flock(fd_src, LOCK_UN);
     close(fd_src);
     return *saved ? BOF_OK : err;
 }

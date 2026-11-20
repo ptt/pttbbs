@@ -328,7 +328,8 @@ bof_fs_purge_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     if (!req->bbs_dir || !req->bbs_selected)
         return BOF_ERR_INVALID_BODY_FIELD;
     // The records go and their files are unlinked, unarchived.
-    n = bof_files_prune(req->bbs_dir, 0, 0, req->bbs_selected, NULL,
+    // Durable, as expire always made it.
+    n = bof_files_prune(req->bbs_dir, 0, 0, 1, req->bbs_selected, NULL,
                         req->bbs_ctx, actor ? actor->name : NULL);
     if (n < 0)
         return BOF_ERR_COULDNT_UPDATE_POST;
@@ -364,7 +365,7 @@ bof_fs_remove_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     close(fd);
 
     n = bof_files_prune(req->bbs_dir, req->bbs_keep_modes,
-                        req->bbs_keep_record, req->bbs_selected,
+                        req->bbs_keep_record, 0, req->bbs_selected,
                         req->bbs_removed, req->bbs_ctx, deleter);
     if (n < 0)
         return BOF_ERR_COULDNT_UPDATE_POST;

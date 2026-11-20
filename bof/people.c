@@ -151,7 +151,7 @@ bof_bbs_can_read_at(const bof_person_t *person, int bbs_id,
                     bof_bbs_rule_t *rule)
 {
     const boardheader_t *bh;
-    bof_community_t c = { 0 };
+    bof_community_t c;
 
     if (!SHM || !bcache || bbs_id <= 0 || bbs_id > MAX_BOARD ||
         !(bh = getbcache(bbs_id))->brdname[0]) {
@@ -159,6 +159,12 @@ bof_bbs_can_read_at(const bof_person_t *person, int bbs_id,
             *rule = BOF_BBS_RULE_NO_COMMUNITY;
         return BOF_ERR_COULDNT_FIND_COMMUNITY;
     }
+    // Not zeroed whole (lists call it for every board): the names are
+    // left empty, the rest is set.
+    c.id = 0;
+    c.name[0] = c.title[0] = '\0';
+    c.bbs_read_only = c.bbs_post_limit_logins = c.bbs_post_limit_badpost = 0;
+    c.nmoderators = 0;
     fill_community_access(bbs_id, bh, &c);
     return bof_bbs_can_read(person, &c, rule);
 }

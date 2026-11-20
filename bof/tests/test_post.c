@@ -307,7 +307,7 @@ test_prune(void)
     EXPECT_INT(read_dir(recs, 16), 8);
 
     // Tombstones in place: the marked one is kept.
-    EXPECT_INT(bof_files_prune(DIRPATH, FILE_MARKED, 1,
+    EXPECT_INT(bof_files_prune(DIRPATH, FILE_MARKED, 1, 0,
                                select_titles_starting_with_p, count_removed,
                                &removed, "sysop"), 2);
     EXPECT_INT(removed, 2);
@@ -318,7 +318,7 @@ test_prune(void)
 
     // Dropping records: the list is rewritten, the files go.
     make_post("M.1700000010.A.010", "u", "prune three", 0);
-    EXPECT_INT(bof_files_prune(DIRPATH, FILE_MARKED, 0,
+    EXPECT_INT(bof_files_prune(DIRPATH, FILE_MARKED, 0, 1,
                                select_titles_starting_with_p, NULL, NULL,
                                "sysop"), 1);
     EXPECT(!exists(BDIR "/M.1700000010.A.010"));

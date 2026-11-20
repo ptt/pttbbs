@@ -70,7 +70,7 @@ int
 delete_range(const char *fpath, int id1, int id2)
 {
     range_t r = { id1, id2 };
-    return bof_files_prune(fpath, range_keep_modes(), 0, range_selected,
+    return bof_files_prune(fpath, range_keep_modes(), 0, 0, range_selected,
                            range_removed, &r, cuser.userid);
 }
 

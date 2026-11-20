@@ -125,7 +125,6 @@ safe_path(const char *path)
 static int
 dir_in_community(const char *community, const char *dir)
 {
-    char path[PATHLEN];
     size_t n;
 
     if (!safe_path(dir))
@@ -134,9 +133,14 @@ dir_in_community(const char *community, const char *dir)
         return strncmp(dir, "boards/", 7) == 0;
     if (!is_valid_brdname(community))
         return 0;
-    setbpath(path, community);
-    n = strlen(path);
-    return strncasecmp(dir, path, n) == 0 && dir[n] == '/' && dir[n + 1];
+    // Under boards/<c>/<community>/ (as setbpath() makes it), compared
+    // without making it: lists are read record by record through here.
+    n = strlen(community);
+    return strncasecmp(dir, "boards/", 7) == 0 &&
+           tolower((unsigned char)dir[7]) ==
+               tolower((unsigned char)community[0]) &&
+           dir[8] == '/' && strncasecmp(dir + 9, community, n) == 0 &&
+           dir[9 + n] == '/' && dir[10 + n];
 }
 
 // Whether text (a title) is free of control codes (ANSI colors and line
