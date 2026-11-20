@@ -4383,7 +4383,6 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
     const char *err_no_history = "此篇文章暫無編輯歷史記錄。"
                                  "要進資源回收筒請再按一次 ~";
     int maxrev = 0;
-    int current_as_base = 1;
 
     // TODO allow author?
     if (!(CBRD_IS_BM() || CBRD_IS_GROUP_OP()))
@@ -4395,30 +4394,15 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
         return FULLUPDATE;
     }
 
-    // assert(FN_SAFEDEL[0] == '.')
-    if ((fhdr->filename[0] == '.')) {
-        if (
-#ifdef FN_SAFEDEL_PREFIX_LEN
-            (strncmp(fhdr->filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) != 0)
-#else
-            (strcmp(fhdr->filename, FN_SAFEDEL) != 0)
-#endif
-           ) {
-            if (vmsg(err_no_history) == '~')
-                psb_recycle_bin(direct, currboard);
-            return FULLUPDATE;
-        }
-        current_as_base = 0;
+    // Tombstones (FN_SAFEDEL) keep no history; the post is in the recycle
+    // bin.
+    if (fhdr->filename[0] == '.') {
+        if (vmsg(err_no_history) == '~')
+            psb_recycle_bin(direct, currboard);
+        return FULLUPDATE;
     }
 
     AUTO_BFILE(fpath, currboard, fhdr->filename);
-    if (!current_as_base) {
-        char *prefix = strrchr(fpath, '/');
-        assert(prefix);
-        // hard-coded file name conversion
-        *++prefix = 'M';
-        *++prefix = '.';
-    }
     maxrev = timecapsule_get_max_revision_number(fpath);
     if (maxrev < 1) {
         if (vmsg(err_no_history) == '~')
@@ -4426,7 +4410,7 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
         return FULLUPDATE;
     }
 
-    if (psb_view_edit_history(fpath, fhdr->title, maxrev, current_as_base))
+    if (psb_view_edit_history(fpath, fhdr->title, maxrev, 1))
         psb_recycle_bin(direct, currboard);
     return FULLUPDATE;
 }

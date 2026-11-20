@@ -87,13 +87,7 @@
 
 // 自訂刪除文章時出現的標題與檔案
 #ifndef FN_SAFEDEL
-#ifdef USE_EDIT_HISTORY
-// For edit_history, the new file name must be as short as possible so that so we can restore it later.
-#define FN_SAFEDEL	".d"
-#define FN_SAFEDEL_PREFIX_LEN (2) // must match FN_SAFEDEL
-#else
 #define FN_SAFEDEL	".deleted"
-#endif // USE_EDIT_HISTORY
 #endif // FN_SAFEDEL
 // Titles of safe-deleted posts: deleted by the author, or removed by
 // moderators (like Lemmy). service/post/importer knows them too.

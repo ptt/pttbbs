@@ -116,9 +116,6 @@ void expire(life_t *brd)
                     (!*head.filename) ||
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 		    strcmp(head.filename, FN_SAFEDEL) == 0 ||
-#ifdef FN_SAFEDEL_PREFIX_LEN
-		    strncmp(head.filename, FN_SAFEDEL, FN_SAFEDEL_PREFIX_LEN) == 0 ||
-#endif
 #endif
                     0)
 		    keep = 0;
