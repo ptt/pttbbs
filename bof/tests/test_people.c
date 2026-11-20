@@ -30,10 +30,26 @@ count_lock_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
     return BOF_OK;
 }
 
+// The record of the post as the backend keeps it: by "someone".
+static bof_error_t
+kept_find_post(void *ctx GCC_UNUSED, const bof_post_key_t *key,
+               bof_found_post_t *out)
+{
+    memset(out->bbs_header, 0, sizeof(*out->bbs_header));
+    strlcpy(out->bbs_header->filename, key->bbs_post_file,
+            sizeof(out->bbs_header->filename));
+    strlcpy(out->bbs_header->owner, "someone",
+            sizeof(out->bbs_header->owner));
+    setbfile(out->bbs_dir, key->community, FN_DIR);
+    out->bbs_index = 1;
+    return BOF_OK;
+}
+
 static const bof_storage_ops_t counting_ops = {
     .name = "counting",
     .edit_post = count_edit_post,
     .lock_post = count_lock_post,
+    .find_post = kept_find_post,
 };
 
 int bof_test_failures;
@@ -225,6 +241,25 @@ test_rules(void)
     bof_edit_post_t edit = { .post = lock.post, .name = "new title" };
     EXPECT_INT(bof_edit_post(&me, &edit, NULL),
                BOF_ERR_NO_POST_EDIT_ALLOWED);
+    // A record made up by the caller does not count: the backend's does.
+    fileheader_t forged = post;
+    strlcpy(forged.owner, "other", sizeof(forged.owner));
+    edit.post.bbs_header = &forged;
+    EXPECT_INT(bof_edit_post(&me, &edit, NULL),
+               BOF_ERR_NO_POST_EDIT_ALLOWED);
+    // Nor a list other than the board's, nor names out of it.
+    edit.post.bbs_dir = "home/s/someone/.DIR";
+    EXPECT_INT(bof_edit_post(&me, &edit, NULL), BOF_ERR_NO_POST_EDIT_ALLOWED);
+    me.bbs_person = NULL;
+    EXPECT_INT(bof_edit_post(&me, &edit, NULL), BOF_ERR_INVALID_BODY_FIELD);
+    edit.post.bbs_dir = "boards/A/Alpha/.DIR";
+    strlcpy(forged.filename, ".DIR", sizeof(forged.filename));
+    EXPECT_INT(bof_edit_post(&me, &edit, NULL), BOF_ERR_INVALID_BODY_FIELD);
+    me.bbs_person = &other;
+    EXPECT_INT(bof_edit_post(&me, &edit, NULL), BOF_ERR_INVALID_BODY_FIELD);
+    EXPECT(!bof_bbs_valid_post_file("../x"));
+    EXPECT(!bof_bbs_valid_post_file(".DIR"));
+    EXPECT(bof_bbs_valid_post_file("M.1700000000.A.000"));
     bof_create_post_t create = { .community = "Alpha", .bbs_header = &post };
     me.bbs_person = &guest;
     EXPECT_INT(bof_create_post(&me, &create, NULL), BOF_ERR_BBS_NOT_ALLOWED);

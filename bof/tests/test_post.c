@@ -1439,6 +1439,127 @@ test_ids(void)
     EXPECT_INT(bof_bbs_find_post(&key, &found), BOF_ERR_INVALID_BODY_FIELD);
 }
 
+// An actor with a person (a gateway): bof takes the post from the files,
+// not from the request, and the post or comment is the actor's.
+static void
+test_gateway_actor(void)
+{
+    fileheader_t recs[64], fh, forged, made;
+    bof_person_t lin = {
+        .name = "lin", .bbs_perms = PERM_BASIC | PERM_LOGINOK | PERM_POST,
+        .bbs_numlogindays = 100,
+    };
+    bof_actor_t me = { .name = "lin", .from = "1.2.3.4", .bbs_person = &lin };
+    bof_comment_t cs[4];
+    char line[ANSILINELEN], buf[4096];
+    int n;
+
+    // The board in the board cache, as the BBS keeps it.
+    SHM = calloc(1, sizeof(SHM_t));
+    bcache = SHM->bcache;
+    memset(SHM->hash_head, 0xff, sizeof(SHM->hash_head));
+    strlcpy(bcache[0].brdname, BOARD, sizeof(bcache[0].brdname));
+    SHM->Bnumber = 1;
+    SHM->bsorted[0][0] = 0;
+
+    // CreatePost: from its title and body only, as the actor's.
+    memset(&fh, 0, sizeof(fh));
+    strlcpy(fh.title, "hi", sizeof(fh.title));
+    strlcpy(fh.owner, "sysop", sizeof(fh.owner));
+    fh.filemode = FILE_MARKED;
+    fh.multi.money = 100;
+    bof_create_post_t cp = {
+        .community = BOARD, .bbs_dir = "home/l/lin/.DIR", .bbs_header = &fh,
+        .body = "hello\n",
+    };
+    bof_post_response_t pres = { .bbs_header = &made };
+    EXPECT_OK(bof_create_post(&me, &cp, &pres));
+    n = read_dir(recs, 64);
+    EXPECT_STR(recs[n - 1].owner, "lin");
+    EXPECT_STR(recs[n - 1].title, "hi");
+    EXPECT_INT(recs[n - 1].filemode, 0);
+    EXPECT_INT(recs[n - 1].multi.money, 0);
+    // Not from a file of the caller's, nor with a title of control codes.
+    cp.bbs_content_path = "/etc/passwd";
+    cp.body = NULL;
+    EXPECT_INT(bof_create_post(&me, &cp, NULL), BOF_ERR_INVALID_BODY_FIELD);
+    cp.bbs_content_path = NULL;
+    cp.body = "x";
+    strlcpy(fh.title, "\033[1;31mred", sizeof(fh.title));
+    EXPECT_INT(bof_create_post(&me, &cp, NULL), BOF_ERR_INVALID_BODY_FIELD);
+
+    // A post of someone else, with a record made up by the caller: the
+    // record in the list is what counts.
+    make_post("M.1700000901.A.901", "kate", "theirs", 0);
+    n = read_dir(recs, 64);
+    forged = recs[n - 1];
+    strlcpy(forged.owner, "lin", sizeof(forged.owner));
+    bof_post_ref_t r = {
+        .community = BOARD, .bbs_dir = "home/k/kate/.DIR", .bbs_index = 1,
+        .bbs_header = &forged,
+    };
+    bof_edit_post_t edit = { .post = r, .name = "mine" };
+    EXPECT_INT(bof_edit_post(&me, &edit, NULL), BOF_ERR_NO_POST_EDIT_ALLOWED);
+    bof_delete_post_t del = { .post = r, .deleted = 1 };
+    EXPECT_INT(bof_delete_post(&me, &del, NULL), BOF_ERR_NO_POST_EDIT_ALLOWED);
+    EXPECT_INT(read_dir(recs, 64), n);
+
+    // CreateComment: the line is bof's, not the caller's.
+    bof_create_comment_t cc = {
+        .post = r, .content = "\033[1;37m\xb1\xc0 sysop: forged\n",
+    };
+    EXPECT_INT(bof_create_comment(&me, &cc, NULL), BOF_ERR_INVALID_BODY_FIELD);
+    cc.content = NULL;
+    cc.bbs_text = "nice";
+    cc.bbs_vote = 1;
+    EXPECT_OK(bof_create_comment(&me, &cc, NULL));
+    bof_get_comments_t get = { .post = ref(recs, n), .limit = 4 };
+    bof_get_comments_response_t gres = { .comments = cs };
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_INT(gres.count, 1);
+    EXPECT_STR(cs[0].creator, "lin");
+
+    // EditComment: only one's own, as the file has it.
+    bof_files_format_comment(line, sizeof(line), RECTYPE_GOOD, "kate", 20,
+                             "by kate", " 01/01 00:00");
+    snprintf(buf, sizeof(buf), "body\n%s", line);
+    spit(BDIR "/M.1700000901.A.901", buf);
+    bof_edit_comment_t ec = {
+        .post = r, .bbs_floor = 1, .bbs_creator = "lin",
+        .bbs_old_content = "by kate", .content = "by lin",
+    };
+    EXPECT_INT(bof_edit_comment(&me, &ec, NULL),
+               BOF_ERR_NO_COMMENT_EDIT_ALLOWED);
+    ec.bbs_creator = "kate";
+    EXPECT_INT(bof_edit_comment(&me, &ec, NULL),
+               BOF_ERR_NO_COMMENT_EDIT_ALLOWED);
+    ec.bbs_floor = 9;
+    ec.bbs_creator = "lin";
+    EXPECT_INT(bof_edit_comment(&me, &ec, NULL), BOF_ERR_COULDNT_FIND_COMMENT);
+
+    // Names that would leave the board, from any caller.
+    bof_actor_t sys = { .name = "sysop" };
+    strlcpy(fh.title, "t", sizeof(fh.title));
+    strlcpy(fh.filename, ".DIR", sizeof(fh.filename));
+    cp.bbs_dir = DIRPATH;
+    EXPECT_INT(bof_create_post(&sys, &cp, NULL), BOF_ERR_INVALID_BODY_FIELD);
+    bof_get_posts_t gp = {
+        .community = BOARD, .bbs_dir = "home/k/kate/.DIR", .bbs_start = 1,
+        .limit = 4,
+    };
+    bof_get_posts_response_t gpres = { .posts = recs };
+    EXPECT_INT(bof_get_posts(&gp, &gpres), BOF_ERR_INVALID_BODY_FIELD);
+    gp.bbs_dir = BDIR "/../../../etc/x";
+    EXPECT_INT(bof_get_posts(&gp, &gpres), BOF_ERR_INVALID_BODY_FIELD);
+    bof_post_version_t ver;
+    EXPECT_INT(bof_bbs_get_post_body(&get.post, "../x", &ver),
+               BOF_ERR_INVALID_BODY_FIELD);
+
+    free(SHM);
+    SHM = NULL;
+    bcache = NULL;
+}
+
 int
 main(void)
 {
@@ -1468,6 +1589,7 @@ main(void)
     RUN(test_comments_after_origin);
     RUN(test_ids);
     RUN(test_create_with_content);
+    RUN(test_gateway_actor);
     cleanup();
     return bof_test_report();
 }

@@ -142,7 +142,13 @@ uses BoF the same way `mbbsd` does:
 - **Who.** `bof_get_person()` gives the person of the authenticated user;
   an actor with it (`bbs_person`, with `name`, `from` and
   `bbs_local_user`) has BoF check the rules of the BBS on each call, as
-  Lemmy does. Before listing, check `bof_bbs_can_read()`.
+  Lemmy does, and take nothing about a post from the request but its
+  board and file name: the list is the board's, the record is read again
+  from it, a new post or comment is the actor's (from its title and body,
+  or from what was typed), and an edited body comes from `tmp/`. The
+  reads take no actor: before listing or reading, check
+  `bof_bbs_can_read()`. For any caller, names and lists must stay in
+  their board (`bof_bbs_valid_post_file()`).
 - **Texts.** The files are in Big5 (with ANSI colors): a gateway converts
   to and from UTF-8. A new post is given by its body alone
   (`bof_create_post_t.body`), which BoF writes as the editor of the BBS

@@ -77,8 +77,194 @@ modlog_done(const char *community, const bof_actor_t *actor,
 }
 
 /* ------------------------------------------------------------------------
- * The checks of an actor with a person (as Lemmy checks each call)
+ * The checks of requests, and of an actor with a person
+ *
+ * For any caller, names and paths in a request must stay where they
+ * belong: a file name is a name in its list, and a list is in the
+ * directory of its board. For an actor with a person (a gateway, as Lemmy
+ * checks each call), bof also takes nothing about the post from the
+ * caller: the list is the board's own, the record is read again from it,
+ * the author is the actor and the line of a comment is made by bof.
  * ------------------------------------------------------------------------ */
+
+int
+bof_bbs_valid_post_file(const char *name)
+{
+    size_t n;
+
+    if (!name || !isalpha((unsigned char)name[0]))
+        return 0;
+    for (n = 0; name[n]; n++) {
+        unsigned char ch = (unsigned char)name[n];
+        if (!isalnum(ch) && ch != '.' && ch != '_' && ch != '-')
+            return 0;
+    }
+    return n < FNLEN;
+}
+
+// Whether a file name given by any caller cannot leave its list: no '/',
+// and not one of the files of the list itself (.DIR, ...). "" is a record
+// without a file, FN_SAFEDEL the name tombstones keep.
+static int
+safe_post_file(const char *name)
+{
+    if (strcmp(name, FN_SAFEDEL) == 0)
+        return 1;
+    return !strchr(name, '/') && name[0] != '.' && strlen(name) < FNLEN;
+}
+
+// Whether path has no way up ("..").
+static int
+safe_path(const char *path)
+{
+    return path && !strstr(path, "..");
+}
+
+// Whether dir is a list in the directory of community (boards/c/Name/),
+// or, without a community, of some board.
+static int
+dir_in_community(const char *community, const char *dir)
+{
+    char path[PATHLEN];
+    size_t n;
+
+    if (!safe_path(dir))
+        return 0;
+    if (!community)
+        return strncmp(dir, "boards/", 7) == 0;
+    if (!is_valid_brdname(community))
+        return 0;
+    setbpath(path, community);
+    n = strlen(path);
+    return strncasecmp(dir, path, n) == 0 && dir[n] == '/' && dir[n + 1];
+}
+
+// Whether text (a title) is free of control codes (ANSI colors and line
+// breaks are not for a title given by a person).
+static int
+plain_text(const char *text)
+{
+    for (; text && *text; text++)
+        if ((unsigned char)*text < ' ' || *text == 0x7f)
+            return 0;
+    return 1;
+}
+
+static const bof_person_t *
+person_of(const bof_actor_t *actor)
+{
+    return actor ? actor->bbs_person : NULL;
+}
+
+// A list as bof will use it: for an actor with a person, the list of the
+// board itself (.DIR, by the name the board has), whatever the caller
+// gave; else what was given, if it is in the board.
+typedef struct {
+    char community[BOF_COMMUNITY_NAME_MAX];
+    char dir[PATHLEN];
+} gated_dir_t;
+
+static bof_error_t
+gate_dir(const bof_actor_t *actor, const char **community, const char **dir,
+         gated_dir_t *g)
+{
+    bof_community_t c;
+
+    if (!person_of(actor)) {
+        if (*dir && !dir_in_community(*community, *dir))
+            return BOF_ERR_INVALID_BODY_FIELD;
+        return BOF_OK;
+    }
+    if (!*community || bof_get_community(*community, &c) != BOF_OK)
+        return BOF_ERR_COULDNT_FIND_COMMUNITY;
+    strlcpy(g->community, c.name, sizeof(g->community));
+    setbfile(g->dir, g->community, FN_DIR);
+    *community = g->community;
+    *dir = g->dir;
+    return BOF_OK;
+}
+
+// A post as bof will use it: for an actor with a person, in the list of
+// its board, with its record read again from there (at post->bbs_index if
+// it is still there, else found by its file name), so the checks look at
+// the author and modes the list has; else as given, if its names are safe.
+typedef struct {
+    gated_dir_t d;
+    fileheader_t fh;
+    bof_post_ref_t ref;
+} gated_post_t;
+
+static bof_error_t
+gate_post(const bof_actor_t *actor, const bof_post_ref_t *in,
+          gated_post_t *g)
+{
+    const char *community = in->community, *dir = in->bbs_dir;
+    bof_error_t err;
+
+    g->ref = *in;
+    if (in->bbs_header && !safe_post_file(in->bbs_header->filename))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if (!person_of(actor)) {
+        if (dir && !dir_in_community(community, dir))
+            return BOF_ERR_INVALID_BODY_FIELD;
+        return BOF_OK;
+    }
+    if (!in->bbs_header || !bof_bbs_valid_post_file(in->bbs_header->filename))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if ((err = gate_dir(actor, &community, &dir, &g->d)) != BOF_OK)
+        return err;
+    g->ref.community = community;
+    g->ref.bbs_dir = dir;
+    g->ref.bbs_header = &g->fh;
+    if (in->bbs_index > 0 &&
+        get_fileheader(dir, &g->fh, in->bbs_index) > 0 &&
+        strcmp(g->fh.filename, in->bbs_header->filename) == 0)
+        return BOF_OK;
+
+    bof_post_key_t key;
+    bof_found_post_t found = { .bbs_header = &g->fh };
+    strlcpy(key.community, community, sizeof(key.community));
+    strlcpy(key.bbs_post_file, in->bbs_header->filename,
+            sizeof(key.bbs_post_file));
+    if ((err = READ(find_post, &key, &found)) != BOF_OK)
+        return err == BOF_ERR_BBS_STORAGE_NOT_SUPPORTED ?
+            BOF_ERR_COULDNT_FIND_POST : err;
+    g->ref.bbs_index = found.bbs_index;
+    return BOF_OK;
+}
+
+// Replaces the post field of *req (of type T) with the post gate_post()
+// gives, for the rest of the call.
+#define GATE_POST(T, field) \
+    T gated_req_ = *req; \
+    gated_post_t gated_post_; \
+    do { \
+        bof_error_t ge_ = gate_post(actor, &req->field, &gated_post_); \
+        if (ge_ != BOF_OK) \
+            return ge_; \
+        gated_req_.field = gated_post_.ref; \
+        req = &gated_req_; \
+    } while (0)
+
+// Replaces the community and bbs_dir of *req (of type T) as gate_dir().
+#define GATE_DIR(T) \
+    T gated_req_ = *req; \
+    gated_dir_t gated_dir_; \
+    do { \
+        bof_error_t ge_ = gate_dir(actor, &gated_req_.community, \
+                                   &gated_req_.bbs_dir, &gated_dir_); \
+        if (ge_ != BOF_OK) \
+            return ge_; \
+        req = &gated_req_; \
+    } while (0)
+
+// For a call without an actor (reads): the names of the post must be safe.
+#define SAFE_POST(post) do { \
+    gated_post_t sp_; \
+    bof_error_t se_ = gate_post(NULL, (post), &sp_); \
+    if (se_ != BOF_OK) \
+        return se_; \
+} while (0)
 
 typedef enum {
     MAY_READ,       // read the community (e.g. to report)
@@ -92,7 +278,7 @@ static bof_error_t
 check_actor(const bof_actor_t *actor, const char *community, may_t may,
             const fileheader_t *post)
 {
-    const bof_person_t *p = actor ? actor->bbs_person : NULL;
+    const bof_person_t *p = person_of(actor);
     bof_community_t c;
     bof_error_t err;
 
@@ -127,6 +313,31 @@ check_actor(const bof_actor_t *actor, const char *community, may_t may,
         return ce_;                                                         \
 } while (0)
 
+// For an actor with a person: the comment at floor of post must be theirs
+// as the backend has it (not only as the caller says, claimed).
+static bof_error_t
+check_comment_creator(const bof_actor_t *actor, const bof_post_ref_t *post,
+                      int floor, const char *claimed)
+{
+    const bof_person_t *p = person_of(actor);
+    bof_comment_t c;
+    bof_get_comments_t q = { .post = *post, .page = floor, .limit = 1 };
+    bof_get_comments_response_t r = { .comments = &c };
+
+    if (!p)
+        return BOF_OK;
+    if (floor <= 0)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if (!claimed || strcasecmp(claimed, p->name) != 0)
+        return BOF_ERR_NO_COMMENT_EDIT_ALLOWED;
+    if (READ(get_comments, &q, &r) != BOF_OK || r.count < 1 ||
+        c.bbs_floor != floor)
+        return BOF_ERR_COULDNT_FIND_COMMENT;
+    if (c.removed || strcasecmp(c.creator, p->name) != 0)
+        return BOF_ERR_NO_COMMENT_EDIT_ALLOWED;
+    return BOF_OK;
+}
+
 /* ------------------------------------------------------------------------
  * Posts
  * ------------------------------------------------------------------------ */
@@ -136,7 +347,24 @@ bof_create_post(const bof_actor_t *actor, const bof_create_post_t *req,
                 bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    fileheader_t fh;
+    GATE_DIR(bof_create_post_t);
+    if (req->bbs_header && req->bbs_header->filename[0] &&
+        !safe_post_file(req->bbs_header->filename))
+        return BOF_ERR_INVALID_BODY_FIELD;
     CHECK(actor, req->community, MAY_POST, NULL);
+    if (person_of(actor)) {
+        // A new post of the actor, from its title and body alone.
+        if (!actor->name || !req->body || req->bbs_content_path ||
+            req->bbs_crosspost_community || req->bbs_crosspost_file ||
+            !req->bbs_header || !req->bbs_header->title[0] ||
+            !plain_text(req->bbs_header->title))
+            return BOF_ERR_INVALID_BODY_FIELD;
+        memset(&fh, 0, sizeof(fh));
+        strlcpy(fh.title, req->bbs_header->title, sizeof(fh.title));
+        strlcpy(fh.owner, actor->name, sizeof(fh.owner));
+        gated_req_.bbs_header = &fh;
+    }
     return WRITE(create_post, out ? out : &local, actor, req);
 }
 
@@ -145,7 +373,23 @@ bof_edit_post(const bof_actor_t *actor, const bof_edit_post_t *req,
               bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    GATE_POST(bof_edit_post_t, post);
+    if (req->bbs_body_path && !safe_path(req->bbs_body_path))
+        return BOF_ERR_INVALID_BODY_FIELD;
     CHECK(actor, req->post.community, MAY_EDIT, req->post.bbs_header);
+    if (person_of(actor)) {
+        // The title and body; the rest of the record is the editor's.
+        bof_community_t c;
+        if ((req->name && !plain_text(req->name)) ||
+            (req->bbs_body_path &&
+             strncmp(req->bbs_body_path, "tmp/", 4) != 0))
+            return BOF_ERR_INVALID_BODY_FIELD;
+        if ((req->bbs_owner || req->bbs_date || req->bbs_money ||
+             req->bbs_modified || req->bbs_no_revision) &&
+            (bof_get_community(req->post.community, &c) != BOF_OK ||
+             !bof_bbs_may_moderate(person_of(actor), &c)))
+            return BOF_ERR_NO_POST_EDIT_ALLOWED;
+    }
     bof_error_t err = WRITE(edit_post, out ? out : &local, actor, req);
     if (err == BOF_OK)
         modlog_done(req->post.community, actor, NULL, req->bbs_modlog);
@@ -157,6 +401,7 @@ bof_delete_post(const bof_actor_t *actor, const bof_delete_post_t *req,
                 bof_post_result_t *out)
 {
     bof_post_result_t local = { 0 };
+    GATE_POST(bof_delete_post_t, post);
     CHECK(actor, req->post.community, MAY_EDIT, req->post.bbs_header);
     return WRITE(delete_post, out ? out : &local, actor, req);
 }
@@ -167,6 +412,7 @@ bof_remove_post(const bof_actor_t *actor, const bof_remove_post_t *req,
 {
     bof_post_result_t local = { 0 };
     bof_post_result_t *res = out ? out : &local;
+    GATE_POST(bof_remove_post_t, post);
     CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(remove_post, res, actor, req);
 
@@ -187,6 +433,7 @@ bof_remove_posts(const bof_actor_t *actor, const bof_remove_posts_t *req,
                  int *count)
 {
     int local;
+    GATE_DIR(bof_remove_posts_t);
     CHECK(actor, req->community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(remove_posts, count ? count : &local, actor,
                             req);
@@ -200,6 +447,7 @@ bof_purge_posts(const bof_actor_t *actor, const bof_purge_posts_t *req,
                 int *count)
 {
     int local;
+    GATE_DIR(bof_purge_posts_t);
     CHECK(actor, req->community, MAY_MODERATE, NULL);
     if (!req->bbs_selected)
         return BOF_ERR_INVALID_BODY_FIELD;
@@ -211,6 +459,9 @@ bof_restore_post(const bof_actor_t *actor, const bof_restore_post_t *req,
                  bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    GATE_DIR(bof_restore_post_t);
+    if (req->bbs_archived && !safe_post_file(req->bbs_archived->filename))
+        return BOF_ERR_INVALID_BODY_FIELD;
     CHECK(actor, req->community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(restore_post, out ? out : &local, actor, req);
     if (err == BOF_OK)
@@ -223,6 +474,7 @@ bof_lock_post(const bof_actor_t *actor, const bof_lock_post_t *req,
               bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    GATE_POST(bof_lock_post_t, post);
     CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(lock_post, out ? out : &local, actor, req);
     if (err == BOF_OK)
@@ -235,6 +487,7 @@ bof_feature_post(const bof_actor_t *actor, const bof_feature_post_t *req,
                  bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    GATE_POST(bof_feature_post_t, post);
     CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     return WRITE(feature_post, out ? out : &local, actor, req);
 }
@@ -245,6 +498,7 @@ bof_bbs_set_post_modes(const bof_actor_t *actor,
                        bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    GATE_POST(bof_bbs_set_post_modes_t, post);
     CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     return WRITE(set_post_modes, out ? out : &local, actor, req);
 }
@@ -255,6 +509,7 @@ bof_bbs_reset_post_score(const bof_actor_t *actor,
                          bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    GATE_POST(bof_bbs_reset_post_score_t, post);
     CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(reset_post_score, out ? out : &local, actor, req);
     if (err == BOF_OK)
@@ -267,6 +522,7 @@ bof_bbs_mask_post(const bof_actor_t *actor, const bof_bbs_mask_post_t *req,
                   bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    GATE_POST(bof_bbs_mask_post_t, post);
     CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(mask_post, out ? out : &local, actor, req);
     if (err == BOF_OK)
@@ -280,6 +536,9 @@ bof_bbs_remove_crosspost(const bof_actor_t *actor,
                          bof_post_result_t *out)
 {
     bof_post_result_t local = { 0 };
+    GATE_DIR(bof_bbs_remove_crosspost_t);
+    if (!req->bbs_header || !safe_post_file(req->bbs_header->filename))
+        return BOF_ERR_INVALID_BODY_FIELD;
     CHECK(actor, req->community, MAY_MODERATE, NULL);
     return WRITE(remove_crosspost, out ? out : &local, actor, req);
 }
@@ -290,6 +549,7 @@ bof_create_post_like(const bof_actor_t *actor,
                      bof_post_like_response_t *out)
 {
     bof_post_like_response_t local = { 0 };
+    GATE_POST(bof_create_post_like_t, post);
     CHECK(actor, req->post.community, MAY_COMMENT, req->post.bbs_header);
     return WRITE(create_post_like, out ? out : &local, actor, req);
 }
@@ -305,7 +565,15 @@ bof_create_comment(const bof_actor_t *actor, const bof_create_comment_t *req,
     bof_comment_response_t local = { 0 };
     bof_create_comment_t made;
     char line[STRLEN * 2];
+    GATE_POST(bof_create_comment_t, post);
     CHECK(actor, req->post.community, MAY_COMMENT, req->post.bbs_header);
+    if (person_of(actor)) {
+        // Only what was typed: the line is bof's, with the actor's name;
+        // and the file is locked, as it may be being rewritten.
+        if (req->content)
+            return BOF_ERR_INVALID_BODY_FIELD;
+        gated_req_.bbs_lock = 1;
+    }
     if (!req->content) {
         // Only what was typed (a gateway): the line as the board shows it.
         bof_community_t c;
@@ -337,7 +605,12 @@ bof_edit_comment(const bof_actor_t *actor, const bof_edit_comment_t *req,
                  bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
+    bof_error_t err;
+    GATE_POST(bof_edit_comment_t, post);
     CHECK(actor, req->post.community, MAY_COMMENT, req->post.bbs_header);
+    if ((err = check_comment_creator(actor, &req->post, req->bbs_floor,
+                                     req->bbs_creator)) != BOF_OK)
+        return err;
     return WRITE(edit_comment, out ? out : &local, actor, req);
 }
 
@@ -346,9 +619,14 @@ bof_delete_comment(const bof_actor_t *actor, const bof_delete_comment_t *req,
                    bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
+    bof_error_t err;
+    GATE_POST(bof_delete_comment_t, post);
     CHECK(actor, req->post.community, MAY_READ, NULL);
     if (!req->post.bbs_header || req->bbs_floor <= 0 || !req->bbs_creator)
         return BOF_ERR_INVALID_BODY_FIELD;
+    if ((err = check_comment_creator(actor, &req->post, req->bbs_floor,
+                                     req->bbs_creator)) != BOF_OK)
+        return err;
     return WRITE(delete_comment, out ? out : &local, actor, req);
 }
 
@@ -357,6 +635,7 @@ bof_remove_comment(const bof_actor_t *actor, const bof_remove_comment_t *req,
                    bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
+    GATE_POST(bof_remove_comment_t, post);
     CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(remove_comment, out ? out : &local, actor, req);
     if (err == BOF_OK)
@@ -373,6 +652,7 @@ bof_create_report(const bof_actor_t *actor, const bof_create_report_t *req,
                   bof_report_t *out)
 {
     bof_report_t local = { 0 };
+    GATE_POST(bof_create_report_t, post);
     CHECK(actor, req->post.community, MAY_READ, NULL);
     return WRITE(create_report, out ? out : &local, actor, req);
 }
@@ -382,6 +662,8 @@ bof_resolve_report(const bof_actor_t *actor, const bof_resolve_report_t *req,
                    bof_report_t *out)
 {
     bof_report_t local = { 0 };
+    if (req->community && !is_valid_brdname(req->community))
+        return BOF_ERR_INVALID_BODY_FIELD;
     CHECK(actor, req->community, MAY_MODERATE, NULL);
     return WRITE(resolve_report, out ? out : &local, actor, req);
 }
@@ -412,12 +694,16 @@ bof_modlog_note_edit(const char *community, const bof_actor_t *actor)
 bof_error_t
 bof_get_posts(const bof_get_posts_t *req, bof_get_posts_response_t *out)
 {
+    if (req->bbs_dir && !dir_in_community(req->community, req->bbs_dir))
+        return BOF_ERR_INVALID_BODY_FIELD;
     return READ(get_posts, req, out);
 }
 
 bof_error_t
 bof_get_post(const bof_get_post_t *req, bof_get_post_response_t *out)
 {
+    if (req->bbs_dir && !dir_in_community(req->community, req->bbs_dir))
+        return BOF_ERR_INVALID_BODY_FIELD;
     return READ(get_post, req, out);
 }
 
@@ -425,6 +711,9 @@ bof_error_t
 bof_bbs_get_post_body(const bof_post_ref_t *post, const char *dest_path,
                       bof_post_version_t *ver)
 {
+    SAFE_POST(post);
+    if (dest_path && !safe_path(dest_path))
+        return BOF_ERR_INVALID_BODY_FIELD;
     return READ(get_post_body, post, dest_path, ver);
 }
 
@@ -432,6 +721,7 @@ bof_error_t
 bof_get_comments(const bof_get_comments_t *req,
                  bof_get_comments_response_t *out)
 {
+    SAFE_POST(&req->post);
     return READ(get_comments, req, out);
 }
 
@@ -443,6 +733,7 @@ bof_get_comment_revisions(const bof_get_comment_revisions_t *req,
     if (!req->post.bbs_header || req->bbs_floor <= 0 || req->limit <= 0 ||
         !out->revisions)
         return BOF_ERR_INVALID_BODY_FIELD;
+    SAFE_POST(&req->post);
     return READ(get_comment_revisions, req, out);
 }
 
@@ -480,6 +771,7 @@ bof_bbs_get_post_file(const bof_post_ref_t *post, char *path, size_t sz)
     if (!post || !post->bbs_dir || !post->bbs_header ||
         !post->bbs_header->filename[0] || !path || !sz)
         return BOF_ERR_INVALID_BODY_FIELD;
+    SAFE_POST(post);
     // The files of a board are the posts, or the cache of the backend.
     if ((err = READ(refresh_post, post)) != BOF_OK)
         return err;
@@ -499,6 +791,7 @@ bof_get_post_id(const bof_post_ref_t *post, bof_post_id_t *id)
     if (!post || !id)
         return BOF_ERR_INVALID_BODY_FIELD;
     *id = 0;
+    SAFE_POST(post);
     return READ(get_post_id, post, id);
 }
 
@@ -515,7 +808,8 @@ bof_error_t
 bof_bbs_find_post(const bof_post_key_t *key, bof_found_post_t *out)
 {
     if (!key || !key->community[0] || !key->bbs_post_file[0] || !out ||
-        !out->bbs_header)
+        !out->bbs_header || !is_valid_brdname(key->community) ||
+        !bof_bbs_valid_post_file(key->bbs_post_file))
         return BOF_ERR_INVALID_BODY_FIELD;
     return READ(find_post, key, out);
 }
@@ -540,6 +834,7 @@ bof_bbs_get_post_revisions(const bof_post_ref_t *post, int *count)
         !post->bbs_header->filename[0] || !count)
         return BOF_ERR_INVALID_BODY_FIELD;
     *count = 0;
+    SAFE_POST(post);
     return READ(get_post_revisions, post, count);
 }
 
@@ -550,6 +845,7 @@ bof_bbs_get_post_revision_file(const bof_post_ref_t *post, int rev,
     if (!post || !post->bbs_dir || !post->bbs_header ||
         !post->bbs_header->filename[0] || rev <= 0 || !path || !sz)
         return BOF_ERR_INVALID_BODY_FIELD;
+    SAFE_POST(post);
     return READ(get_post_revision_file, post, rev, path, sz);
 }
 
@@ -562,6 +858,7 @@ bof_bbs_list_post_revisions(const bof_bbs_list_post_revisions_t *req,
         req->limit <= 0 || !out || !out->revisions)
         return BOF_ERR_INVALID_BODY_FIELD;
     out->count = out->bbs_total = 0;
+    SAFE_POST(&req->post);
     return READ(list_post_revisions, req, out);
 }
 
@@ -570,7 +867,8 @@ bof_bbs_list_removed_posts(const bof_bbs_list_removed_posts_t *req,
                            bof_bbs_list_removed_posts_response_t *out)
 {
     if (!req || !req->bbs_dir || req->start < 0 || req->limit <= 0 ||
-        !out || !out->posts)
+        !out || !out->posts ||
+        !dir_in_community(req->community, req->bbs_dir))
         return BOF_ERR_INVALID_BODY_FIELD;
     out->count = out->bbs_total = 0;
     return READ(list_removed_posts, req, out);

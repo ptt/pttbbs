@@ -110,8 +110,15 @@ bof_error_t bof_get_person(const char *name, bof_person_t *out);
 
 /* Who calls bof (Lemmy's authenticated local user). With bbs_person, bof
  * checks that the actor may do what it asks (as Lemmy does): the rules of
- * the BBS (bof_bbs_can_*()), being the author (no_post_edit_allowed) or a
- * moderator (not_a_moderator); without, the caller has checked. */
+ * the BBS (bof_bbs_can_*()), being the author (no_post_edit_allowed,
+ * no_comment_edit_allowed) or a moderator (not_a_moderator); and it takes
+ * nothing about a post from the request but its board and file name: the
+ * list is the board's own (.DIR), the record is read again from it (by
+ * bbs_index if still there, else by the file name), a new post is the
+ * actor's (from its title and body alone), a comment is made from what was
+ * typed (bbs_text), and edited bodies come from tmp/. Without bbs_person,
+ * the caller has checked. For any caller, file names and lists must stay
+ * in their board (invalid_body_field). */
 typedef struct bof_actor_t {
     bof_person_id_t person_id; /* 0 until people have IDs */
     const char *name;          /* BBS userid */
@@ -354,6 +361,11 @@ typedef struct bof_post_key_t {
     char community[BOF_COMMUNITY_NAME_MAX];
     char bbs_post_file[BOF_POST_FILE_MAX];
 } bof_post_key_t;
+
+/* PTT: whether name can be the file name of a post (as the BBS names
+ * them: a letter, then letters, digits, '.', '_' or '-', shorter than
+ * FNLEN), e.g. for a key from a gateway. */
+int bof_bbs_valid_post_file(const char *name);
 
 /* The ID of a post (Lemmy's post.id). Errors: couldnt_find_post,
  * bbs_storage_not_supported (the files backend). */
