@@ -30,5 +30,7 @@ const bof_storage_ops_t bof_storage_files = {
     .remove_comment = bof_fs_remove_comment,
     .write_modlog = bof_fs_write_modlog,
     .note_modlog_edit = bof_fs_note_modlog_edit,
+    .get_posts = bof_fs_get_posts,
+    .get_post = bof_fs_get_post,
     .get_post_body = bof_fs_bbs_get_post_body,
 };

@@ -685,6 +685,54 @@ test_modlog_with_actions(void)
 }
 
 static void
+test_get_posts(void)
+{
+    fileheader_t recs[64], got[8];
+    int n;
+
+    n = read_dir(recs, 64);
+    // The last two of the list, then post 1 featured.
+    int32_t featured[] = { 1 };
+    bof_get_posts_t req = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_start = n - 1,
+        .limit = 8, .bbs_featured = featured, .bbs_nfeatured = 1,
+    };
+    bof_get_posts_response_t res = { .posts = got };
+    EXPECT_OK(bof_get_posts(&req, &res));
+    EXPECT_INT(res.bbs_total, n);
+    EXPECT_INT(res.count, 3);
+    EXPECT_STR(got[0].filename, recs[n - 2].filename);
+    EXPECT_STR(got[1].filename, recs[n - 1].filename);
+    EXPECT_STR(got[2].filename, recs[0].filename);
+    EXPECT(got[2].filemode & FILE_BOTTOM);
+
+    // Only the featured part; a short page of the list.
+    req.bbs_start = n + 1;
+    EXPECT_OK(bof_get_posts(&req, &res));
+    EXPECT_INT(res.count, 1);
+    req.bbs_start = 1;
+    req.limit = 2;
+    EXPECT_OK(bof_get_posts(&req, &res));
+    EXPECT_INT(res.count, 2);
+    EXPECT_STR(got[1].filename, recs[1].filename);
+
+    // GetPost.
+    fileheader_t one;
+    int fd = -1;
+    bof_get_post_t get = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = 2, .bbs_fd = &fd,
+    };
+    bof_get_post_response_t gres = { .bbs_header = &one };
+    EXPECT_OK(bof_get_post(&get, &gres));
+    EXPECT_STR(one.filename, recs[1].filename);
+    EXPECT(strstr(gres.bbs_path, recs[1].filename) != NULL);
+    get.bbs_index = n + 1;
+    EXPECT_INT(bof_get_post(&get, &gres), BOF_ERR_COULDNT_FIND_POST);
+    if (fd >= 0)
+        close(fd);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -730,6 +778,7 @@ main(void)
     RUN(test_crosspost);
     RUN(test_remove_posts);
     RUN(test_modlog_with_actions);
+    RUN(test_get_posts);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

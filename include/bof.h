@@ -417,6 +417,58 @@ bof_error_t bof_remove_comment(const bof_actor_t *actor,
                                bof_comment_response_t *out);
 
 /* ------------------------------------------------------------------------
+ * Reading posts
+ * ------------------------------------------------------------------------ */
+
+/* Lemmy's GetPosts, for a board in the order of its list (oldest first,
+ * as PTT shows it). Lemmy pages by page and limit; posts in files are
+ * read by their position instead. Featured (pinned) posts come after the
+ * list, as PTT shows them at the bottom (Lemmy lists them first): their
+ * positions in the list are given by the caller (the board header keeps
+ * them), and they get FILE_BOTTOM. */
+typedef struct bof_get_posts_t {
+    const char *community;
+    const char *bbs_dir;
+    int bbs_start;               /* 1-based position of the first to get */
+    int limit;                   /* how many at most */
+    /* How many posts the list has, as the UI last saw it: none after that
+     * many are given, and featured posts come after them; 0: as it has
+     * now. */
+    int bbs_total;
+    const int32_t *bbs_featured; /* positions of featured posts */
+    int bbs_nfeatured;
+} bof_get_posts_t;
+
+typedef struct bof_get_posts_response_t {
+    struct fileheader_t *posts;  /* room for limit records, by the caller */
+    int count;                   /* how many were got */
+    int bbs_total;               /* the posts in the list, not featured */
+} bof_get_posts_response_t;
+
+bof_error_t bof_get_posts(const bof_get_posts_t *req,
+                          bof_get_posts_response_t *out);
+
+/* Lemmy's GetPost: the post at a position of a list, and where its
+ * content is (its body and comments; see also bof_bbs_get_post_body()). */
+typedef struct bof_get_post_t {
+    const char *community;
+    const char *bbs_dir;
+    int bbs_index;               /* 1-based */
+    /* If not NULL, the list is kept open there for the next call (-1 at
+     * first; the caller closes it), for reading many one by one. */
+    int *bbs_fd;
+} bof_get_post_t;
+
+typedef struct bof_get_post_response_t {
+    struct fileheader_t *bbs_header;  /* gets the record, by the caller */
+    char bbs_path[BOF_PATH_MAX];      /* "" for a record without a file */
+} bof_get_post_response_t;
+
+/* Errors: couldnt_find_post (no record there). */
+bof_error_t bof_get_post(const bof_get_post_t *req,
+                         bof_get_post_response_t *out);
+
+/* ------------------------------------------------------------------------
  * Modlog
  * ------------------------------------------------------------------------ */
 

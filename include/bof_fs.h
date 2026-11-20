@@ -48,6 +48,10 @@ int bof_fs_write_modlog(void *ctx, const char *community,
                         int reason_audit_only, const bof_modlog_t *m);
 int bof_fs_note_modlog_edit(void *ctx, const char *community,
                             const bof_actor_t *actor);
+bof_error_t bof_fs_get_posts(void *ctx, const bof_get_posts_t *req,
+                             bof_get_posts_response_t *out);
+bof_error_t bof_fs_get_post(void *ctx, const bof_get_post_t *req,
+                            bof_get_post_response_t *out);
 bof_error_t bof_fs_bbs_get_post_body(void *ctx, const bof_post_ref_t *post,
                                      const char *dest_path,
                                      bof_post_version_t *ver);

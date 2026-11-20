@@ -1,0 +1,99 @@
+/*
+ * listing.c - bof (Birds Of Feather), the files backend: reading the
+ * posts of a board.
+ *
+ * Copyright (c) 2026 Hung-Te Lin (piaip) <hungte@gmail.com>
+ * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0-only
+ *
+ * The posts of a board are listed in .DIR, oldest first. Featured
+ * (pinned) posts are listed again after them, as PTT shows them at the
+ * bottom of the board; Lemmy lists its featured posts first.
+ */
+
+#include "../bof_int.h"
+#include "bof_fs.h"
+
+bof_error_t
+bof_fs_get_posts(void *ctx GCC_UNUSED, const bof_get_posts_t *req,
+                 bof_get_posts_response_t *out)
+{
+    fileheader_t *buf;
+    int total, n, rv = 0, fstart, avail;
+
+    if (!out)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    buf = out->posts;
+    out->count = 0;
+    out->bbs_total = 0;
+    if (!req->bbs_dir || !buf || req->limit <= 0 || req->bbs_start <= 0 ||
+        (req->bbs_nfeatured > 0 && !req->bbs_featured))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    total = req->bbs_total > 0 ? req->bbs_total :
+        get_num_records(req->bbs_dir, sizeof(fileheader_t));
+    out->bbs_total = total;
+
+    // The posts of the list from bbs_start, as many as fit (and not after
+    // the last of the list).
+    n = total - req->bbs_start + 1;
+    if (n >= req->limit || req->bbs_nfeatured <= 0) {
+        int want = n < req->limit ? n : req->limit;
+        rv = want > 0 ?
+            get_fileheaders(req->bbs_dir, buf, req->bbs_start, want) : 0;
+        out->count = rv < 0 ? 0 : rv;
+        return BOF_OK;
+    }
+    if (n > 0) {
+        rv = get_fileheaders(req->bbs_dir, buf, req->bbs_start, n);
+        if (rv < 0)
+            rv = 0;
+        fstart = 1;
+    } else {
+        fstart = 1 - n;
+    }
+
+    // Then the featured ones, as many as fit after them.
+    avail = req->bbs_nfeatured - (fstart - 1);
+    if (rv + avail > req->limit)
+        avail = req->limit - rv;
+    if (avail > 0) {
+        int fd = -1;
+        for (int i = 0; i < avail; i++) {
+            int idx = (fstart - 1) + i;
+            if (idx < 0 || idx >= req->bbs_nfeatured)
+                continue;
+            if (get_fileheader_keep(req->bbs_dir, &buf[rv],
+                                    req->bbs_featured[idx], &fd) > 0) {
+                buf[rv].filemode |= FILE_BOTTOM;
+                rv++;
+            }
+        }
+        if (fd != -1)
+            close(fd);
+    }
+    out->count = rv;
+    return BOF_OK;
+}
+
+bof_error_t
+bof_fs_get_post(void *ctx GCC_UNUSED, const bof_get_post_t *req,
+                bof_get_post_response_t *out)
+{
+    char path[PATHLEN];
+    int rv;
+
+    if (!req->bbs_dir || req->bbs_index <= 0 || !out || !out->bbs_header)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    rv = req->bbs_fd ?
+        get_fileheader_keep(req->bbs_dir, out->bbs_header, req->bbs_index,
+                            req->bbs_fd) :
+        get_fileheader(req->bbs_dir, out->bbs_header, req->bbs_index);
+    if (rv <= 0)
+        return BOF_ERR_COULDNT_FIND_POST;
+    if (out->bbs_header->filename[0]) {
+        setdirpath(path, req->bbs_dir, out->bbs_header->filename);
+        strlcpy(out->bbs_path, path, sizeof(out->bbs_path));
+    } else {
+        out->bbs_path[0] = '\0';
+    }
+    return BOF_OK;
+}

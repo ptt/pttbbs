@@ -60,11 +60,21 @@ mock_write_modlog(void *ctx, const char *community GCC_UNUSED,
     return 0;
 }
 
+static bof_error_t
+mock_get_posts(void *ctx, const bof_get_posts_t *req GCC_UNUSED,
+               bof_get_posts_response_t *out)
+{
+    called(ctx, "get_posts");
+    out->count = 7;
+    return BOF_OK;
+}
+
 static const bof_storage_ops_t full_ops = {
     .name = "full",
     .delete_post = mock_delete_post,
     .remove_post = mock_remove_post,
     .write_modlog = mock_write_modlog,
+    .get_posts = mock_get_posts,
 };
 
 // Without remove_post.
@@ -72,6 +82,7 @@ static const bof_storage_ops_t partial_ops = {
     .name = "partial",
     .delete_post = mock_delete_post,
     .write_modlog = mock_write_modlog,
+    .get_posts = mock_get_posts,
 };
 
 static void
@@ -99,6 +110,21 @@ test_one_backend(void)
     EXPECT_STR(a.calls, "");
     EXPECT_STR(b.calls, "delete_post ");
     EXPECT_STR(res.bbs_archived_path, "b");
+}
+
+static void
+test_reads(void)
+{
+    mock_t a = { .name = "a" };
+    fileheader_t buf[1];
+    bof_get_posts_t req = { .community = "Test", .bbs_start = 1, .limit = 1 };
+    bof_get_posts_response_t res = { .posts = buf };
+
+    bof_storage_reset();
+    bof_storage_set(&full_ops, &a);
+    EXPECT_OK(bof_get_posts(&req, &res));
+    EXPECT_INT(res.count, 7);
+    EXPECT_STR(a.calls, "get_posts ");
 }
 
 static void
@@ -146,6 +172,7 @@ main(void)
     }
     mkdir("log", 0755);
     RUN(test_one_backend);
+    RUN(test_reads);
     RUN(test_not_supported);
     RUN(test_files_by_default);
     bof_storage_reset();

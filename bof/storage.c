@@ -235,6 +235,18 @@ bof_modlog_note_edit(const char *community, const bof_actor_t *actor)
  * ------------------------------------------------------------------------ */
 
 bof_error_t
+bof_get_posts(const bof_get_posts_t *req, bof_get_posts_response_t *out)
+{
+    return READ(get_posts, req, out);
+}
+
+bof_error_t
+bof_get_post(const bof_get_post_t *req, bof_get_post_response_t *out)
+{
+    return READ(get_post, req, out);
+}
+
+bof_error_t
 bof_bbs_get_post_body(const bof_post_ref_t *post, const char *dest_path,
                       bof_post_version_t *ver)
 {

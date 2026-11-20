@@ -470,6 +470,29 @@ read_view_real_recno(read_ctx_t *cx, int disp_ln)
     return disp_ln;
 }
 
+// Whether the list read is the posts of the board, read through bof; the
+// mailbox and the digest are not posts of a board and are read directly.
+static bool
+read_is_board(void)
+{
+    return currstat != RMAIL && !(currmode & MODE_DIGEST);
+}
+
+// The record at recno of direct (GetPost), keeping the list open in *pfd.
+// Returns 1, or 0 if there is none.
+static int
+read_post_at(const char *direct, int recno, fileheader_t *fh, int *pfd)
+{
+    if (!read_is_board())
+        return get_fileheader_keep(direct, fh, recno, pfd) > 0;
+    bof_get_post_t req = {
+        .community = currboard, .bbs_dir = direct, .bbs_index = recno,
+        .bbs_fd = pfd,
+    };
+    bof_get_post_response_t res = { .bbs_header = fh };
+    return bof_get_post(&req, &res) == BOF_OK;
+}
+
 static int
 TagThreadView(read_ctx_t *cx, const char *direct)
 {
@@ -480,7 +503,7 @@ TagThreadView(read_ctx_t *cx, const char *direct)
     fileheader_t fh;
     for (int ln = 1; ln <= last_line; ln++) {
         int real_recno = read_view_real_recno(cx, ln);
-        if (get_fileheaders_keep(direct, &fh, real_recno, 1, &fd) > 0) {
+        if (read_post_at(direct, real_recno, &fh, &fd) > 0) {
             if (_iter_tag_match_title(&fh, currtitle) < 0)
                 break;
         }
@@ -538,7 +561,7 @@ thread(read_ctx_t *cx, int stypen)
 	    break;
 	}
 	int real_recno = read_view_real_recno(cx, new_ln);
-	if (get_fileheaders_keep(currdirect, &fh, real_recno, 1, &fd) <= 0)
+	if (read_post_at(currdirect, real_recno, &fh, &fd) <= 0)
 	{
 	    new_ln = pos;
 	    break;
@@ -593,7 +616,7 @@ search_read_fh(read_ctx_t *cx, fileheader_t *fh, int ln, int *pfd)
     if (!(currmode & (MODE_SELECT | MODE_DIGEST)) &&
         cx->view.bottom_count > 0 && ln > cx->view.bottom_line)
         return 0;
-    return get_fileheaders_keep(currdirect, fh, read_view_real_recno(cx, ln), 1, pfd);
+    return read_post_at(currdirect, read_view_real_recno(cx, ln), fh, pfd);
 }
 
 static int
@@ -1070,7 +1093,7 @@ read_view_load_physical_range(read_ctx_t *cx, const char *direct,
             if (attempt == 0) {
                 for (int i = 0; i < count && (recbase + i) <= view->total; i++) {
                     int real_recno = read_view_real_recno(cx, recbase + i);
-                    if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) <= 0 ||
+                    if (!read_post_at(direct, real_recno, &buf[rv], &fd) ||
                         !buf[rv].filename[0]) {
                         stale = 1;
                         structural_stale = 1;
@@ -1107,7 +1130,7 @@ read_view_load_physical_range(read_ctx_t *cx, const char *direct,
                     offset++;
                     if (real_recno <= 0)
                         continue;
-                    if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) <= 0 ||
+                    if (!read_post_at(direct, real_recno, &buf[rv], &fd) ||
                         !buf[rv].filename[0]) {
                         continue;
                     }
@@ -1137,46 +1160,29 @@ read_view_load_physical_range(read_ctx_t *cx, const char *direct,
         return rv;
     }
 
-    int n = view->bottom_line - recbase + 1;
-    int rv = 0;
-
-    if (n >= count || (currmode & MODE_DIGEST)) {
-        rv = get_fileheaders(direct, buf, recbase, count);
+    int rv;
+    if (!read_is_board()) {
+        // As many as fit: of the mailbox up to its last line seen, of the
+        // digest all.
+        int n = (currmode & MODE_DIGEST) ? count :
+                view->bottom_line - recbase + 1;
+        if (n > count)
+            n = count;
+        rv = n > 0 ? get_fileheaders(direct, buf, recbase, n) : 0;
         if (rv < 0)
             rv = 0;
         ENDSTAT(STAT_BOARDREC);
         return rv;
     }
 
-    if (n > 0) {
-        n = get_fileheaders(direct, buf, recbase, n);
-        if (n < 0)
-            n = 0;
-        rv += n;
-        recbase = 1;
-    } else {
-        recbase = 1 + (-n);
-    }
-
-    int b_avail = view->bottom_count - (recbase - 1);
-    if (rv + b_avail > count)
-        b_avail = count - rv;
-
-    if (b_avail > 0) {
-        int fd = -1;
-        for (int i = 0; i < b_avail; i++) {
-            int b_idx = (recbase - 1) + i;
-            if (b_idx >= 0 && b_idx < view->bottom_count) {
-                int real_recno = view->bottom_recs[b_idx];
-                if (get_fileheader_keep(direct, &buf[rv], real_recno, &fd) > 0) {
-                    buf[rv].filemode |= FILE_BOTTOM;
-                    rv++;
-                }
-            }
-        }
-        if (fd != -1)
-            close(fd);
-    }
+    // The list, then the pinned posts after it.
+    bof_get_posts_t req = {
+        .community = currboard, .bbs_dir = direct, .bbs_start = recbase,
+        .limit = count, .bbs_total = view->bottom_line,
+        .bbs_featured = view->bottom_recs, .bbs_nfeatured = view->bottom_count,
+    };
+    bof_get_posts_response_t res = { .posts = buf };
+    rv = bof_get_posts(&req, &res) == BOF_OK ? res.count : 0;
 
     ENDSTAT(STAT_BOARDREC);
     return rv;

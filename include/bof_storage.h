@@ -91,6 +91,10 @@ typedef struct bof_storage_ops_t {
                             const bof_actor_t *actor);
 
     /* Reads. */
+    bof_error_t (*get_posts)(void *ctx, const bof_get_posts_t *req,
+                             bof_get_posts_response_t *out);
+    bof_error_t (*get_post)(void *ctx, const bof_get_post_t *req,
+                            bof_get_post_response_t *out);
     bof_error_t (*get_post_body)(void *ctx, const bof_post_ref_t *post,
                                  const char *dest_path,
                                  bof_post_version_t *ver);

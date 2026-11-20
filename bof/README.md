@@ -103,6 +103,7 @@ if (err != BOF_OK)
 | Errors | `couldnt_find_post`, ... | `bof_error_t`, `bof_error_name()` |
 | People | `person`, `local_user` | `bof_person_id_t`, `bof_actor_t` |
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
+| Reading | `GetPosts`, `GetPost` | `bof_get_posts()`, `bof_get_post()` |
 | Comments | `CreateComment` (+ `CreatePostLike` for a push or boo), `RemoveComment` | `bof_create_comment()`, `bof_remove_comment()` |
 | Modlog | `GetModlog`, `mod_*` | `bof_modlog_*()`; moderation calls take their record |
 | Bulk | Discourse's bulk delete | `bof_remove_posts()` |
@@ -119,7 +120,7 @@ keeping the BBS working exactly as before:
 2. **Posts** -- all the writes of posts on boards *(done)*; digests stay in
    `mbbsd`, as Lemmy has none.
 3. **Comments, modlog** *(done)*.
-4. **Listings** -- the post list.
+4. **Listings** -- the post list *(done)*.
 5. **Storage virtualization** -- the files backend behind it *(done)*;
    the `post.svc` backend next.
 6. **Communities** -- boards and moderators.
