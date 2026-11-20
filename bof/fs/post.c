@@ -242,16 +242,79 @@ bof_fs_bbs_reset_post_score(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     return BOF_OK;
 }
 
+// The directory of a list (bbs_dir without its file name), into dir.
+static int
+list_directory(const char *bbs_dir, char *dir, size_t sz)
+{
+    const char *slash = strrchr(bbs_dir, '/');
+    size_t n = slash ? (size_t)(slash - bbs_dir) : 0;
+
+    if (!n || n >= sz)
+        return -1;
+    memcpy(dir, bbs_dir, n);
+    dir[n] = '\0';
+    return 0;
+}
+
 bof_error_t
-bof_fs_create_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+bof_fs_create_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                    const bof_create_post_t *req, bof_post_response_t *out)
 {
-    if (!req->bbs_dir || !req->bbs_header || !req->bbs_header->filename[0])
+    fileheader_t fh;
+    char path[PATHLEN], tmp[PATHLEN];
+    int named = 0, placed = 0;
+
+    if (!req->bbs_dir || !req->bbs_header ||
+        (req->bbs_content_path && req->body))
         return BOF_ERR_INVALID_BODY_FIELD;
-    if (append_fileheader(req->bbs_dir, req->bbs_header) == -1)
+    fh = *req->bbs_header;
+
+    // Named here, in the directory of the list.
+    if (!fh.filename[0]) {
+        if (list_directory(req->bbs_dir, path, sizeof(path)) != 0 ||
+            stampfile_u(path, &fh) != 0)
+            return BOF_ERR_COULDNT_CREATE_POST;
+        named = 1;
+    } else {
+        if (strchr(fh.filename, '/'))
+            return BOF_ERR_INVALID_BODY_FIELD;
+        setdirpath(path, req->bbs_dir, fh.filename);
+    }
+
+    // The content, written aside and moved into place at once.
+    if (req->bbs_content_path || req->body) {
+        snprintf(tmp, sizeof(tmp), "%s.new%d", path, (int)getpid());
+        if (req->body ?
+            bof_files_write_post(tmp, fh.owner, req->bbs_nickname,
+                                 req->community, fh.title, time4(NULL),
+                                 req->body, actor ? actor->from : NULL) :
+            Copy(req->bbs_content_path, tmp)) {
+            unlink(tmp);
+            if (named)
+                unlink(path);
+            return BOF_ERR_COULDNT_CREATE_POST;
+        }
+        if (Rename(tmp, path) != 0) {
+            unlink(tmp);
+            if (named)
+                unlink(path);
+            return BOF_ERR_COULDNT_CREATE_POST;
+        }
+        placed = 1;
+        // A post given whole (body) gets the time of its file; a
+        // caller that wrote the file keeps the time it set in the
+        // record (none for anonymous posts).
+        if (req->body)
+            fh.modified = dasht4(path);
+    }
+
+    if (append_fileheader(req->bbs_dir, &fh) == -1) {
+        if (named || placed)
+            unlink(path);
         return BOF_ERR_COULDNT_CREATE_POST;
+    }
     if (out && out->bbs_header)
-        *out->bbs_header = *req->bbs_header;
+        *out->bbs_header = fh;
     return BOF_OK;
 }
 

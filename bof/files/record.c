@@ -361,3 +361,17 @@ bof_files_prune(const char *direct, uint16_t keep_modes, int keep_records,
     close(fd);
     return count;
 }
+
+bof_error_t
+bof_bbs_name_post(const char *community, fileheader_t *fh)
+{
+    char path[PATHLEN];
+
+    if (!community || !is_valid_brdname(community) || !fh)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    setbpath(path, community);
+    if (!dashd(path))
+        return BOF_ERR_COULDNT_FIND_COMMUNITY;
+    // An empty file takes the name (stamped by the time, as all posts).
+    return stampfile_u(path, fh) == 0 ? BOF_OK : BOF_ERR_COULDNT_CREATE_POST;
+}

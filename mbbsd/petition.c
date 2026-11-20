@@ -110,7 +110,6 @@ do_petition_reply(const fileheader_t * fhdr)
     char            opnion[10];
     char           *ptr, *uid;
     FILE           *fi;
-    fileheader_t    petitionfile;
     int             yes=0;
     unsigned long   endtime=0;
 
@@ -131,8 +130,8 @@ do_petition_reply(const fileheader_t * fhdr)
 	vmsgf("未達投票資格限制: %s", genbuf);
 	return;
     }
-    setbpath(fpath, currboard);
-    stampfile(fpath, &petitionfile);
+    // The signed petition is written aside, and saved through bof.
+    snprintf(fpath, sizeof(fpath), "tmp/petition.%d", (int)getpid());
 
     // The petition in bof, read and signed through it.
     fileheader_t cur = *fhdr;
@@ -147,7 +146,6 @@ do_petition_reply(const fileheader_t * fhdr)
 
     if (bof_bbs_get_post_file(&ref, oldfpath, sizeof(oldfpath)) != BOF_OK ||
         !(fi = fopen(oldfpath, "r"))) {
-        unlink(fpath);
         vmsg("此檔已損毀，無法連署。");
         return;
     }

@@ -195,3 +195,72 @@ bof_files_rewrite_post(const char *path,
         unlink(tmp);
     return saved ? BOF_OK : err;
 }
+
+int
+bof_bbs_format_post_header(char *buf, size_t sz, const char *author,
+                           const char *nickname, const char *community,
+                           const char *title, int32_t when)
+{
+    // Each line as the editor writes it, within its margin.
+    char line[WRAPMARGIN];
+    time4_t t = when;
+    size_t len = 0;
+
+    if (!buf || !sz)
+        return -1;
+    buf[0] = '\0';
+    if (community)
+        snprintf(line, sizeof(line), "%s %s (%s) %s %s", STR_AUTHOR1,
+                 author ? author : "", nickname ? nickname : "", STR_POST1,
+                 community);
+    else
+        snprintf(line, sizeof(line), "%s %s (%s)", STR_AUTHOR1,
+                 author ? author : "", nickname ? nickname : "");
+    len += snprintf(buf + len, sz > len ? sz - len : 0, "%s\n", line);
+    snprintf(line, sizeof(line), STR_POST_TITLE " %s", title ? title : "");
+    len += snprintf(buf + len, sz > len ? sz - len : 0, "%s\n", line);
+    snprintf(line, sizeof(line), STR_POST_TIME " %s", ctime4(&t));
+    len += snprintf(buf + len, sz > len ? sz - len : 0, "%s\n", line);
+    return len < sz ? (int)len : -1;
+}
+
+int
+bof_bbs_format_post_origin(char *buf, size_t sz, const char *from)
+{
+    size_t len;
+
+    if (!buf || !sz)
+        return -1;
+    len = snprintf(buf, sz, STR_POST_MARK STR_POST_ORIGIN " " BBSNAME "("
+                   MYHOSTNAME "), " STR_POST_FROM " %s", from ? from : "");
+    return len < sz ? (int)len : -1;
+}
+
+int
+bof_files_write_post(const char *path, const char *author,
+                     const char *nickname, const char *community,
+                     const char *title, int32_t when, const char *body,
+                     const char *from)
+{
+    char head[WRAPMARGIN * 3 + 4], origin[WRAPMARGIN];
+    size_t blen = body ? strlen(body) : 0;
+    FILE *fp;
+    int bad;
+
+    if (bof_bbs_format_post_header(head, sizeof(head), author, nickname,
+                                   community, title, when) < 0 ||
+        bof_bbs_format_post_origin(origin, sizeof(origin), from) < 0)
+        return -1;
+    if (!(fp = fopen(path, "w")))
+        return -1;
+    // The header, a blank line, the body and the origin after "--".
+    fprintf(fp, "%s\n", head);
+    if (blen)
+        fwrite(body, 1, blen, fp);
+    if (blen && body[blen - 1] != '\n')
+        fputc('\n', fp);
+    fprintf(fp, "\n--\n%s\n", origin);
+    bad = ferror(fp);
+    bad |= fclose(fp) != 0;
+    return bad ? -1 : 0;
+}

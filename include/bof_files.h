@@ -161,6 +161,14 @@ int bof_files_rewrite_post(const char *path,
                            void *ctx, const char *tail, const char *rev_note,
                            int *matched);
 
+/* Writes the file of a new post at path from its body alone, as the
+ * editor of the BBS writes posts: the header (bof_bbs_format_post_header()),
+ * a blank line, the body, and the origin line after "--". Returns 0 or -1. */
+int bof_files_write_post(const char *path, const char *author,
+                         const char *nickname, const char *community,
+                         const char *title, int32_t when, const char *body,
+                         const char *from);
+
 /* Comments in the files of posts (bof/files/comment.c). */
 
 /* Formats the line of a comment of type (RECTYPE_*) by author saying

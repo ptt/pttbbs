@@ -109,7 +109,7 @@ if (err != BOF_OK)
 | Reports | `CreatePostReport`, `CreateCommentReport`, `ListReports`, `Resolve*Report` | `bof_create_report()`, `bof_list_reports()`, `bof_resolve_report()` |
 | Modlog | `GetModlog`, `mod_*` | `bof_modlog_*()`; moderation calls take their record |
 | Bulk | Discourse's bulk delete | `bof_remove_posts()` |
-| BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()`, `bof_bbs_mask_post()`, `bof_bbs_remove_crosspost()` |
+| BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()`, `bof_bbs_mask_post()`, `bof_bbs_remove_crosspost()`; the content: `bof_bbs_get_post_file()` (to read), `bof_bbs_get_post_body()` (to edit), `bof_bbs_name_post()`, `bof_bbs_format_post_header()`, `bof_bbs_format_post_origin()` |
 
 The API grows one feature at a time, as `mbbsd` moves onto it.
 

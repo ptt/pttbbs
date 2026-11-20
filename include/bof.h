@@ -250,16 +250,25 @@ bof_error_t bof_remove_post(const bof_actor_t *actor,
                             const bof_remove_post_t *req,
                             bof_post_result_t *out);
 
-/* Lemmy's CreatePost. The UI's editor still writes the file of the post
- * (named as bbs_header->filename, in the directory of bbs_dir); this
- * lists it. */
+/* Lemmy's CreatePost. Its content (Lemmy's body) is given as a whole file
+ * the caller wrote, as the editor of the BBS writes it (bbs_content_path:
+ * bof copies it into place, and the caller removes its own), or as the
+ * body alone (body, in the encoding of the files), which bof writes as a
+ * post of the BBS, with the header of its author, board, title and time
+ * and the line of where it was posted from (bof_bbs_format_post_header(),
+ * bof_bbs_format_post_origin()). Without either, the content is at its
+ * place already or there is none (PTT: the copies in ALLPOST). With
+ * bbs_header->filename empty, bof names the post; out->bbs_header gets the
+ * record as listed. */
 typedef struct bof_create_post_t {
     const char *community;                  /* board name */
     const char *bbs_dir;                    /* the list (.DIR) to add it to */
-    const struct fileheader_t *bbs_header;  /* its record */
-    /* Where its content (Lemmy's body) is, if not at its place in the
-     * board yet (the caller moves it there); NULL: at its place. */
+    /* Its record: the title (Lemmy's name), author, modes, money; the file
+     * name (or "" for bof to name it) and date. */
+    const struct fileheader_t *bbs_header;
     const char *bbs_content_path;
+    const char *body;
+    const char *bbs_nickname;  /* of the author, for the header of body */
     /* A crosspost (Reddit's crosspost_parent): the post it was copied
      * from, by its board and file name; NULL if none. */
     const char *bbs_crosspost_community;
@@ -353,6 +362,24 @@ int bof_bbs_post_version_matches(const bof_post_ref_t *post,
  * couldnt_find_post. */
 bof_error_t bof_bbs_get_post_file(const bof_post_ref_t *post, char *path,
                                   size_t sz);
+
+/* PTT: names a new post of community before it is created (e.g. to put its
+ * address, which comes from the name, in its content): its file name and
+ * date into fh, the rest of fh kept. The name is taken until
+ * bof_create_post() uses it. Errors: couldnt_find_community. */
+bof_error_t bof_bbs_name_post(const char *community, struct fileheader_t *fh);
+
+/* PTT: the header a post of the BBS starts with, as its editor writes it:
+ * the lines of its author (with nickname) and board (none if community is
+ * NULL, as for mails), title and time, each ending with a newline, into buf.
+ * Returns the length, or -1 if it does not fit. */
+int bof_bbs_format_post_header(char *buf, size_t sz, const char *author,
+                               const char *nickname, const char *community,
+                               const char *title, int32_t when);
+
+/* PTT: the line that ends a post of the BBS (after "--"): the site and
+ * where it was posted from. Returns the length, or -1 if it does not fit. */
+int bof_bbs_format_post_origin(char *buf, size_t sz, const char *from);
 
 /* Lemmy's DeletePost with deleted: false and RemovePost with removed:
  * false: puts a deleted or removed post back from the archive (the time

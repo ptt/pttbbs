@@ -2029,16 +2029,17 @@ write_header(FILE * fp,  const char *mytitle, bool allow_anon)
     assert(mytitle);
     // cross_post may call this without setting curr_buf.
     // TODO Isolate curr_buf so we don't need to hack around.
-    char hbuf[WRAPMARGIN];
+    // The header as bof writes it (author and board, title, time).
+    char hbuf[WRAPMARGIN * 3 + 4];
+    char post_author[IDLEN + 2];
+    const char *author = cuser.userid, *nickname = cuser.nickname;
+    const char *board = NULL;
     if (curr_buf &&
         (curr_buf->flags & (EDITFLAG_KIND_MAILLIST | EDITFLAG_KIND_SENDMAIL)) &&
         !(curr_buf->flags & (EDITFLAG_KIND_NEWPOST | EDITFLAG_KIND_REPLYPOST))) {
-	snprintf(hbuf, sizeof(hbuf), "%s %s (%s)", STR_AUTHOR1, cuser.userid,
-		 cuser.nickname);
-	edit_fprintf_line(fp, hbuf);
+	// A mail: no board.
     } else {
 	const char *ptr = mytitle;
-        const char *nickname = cuser.nickname;
 	struct {
 	    char            author[IDLEN + 1];
 	    char            board[IDLEN + 1];
@@ -2118,15 +2119,16 @@ write_header(FILE * fp,  const char *mytitle, bool allow_anon)
 	postlog.date = now;
 	postlog.number = 1;
 	append_record(".post", (fileheader_t *) &postlog, sizeof(postlog));
-	snprintf(hbuf, sizeof(hbuf), "%s %s (%s) %s %s", STR_AUTHOR1,
-		 postlog.author, nickname, STR_POST1, currboard);
-	edit_fprintf_line(fp, hbuf);
-
+	STRLCPY(post_author, postlog.author);
+	author = post_author;
+	board = currboard;
     }
-    snprintf(hbuf, sizeof(hbuf), "標題: %s", mytitle);
-    edit_fprintf_line(fp, hbuf);
-    snprintf(hbuf, sizeof(hbuf), "時間: %s", ctime4(&now));
-    edit_fprintf_line(fp, hbuf);
+    bof_bbs_format_post_header(hbuf, sizeof(hbuf), author, nickname, board,
+                               mytitle, now);
+    for (char *line = hbuf, *nl; (nl = strchr(line, '\n')); line = nl + 1) {
+        *nl = '\0';
+        edit_fprintf_line(fp, line);
+    }
 
     // Warn the receivers of mails from new accounts (e.g. of frauds).
     if (currstat == SMAIL && is_new_account(&cuser) &&
@@ -2208,8 +2210,7 @@ addsimplesignature(FILE *fp, const char *host) {
         host = FROMHOST;
     }
     fputs("\n--\n", fp);
-    snprintf(sbuf, sizeof(sbuf),
-             STR_POST_MARK "發信站: " BBSNAME "(" MYHOSTNAME "), 來自: %s", host);
+    bof_bbs_format_post_origin(sbuf, sizeof(sbuf), host);
     edit_fprintf_line(fp, sbuf);
 }
 

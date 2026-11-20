@@ -1158,6 +1158,67 @@ test_files_extras(void)
 }
 
 static void
+test_create_with_content(void)
+{
+    fileheader_t fh, got, recs[64];
+    bof_actor_t me = { .name = "erin", .from = "10.0.0.1" };
+    bof_post_response_t res = { .bbs_header = &got };
+    char path[PATHLEN], buf[4096];
+    int n;
+
+    // Named by bof, the content copied from the caller's file.
+    memset(&fh, 0, sizeof(fh));
+    strlcpy(fh.owner, "erin", sizeof(fh.owner));
+    strlcpy(fh.title, "drafted", sizeof(fh.title));
+    spit("draft.tmp", "the whole post\n");
+    bof_create_post_t req = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_header = &fh,
+        .bbs_content_path = "draft.tmp",
+    };
+    EXPECT_OK(bof_create_post(&me, &req, &res));
+    EXPECT(strncmp(got.filename, "M.", 2) == 0);
+    EXPECT(got.date[0] != 0);
+    EXPECT_INT(got.modified, 0);         // the caller's (none here)
+    EXPECT_STR(got.title, "drafted");
+    n = read_dir(recs, 64);
+    EXPECT_STR(recs[n - 1].filename, got.filename);
+    snprintf(path, sizeof(path), BDIR "/%s", got.filename);
+    EXPECT_STR(slurp(path, buf, sizeof(buf)), "the whole post\n");
+    EXPECT(exists("draft.tmp"));        // the caller's file stays
+    unlink("draft.tmp");
+
+    // Named beforehand (to put its address in it).
+    memset(&fh, 0, sizeof(fh));
+    EXPECT_OK(bof_bbs_name_post(BOARD, &fh));
+    EXPECT(strncmp(fh.filename, "M.", 2) == 0);
+    snprintf(path, sizeof(path), BDIR "/%s", fh.filename);
+    EXPECT(exists(path));
+    EXPECT_INT(bof_bbs_name_post("NoSuchBoard", &fh),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+
+    // From the body alone (a Lemmy client): written as the editor does.
+    memset(&fh, 0, sizeof(fh));
+    strlcpy(fh.owner, "erin", sizeof(fh.owner));
+    strlcpy(fh.title, "from the web", sizeof(fh.title));
+    req.bbs_content_path = NULL;
+    req.body = "line one\nline two";
+    req.bbs_nickname = "Erin";
+    EXPECT_OK(bof_create_post(&me, &req, &res));
+    snprintf(path, sizeof(path), BDIR "/%s", got.filename);
+    slurp(path, buf, sizeof(buf));
+    EXPECT(strstr(buf, STR_AUTHOR1 " erin (Erin) " STR_POST1 " " BOARD "\n")
+           == buf);
+    EXPECT(strstr(buf, "\n" STR_POST_TITLE " from the web\n") != NULL);
+    EXPECT(strstr(buf, "\n\nline one\nline two\n\n--\n" STR_POST_MARK
+                  STR_POST_ORIGIN) != NULL);
+    EXPECT(strstr(buf, STR_POST_FROM " 10.0.0.1\n") != NULL);
+
+    // Not both.
+    req.bbs_content_path = "x";
+    EXPECT_INT(bof_create_post(&me, &req, &res), BOF_ERR_INVALID_BODY_FIELD);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -1312,6 +1373,7 @@ main(void)
     RUN(test_quiet_edit_and_purge);
     RUN(test_comments_after_origin);
     RUN(test_ids);
+    RUN(test_create_with_content);
     cleanup();
     return bof_test_report();
 }
