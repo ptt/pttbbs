@@ -357,9 +357,9 @@ bof_fs_remove_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         if ((fh.filemode & req->bbs_keep_modes) ||
             !req->bbs_selected(&fh, index, req->bbs_ctx))
             continue;
-        // The reason is in the modlog, not in the archived posts.
+        // With the reason, as RemovePost appends it.
         bof_files_delete_content(req->bbs_dir, &fh, req->bbs_dir, NULL, 0,
-                                 NULL, deleter,
+                                 req->reason, deleter,
                                  actor ? actor->from : NULL);
     }
     close(fd);
