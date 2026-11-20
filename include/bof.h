@@ -52,8 +52,10 @@ typedef enum bof_error_t {
     BOF_ERR_COULDNT_CREATE_POST,    /* couldnt_create_post */
     BOF_ERR_COULDNT_CREATE_COMMENT, /* couldnt_create_comment */
     BOF_ERR_BBS_READ_ONLY,          /* bbs_read_only: the files are read only */
+    BOF_ERR_COULDNT_UPDATE_COMMENT, /* couldnt_update_comment */
     /* bbs_storage_not_supported: not by the storage backend */
     BOF_ERR_BBS_STORAGE_NOT_SUPPORTED,
+    BOF_ERR_NO_COMMENT_EDIT_ALLOWED, /* no_comment_edit_allowed */
     BOF_ERR_MAX
 } bof_error_t;
 
@@ -388,6 +390,78 @@ typedef struct bof_comment_response_t {
  * (appended, but the record of the post has changed meanwhile). */
 bof_error_t bof_create_comment(const bof_actor_t *actor,
                                const bof_create_comment_t *req,
+                               bof_comment_response_t *out);
+
+/* A comment as found in the file of a post (Lemmy's CommentView, in
+ * part). Comments in files have no IDs: they are numbered by their floor,
+ * the order among the comments of the post (counting removed ones, whose
+ * lines note it), as post.svc keys them by (post, floor). */
+typedef struct bof_comment_t {
+    int bbs_floor;           /* 1-based */
+    int bbs_vote;            /* +1 (push), -1 (boo) or 0 (arrow) */
+    int removed;             /* only a note of its removal is left */
+    char creator[16];        /* BBS userid */
+    char content[256];       /* without the padding */
+    char bbs_tail[64];       /* what follows: where from and when */
+    int bbs_width;           /* the room for the content in the line */
+    /* Edited (Lemmy's updated is a time; a line keeps only the mark of an
+     * edit, BOF_COMMENT_EDITED_MARK before its date). */
+    int bbs_edited;
+} bof_comment_t;
+
+#define BOF_COMMENT_EDITED_MARK '~'
+
+
+/* Lemmy's GetComments, for one post, in order. */
+typedef struct bof_get_comments_t {
+    bof_post_ref_t post;     /* bbs_index is not checked (may be 0) */
+    const char *bbs_creator; /* only those by them, or NULL for all */
+    int limit;               /* room in comments */
+} bof_get_comments_t;
+
+typedef struct bof_get_comments_response_t {
+    bof_comment_t *comments; /* by the caller, room for limit */
+    int count;
+} bof_get_comments_response_t;
+
+/* Errors: couldnt_find_post. */
+bof_error_t bof_get_comments(const bof_get_comments_t *req,
+                             bof_get_comments_response_t *out);
+
+/* Lemmy's EditComment, by its creator (the actor must be bbs_creator, else
+ * no_comment_edit_allowed): the content (one line, no control codes, in
+ * the room of the old in files, else invalid_body_field) replaces what the
+ * comment at bbs_floor says, which must still be by bbs_creator and say
+ * bbs_old_content (else couldnt_update_comment); the post before is kept
+ * in the time capsule, with a note of the edit. With post.bbs_index, the
+ * record of the post gets the time of the change (out->bbs_header). Lines
+ * appended meanwhile are kept. */
+typedef struct bof_edit_comment_t {
+    bof_post_ref_t post;
+    int bbs_floor;
+    const char *bbs_creator;
+    const char *bbs_old_content;
+    const char *content;
+} bof_edit_comment_t;
+
+bof_error_t bof_edit_comment(const bof_actor_t *actor,
+                             const bof_edit_comment_t *req,
+                             bof_comment_response_t *out);
+
+/* Lemmy's DeleteComment, by its creator. Posts in files cannot take a
+ * comment back the way post.svc does (it keeps the comment to restore,
+ * deleted: false, and its history), so this backend gives
+ * bbs_storage_not_supported; the UI offers it for post.svc. */
+typedef struct bof_delete_comment_t {
+    bof_post_ref_t post;
+    int bbs_floor;
+    const char *bbs_creator;
+    const char *bbs_content;
+    int deleted;
+} bof_delete_comment_t;
+
+bof_error_t bof_delete_comment(const bof_actor_t *actor,
+                               const bof_delete_comment_t *req,
                                bof_comment_response_t *out);
 
 /* Lemmy's RemoveComment, by a moderator. Comments in the files of a board

@@ -41,6 +41,7 @@ BOF_FS_WRITE(bbs_mask_post, bof_bbs_mask_post_t, bof_post_response_t);
 BOF_FS_WRITE(bbs_remove_crosspost, bof_bbs_remove_crosspost_t,
              bof_post_result_t);
 BOF_FS_WRITE(create_comment, bof_create_comment_t, bof_comment_response_t);
+BOF_FS_WRITE(edit_comment, bof_edit_comment_t, bof_comment_response_t);
 BOF_FS_WRITE(remove_comment, bof_remove_comment_t, bof_comment_response_t);
 #undef BOF_FS_WRITE
 int bof_fs_write_modlog(void *ctx, const char *community,
@@ -55,6 +56,8 @@ bof_error_t bof_fs_get_post(void *ctx, const bof_get_post_t *req,
 bof_error_t bof_fs_bbs_get_post_body(void *ctx, const bof_post_ref_t *post,
                                      const char *dest_path,
                                      bof_post_version_t *ver);
+bof_error_t bof_fs_get_comments(void *ctx, const bof_get_comments_t *req,
+                                bof_get_comments_response_t *out);
 
 #ifdef __cplusplus
 }

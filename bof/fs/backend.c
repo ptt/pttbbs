@@ -27,10 +27,15 @@ const bof_storage_ops_t bof_storage_files = {
     .mask_post = bof_fs_bbs_mask_post,
     .remove_crosspost = bof_fs_bbs_remove_crosspost,
     .create_comment = bof_fs_create_comment,
+    .edit_comment = bof_fs_edit_comment,
+    // A comment taken out of a file could neither be restored (deleted:
+    // false) nor keep its history: see bof_delete_comment_t.
+    .delete_comment = NULL,
     .remove_comment = bof_fs_remove_comment,
     .write_modlog = bof_fs_write_modlog,
     .note_modlog_edit = bof_fs_note_modlog_edit,
     .get_posts = bof_fs_get_posts,
     .get_post = bof_fs_get_post,
     .get_post_body = bof_fs_bbs_get_post_body,
+    .get_comments = bof_fs_get_comments,
 };

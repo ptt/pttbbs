@@ -191,3 +191,251 @@ bof_fs_remove_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     }
     return BOF_OK;
 }
+
+/* ------------------------------------------------------------------------
+ * Reading and editing comments in the file of a post
+ * ------------------------------------------------------------------------ */
+
+// The marks a comment line starts with, by type (see
+// bof_files_format_comment()), up to the color of the author.
+static int
+comment_prefix_of(int type, char *buf, size_t sz)
+{
+    static const char *const kinds[] = {
+        STR_COMMENT_PUSH, STR_COMMENT_BOO, STR_COMMENT_ARROW,
+    };
+    static const char *const attrs[] = {
+        ANSI_COLOR(1;37), ANSI_COLOR(1;31), ANSI_COLOR(1;31),
+    };
+
+    if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
+        if (type != RECTYPE_GOOD)
+            return 0;
+        snprintf(buf, sz, ANSI_COLOR(1;31) STR_COMMENT_ARROW " "
+                 ANSI_COLOR(33));
+        return 1;
+    }
+    snprintf(buf, sz, "%s%s " ANSI_COLOR(33), attrs[type], kinds[type]);
+    return 1;
+}
+
+// Copies the n bytes at s into dst (sz bytes), without trailing spaces.
+static void
+copy_trimmed(char *dst, size_t sz, const char *s, size_t n)
+{
+    while (n > 0 && s[n - 1] == ' ')
+        n--;
+    if (n >= sz)
+        n = sz - 1;
+    memcpy(dst, s, n);
+    dst[n] = '\0';
+}
+
+// Where the date (MM/DD) is in the tail s of a comment line, or NULL.
+static const char *
+tail_date(const char *s)
+{
+    for (; *s && *s != '\n'; s++)
+        if (isdigit((unsigned char)s[0]) && isdigit((unsigned char)s[1]) &&
+            s[2] == '/' && isdigit((unsigned char)s[3]) &&
+            isdigit((unsigned char)s[4]))
+            return s;
+    return NULL;
+}
+
+// Parses a line of the file of a post. Returns 1 for a comment, 2 for the
+// note left of a removed one (both filling c, but its floor), or 0. For a
+// comment, *coff and *clen (if not NULL) tell where its content (with the
+// padding) is in line.
+static int
+parse_comment_line(const char *line, bof_comment_t *c, size_t *coff,
+                   size_t *clen)
+{
+    char prefix[64];
+    const char *p, *e, *end = line + strcspn(line, "\n");
+
+    memset(c, 0, sizeof(*c));
+
+    // The note of a removed comment: "(remover BY creator OF reason)".
+    p = ANSI_COLOR(1;30) "(";
+    if (strncmp(line, p, strlen(p)) == 0) {
+        const char *by = strstr(line, STR_COMMENT_REMOVED_BY);
+        const char *of = by ? strstr(by, STR_COMMENT_REMOVED_OF) : NULL;
+        if (!of || of > end)
+            return 0;
+        by += strlen(STR_COMMENT_REMOVED_BY);
+        copy_trimmed(c->creator, sizeof(c->creator), by, of - by);
+        c->removed = 1;
+        return 2;
+    }
+
+    for (int type = 0; type < RECTYPE_SIZE; type++) {
+        if (!comment_prefix_of(type, prefix, sizeof(prefix)) ||
+            strncmp(line, prefix, strlen(prefix)) != 0)
+            continue;
+        p = line + strlen(prefix);
+        // The author, then its color ends and the content's starts.
+        if (!(e = strstr(p, ANSI_RESET ANSI_COLOR(33) ":")) || e > end)
+            return 0;
+        copy_trimmed(c->creator, sizeof(c->creator), p, e - p);
+        p = e + strlen(ANSI_RESET ANSI_COLOR(33) ":");
+        // Older comments may have no space after the colon.
+        if (!IS_ENABLED(CONFIG_OLD_RECOMMEND) && *p == ' ')
+            p++;
+        if (!(e = strstr(p, ANSI_RESET)) || e > end)
+            return 0;
+        copy_trimmed(c->content, sizeof(c->content), p, e - p);
+        c->bbs_width = (int)(e - p);
+        if (coff)
+            *coff = p - line;
+        if (clen)
+            *clen = e - p;
+        e += strlen(ANSI_RESET);
+        if (IS_ENABLED(CONFIG_OLD_RECOMMEND) &&
+            strncmp(e, STR_COMMENT_PUSH, strlen(STR_COMMENT_PUSH)) == 0)
+            e += strlen(STR_COMMENT_PUSH);
+        copy_trimmed(c->bbs_tail, sizeof(c->bbs_tail), e,
+                     e < end ? (size_t)(end - e) : 0);
+        // An edited comment has the mark before its date.
+        const char *date = tail_date(e);
+        c->bbs_edited = date && date > e && date[-1] == BOF_COMMENT_EDITED_MARK;
+        c->bbs_vote = type == RECTYPE_GOOD ? 1 : type == RECTYPE_BAD ? -1 : 0;
+        return 1;
+    }
+    return 0;
+}
+
+bof_error_t
+bof_fs_get_comments(void *ctx GCC_UNUSED, const bof_get_comments_t *req,
+                    bof_get_comments_response_t *out)
+{
+    const fileheader_t *fh = req->post.bbs_header;
+    char path[PATHLEN], line[ANSILINELEN];
+    bof_comment_t c;
+    FILE *fp;
+    int floor = 0;
+
+    out->count = 0;
+    if (!req->post.bbs_dir || !fh || !fh->filename[0] || !out->comments ||
+        req->limit <= 0)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    setdirpath(path, req->post.bbs_dir, fh->filename);
+    if (!(fp = fopen(path, "r")))
+        return BOF_ERR_COULDNT_FIND_POST;
+    while (out->count < req->limit && fgets(line, sizeof(line), fp)) {
+        if (!parse_comment_line(line, &c, NULL, NULL))
+            continue;
+        c.bbs_floor = ++floor;
+        if (req->bbs_creator && strcasecmp(c.creator, req->bbs_creator) != 0)
+            continue;
+        out->comments[out->count++] = c;
+    }
+    fclose(fp);
+    return BOF_OK;
+}
+
+// Finds the line of the comment at a floor and replaces its content.
+typedef struct {
+    const bof_edit_comment_t *req;
+    int floor;
+    int mismatch;
+    int too_long;   // the new content does not fit in the room of the old
+} edit_ctx;
+
+static int
+edit_line(const char *line, FILE *out, void *vctx)
+{
+    edit_ctx *x = (edit_ctx *)vctx;
+    bof_comment_t c;
+    size_t coff, clen, n;
+
+    if (!parse_comment_line(line, &c, &coff, &clen) ||
+        ++x->floor != x->req->bbs_floor)
+        return 0;
+    if (c.removed || strcasecmp(c.creator, x->req->bbs_creator) != 0 ||
+        strcmp(c.content, x->req->bbs_old_content) != 0) {
+        x->mismatch = 1;
+        return 0;
+    }
+    if (strlen(x->req->content) > clen) {
+        x->too_long = 1;
+        return 0;
+    }
+    // The new content in the room of the old, so what follows stays, but
+    // with the mark of an edit before the date (in place of the space
+    // before it, if there is one).
+    const char *rest = line + coff + clen, *date = tail_date(rest);
+    n = strlen(x->req->content);
+    fwrite(line, 1, coff, out);
+    fputs(x->req->content, out);
+    for (; n < clen; n++)
+        fputc(' ', out);
+    if (!date || (date > rest && date[-1] == BOF_COMMENT_EDITED_MARK)) {
+        fputs(rest, out);
+    } else {
+        size_t keep = (size_t)(date - rest);
+        if (keep > 0 && date[-1] == ' ')
+            keep--;
+        fwrite(rest, 1, keep, out);
+        fputc(BOF_COMMENT_EDITED_MARK, out);
+        fputs(date, out);
+    }
+    return 1;
+}
+
+bof_error_t
+bof_fs_edit_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                    const bof_edit_comment_t *req, bof_comment_response_t *out)
+{
+    const bof_post_ref_t *post = &req->post;
+    const fileheader_t *fh = post->bbs_header;
+    char path[PATHLEN], rev_note[ANSILINELEN * 2];
+    time4_t now = time4(NULL);
+    edit_ctx x = { .req = req };
+    int matched;
+    bof_error_t err;
+
+    if (!post->bbs_dir || !fh || !fh->filename[0] || req->bbs_floor <= 0 ||
+        !req->bbs_creator || !req->bbs_old_content || !req->content ||
+        !actor || !actor->name ||
+        strlen(req->content) >= sizeof(((bof_comment_t *)0)->content))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // No control codes: the content is one line of plain text.
+    for (const char *p = req->content; *p; p++)
+        if ((unsigned char)*p < ' ' || *p == 0x7f)
+            return BOF_ERR_INVALID_BODY_FIELD;
+    // Only by its creator, as Lemmy's EditComment.
+    if (strcasecmp(actor->name, req->bbs_creator) != 0)
+        return BOF_ERR_NO_COMMENT_EDIT_ALLOWED;
+
+    setdirpath(path, post->bbs_dir, fh->filename);
+    snprintf(rev_note, sizeof(rev_note),
+             "\n" STR_POST_MARK STR_COMMENT_EDITED_NOTE, Cdatelite(&now),
+             actor->name, req->bbs_creator, req->bbs_old_content);
+    err = bof_files_rewrite_post(path, edit_line, &x, NULL, rev_note,
+                                 &matched);
+    if (err != BOF_OK)
+        return err;
+    if (!matched)
+        return x.too_long ? BOF_ERR_INVALID_BODY_FIELD :
+            x.mismatch ? BOF_ERR_COULDNT_UPDATE_COMMENT :
+            BOF_ERR_COULDNT_FIND_COMMENT;
+
+    // The post changed: readers may see it again.
+    fileheader_t updated = *fh;
+    if (post->bbs_index > 0) {
+        updated.modified = dasht4(path);
+        if (updated.modified == 0 ||
+            bof_files_modify_record(post->bbs_dir, post->bbs_index,
+                                    fh->filename, updated.modified, NULL,
+                                    NULL, NULL, 0, NULL, 0, 0,
+                                    &updated) != 0)
+            return BOF_ERR_COULDNT_UPDATE_POST;  // edited, not in the list
+    }
+    if (out) {
+        if (out->bbs_header)
+            *out->bbs_header = updated;
+        out->bbs_file_size = dashs(path);
+    }
+    return BOF_OK;
+}

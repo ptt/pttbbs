@@ -238,6 +238,10 @@ int psb_view_edit_history(const char *base, const char *subject,
 int psb_recycle_bin(const char *base, const char *title);
 int psb_admin_edit();
 int psb_comment_manager(const char *board, const fileheader_t *fh);
+int psb_comment_editor(const char *board, const char *direct, int ent,
+                       fileheader_t *fh);
+int psb_has_my_comments(const char *board, const char *direct, int ent,
+                        const fileheader_t *fh);
 
 /* chc */
 void chc(int s, ChessGameMode mode);

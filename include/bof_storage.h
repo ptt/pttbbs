@@ -79,6 +79,12 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*create_comment)(void *ctx, const bof_actor_t *actor,
                                   const bof_create_comment_t *req,
                                   bof_comment_response_t *out);
+    bof_error_t (*edit_comment)(void *ctx, const bof_actor_t *actor,
+                                const bof_edit_comment_t *req,
+                                bof_comment_response_t *out);
+    bof_error_t (*delete_comment)(void *ctx, const bof_actor_t *actor,
+                                  const bof_delete_comment_t *req,
+                                  bof_comment_response_t *out);
     bof_error_t (*remove_comment)(void *ctx, const bof_actor_t *actor,
                                   const bof_remove_comment_t *req,
                                   bof_comment_response_t *out);
@@ -98,6 +104,8 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*get_post_body)(void *ctx, const bof_post_ref_t *post,
                                  const char *dest_path,
                                  bof_post_version_t *ver);
+    bof_error_t (*get_comments)(void *ctx, const bof_get_comments_t *req,
+                                bof_get_comments_response_t *out);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

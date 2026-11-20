@@ -106,8 +106,14 @@
 #define STR_COMMENT_PUSH    "推"
 #define STR_COMMENT_BOO     "噓"
 #define STR_COMMENT_ARROW   "→"
-#define STR_COMMENT_REMOVED_LINE "(%s 刪除 %s 的推文: %s)"
+#define STR_COMMENT_REMOVED_BY   " 刪除 "
+#define STR_COMMENT_REMOVED_OF   " 的推文: "
+#define STR_COMMENT_REMOVED_LINE \
+    "(%s" STR_COMMENT_REMOVED_BY "%s" STR_COMMENT_REMOVED_OF "%s)"
 #define STR_COMMENT_REMOVED_NOTE "刪除推文: %s %s理由: %s\n推文內容: %s: %s\n"
+// Noted in the revision kept when a comment is edited (when, by, of whom,
+// what it said).
+#define STR_COMMENT_EDITED_NOTE "修改推文: %s %s\n原推文: %s: %s\n"
 // What replaces a masked line of a post, the note appended (by, when,
 // reason) and the pattern noted in the revision kept.
 #define STR_MASKED_LINE     "[部份違規文字已刪除]"

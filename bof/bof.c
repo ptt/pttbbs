@@ -22,7 +22,9 @@ static const char *const bof_error_names[BOF_ERR_MAX] = {
     [BOF_ERR_COULDNT_CREATE_POST] = "couldnt_create_post",
     [BOF_ERR_COULDNT_CREATE_COMMENT] = "couldnt_create_comment",
     [BOF_ERR_BBS_READ_ONLY] = "bbs_read_only",
+    [BOF_ERR_COULDNT_UPDATE_COMMENT] = "couldnt_update_comment",
     [BOF_ERR_BBS_STORAGE_NOT_SUPPORTED] = "bbs_storage_not_supported",
+    [BOF_ERR_NO_COMMENT_EDIT_ALLOWED] = "no_comment_edit_allowed",
 };
 
 const char *

@@ -733,6 +733,114 @@ test_get_posts(void)
 }
 
 static void
+test_edit_comment(void)
+{
+    fileheader_t recs[64], updated;
+    bof_actor_t me = { .name = "ivan" }, mod = { .name = "boss" };
+    bof_comment_t cs[8];
+    bof_comment_response_t cres = { .bbs_header = &updated };
+    char l1[ANSILINELEN], l2[ANSILINELEN], l3[ANSILINELEN], buf[4096];
+    int n;
+
+    make_post("M.1700000081.A.081", "kate", "comments", 0);
+    n = read_dir(recs, 64);
+    bof_files_format_comment(l1, sizeof(l1), RECTYPE_GOOD, "ivan", 20,
+                             "first", " 01/01 00:00");
+    bof_files_format_comment(l2, sizeof(l2), RECTYPE_ARROW, "judy", 20,
+                             "second", " 01/01 00:01");
+    bof_files_format_comment(l3, sizeof(l3), RECTYPE_GOOD, "ivan", 20,
+                             "third", " 01/01 00:02");
+    snprintf(buf, sizeof(buf), "body\n%s%s%s", l1, l2, l3);
+    spit(BDIR "/M.1700000081.A.081", buf);
+
+    // GetComments, all and by one.
+    bof_get_comments_t get = { .post = ref(recs, n), .limit = 8 };
+    bof_get_comments_response_t gres = { .comments = cs };
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_INT(gres.count, 3);
+    EXPECT_INT(cs[1].bbs_floor, 2);
+    EXPECT_STR(cs[1].creator, "judy");
+    EXPECT_STR(cs[1].content, "second");
+    EXPECT_STR(cs[1].bbs_tail, " 01/01 00:01");
+    EXPECT_INT(cs[1].bbs_width, 20);
+    get.bbs_creator = "IVAN";
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_INT(gres.count, 2);
+    EXPECT_INT(cs[1].bbs_floor, 3);
+
+    // A removed comment keeps its floor.
+    bof_remove_comment_t rm = {
+        .post = ref(recs, n), .bbs_vote = 0, .bbs_author = "judy",
+        .bbs_content = "second", .reason = "spam",
+    };
+    EXPECT_OK(bof_remove_comment(&mod, &rm, NULL));
+    get.bbs_creator = NULL;
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_INT(gres.count, 3);
+    EXPECT_INT(cs[1].removed, 1);
+    EXPECT_STR(cs[1].creator, "judy");
+    EXPECT_INT(cs[2].bbs_floor, 3);
+
+    // EditComment.
+    bof_edit_comment_t edit = {
+        .post = ref(recs, n), .bbs_floor = 3, .bbs_creator = "ivan",
+        .bbs_old_content = "third", .content = "third, edited",
+    };
+    EXPECT_OK(bof_edit_comment(&me, &edit, &cres));
+    EXPECT(updated.modified != 0);
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_STR(cs[2].content, "third, edited");
+    EXPECT_STR(cs[2].bbs_tail, "~01/01 00:02");
+    EXPECT_INT(cs[2].bbs_edited, 1);
+    EXPECT_INT(cs[0].bbs_edited, 0);
+    EXPECT_STR(cs[0].content, "first");
+    // From what it said before; not by its creator; someone else's (and
+    // removed); a missing one; bad input; too long for its room.
+    EXPECT_INT(bof_edit_comment(&me, &edit, &cres),
+               BOF_ERR_COULDNT_UPDATE_COMMENT);
+    edit.bbs_old_content = "third, edited";
+    edit.bbs_creator = "judy";
+    EXPECT_INT(bof_edit_comment(&me, &edit, &cres),
+               BOF_ERR_NO_COMMENT_EDIT_ALLOWED);
+    EXPECT_INT(bof_edit_comment(&mod, &edit, &cres),
+               BOF_ERR_NO_COMMENT_EDIT_ALLOWED);
+    edit.bbs_creator = "ivan";
+    edit.bbs_floor = 2;
+    edit.bbs_old_content = "second";
+    edit.content = "second, edited";
+    EXPECT_INT(bof_edit_comment(&me, &edit, &cres),
+               BOF_ERR_COULDNT_UPDATE_COMMENT);
+    edit.bbs_floor = 9;
+    EXPECT_INT(bof_edit_comment(&me, &edit, &cres),
+               BOF_ERR_COULDNT_FIND_COMMENT);
+    edit.bbs_floor = 3;
+    edit.bbs_old_content = "third, edited";
+    edit.content = "two\nlines";
+    EXPECT_INT(bof_edit_comment(&me, &edit, &cres),
+               BOF_ERR_INVALID_BODY_FIELD);
+    edit.content = "a\ttab";
+    EXPECT_INT(bof_edit_comment(&me, &edit, &cres),
+               BOF_ERR_INVALID_BODY_FIELD);
+    edit.content = "far too long to fit in the room of the old one";
+    EXPECT_INT(bof_edit_comment(&me, &edit, &cres),
+               BOF_ERR_INVALID_BODY_FIELD);
+    // Edited again: still one mark.
+    edit.content = "third, again";
+    EXPECT_OK(bof_edit_comment(&me, &edit, &cres));
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_STR(cs[2].content, "third, again");
+    EXPECT_STR(cs[2].bbs_tail, "~01/01 00:02");
+
+    // DeleteComment is not for posts in files.
+    bof_delete_comment_t del = {
+        .post = ref(recs, n), .bbs_floor = 1, .bbs_creator = "ivan",
+        .bbs_content = "first", .deleted = 1,
+    };
+    EXPECT_INT(bof_delete_comment(&me, &del, NULL),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -779,6 +887,7 @@ main(void)
     RUN(test_remove_posts);
     RUN(test_modlog_with_actions);
     RUN(test_get_posts);
+    RUN(test_edit_comment);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

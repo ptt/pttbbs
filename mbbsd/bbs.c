@@ -1650,8 +1650,27 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	return DONOTHING;
 
     setdirpath(genbuf, direct, fhdr->filename);
-    if (!is_file_owner(fhdr, &cuser))
-        return DONOTHING;
+    // Commenters edit their comments (EditComment), where the site allows
+    // it (CONFIG_COMMENT_EDIT); authors choose.
+    int my_comments = IS_ENABLED(CONFIG_COMMENT_EDIT) &&
+                      psb_has_my_comments(currboard, direct, ent, fhdr);
+    if (!is_file_owner(fhdr, &cuser)) {
+        if (!my_comments)
+            return DONOTHING;
+        if (psb_comment_editor(currboard, direct, ent, fhdr))
+            brc_addlist(fhdr->filename, fhdr->modified);
+        return FULLUPDATE;
+    }
+    if (my_comments) {
+        int ans = vans("編輯: [1] 文章內文 [2] 我的推文 [q] 取消: ");
+        if (ans == '2') {
+            if (psb_comment_editor(currboard, direct, ent, fhdr))
+                brc_addlist(fhdr->filename, fhdr->modified);
+            return FULLUPDATE;
+        }
+        if (ans != '1')
+            return FULLUPDATE;
+    }
 
     if (!dashf(genbuf)) {
         vmsg("此檔已損毀，無法編輯。您可以試著刪除它。");

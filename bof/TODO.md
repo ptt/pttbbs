@@ -25,6 +25,13 @@ what BoF does only in part. See `README.md` for what BoF is.
 - **ListPostLikes / ListCommentLikes** (who voted): needs votes kept by
   person, as post.svc does.
 
+### Restoring
+- **DeleteComment** (by its creator): gives `bbs_storage_not_supported`
+  for posts in files, as a comment taken out of a file can be neither
+  restored nor keep its history; works once comments live in post.svc.
+  The UI is there.
+- **RemoveComment with `removed: false`**: same reason.
+
 ### Comments
 - **Comment IDs**: comments in files are numbered by floor; post.svc keys
   them by (post ID, floor). Multi-line comments (post.svc) are one line

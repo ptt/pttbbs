@@ -197,6 +197,24 @@ bof_create_comment(const bof_actor_t *actor, const bof_create_comment_t *req,
 }
 
 bof_error_t
+bof_edit_comment(const bof_actor_t *actor, const bof_edit_comment_t *req,
+                 bof_comment_response_t *out)
+{
+    bof_comment_response_t local = { 0 };
+    return WRITE(edit_comment, out ? out : &local, actor, req);
+}
+
+bof_error_t
+bof_delete_comment(const bof_actor_t *actor, const bof_delete_comment_t *req,
+                   bof_comment_response_t *out)
+{
+    bof_comment_response_t local = { 0 };
+    if (!req->post.bbs_header || req->bbs_floor <= 0 || !req->bbs_creator)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    return WRITE(delete_comment, out ? out : &local, actor, req);
+}
+
+bof_error_t
 bof_remove_comment(const bof_actor_t *actor, const bof_remove_comment_t *req,
                    bof_comment_response_t *out)
 {
@@ -251,4 +269,11 @@ bof_bbs_get_post_body(const bof_post_ref_t *post, const char *dest_path,
                       bof_post_version_t *ver)
 {
     return READ(get_post_body, post, dest_path, ver);
+}
+
+bof_error_t
+bof_get_comments(const bof_get_comments_t *req,
+                 bof_get_comments_response_t *out)
+{
+    return READ(get_comments, req, out);
 }

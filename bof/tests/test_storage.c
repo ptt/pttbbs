@@ -77,7 +77,7 @@ static const bof_storage_ops_t full_ops = {
     .get_posts = mock_get_posts,
 };
 
-// Without remove_post.
+// Without remove_post (as the files backend is without delete_comment).
 static const bof_storage_ops_t partial_ops = {
     .name = "partial",
     .delete_post = mock_delete_post,
@@ -154,8 +154,22 @@ test_not_supported(void)
 static void
 test_files_by_default(void)
 {
-    // Nothing set: the files backend.
+    bof_comment_response_t res;
+    fileheader_t fh;
+    bof_delete_comment_t req = {
+        .post = {
+            .community = "Test", .bbs_dir = "boards/T/Test/.DIR",
+            .bbs_header = &fh,
+        },
+        .bbs_floor = 1, .bbs_creator = "someone", .deleted = 1,
+    };
+
+    // Nothing set: the files backend, which cannot delete comments.
     bof_storage_reset();
+    memset(&fh, 0, sizeof(fh));
+    strlcpy(fh.filename, "M.42.A.000", sizeof(fh.filename));
+    EXPECT_INT(bof_delete_comment(NULL, &req, &res),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
     EXPECT_STR(bof_storage_files.name, "files");
 }
 
