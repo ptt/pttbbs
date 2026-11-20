@@ -774,86 +774,45 @@ do_select(void)
     return NEWDIRECT;
 }
 
+// Removes the other copy of a deleted post (see bof_bbs_remove_crosspost()):
+// the original when sysops delete a copy in an aggregate board (e.g. for
+// crossposting against the rules), or else the copy in ALLPOST.
 static void
-do_deleteCrossPost(const fileheader_t *fh, char bname[])
+deleteCrossPost(const fileheader_t *fhdr, const char *bname)
 {
-    // TODO FIXME this function is used when some user violates policy (ex,
-    // crosspost) and system is trying to delete all the posts in every boards.
+    char origin[IDLEN + 1];
+    bof_actor_t me = bof_me();
+    bof_post_result_t res;
 
-    fileheader_t newfh;
-    boardheader_t  *bp;
-    int i, bid;
+    if (!fhdr || !fhdr->filename[0])
+        return;
 
-    if(!bname || !fh) return;
-    if(!fh->filename[0]) return;
+    if (bof_bbs_is_aggregate(bname)) {
+        int bid;
+        boardheader_t *bp;
 
-    bid = getbnum(bname);
-    if(bid <= 0) return;
-
-    bp = getbcache(bid);
-    if(!bp) return;
-
-    AUTO_BDIR(bdir, bname);
-    AUTO_BFILE(file, bname, fh->filename);
-    memcpy(&newfh, fh, sizeof(fileheader_t));
-
-    // Found by AID, which matches the whole AID (not only the time stamp)
-    // and scans the .DIR if bisecting fails, as the .DIR may not be in order.
-    i = search_dir_by_aidu(bdir, fn2aidu(fh->filename), 0, NULL,
-                           SEARCH_SRC_UNKNOWN);
-    if (i > 0)
-    {
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-        if(bp && bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
-            safe_article_delete(i, &newfh, bdir, NULL);
-        else
-#endif
-            delete_fileheader(bdir, &newfh, i);
-	setbtotal(bid);
-    }
-
-    // Delete the file even if its header was not found, so no file is left.
-    delete_file_content2(bdir, fh, bdir, NULL, 0, "Cross-Post(系統警察刪除)");
-    unlink(file);
-}
-
-static void
-deleteCrossPost(const fileheader_t *fhdr, char *bname)
-{
-    if(!fhdr || !fhdr->filename[0]) return;
-
-    if(strcmp(bname, BN_ALLPOST) == 0 ||
-       strcmp(bname, BN_ALLHIDPOST) == 0 ||
-       strcmp(bname, BN_NEWIDPOST) == 0 ||
-       strcmp(bname, BN_UNANONYMOUS) == 0 ) {
-        // These files (in BN_ALLPOST etc) have '.BOARD板' or '(BOARD)' refrence
-        // in title
-        int bnlen;
-	char bnbuf[IDLEN + 1] = "";
-        const char *bn;
-
-        if (*fhdr->title && fhdr->title[strlen(fhdr->title) - 1] == ')') {
-            // new format:  (BOARD)
-            bn = strrchr(fhdr->title, '(');
-            if (!bn)
-                return;
-            bnlen = strlen(++bn) - 1;
-            SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
-        } else {
-            // old format:  .BOARD版, which may conflict with board names.
-            bn = strrchr(fhdr->title, '.');
-            if (!bn)
-                return;
-            bnlen = strlen(++bn) - 2;
-            SNPRINTF(bnbuf, "%*.*s", bnlen, bnlen, bn);
-        }
-	do_deleteCrossPost(fhdr, bnbuf);
-    } else {
-        // Always delete file content in ALLPOST and keep the header
-        // because that will be reset by cron jobs
-        // Note with CONFIG_LIVE_ALLPOST, there should be no files.
-        if (!IS_ENABLED(CONFIG_LIVE_ALLPOST))
-            unlink(TEMP_BFILE(BN_ALLPOST, fhdr->filename));
+        if (!bof_bbs_crosspost_origin(fhdr, origin, sizeof(origin)) ||
+            (bid = getbnum(origin)) <= 0 || !(bp = getbcache(bid)))
+            return;
+        AUTO_BDIR(dir, origin);
+        bof_bbs_remove_crosspost_t req = {
+            .community = origin, .bbs_dir = dir,
+            .bbs_header = fhdr,
+            .bbs_keep_record = IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+                               bp->nuser >= SAFE_ARTICLE_DELETE_NUSER,
+            .reason = "Cross-Post(系統警察刪除)",
+        };
+        if (bof_bbs_remove_crosspost(&me, &req, &res) == BOF_OK)
+            setbtotal(bid);
+    } else if (!IS_ENABLED(CONFIG_LIVE_ALLPOST)) {
+        // Only the file: the record goes when ALLPOST is cleared by cron.
+        // With CONFIG_LIVE_ALLPOST there are no files.
+        AUTO_BDIR(dir, BN_ALLPOST);
+        bof_bbs_remove_crosspost_t req = {
+            .community = BN_ALLPOST, .bbs_dir = dir,
+            .bbs_header = fhdr, .bbs_content_only = 1,
+        };
+        bof_bbs_remove_crosspost(&me, &req, &res);
     }
 }
 

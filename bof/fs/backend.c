@@ -24,6 +24,7 @@ const bof_storage_ops_t bof_storage_files = {
     .set_post_modes = bof_fs_bbs_set_post_modes,
     .reset_post_score = bof_fs_bbs_reset_post_score,
     .mask_post = bof_fs_bbs_mask_post,
+    .remove_crosspost = bof_fs_bbs_remove_crosspost,
     .create_comment = bof_fs_create_comment,
     .remove_comment = bof_fs_remove_comment,
     .get_post_body = bof_fs_bbs_get_post_body,

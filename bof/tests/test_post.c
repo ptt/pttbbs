@@ -547,6 +547,62 @@ test_mask_post(void)
 }
 
 static void
+test_crosspost(void)
+{
+    fileheader_t recs[64], copy;
+    bof_actor_t sysop = { .name = "police" };
+    bof_post_result_t res;
+    char origin[IDLEN + 1];
+    int n;
+
+    EXPECT(bof_bbs_is_aggregate(BN_ALLPOST));
+    EXPECT(!bof_bbs_is_aggregate(BOARD));
+
+    memset(&copy, 0, sizeof(copy));
+    strlcpy(copy.title, "[news] something(" BOARD ")", sizeof(copy.title));
+    EXPECT(bof_bbs_crosspost_origin(&copy, origin, sizeof(origin)));
+    EXPECT_STR(origin, BOARD);
+    strlcpy(copy.title, "no board here", sizeof(copy.title));
+    EXPECT(!bof_bbs_crosspost_origin(&copy, origin, sizeof(origin)));
+
+    // The original of a copy is removed from its board.
+    make_post("M.1700000051.A.051", "mallory", "spam", 0);
+    n = read_dir(recs, 64);
+    copy = recs[n - 1];
+    bof_bbs_remove_crosspost_t req = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_header = &copy,
+        .reason = "cross-post",
+    };
+    EXPECT_OK(bof_bbs_remove_crosspost(&sysop, &req, &res));
+    EXPECT_INT(read_dir(recs, 64), n - 1);
+    EXPECT(!exists(BDIR "/M.1700000051.A.051"));
+    EXPECT_INT(bof_bbs_remove_crosspost(&sysop, &req, &res),
+               BOF_ERR_COULDNT_FIND_POST);
+
+    // With a tombstone.
+    make_post("M.1700000052.A.052", "mallory", "spam again", 0);
+    n = read_dir(recs, 64);
+    copy = recs[n - 1];
+    req.bbs_keep_record = 1;
+    EXPECT_OK(bof_bbs_remove_crosspost(&sysop, &req, &res));
+    EXPECT_INT(res.bbs_record_kept, 1);
+    EXPECT_INT(read_dir(recs, 64), n);
+    EXPECT(!exists(BDIR "/M.1700000052.A.052"));
+
+    // Only the file of a copy.
+    make_post("M.1700000053.A.053", "mallory", "copy", 0);
+    n = read_dir(recs, 64);
+    copy = recs[n - 1];
+    bof_bbs_remove_crosspost_t only = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_header = &copy,
+        .bbs_content_only = 1,
+    };
+    EXPECT_OK(bof_bbs_remove_crosspost(&sysop, &only, &res));
+    EXPECT_INT(read_dir(recs, 64), n);
+    EXPECT(!exists(BDIR "/M.1700000053.A.053"));
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -589,6 +645,7 @@ main(void)
     RUN(test_remove_comment);
     RUN(test_edit_post_body);
     RUN(test_mask_post);
+    RUN(test_crosspost);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

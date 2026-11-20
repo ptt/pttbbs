@@ -130,6 +130,10 @@ int  search_dir_by_aidu_fd(int fd, int total, aidu_t aidu,
 int  search_dir_by_aidu_fd_bounded(int fd, int total, aidu_t aidu,
                                    int required_mode, fileheader_t *out_fh,
                                    int max_backtrack);
+/* The record of file name filename in list direct, by its AID (see
+ * aids.c); its position, or 0. */
+int  search_dir_by_filename(const char *direct, const char *filename,
+                            fileheader_t *out);
 int  search_dir_by_aidu(const char *direct, aidu_t aidu,
                         int required_mode, fileheader_t *out_fh,
                         int source);

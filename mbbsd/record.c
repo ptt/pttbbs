@@ -144,21 +144,12 @@ safe_article_delete_range(const char *direct, int from, int to)
 // Return -1 if cannot delete file, 0 for success,
 // 1 if delete success but backup failed.
 int
-delete_file_content2(const char *direct, const fileheader_t *fh,
-                     const char *backup_direct,
-                     char *backup_path, size_t sz_backup_path,
-                     const char *reason) {
-    return bof_files_delete_content(direct, fh, backup_direct, backup_path,
-                                    sz_backup_path, reason, cuser.userid,
-                                    fromhost);
-}
-
-int
 delete_file_content(const char *direct, const fileheader_t *fh,
                     const char *backup_direct,
                     char *backup_path, size_t sz_backup_path) {
-    return delete_file_content2(direct, fh, backup_direct,
-            backup_path, sz_backup_path, NULL);
+    return bof_files_delete_content(direct, fh, backup_direct, backup_path,
+                                    sz_backup_path, NULL, cuser.userid,
+                                    fromhost);
 }
 
 // XXX announce(man) directory uses a smaller range of file names.

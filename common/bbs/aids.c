@@ -344,6 +344,28 @@ search_dir_by_aidu(const char *direct, aidu_t aidu,
     return found;
 }
 
+/* The position (1-based) of the record of file name filename in list
+ * direct, found by its AID (M. and G. names: search.svc, a bisection by
+ * time, then a scan) and checked by the whole name, as getindex() did by
+ * the time alone; into *out if not NULL. 0 if not found. */
+int
+search_dir_by_filename(const char *direct, const char *filename,
+                       fileheader_t *out)
+{
+    fileheader_t fh;
+    int i;
+
+    if (!direct || !filename || !filename[0])
+        return 0;
+    i = search_dir_by_aidu(direct, fn2aidu(filename), 0, &fh,
+                           SEARCH_SRC_UNKNOWN);
+    if (i <= 0 || strcmp(fh.filename, filename) != 0)
+        return 0;
+    if (out)
+        *out = fh;
+    return i;
+}
+
 int
 search_dir_by_aidu_legacy(const char *direct, aidu_t aidu,
                           int required_mode, fileheader_t *out_fh)

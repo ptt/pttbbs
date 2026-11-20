@@ -37,6 +37,8 @@ BOF_FS_WRITE(bbs_set_post_modes, bof_bbs_set_post_modes_t,
 BOF_FS_WRITE(bbs_reset_post_score, bof_bbs_reset_post_score_t,
              bof_post_response_t);
 BOF_FS_WRITE(bbs_mask_post, bof_bbs_mask_post_t, bof_post_response_t);
+BOF_FS_WRITE(bbs_remove_crosspost, bof_bbs_remove_crosspost_t,
+             bof_post_result_t);
 BOF_FS_WRITE(create_comment, bof_create_comment_t, bof_comment_response_t);
 BOF_FS_WRITE(remove_comment, bof_remove_comment_t, bof_comment_response_t);
 #undef BOF_FS_WRITE

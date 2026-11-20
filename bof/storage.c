@@ -127,6 +127,15 @@ bof_bbs_mask_post(const bof_actor_t *actor, const bof_bbs_mask_post_t *req,
     return WRITE(mask_post, out ? out : &local, actor, req);
 }
 
+bof_error_t
+bof_bbs_remove_crosspost(const bof_actor_t *actor,
+                         const bof_bbs_remove_crosspost_t *req,
+                         bof_post_result_t *out)
+{
+    bof_post_result_t local = { 0 };
+    return WRITE(remove_crosspost, out ? out : &local, actor, req);
+}
+
 /* ------------------------------------------------------------------------
  * Comments
  * ------------------------------------------------------------------------ */

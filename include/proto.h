@@ -800,10 +800,6 @@ int get_sum_records(const char* fpath, int size);
 int delete_file_content(const char *direct, const fileheader_t *fh,
                         const char *backup_direct,
                         char *newpath, size_t sznewpath);
-int delete_file_content2(const char *direct, const fileheader_t *fh,
-                         const char *backup_direct,
-                         char *newpath, size_t sznewpath,
-                         const char *reason);
 
 /* recover */
 void recover_account();

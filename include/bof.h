@@ -277,6 +277,36 @@ bof_error_t bof_bbs_mask_post(const bof_actor_t *actor,
                               const bof_bbs_mask_post_t *req,
                               bof_post_response_t *out);
 
+/* PTT: boards that collect copies (or notes) of the posts of other boards
+ * (ALLPOST, ALLHIDPOST, NEWIDPOST, UnAnonymous). Lemmy and Reddit show
+ * such listings (r/all) without copies. */
+int bof_bbs_is_aggregate(const char *community);
+
+/* The board a copy in an aggregate board came from, by the end of its
+ * title, into board (sz bytes). Returns 1 if found. */
+int bof_bbs_crosspost_origin(const struct fileheader_t *fh, char *board,
+                             size_t sz);
+
+/* PTT: removes the other copy of a deleted post, which has the same file
+ * name: the original in its board (when the copy in an aggregate board was
+ * deleted) or the copy in ALLPOST (bbs_content_only: its record stays
+ * until the board is cleared). The record is found by the time in its file
+ * name; its content is archived with reason and removed even if the record
+ * is not found (couldnt_find_post); with bbs_content_only it is only
+ * removed, not archived. out must not be NULL. */
+typedef struct bof_bbs_remove_crosspost_t {
+    const char *community;                  /* the board with the copy */
+    const char *bbs_dir;                    /* its list */
+    const struct fileheader_t *bbs_header;  /* the deleted post */
+    int bbs_content_only;
+    int bbs_keep_record;    /* leave a tombstone, as in bof_remove_post_t */
+    const char *reason;
+} bof_bbs_remove_crosspost_t;
+
+bof_error_t bof_bbs_remove_crosspost(const bof_actor_t *actor,
+                                     const bof_bbs_remove_crosspost_t *req,
+                                     bof_post_result_t *out);
+
 /* ------------------------------------------------------------------------
  * Comments
  * ------------------------------------------------------------------------ */
