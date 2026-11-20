@@ -138,14 +138,16 @@ int bof_files_version_matches(const char *path,
  * ver of it: under the lock of the post, checks that it still has that
  * content, appends to new_path what was appended to the post after ver
  * (with CONFIG_EDITPOST_SMARTMERGE; without it, the post must have nothing
- * after ver), keeps it in the time capsule (appending rev_note, if not
- * NULL, to that revision), and renames new_path over the post if it is
- * still the same file. *saved tells if new_path took the place of the post
- * (it may have when an error is returned). Returns 0 or a bof error:
- * couldnt_find_post, read_only, couldnt_update_post (changed meanwhile). */
+ * after ver), keeps it in the time capsule if keep_revision (appending
+ * rev_note, if not NULL, to that revision), and renames new_path over the
+ * post if it is still the same file. *saved tells if new_path took the
+ * place of the post (it may have when an error is returned). Returns 0 or
+ * a bof error: couldnt_find_post, read_only, couldnt_update_post (changed
+ * meanwhile). */
 int bof_files_replace_post(const char *path, const char *new_path,
                            const struct bof_post_version_t *ver,
-                           const char *rev_note, int *saved);
+                           int keep_revision, const char *rev_note,
+                           int *saved);
 
 /* Rewrites the post at path line by line: filter() writes what replaces a
  * line to out and returns 1, or returns 0 to keep it. If any line was

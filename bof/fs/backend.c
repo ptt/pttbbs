@@ -20,6 +20,7 @@ const bof_storage_ops_t bof_storage_files = {
     .delete_post = bof_fs_delete_post,
     .remove_post = bof_fs_remove_post,
     .remove_posts = bof_fs_remove_posts,
+    .purge_posts = bof_fs_purge_posts,
     .restore_post = bof_fs_restore_post,
     .lock_post = bof_fs_lock_post,
     .feature_post = bof_fs_feature_post,

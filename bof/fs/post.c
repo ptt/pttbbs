@@ -118,7 +118,8 @@ bof_fs_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
         snprintf(note, sizeof(note), "\n" STR_POST_MARK "Last modified: %s",
                  Cdatelite(&oldmt));
         err = bof_files_replace_post(path, req->bbs_body_path,
-                                     req->bbs_body_version, note, &saved);
+                                     req->bbs_body_version,
+                                     !req->bbs_no_revision, note, &saved);
         if (out)
             out->bbs_body_saved = saved;
         if (!saved)
@@ -251,6 +252,24 @@ bof_fs_create_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
         return BOF_ERR_COULDNT_CREATE_POST;
     if (out && out->bbs_header)
         *out->bbs_header = *req->bbs_header;
+    return BOF_OK;
+}
+
+bof_error_t
+bof_fs_purge_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                   const bof_purge_posts_t *req, int *count)
+{
+    int n;
+
+    *count = 0;
+    if (!req->bbs_dir || !req->bbs_selected)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // The records go and their files are unlinked, unarchived.
+    n = bof_files_prune(req->bbs_dir, 0, 0, req->bbs_selected, NULL,
+                        req->bbs_ctx, actor ? actor->name : NULL);
+    if (n < 0)
+        return BOF_ERR_COULDNT_UPDATE_POST;
+    *count = n;
     return BOF_OK;
 }
 

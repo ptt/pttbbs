@@ -79,8 +79,8 @@ copy_tail(int fd_src, off_t offset, int fd_dest)
 
 int
 bof_files_replace_post(const char *path, const char *new_path,
-                       const bof_post_version_t *ver, const char *rev_note,
-                       int *saved)
+                       const bof_post_version_t *ver, int keep_revision,
+                       const char *rev_note, int *saved)
 {
     struct stat st_src, st_now;
     uint64_t hash;
@@ -126,7 +126,8 @@ bof_files_replace_post(const char *path, const char *new_path,
 
     // The revision is a hard link of the post: its note is appended once
     // the post is a new file.
-    rev = timecapsule_add_revision(path);
+    if (keep_revision)
+        rev = timecapsule_add_revision(path);
     if (Rename(new_path, path) != 0) {
         // Rename() may have moved it by copying and failed after.
         err = BOF_ERR_COULDNT_UPDATE_POST;
@@ -189,7 +190,7 @@ bof_files_rewrite_post(const char *path,
         unlink(tmp);
         return bad ? BOF_ERR_UNKNOWN : BOF_OK;
     }
-    err = bof_files_replace_post(path, tmp, &ver, rev_note, &saved);
+    err = bof_files_replace_post(path, tmp, &ver, 1, rev_note, &saved);
     if (!saved)
         unlink(tmp);
     return saved ? BOF_OK : err;

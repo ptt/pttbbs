@@ -55,14 +55,39 @@ void cleanSR(char *brdname)
     printf("board %s: %d SRs are deleted.\n", brdname, nDelete);
 }
 
+// The posts expire() purges, by their file names (sorted).
+typedef struct {
+    char (*names)[FNLEN];
+    int n;
+} purge_set_t;
+
+static int
+cmp_name(const void *a, const void *b)
+{
+    return strcmp((const char *)a, (const char *)b);
+}
+
+static int
+purge_selected(const fileheader_t *fh, int index GCC_UNUSED, void *ctx)
+{
+    const purge_set_t *set = ctx;
+    char name[FNLEN];
+
+    // Marked (or pinned) since it was picked: kept, as when picking.
+    if (fh->owner[0] != '-' && (fh->filemode & (FILE_MARKED | FILE_BOTTOM)))
+        return 0;
+    strlcpy(name, fh->filename, sizeof(name));
+    return bsearch(name, set->names, set->n, FNLEN, cmp_name) != NULL;
+}
+
 void expire(life_t *brd)
 {
     fileheader_t head;
-    struct stat state;
-    char fpath[128], index[128], *fname;
-    int total, bid;
-    int fdlock, fdr, fdw = 0, done, keep;
+    char index[PATHLEN], fpath[PATHLEN];
+    int total, bid, keep;
     int nKeep = 0, nDelete = 0;
+    purge_set_t set = { NULL, 0 };
+    FILE *fp;
 
     printf("%s\n", brd->bname);
     /* XXX: bid of cache.c's getbnum starts from 1 */
@@ -82,36 +107,20 @@ void expire(life_t *brd)
 #endif
     cleanSR(brd->bname);
 
-    setbfile(index, brd->bname, ".DIR");
-    AUTO_STR(lockfile, "%s.lock", index);
-    if ((fdlock = OpenCreate(lockfile, O_RDWR | O_APPEND)) == -1){
-	perror("open lock file error");
+    // Which posts expire, then they are purged through bof (Lemmy's
+    // PurgePost), which rewrites the list under its lock.
+    setbfile(index, brd->bname, FN_DIR);
+    if (!(fp = fopen(index, "rb")))
+	return;
+    fseek(fp, 0, SEEK_END);
+    total = ftell(fp) / sizeof(head);
+    rewind(fp);
+    set.names = calloc(total > 0 ? total : 1, FNLEN);
+    if (!set.names) {
+	fclose(fp);
 	return;
     }
-    flock(fdlock, LOCK_EX);
-
-    STRLCPY(fpath, index);
-    fname = (char *) strrchr(fpath, '.');
-
-    done = 0;
-    AUTO_STR(tmpfile, "%s.new", index);
-    if( (fdr = open(index, O_RDONLY, 0)) >= 0 ){
-	fstat(fdr, &state);
-	total = state.st_size / sizeof(head);
-	if( !checkmode ){
-	    unlink(tmpfile);
-	}
-	// TODO use fread/fwrite to reduce system calls
-	if( checkmode ||
-	    (fdw = OpenCreate(tmpfile, O_WRONLY | O_EXCL)) >= 0 ){
-	    done = 1;
-	    while (1) {
-		int ret = read(fdr, &head, sizeof(head));
-		if (ret != sizeof(head)) {
-		    if (ret != 0)
-			done = 0;
-		    break;
-		}
+    while (set.n < total && fread(&head, sizeof(head), 1, fp) == 1) {
                 if (head.owner[0] == '-' ||
                     (!*head.filename) ||
 #if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
@@ -125,51 +134,44 @@ void expire(life_t *brd)
 #endif
 		else if (head.filemode & (FILE_MARKED | FILE_BOTTOM))
 		    keep = 1;
-		else if (total > brd->maxp)
+		else if (total - nDelete > brd->maxp)
 		    keep = 0;
 		else
 		    keep = 1;
 
-		if( keep ){
-		    ++nKeep;
-		    if( !checkmode &&
-			write(fdw, (char *)&head, sizeof(head)) != sizeof(head) ){
-			done = 0;
-			break;
-		    }
-		}
-		else {
-		    ++nDelete;
-		    if (head.filename[0] != '\0') {
-			setbfile(fname, brd->bname, head.filename);
-			callrm(fname);
-		    }
-		    total--;
-		}
-	    }
-	    if (!checkmode) {
-		if (fsync(fdw) != 0) {
-		    perror("fsync");
-		    done = 0;
-		}
-		close(fdw);
-	    }
+	if (keep) {
+	    ++nKeep;
+	    continue;
 	}
-	close(fdr);
+	++nDelete;
+	strlcpy(set.names[set.n++], head.filename, FNLEN);
+	if (checkmode && head.filename[0]) {
+	    setbfile(fpath, brd->bname, head.filename);
+	    callrm(fpath);
+	}
     }
+    fclose(fp);
 
-    if( !checkmode && done ){
-	AUTO_STR(bakfile, "%s.old", index);
-	if( rename(index, bakfile) == 0 ){
-	    rename(tmpfile, index);
+    if (!checkmode && set.n > 0) {
+	bof_actor_t sys = { .name = "system" };
+	bof_purge_posts_t req = {
+	    .community = brd->bname, .bbs_dir = index,
+	    .bbs_selected = purge_selected, .bbs_ctx = &set, .reason = "expire",
+	};
+	int n = 0;
+	qsort(set.names, set.n, FNLEN, cmp_name);
+	if (bof_purge_posts(&sys, &req, &n) == BOF_OK) {
+	    nDelete = n;
 	    touchbtotal(bid);
+	} else {
+	    printf("board %s: could not purge the expired posts.\n", brd->bname);
+	    nDelete = 0;
 	}
     }
+    free(set.names);
 
     printf("board %s: %d articles are kept, %d articles are deleted.\n",
 	   brd->bname, nKeep, nDelete);
-    flock(fdlock, LOCK_UN);
-    close(fdlock);
 }
 
 int     count;

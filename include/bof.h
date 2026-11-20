@@ -240,6 +240,22 @@ typedef struct bof_remove_posts_t {
 bof_error_t bof_remove_posts(const bof_actor_t *actor,
                              const bof_remove_posts_t *req, int *count);
 
+/* Lemmy's PurgePost, for the posts of a board that bbs_selected selects
+ * (the posts expired by the limits of the board): gone for good, neither
+ * archived nor left as tombstones. bbs_selected may be called once per
+ * backend, so it should not keep state (e.g. pick the posts beforehand).
+ * *count gets how many were purged. */
+typedef struct bof_purge_posts_t {
+    const char *community;
+    const char *bbs_dir;
+    int (*bbs_selected)(const struct fileheader_t *fh, int index, void *ctx);
+    void *bbs_ctx;
+    const char *reason;     /* may be NULL */
+} bof_purge_posts_t;
+
+bof_error_t bof_purge_posts(const bof_actor_t *actor,
+                            const bof_purge_posts_t *req, int *count);
+
 /* Lemmy's CreatePostLike, a vote alone (score +1, -1 or 0 to take it
  * back), for boards that keep votes apart from comments. One vote per
  * person. The files backend keeps votes only with comments: there, it is
@@ -312,6 +328,11 @@ typedef struct bof_edit_post_t {
     const char *bbs_owner;     /* the author shown in the list */
     const char *bbs_date;      /* the date shown in the list */
     const int32_t *bbs_money;  /* fileheader_t.multi */
+    /* PTT: do not keep the old body in the time capsule, for changes made
+     * by the system that come often (a petition signed). Lemmy keeps no
+     * revisions at all; Discourse (post_revisions) skips them for such
+     * changes too. */
+    int bbs_no_revision;
     /* PTT: for a change by moderators, as in bof_lock_post_t (no reason). */
     const struct bof_modlog_t *bbs_modlog;
 } bof_edit_post_t;

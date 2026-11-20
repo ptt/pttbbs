@@ -343,6 +343,14 @@ bof_files_prune(const char *direct, uint16_t keep_modes, int keep_records,
         }
     }
     close(fdr);
+    // On disk before it takes the place of the list.
+    if (fsync(fdw) != 0) {
+        close(fdw);
+        unlink(newfn);
+        flock(fd, LOCK_UN);
+        close(fd);
+        return -1;
+    }
     close(fdw);
     if (Rename(direct, oldfn) == -1 || Rename(newfn, direct) == -1) {
         flock(fd, LOCK_UN);

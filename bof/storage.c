@@ -140,6 +140,16 @@ bof_remove_posts(const bof_actor_t *actor, const bof_remove_posts_t *req,
 }
 
 bof_error_t
+bof_purge_posts(const bof_actor_t *actor, const bof_purge_posts_t *req,
+                int *count)
+{
+    int local;
+    if (!req->bbs_selected)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    return WRITE(purge_posts, count ? count : &local, actor, req);
+}
+
+bof_error_t
 bof_restore_post(const bof_actor_t *actor, const bof_restore_post_t *req,
                  bof_post_response_t *out)
 {

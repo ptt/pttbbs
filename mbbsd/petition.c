@@ -37,6 +37,69 @@ find_petition_entry_userid(char *s) {
         return NULL;
 }
 
+// Writes to fpath the petition in srcpath signed by the current user: for
+// (op 'y') or against ('n') it, for reason. Returns 0, or -1.
+static int
+petition_sign(const char *srcpath, const char *fpath, unsigned long endtime,
+              char op, const char *reason)
+{
+    char genbuf[256], *uid;
+    FILE *fi, *fo;
+    int yes, no, len;
+
+    if (!(fi = fopen(srcpath, "r")))
+        return -1;
+    if (!(fo = fopen(fpath, "w"))) {
+        fclose(fi);
+        return -1;
+    }
+
+    while (fgets(genbuf, sizeof(genbuf), fi)) {
+        if (is_petition_divider(genbuf))
+	    break;
+	fputs(genbuf, fo);
+    }
+    if (!endtime) {
+	time4_t end4 = time4_add(now, 14 * DAY_SECONDS);
+	fprintf(fo, "連署結束時間: (%d)%s\n\n", end4, Cdate(&end4));
+    }
+    fputs(genbuf, fo);
+    len = strlen(cuser.userid);
+    for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
+	if (is_petition_divider(genbuf))
+	    break;
+	if (strlen(genbuf)<30)
+            continue;
+        uid = find_petition_entry_userid(genbuf);
+        if (!uid || (uid[len] == ' ' && strncasecmp(uid, cuser.userid, len) == 0))
+            continue;
+	fprintf(fo, "%3d.%s", ++yes, uid);
+      }
+    if (op == 'y')
+	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser.userid, reason, cuser.lasthost);
+    fputs(genbuf, fo);
+
+    for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
+	if (is_petition_divider(genbuf))
+	    break;
+	if (strlen(genbuf)<30)
+            continue;
+        uid = find_petition_entry_userid(genbuf);
+        if (!uid || (uid[len] == ' ' && strncasecmp(uid, cuser.userid, len) == 0))
+            continue;
+	fprintf(fo, "%3d.%s", ++no, uid);
+    }
+    if (op == 'n')
+	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
+    fprintf(fo, PETITION_DIVIDER "總計" PETITION_DIVIDER "\n");
+    fprintf(fo, "支持人數:%-9d反對人數:%-9d\n", yes, no);
+    fprintf(fo, "\n--\n" STR_POST_MARK "發信站: " BBSNAME "(" MYHOSTNAME
+                ") \n◆ From: 連署文章\n");
+
+    fclose(fi);
+    return fclose(fo) == 0 ? 0 : -1;
+}
+
 void
 do_petition_reply(const fileheader_t * fhdr)
 {
@@ -46,10 +109,9 @@ do_petition_reply(const fileheader_t * fhdr)
     char            oldfpath[PATHLEN];
     char            opnion[10];
     char           *ptr, *uid;
-    FILE           *fo,*fi;
+    FILE           *fi;
     fileheader_t    petitionfile;
-    int             yes=0, no=0, len;
-    int             fd;
+    int             yes=0;
     unsigned long   endtime=0;
 
 
@@ -72,13 +134,23 @@ do_petition_reply(const fileheader_t * fhdr)
     setbpath(fpath, currboard);
     stampfile(fpath, &petitionfile);
 
-    setbpath(oldfpath, currboard);
+    // The petition in bof, read and signed through it.
+    fileheader_t cur = *fhdr;
+    char direct[PATHLEN], srcpath[PATHLEN];
+    setbfile(direct, currboard, FN_DIR);
+    bof_post_ref_t ref = {
+        .community = currboard, .bbs_dir = direct,
+        .bbs_index = search_dir_by_filename(direct, cur.filename, NULL),
+        .bbs_header = &cur,
+    };
+    snprintf(srcpath, sizeof(srcpath), "%s.src", fpath);
 
-    strcat(oldfpath, "/");
-    strcat(oldfpath, fhdr->filename);
-
-    fi = fopen(oldfpath, "r");
-    assert(fi);
+    if (bof_bbs_get_post_file(&ref, oldfpath, sizeof(oldfpath)) != BOF_OK ||
+        !(fi = fopen(oldfpath, "r"))) {
+        unlink(fpath);
+        vmsg("此檔已損毀，無法連署。");
+        return;
+    }
 
     while (fgets(genbuf, sizeof(genbuf), fi)) {
 	char *space;
@@ -142,69 +214,38 @@ do_petition_reply(const fileheader_t * fhdr)
 		 opnion[0] == 'y' ? "支持" : "反對"), reason, 35, DOECHO)) {
 	return;
     }
-    if ((fd = open(oldfpath, O_RDONLY)) == -1)
-	return;
-    if(flock(fd, LOCK_EX)==-1 )
-       {close(fd); return;}
-    if(!(fi = fopen(oldfpath, "r")))
-       {flock(fd, LOCK_UN); close(fd); return;}
-
-    if(!(fo = fopen(fpath, "w")))
-       {
-        flock(fd, LOCK_UN);
-        close(fd);
-        fclose(fi);
-	return;
-       }
-
-    while (fgets(genbuf, sizeof(genbuf), fi)) {
-        if (is_petition_divider(genbuf))
-	    break;
-	fputs(genbuf, fo);
+    // Signed from the content as it is now, and saved over it from that
+    // version; again if it changed meanwhile (someone else signed).
+    bof_error_t err = BOF_ERR_COULDNT_UPDATE_POST;
+    fileheader_t updated;
+    bof_post_response_t res = { .bbs_header = &updated };
+    for (int tries = 0; tries < 3 && err == BOF_ERR_COULDNT_UPDATE_POST &&
+                        !res.bbs_body_saved; tries++) {
+        bof_post_version_t ver;
+        if (ref.bbs_index <= 0 ||
+            bof_bbs_get_post_body(&ref, srcpath, &ver) != BOF_OK ||
+            petition_sign(srcpath, fpath, endtime, opnion[0], reason) != 0) {
+            unlink(srcpath);
+            err = BOF_ERR_UNKNOWN;
+            break;
+        }
+        unlink(srcpath);
+        // A signature is not a revision of the petition, nor a change that
+        // makes it unread: the record keeps its time.
+        bof_actor_t me = mbbsd_user_actor();
+        bof_edit_post_t req = {
+            .post = ref, .bbs_body_path = fpath, .bbs_body_version = &ver,
+            .bbs_modified = cur.modified, .bbs_no_revision = 1,
+        };
+        err = bof_edit_post(&me, &req, &res);
     }
-    if (!endtime) {
-	time4_t end4 = time4_add(now, 14 * DAY_SECONDS);
-	fprintf(fo, "連署結束時間: (%d)%s\n\n", end4, Cdate(&end4));
+    if (err == BOF_OK) {
+        post_record_changed(direct, ref.bbs_index, &updated);
+    } else if (!res.bbs_body_saved) {
+        unlink(fpath);
+        vmsg(err == BOF_ERR_COULDNT_UPDATE_POST ?
+             "連署失敗：文章剛被修改，請再試一次。" : "連署失敗，請稍後再試。");
     }
-    fputs(genbuf, fo);
-    len = strlen(cuser.userid);
-    for(yes=0; fgets(genbuf, sizeof(genbuf), fi);) {
-	if (is_petition_divider(genbuf))
-	    break;
-	if (strlen(genbuf)<30)
-            continue;
-        uid = find_petition_entry_userid(genbuf);
-        if (!uid || (uid[len] == ' ' && strncasecmp(uid, cuser.userid, len) == 0))
-            continue;
-	fprintf(fo, "%3d.%s", ++yes, uid);
-      }
-    if (opnion[0] == 'y')
-	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++yes, cuser.userid, reason, cuser.lasthost);
-    fputs(genbuf, fo);
-
-    for(no=0; fgets(genbuf, sizeof(genbuf), fi);) {
-	if (is_petition_divider(genbuf))
-	    break;
-	if (strlen(genbuf)<30)
-            continue;
-        uid = find_petition_entry_userid(genbuf);
-        if (!uid || (uid[len] == ' ' && strncasecmp(uid, cuser.userid, len) == 0))
-            continue;
-	fprintf(fo, "%3d.%s", ++no, uid);
-    }
-    if (opnion[0] == 'n')
-	fprintf(fo, "%3d.%-15s%-34s 來源:%s\n", ++no, cuser.userid, reason, cuser.lasthost);
-    fprintf(fo, PETITION_DIVIDER "總計" PETITION_DIVIDER "\n");
-    fprintf(fo, "支持人數:%-9d反對人數:%-9d\n", yes, no);
-    fprintf(fo, "\n--\n" STR_POST_MARK "發信站: " BBSNAME "(" MYHOSTNAME
-                ") \n◆ From: 連署文章\n");
-
-    flock(fd, LOCK_UN);
-    close(fd);
-    fclose(fi);
-    fclose(fo);
-    unlink(oldfpath);
-    rename(fpath, oldfpath);
 }
 
 int

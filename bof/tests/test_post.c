@@ -637,6 +637,55 @@ test_remove_posts(void)
                1);
 }
 
+// Edits without a revision (petitions signed) and purging (expiry).
+static void
+test_quiet_edit_and_purge(void)
+{
+    fileheader_t recs[64], updated;
+    bof_actor_t me = { .name = "quinn" }, sys = { .name = "system" };
+    bof_post_response_t res = { .bbs_header = &updated };
+    bof_post_version_t ver;
+    char buf[1024];
+    int n, count, archived;
+
+    make_post("M.1700000081.A.081", "quinn", "petition", 0);
+    n = read_dir(recs, 64);
+    bof_post_ref_t post = ref(recs, n);
+    EXPECT_OK(bof_bbs_get_post_body(&post, "edit.tmp", &ver));
+    int revs = timecapsule_get_max_revision_number(BDIR "/M.1700000081.A.081");
+    spit("edit.tmp", "signed\n");
+    bof_edit_post_t edit = {
+        .post = post, .bbs_body_path = "edit.tmp", .bbs_body_version = &ver,
+        .bbs_no_revision = 1,
+    };
+    EXPECT_OK(bof_edit_post(&me, &edit, &res));
+    EXPECT_STR(slurp(BDIR "/M.1700000081.A.081", buf, sizeof(buf)),
+               "signed\n");
+    EXPECT_INT(timecapsule_get_max_revision_number(
+                   BDIR "/M.1700000081.A.081"), revs);
+
+    // Purged: no record, no file, nothing archived.
+    make_post("M.1700000082.A.082", "quinn", "old", 0);
+    archived = timecapsule_get_max_archive_number(DIRPATH,
+                                                  sizeof(fileheader_t));
+    n = read_dir(recs, 64);
+    bof_purge_posts_t purge = {
+        .community = BOARD, .bbs_dir = DIRPATH,
+        .bbs_selected = select_owner, .bbs_ctx = "quinn", .reason = "expire",
+    };
+    EXPECT_OK(bof_purge_posts(&sys, &purge, &count));
+    EXPECT_INT(count, 2);
+    EXPECT_INT(read_dir(recs, 64), n - 2);
+    EXPECT(!exists(BDIR "/M.1700000081.A.081"));
+    EXPECT(!exists(BDIR "/M.1700000082.A.082"));
+    EXPECT_INT(timecapsule_get_max_archive_number(DIRPATH,
+                                                  sizeof(fileheader_t)),
+               archived);
+    purge.bbs_selected = NULL;
+    EXPECT_INT(bof_purge_posts(&sys, &purge, &count),
+               BOF_ERR_INVALID_BODY_FIELD);
+}
+
 static void
 test_modlog_with_actions(void)
 {
@@ -1150,6 +1199,7 @@ main(void)
     RUN(test_restore_post);
     RUN(test_files_extras);
     RUN(test_tombstone_titles);
+    RUN(test_quiet_edit_and_purge);
     cleanup();
     return bof_test_report();
 }
