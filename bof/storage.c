@@ -109,7 +109,19 @@ bof_remove_post(const bof_actor_t *actor, const bof_remove_post_t *req,
                 bof_post_result_t *out)
 {
     bof_post_result_t local = { 0 };
-    return WRITE(remove_post, out ? out : &local, actor, req);
+    bof_post_result_t *res = out ? out : &local;
+    bof_error_t err = WRITE(remove_post, res, actor, req);
+
+    if (err == BOF_OK && req->bbs_modlog) {
+        // Not as asked when the content could not be archived.
+        const bof_modlog_t *m = req->bbs_modlog;
+        if (req->bbs_modlog_unarchived &&
+            (res->bbs_content_result == DELETE_FILE_CONTENT_FAILED ||
+             !res->bbs_archived_path[0]))
+            m = req->bbs_modlog_unarchived;
+        modlog_done(req->post.community, actor, req->reason, m);
+    }
+    return err;
 }
 
 bof_error_t

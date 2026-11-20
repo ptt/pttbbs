@@ -908,6 +908,42 @@ test_reports(void)
 }
 
 static void
+test_remove_post_modlog(void)
+{
+    fileheader_t recs[64];
+    bof_actor_t mod = { .name = "boss", .bbs_role = "BM" };
+    bof_post_result_t res;
+    bof_modlog_t bad, plain;
+    char buf[8192];
+    int n;
+
+    bof_modlog_init(&bad, "badpost one");
+    bof_modlog_init(&plain, "removed one");
+    make_post("M.1700000101.A.101", "zed", "to remove", 0);
+    n = read_dir(recs, 64);
+    bof_remove_post_t req = {
+        .post = ref(recs, n), .removed = 1, .reason = "rules",
+        .bbs_modlog = &bad, .bbs_modlog_unarchived = &plain,
+    };
+    EXPECT_OK(bof_remove_post(&mod, &req, &res));
+    slurp(BDIR "/" FN_MODLOG, buf, sizeof(buf));
+    EXPECT(strstr(buf, " BM badpost one: rules\n") != NULL);
+    EXPECT(strstr(buf, "removed one") == NULL);
+
+    // Its content gone already: not archived, so the other record.
+    make_post("M.1700000102.A.102", "zed", "no file", 0);
+    unlink(BDIR "/M.1700000102.A.102");
+    n = read_dir(recs, 64);
+    bof_modlog_init(&bad, "badpost two");
+    bof_modlog_init(&plain, "removed two");
+    req.post = ref(recs, n);
+    EXPECT_OK(bof_remove_post(&mod, &req, &res));
+    slurp(BDIR "/" FN_MODLOG, buf, sizeof(buf));
+    EXPECT(strstr(buf, "removed two") != NULL);
+    EXPECT(strstr(buf, "badpost two") == NULL);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -956,6 +992,7 @@ main(void)
     RUN(test_get_posts);
     RUN(test_edit_comment);
     RUN(test_reports);
+    RUN(test_remove_post_modlog);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

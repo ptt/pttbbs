@@ -145,6 +145,11 @@ typedef struct bof_remove_post_t {
     const char *reason;     /* also appended to the archived post */
     int bbs_keep_record;    /* as in bof_delete_post_t */
     const char *bbs_title;  /* NULL or "": the default for removed posts */
+    /* The record for the modlog (see bof_lock_post_t), and the one to write
+     * instead if the content could not be archived (e.g. a bad post is
+     * not given then); NULL: bbs_modlog. */
+    const struct bof_modlog_t *bbs_modlog;
+    const struct bof_modlog_t *bbs_modlog_unarchived;
 } bof_remove_post_t;
 
 

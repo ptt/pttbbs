@@ -3647,7 +3647,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	int keep_record = IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
 	    (custom_title || bp->nuser >= SAFE_ARTICLE_DELETE_NUSER) &&
 	    !(currmode & MODE_DIGEST);
-	bof_actor_t actor = { .name = cuser.userid, .from = fromhost };
+	bof_actor_t actor = bof_me();
 	bof_post_ref_t ref = {
 	    .community = currboard, .bbs_dir = direct, .bbs_index = ent,
 	    .bbs_header = fhdr,
@@ -3655,9 +3655,18 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	bof_post_result_t res;
 	bof_error_t err;
 	if (not_owned) {
+	    // bof puts it in the modlog: as a bad post if asked, but not if
+	    // the content could not be archived (no bad post then).
+	    bof_modlog_t log_plain;
+	    if (by_mod) {
+		del_post_modlog(&log, as_badpost, &log_fh);
+		del_post_modlog(&log_plain, 0, &log_fh);
+	    }
 	    bof_remove_post_t req = {
 		.post = ref, .removed = 1, .reason = log_reason,
 		.bbs_keep_record = keep_record, .bbs_title = newtitle,
+		.bbs_modlog = by_mod ? &log : NULL,
+		.bbs_modlog_unarchived = by_mod ? &log_plain : NULL,
 	    };
 	    err = bof_remove_post(&actor, &req, &res);
 	} else {
@@ -3701,12 +3710,6 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 		apply_badpost(getuserid(tusernum), fhdr, newpath, log_reason);
 		outs("原文已隨退文通知寄到作者的信箱。\n");
 	    }
-            // Not by bof_remove_post(): the record tells a bad post, which
-            // is known only now (not when the content could not be kept).
-            if (by_mod) {
-                del_post_modlog(&log, as_badpost, &log_fh);
-                modlog(bp->brdname, log_reason, &log);
-            }
             // Mail the post to the author, as it is not shown on the board
             // anymore. apply_badpost() mails bad posts already.
             if (by_mod && tusernum > 0 && !as_badpost && *newpath &&

@@ -132,23 +132,27 @@ test_not_supported(void)
 {
     mock_t a = { .name = "a" }, b = { .name = "b" };
     bof_actor_t me = { .name = "tester" };
+    bof_modlog_t log;
     fileheader_t fh = { .filename = "M.42.A.000" };
     bof_remove_post_t req = {
         .post = { .community = "Test", .bbs_header = &fh },
         .removed = 1,
     };
 
-    // Without it: bbs_storage_not_supported.
+    bof_modlog_init(&log, "remove");
+    req.bbs_modlog = &log;
+
+    // Without it: bbs_storage_not_supported, and no modlog.
     bof_storage_reset();
     bof_storage_set(&partial_ops, &a);
     EXPECT_INT(bof_remove_post(&me, &req, NULL),
                BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
     EXPECT_STR(a.calls, "");
 
-    // With it: done.
+    // With it: done, then the modlog.
     bof_storage_set(&full_ops, &b);
     EXPECT_OK(bof_remove_post(&me, &req, NULL));
-    EXPECT_STR(b.calls, "remove_post ");
+    EXPECT_STR(b.calls, "remove_post write_modlog ");
 }
 
 static void
