@@ -48,6 +48,19 @@ bof_files_get_version(int fd, int64_t size, bof_post_version_t *ver)
     return hash_fd(fd, size, &ver->hash);
 }
 
+int
+bof_files_version_matches(const char *path, const bof_post_version_t *ver)
+{
+    uint64_t hash;
+    int fd = open(path, O_RDONLY), ok;
+
+    if (fd < 0)
+        return 0;
+    ok = hash_fd(fd, ver->size, &hash) == 0 && hash == ver->hash;
+    close(fd);
+    return ok;
+}
+
 // Appends what src has from offset to the end onto fd_dest. Returns 0 or
 // -1.
 static int

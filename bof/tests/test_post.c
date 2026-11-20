@@ -429,6 +429,91 @@ test_remove_comment(void)
     EXPECT_INT(bof_remove_comment(&mod, &rm, NULL), BOF_ERR_COULDNT_FIND_POST);
 }
 
+static char *
+slurp(const char *path, char *buf, size_t sz)
+{
+    FILE *fp = fopen(path, "r");
+    size_t n = 0;
+
+    if (fp) {
+        n = fread(buf, 1, sz - 1, fp);
+        fclose(fp);
+    }
+    buf[n] = '\0';
+    return buf;
+}
+
+static void
+spit(const char *path, const char *text)
+{
+    FILE *fp = fopen(path, "w");
+    fputs(text, fp);
+    fclose(fp);
+}
+
+static void
+test_edit_post_body(void)
+{
+    fileheader_t recs[32], updated;
+    bof_actor_t me = { .name = "kate" };
+    bof_post_response_t res = { .bbs_header = &updated };
+    bof_post_version_t ver, ver2;
+    char buf[4096];
+    int n;
+
+    make_post("M.1700000031.A.031", "kate", "body", 0);
+    n = read_dir(recs, 32);
+    bof_post_ref_t post = ref(recs, n);
+
+    // GetPost gives the body and its version.
+    EXPECT_OK(bof_bbs_get_post_body(&post, "edit.tmp", &ver));
+    EXPECT_STR(slurp("edit.tmp", buf, sizeof(buf)),
+               "the content of M.1700000031.A.031\n");
+    EXPECT_INT(ver.size, strlen("the content of M.1700000031.A.031\n"));
+    EXPECT(bof_files_version_matches(BDIR "/M.1700000031.A.031", &ver));
+
+    // A comment comes while editing; it stays after the new body.
+    spit("edit.tmp", "new body\n");
+    bof_create_comment_t c = {
+        .post = post, .content = "a comment\n", .bbs_lock = 1,
+    };
+    EXPECT_OK(bof_create_comment(&me, &c, NULL));
+    EXPECT(bof_files_version_matches(BDIR "/M.1700000031.A.031", &ver));
+    bof_edit_post_t edit = {
+        .post = post, .name = "body, edited",
+        .bbs_body_path = "edit.tmp", .bbs_body_version = &ver,
+    };
+    EXPECT_OK(bof_edit_post(&me, &edit, &res));
+    EXPECT_INT(res.bbs_body_saved, 1);
+    EXPECT(!exists("edit.tmp"));
+    EXPECT_STR(slurp(BDIR "/M.1700000031.A.031", buf, sizeof(buf)),
+               "new body\na comment\n");
+    EXPECT_STR(updated.title, "body, edited");
+    EXPECT(updated.modified != 0);
+    // The old content is in the time capsule, with when it was made.
+    EXPECT_INT(timecapsule_get_max_revision_number(
+                   BDIR "/M.1700000031.A.031"), 1);
+
+    // An edit from the old version fails now and keeps its file.
+    spit("edit.tmp", "stale body\n");
+    n = read_dir(recs, 32);
+    post = ref(recs, n);
+    edit.post = post;
+    EXPECT_INT(bof_edit_post(&me, &edit, &res), BOF_ERR_COULDNT_UPDATE_POST);
+    EXPECT_INT(res.bbs_body_saved, 0);
+    EXPECT(exists("edit.tmp"));
+    EXPECT_STR(slurp(BDIR "/M.1700000031.A.031", buf, sizeof(buf)),
+               "new body\na comment\n");
+
+    // From the new version it works.
+    EXPECT_OK(bof_bbs_get_post_body(&post, "edit.tmp", &ver2));
+    spit("edit.tmp", "third body\n");
+    edit.bbs_body_version = &ver2;
+    EXPECT_OK(bof_edit_post(&me, &edit, &res));
+    EXPECT_STR(slurp(BDIR "/M.1700000031.A.031", buf, sizeof(buf)),
+               "third body\n");
+}
+
 static void
 test_tombstone_titles(void)
 {
@@ -470,6 +555,7 @@ main(void)
     RUN(test_prune);
     RUN(test_create_post_and_comment);
     RUN(test_remove_comment);
+    RUN(test_edit_post_body);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

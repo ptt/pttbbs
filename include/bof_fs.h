@@ -39,6 +39,9 @@ BOF_FS_WRITE(bbs_reset_post_score, bof_bbs_reset_post_score_t,
 BOF_FS_WRITE(create_comment, bof_create_comment_t, bof_comment_response_t);
 BOF_FS_WRITE(remove_comment, bof_remove_comment_t, bof_comment_response_t);
 #undef BOF_FS_WRITE
+bof_error_t bof_fs_bbs_get_post_body(void *ctx, const bof_post_ref_t *post,
+                                     const char *dest_path,
+                                     bof_post_version_t *ver);
 
 #ifdef __cplusplus
 }

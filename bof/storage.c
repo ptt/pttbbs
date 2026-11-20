@@ -138,3 +138,14 @@ bof_remove_comment(const bof_actor_t *actor, const bof_remove_comment_t *req,
     bof_comment_response_t local = { 0 };
     return WRITE(remove_comment, out ? out : &local, actor, req);
 }
+
+/* ------------------------------------------------------------------------
+ * Reads
+ * ------------------------------------------------------------------------ */
+
+bof_error_t
+bof_bbs_get_post_body(const bof_post_ref_t *post, const char *dest_path,
+                      bof_post_version_t *ver)
+{
+    return READ(get_post_body, post, dest_path, ver);
+}

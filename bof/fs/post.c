@@ -98,7 +98,35 @@ bof_error_t
 bof_fs_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
                  const bof_edit_post_t *req, bof_post_response_t *out)
 {
-    return change_record(&req->post, req->bbs_modified, req->name,
+    const bof_post_ref_t *post = &req->post;
+    int32_t modified = req->bbs_modified;
+
+    if (out)
+        out->bbs_body_saved = 0;
+    if (req->bbs_body_path) {
+        char path[PATHLEN], note[STRLEN];
+        time4_t oldmt;
+        int saved = 0;
+        bof_error_t err;
+
+        if (!req->bbs_body_version || !post->bbs_dir || !post->bbs_header ||
+            !post->bbs_header->filename[0])
+            return BOF_ERR_INVALID_BODY_FIELD;
+        setdirpath(path, post->bbs_dir, post->bbs_header->filename);
+        // The revision kept tells when the content it has was made.
+        oldmt = dasht4(path);
+        snprintf(note, sizeof(note), "\n" STR_POST_MARK "Last modified: %s",
+                 Cdatelite(&oldmt));
+        err = bof_files_replace_post(path, req->bbs_body_path,
+                                     req->bbs_body_version, note, &saved);
+        if (out)
+            out->bbs_body_saved = saved;
+        if (!saved)
+            return err;
+        if (!modified)
+            modified = dasht4(path);
+    }
+    return change_record(post, modified, req->name,
                          req->bbs_owner, req->bbs_date,
                          req->bbs_money, 0, 0, out);
 }

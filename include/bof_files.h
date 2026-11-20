@@ -121,6 +121,10 @@ struct bof_post_version_t;
 int bof_files_get_version(int fd, int64_t size,
                           struct bof_post_version_t *ver);
 
+/* Whether the file at path still has the content of version ver. */
+int bof_files_version_matches(const char *path,
+                              const struct bof_post_version_t *ver);
+
 /* Replaces the post at path with new_path, a new content made from version
  * ver of it: under the lock of the post, checks that it still has that
  * content, appends to new_path what was appended to the post after ver

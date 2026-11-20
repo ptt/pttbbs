@@ -8,7 +8,7 @@ include $(SRCROOT)/pttbbs.mk
 CORE_SRCS:=	bof.c storage.c
 FILES_SRCS:=	files/comment.c files/content.c \
 		files/record.c files/timecap.c
-FS_SRCS:=	fs/backend.c fs/comment.c \
+FS_SRCS:=	fs/backend.c fs/comment.c fs/content.c \
 		fs/post.c
 # Other backends live where their services are, e.g. post.svc's in
 # bof/ps/ of pttbbs.cmd; whatever is there is built in.

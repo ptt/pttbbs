@@ -6,7 +6,6 @@
 #include "livepost.h"
 #include <arpa/inet.h>
 
-#define SMHASHLEN (64/8)
 #define WHEREAMI_LEVEL	16
 
 #define NEWIDPOST_LIMIT_DAYS (14)
@@ -1640,39 +1639,6 @@ reply_post(int ent GCC_UNUSED, fileheader_t * fhdr,
 }
 
 
-#define HASHPF_RET_OK (0)
-
-// return: 0 - ok; otherwise - fail.
-static int
-hash_partial_file( char *path, size_t sz, unsigned char output[SMHASHLEN] )
-{
-    int fd;
-    size_t n;
-    unsigned char buf[1024];
-
-    Fnv64_t fnvseed = FNV1_64_INIT;
-    assert(SMHASHLEN == sizeof(fnvseed));
-
-    fd = open(path, O_RDONLY);
-    if (fd < 0)
-	return 1;
-
-    while(  sz > 0 &&
-	    (n = read(fd, buf, sizeof(buf))) > 0 )
-    {
-	if (n > sz) n = sz;
-	fnvseed = fnv_64_buf(buf, (int) n, fnvseed);
-	sz -= n;
-    }
-    close(fd);
-
-    if (sz > 0) // file is different
-	return 2;
-
-    memcpy(output, (void*) &fnvseed, sizeof(fnvseed));
-    return HASHPF_RET_OK;
-}
-
 int
 append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig,
                      const struct stat *expect) {
@@ -1745,14 +1711,10 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     char            genbuf[PATHLEN];
     fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
-    off_t	    oldsz;
     int		    edflags = 0, is_race_condition = 0;
     char save_title[STRLEN];
 
-    int rev = 0;
-    time4_t oldmt = 0;
-
-    unsigned char oldsum[SMHASHLEN] = {0}, newsum[SMHASHLEN] = {0};
+    bof_post_version_t ver;
 
 #ifdef EXP_EDITPOST_TEXTONLY
     // experimental: "text only" editing
@@ -1825,16 +1787,12 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     STRLCPY(save_title, fhdr->title);
 
-    Copy(genbuf, fpath);
-    // to prevent genbuf being modified after copy, use dashs(fpath) instead.
-    oldsz = dashs(fpath);
-
-    if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
-        if (hash_partial_file(fpath, oldsz, oldsum) != HASHPF_RET_OK) {
-            vmsg("系統錯誤，無法準備編輯檔案。請至" BN_BUGREPORT "報告");
-            unlink(fpath);
-            return FULLUPDATE;
-        }
+    // The content to edit and its version, to save over it later.
+    bof_post_ref_t ref = bof_ref(direct, ent, fhdr);
+    if (bof_bbs_get_post_body(&ref, fpath, &ver) != BOF_OK) {
+        vmsg("系統錯誤，無法準備編輯檔案。請至" BN_BUGREPORT "報告");
+        unlink(fpath);
+        return FULLUPDATE;
     }
 
     content_set_context(CONTENT_KIND_POST, NULL, CONTENT_F_REEDIT, 0);
@@ -1853,23 +1811,13 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
             STRLCPY(save_title, fhdr->title);
     }
 
-    // The post checked here: the merge below must replace this same file,
-    // not one a mask or another edit put there during the prompts between.
-    struct stat st_post;
-    if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
-        outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
-        refresh();
-
-        if (stat(genbuf, &st_post) != 0 ||
-            hash_partial_file(genbuf, oldsz, newsum) != HASHPF_RET_OK ||
-            memcmp(oldsum, newsum, sizeof(oldsum)) != 0) {
-            is_race_condition = 1;
-        }
-    } else {
-        // without smart merge, simply alert by size and mtime.
-        if (dashs(genbuf) != oldsz || dasht(genbuf) > dashc(fpath))
-            is_race_condition = 1;
-    }
+    // Checked again when it is saved (a mask or another edit may come
+    // during the prompts between); this spares the prompts when it is
+    // already too late.
+    outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
+    refresh();
+    if (!bof_files_version_matches(genbuf, &ver))
+        is_race_condition = 1;
     if (is_race_condition) {
         // save to ~/buf.0
         setuserfile(genbuf, "buf.0");
@@ -1899,42 +1847,14 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         }
     }
 
-    oldmt = dasht4(genbuf);
-    rev = timecapsule_add_revision(genbuf);
-
-    if (IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE)) {
-        // atomic lock-merge-replace
-        if (!append_merge_replace(genbuf, fpath, oldsz, &st_post) &&
-            dashf(fpath)) {
-            // Not replaced: the post was deleted or replaced since the
-            // check above. Keep the edit as for a race there.
-            char bufpath[PATHLEN];
-            setuserfile(bufpath, "buf.0");
-            Rename(fpath, bufpath);
-            outs("\n\n" ANSI_COLOR(1;31) "檔案全被其他人修改過，無法寫入。\n"
-                 "新內容已存入您的暫存檔[0]。 請重新編輯。");
-            pressanykey();
-            return FULLUPDATE;
-        }
-    } else {
-        // piaip Wed Jan  9 11:11:33 CST 2008
-        // in order to prevent calling system 'mv' all the
-        // time, it is better to unlink() first, which
-        // increased the chance of succesfully using rename().
-        // WARNING: if genbuf and fpath are in different directory,
-        // you should disable pre-unlinking
-        unlink(genbuf);
-        Rename(fpath, genbuf);
-    }
-
-    fhdr->modified = dasht4(genbuf);
-
-    // Take the fee right before the .DIR change, and only if it is all
-    // there: taken after it with pay(), which stops at zero, a second login
-    // spending the money meanwhile would keep the post's pay. Short now,
-    // the title stays, as when the check before the prompt fails. A kick
-    // can't split the fee from the change, and a failed change gives it
-    // back.
+    // Take the fee right before saving, and only if it is all there: taken
+    // after it with pay(), which stops at zero, a second login spending the
+    // money meanwhile would keep the post's pay. Short now, the title
+    // stays, as when the check before the prompt fails. A kick can't split
+    // the fee from the change, and a failed change gives it back.
+    char orig_title[sizeof(fhdr->title)];
+    int32_t orig_money = fhdr->multi.money;
+    STRLCPY(orig_title, fhdr->title);
     sigset_t old_set;
     block_abort_signals(&old_set);
     int short_fee = 0;
@@ -1961,7 +1881,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     int32_t money = fhdr->multi.money;
     bof_edit_post_t req = {
         .post = bof_ref(direct, ent, fhdr), .name = save_title,
-        .bbs_modified = fhdr->modified, .bbs_money = &money,
+        .bbs_money = &money,
+        .bbs_body_path = fpath, .bbs_body_version = &ver,
     };
     fileheader_t updated;
     bof_post_response_t res = { .bbs_header = &updated };
@@ -1973,6 +1894,23 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         fee = 0;
     }
     restore_abort_signals(&old_set);
+
+    if (!res.bbs_body_saved) {
+        // Not saved: the post was changed, deleted or replaced since the
+        // check above. Keep the edit as for a race there.
+        STRLCPY(fhdr->title, orig_title);
+        fhdr->multi.money = orig_money;
+        if (dashf(fpath)) {
+            char bufpath[PATHLEN];
+            setuserfile(bufpath, "buf.0");
+            Rename(fpath, bufpath);
+        }
+        outs("\n\n" ANSI_COLOR(1;31) "檔案全被其他人修改過，無法寫入。\n"
+             "新內容已存入您的暫存檔[0]。 請重新編輯。");
+        pressanykey();
+        return FULLUPDATE;
+    }
+    fhdr->modified = dasht4(genbuf);
 
     // The text is saved already; only the new title (and the modified
     // time) didn't make it into the .DIR.
@@ -1986,14 +1924,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // mark my self as "read this file".
     brc_addlist(fhdr->filename, fhdr->modified);
-
-    // tag revision history file to solve expire issue
-    if (rev > 0) {
-        char revfn[PATHLEN];
-        timecapsule_get_by_revision(genbuf, rev, revfn, sizeof(revfn));
-        if (dashf(revfn))
-            file_appendf(revfn, "\n" STR_POST_MARK "Last modified: %s", Cdatelite(&oldmt));
-    }
 
     return FULLUPDATE;
 }

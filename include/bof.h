@@ -111,6 +111,12 @@ typedef struct bof_post_version_t {
     uint64_t hash;
 } bof_post_version_t;
 
+/* The body of a post (post.body of Lemmy's GetPost) copied to dest_path,
+ * e.g. for editing, and its version. Errors: couldnt_find_post. */
+bof_error_t bof_bbs_get_post_body(const bof_post_ref_t *post,
+                                  const char *dest_path,
+                                  bof_post_version_t *ver);
+
 /* Lemmy's DeletePost: the creator deletes the post. */
 typedef struct bof_delete_post_t {
     bof_post_ref_t post;
@@ -171,19 +177,31 @@ typedef struct bof_create_post_t {
 typedef struct bof_post_response_t {
     /* If not NULL, gets the updated record of the post. */
     struct fileheader_t *bbs_header;
+    /* EditPost with a body: whether the body was saved (it may be, while
+     * the record could not be changed). */
+    int bbs_body_saved;
 } bof_post_response_t;
 
 bof_error_t bof_create_post(const bof_actor_t *actor,
                             const bof_create_post_t *req,
                             bof_post_response_t *out);
 
-/* Lemmy's EditPost. The body of a post is still written by the editor of
- * the UI; this changes its record. */
+/* Lemmy's EditPost: the title, the body, and (PTT) other fields of the
+ * record. */
 typedef struct bof_edit_post_t {
     bof_post_ref_t post;
     const char *name;          /* the new title; NULL or "": unchanged */
+    /* The body (Lemmy's body), as a file the editor wrote from the content
+     * of version bbs_body_version (see bof_bbs_get_post_body()); it is
+     * moved over the post, after the old one is kept in the time capsule
+     * and the lines appended since that version are added to it. NULL:
+     * unchanged. If the content has changed otherwise since that version,
+     * nothing changes (couldnt_update_post) and the file stays. */
+    const char *bbs_body_path;
+    const bof_post_version_t *bbs_body_version;
     /* PTT, for sysops and the editor: NULL or 0 leaves them unchanged. */
-    int32_t bbs_modified;      /* when the content was last changed */
+    int32_t bbs_modified;      /* when the content was last changed (with a
+                                * body: 0 for when it is saved) */
     const char *bbs_owner;     /* the author shown in the list */
     const char *bbs_date;      /* the date shown in the list */
     const int32_t *bbs_money;  /* fileheader_t.multi */
