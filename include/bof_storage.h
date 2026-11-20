@@ -129,11 +129,13 @@ typedef struct bof_storage_ops_t {
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time
- * capsule). It is used when no other was set. */
+ * capsule). It is used when no other was set, unless pttbbs.conf defines
+ * BOF_DEFAULT_STORAGE as another backend. */
 extern const bof_storage_ops_t bof_storage_files;
 
-/* Sets the backend, with the context its operations get; NULL: the files
- * backend again, when something is called. */
+/* Sets the backend, with the context its operations get; NULL: the
+ * default one (BOF_DEFAULT_STORAGE, or the files backend) again, when
+ * something is called. */
 void bof_storage_set(const bof_storage_ops_t *ops, void *ctx);
 
 /* As bof_storage_set(NULL, NULL). */

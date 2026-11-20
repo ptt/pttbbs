@@ -13,6 +13,15 @@
 #include <string.h>
 
 #include "bof.h"
+#include "bof_storage.h"
+
+/* The tests are of the files backend, even where pttbbs.conf names another
+ * default backend (BOF_DEFAULT_STORAGE). */
+__attribute__((constructor)) static void
+bof_test_use_files(void)
+{
+    bof_storage_set(&bof_storage_files, NULL);
+}
 
 extern int bof_test_failures;
 

@@ -170,6 +170,9 @@ test_files_by_default(void)
 
     // Nothing set: the files backend, which cannot delete comments.
     bof_storage_reset();
+    // pttbbs.conf names another default: set the files backend.
+    if (!IS_ENABLED(BOF_DEFAULT_STORAGE_IS_FILES))
+        bof_storage_set(&bof_storage_files, NULL);
     memset(&fh, 0, sizeof(fh));
     strlcpy(fh.filename, "M.42.A.000", sizeof(fh.filename));
     EXPECT_INT(bof_delete_comment(NULL, &req, &res),

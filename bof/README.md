@@ -123,7 +123,10 @@ keeping the BBS working exactly as before:
 3. **Comments, reports, modlog** *(done)*.
 4. **Listings** -- the post list and read records *(done)*.
 5. **Storage virtualization** -- the files backend behind it *(done)*;
-   the `post.svc` backend next.
+   `pttbbs.conf` picks the default backend (`BOF_DEFAULT_STORAGE`). The
+   `post.svc` backend lives where `post.svc` does (pttbbs.cmd): post.svc
+   is the database, and the files of the boards are its cache, which BoF
+   reads directly.
 6. **Communities** -- boards and moderators.
 7. **People** -- accounts in a database, with Lemmy person IDs.
 8. **Gateways** for Lemmy clients.

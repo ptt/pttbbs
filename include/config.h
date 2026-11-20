@@ -800,6 +800,14 @@
 #define BRC_MAXNUM      80
 #endif
 
+/* BOF_DEFAULT_STORAGE: the storage backend of BoF when none is set: the
+ * files backend unless pttbbs.conf (or CONFIG_POST_SVC above) names
+ * another. */
+#ifndef BOF_DEFAULT_STORAGE
+#define BOF_DEFAULT_STORAGE bof_storage_files
+#define BOF_DEFAULT_STORAGE_IS_FILES 1
+#endif
+
 #if defined(DEBUG) && !defined(CONFIG_DEBUG)
 #define CONFIG_DEBUG 1
 #endif

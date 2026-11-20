@@ -30,12 +30,15 @@ bof_storage_reset(void)
     bof_storage_set(NULL, NULL);
 }
 
-// The backend when none was set: the files backend.
+// The backend when none was set: BOF_DEFAULT_STORAGE (config.h), the
+// files backend unless pttbbs.conf names another (a bof_storage_ops_t
+// declared in bof_storage.h).
+
 static const bof_storage_ops_t *
 get_backend(void)
 {
     if (!backend)
-        bof_storage_set(&bof_storage_files, NULL);
+        bof_storage_set(&BOF_DEFAULT_STORAGE, NULL);
     return backend;
 }
 
