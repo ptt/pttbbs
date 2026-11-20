@@ -831,22 +831,6 @@ modlog_ask_reason(const char *bname, int y, char *reason, size_t sz)
     return modlog_ask_reason_as(bname, y, reason, sz, false, false);
 }
 
-// Asks at line y for a reason that is not put in the modlog, e.g. for posts
-// in the digest, where it is still used elsewhere. Returns the line below
-// it, or -1 if no reason was given.
-int
-modlog_ask_reason_unlogged(int y, char *reason, size_t sz)
-{
-    move(y, 0); clrtobot();
-    getdata(y + 1, 0, "請輸入理由(空白取消): ", reason, sz, DOECHO);
-    trim(reason);
-    if (!*reason) {
-        vmsg("未輸入理由，取消操作。");
-        return -1;
-    }
-    return y + 3;
-}
-
 // The usual reasons a board keeps in a file, one per line, for
 // modlog_ask_reason_list() to pick by number. Lines past these are kept
 // but not shown.

@@ -70,10 +70,7 @@ bof_actor_t mbbsd_actor(const char *bname, bool police);
 // the account, without a role for the modlog.
 bof_actor_t mbbsd_user_actor(void);
 void modlog_police(const char *bname, const char *reason, const bof_modlog_t *m);
-// Posts in the digest (g) are copies: changes to them are not recorded.
-#define MODLOG_FOR_POSTS() (!(currmode & MODE_DIGEST))
 int modlog_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
-int modlog_ask_reason_unlogged(int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
 int modlog_police_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
 int modlog_ask_reason_list(const char *bname, int y, char *reason, size_t sz,
                            const char *title, const char *fn,
@@ -764,6 +761,7 @@ int read_exec_noitem(read_noitem_func_t func, cmd_ctx_t *ctx);
     }
 struct PSB_CTX;
 void i_read(int cmdmode, const char *direct, void (*dotitle)(struct PSB_CTX *), void (*doentry)(int, fileheader_t *, struct PSB_CTX *), const cmd_t *rcmdlist, int bidcache) EXCLUDES_ABORT_BLOCK;
+void i_read_digest(int cmdmode, const char *direct, void (*dotitle)(struct PSB_CTX *), void (*doentry)(int, fileheader_t *, struct PSB_CTX *), const cmd_t *rcmdlist, const cmd_t *digest_cmdlist, int bidcache) EXCLUDES_ABORT_BLOCK;
 void fixkeep(const char *s, int first);
 keeploc_t *getkeep(const char *s, int def_topline, int def_cursline);
 void forward_file(const fileheader_t * fhdr, const char *direct) EXCLUDES_ABORT_BLOCK;

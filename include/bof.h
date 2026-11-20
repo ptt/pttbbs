@@ -110,7 +110,7 @@ struct fileheader_t;
  * bof checks that the record there is still the same post. */
 typedef struct bof_post_ref_t {
     const char *community;                  /* board name */
-    const char *bbs_dir;                    /* the list (.DIR, or the digest's) */
+    const char *bbs_dir;                    /* the list (.DIR) */
     int bbs_index;                          /* 1-based position in bbs_dir */
     const struct fileheader_t *bbs_header;  /* the record there */
 } bof_post_ref_t;
@@ -233,7 +233,7 @@ typedef struct bof_remove_posts_t {
     const char *reason;     /* may be NULL */
     /* PTT: the record of this action for the modlog of the board, written
      * when it is done (as Lemmy writes a mod_* row with the action), with
-     * the reason. NULL: not recorded (e.g. in the digest). */
+     * the reason. NULL: not recorded. */
     const struct bof_modlog_t *bbs_modlog;
 } bof_remove_posts_t;
 
@@ -363,7 +363,7 @@ typedef struct bof_lock_post_t {
     const char *reason;        /* may be NULL */
     /* PTT: the record of this action for the modlog of the board, written
      * when it is done (as Lemmy writes a mod_* row with the action), with
-     * the reason. NULL: not recorded (e.g. in the digest). */
+     * the reason. NULL: not recorded. */
     const struct bof_modlog_t *bbs_modlog;
 } bof_lock_post_t;
 
@@ -392,7 +392,7 @@ typedef struct bof_bbs_reset_post_score_t {
     const char *reason;        /* may be NULL */
     /* PTT: the record of this action for the modlog of the board, written
      * when it is done (as Lemmy writes a mod_* row with the action), with
-     * the reason. NULL: not recorded (e.g. in the digest). */
+     * the reason. NULL: not recorded. */
     const struct bof_modlog_t *bbs_modlog;
 } bof_bbs_reset_post_score_t;
 
@@ -414,7 +414,7 @@ typedef struct bof_bbs_mask_post_t {
     const char *reason;        /* may be NULL */
     /* PTT: the record of this action for the modlog of the board, written
      * when it is done (as Lemmy writes a mod_* row with the action), with
-     * the reason. NULL: not recorded (e.g. in the digest). */
+     * the reason. NULL: not recorded. */
     const struct bof_modlog_t *bbs_modlog;
 } bof_bbs_mask_post_t;
 
@@ -580,7 +580,7 @@ typedef struct bof_remove_comment_t {
     const char *reason;        /* may be NULL */
     /* PTT: the record of this action for the modlog of the board, written
      * when it is done (as Lemmy writes a mod_* row with the action), with
-     * the reason. NULL: not recorded (e.g. in the digest). */
+     * the reason. NULL: not recorded. */
     const struct bof_modlog_t *bbs_modlog;
 } bof_remove_comment_t;
 

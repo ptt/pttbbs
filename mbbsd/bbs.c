@@ -2261,6 +2261,24 @@ static const cmd_layer_t read_post_layers[] = {
     { NULL, NULL }
 };
 
+// Reading in the digest: copies of posts, which nothing changes (see
+// digest_comms).
+static const cmd_t read_digest_post_cmds[] = {
+    { 's', "切換看板", "搜尋並切換至其他看板", rp_cmd_selectbrd, PERM_BASIC, CMD_PRIO_LOW },
+    { 'S', NULL, NULL, rp_cmd_selectbrd, PERM_BASIC, CMD_PRIO_NONE },
+    { '#', "代碼搜尋", "以文章代碼(AID)搜尋文章", rp_cmd_selectaid, PERM_BASIC, CMD_PRIO_LOW },
+    { 'Q', "查詢資訊", "查詢文章代碼(AID)與檔案資訊", rp_cmd_query, 0, CMD_PRIO_LOW },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static const cmd_layer_t read_digest_post_layers[] = {
+    { read_digest_post_cmds, NULL },
+    { more_thread_nav_cmds, NULL },
+    { more_list_nav_cmds, NULL },
+    { more_reader_cmds, NULL },
+    { NULL, NULL }
+};
+
 static int
 read_post(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -2328,13 +2346,17 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
     // Real read.
     read_post_ctx_t rp = { .ent = ent, .fhdr = fhdr, .direct = direct };
-    if (live_bid > 0 && strstr(genbuf, "boards/")) {
+    // No live mode for copies in the digest: they take no comments.
+    if (live_bid > 0 && !(currmode & MODE_DIGEST) &&
+        strstr(genbuf, "boards/")) {
         rp.live.aid = fn2aidu(fhdr->filename);
         if (aidu_raw(rp.live.aid))
             rp.live.bid = (uint32_t)live_bid;
     }
     rp.live.start = rp.live.bid && live_check_repeat(rp.live.bid, rp.live.aid);
-    const more_hooks_t hooks = { .layers = read_post_layers,
+    const more_hooks_t hooks = { .layers = (currmode & MODE_DIGEST) ?
+                                     read_digest_post_layers :
+                                     read_post_layers,
                                  .title = "文章閱讀",
                                  .live = &rp.live, .ctx = &rp };
     more_result = more_ex(genbuf, YEA, &hooks);
@@ -2651,7 +2673,7 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     // Moderators changing posts of others are recorded in the modlog, shown
     // in a full screen form.
     bof_modlog_t log;
-    bool by_mod = currbid > 0 && MODLOG_FOR_POSTS() &&
+    bool by_mod = currbid > 0 &&
                   (allow >= 2 || !is_file_owner(fhdr, &cuser));
     int y_confirm = b_lines - 1;
     if (by_mod) {
@@ -3351,7 +3373,7 @@ del_range_post(int ent, fileheader_t * fhdr, char *direct)
     }
 
     ret = del_range(ent, fhdr, direct, direct,
-                    MODLOG_FOR_POSTS() ? currboard : NULL);
+                    currboard);
     if (ret == DIRCHANGED) {
         setbtotal(currbid);
         if (currbid > 0) {
@@ -3502,7 +3524,7 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
     // Moderators deleting posts of others must say why, for the modlog, but
     // not in the digest: those are copies, so the authors are not mailed
     // either.
-    int by_mod = not_owned && MODLOG_FOR_POSTS();
+    int by_mod = not_owned && !(currmode & MODE_DIGEST);
     // Copied as deleting may change the header.
     char log_reason[MODLOG_REASON_LEN] = "";
     char log_title[TTLEN + 1];
@@ -3679,7 +3701,17 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
 	};
 	bof_post_result_t res;
 	bof_error_t err;
-	if (not_owned) {
+	if (currmode & MODE_DIGEST) {
+	    // The digest lists copies of posts marked into it: taking one out
+	    // is not a change of the post (bof is not involved), and nothing is
+	    // archived or recorded.
+	    memset(&res, 0, sizeof(res));
+	    err = delete_fileheader(direct, fhdr, ent) == 0 ? BOF_OK :
+		BOF_ERR_COULDNT_UPDATE_POST;
+	    if (err == BOF_OK)
+		res.bbs_content_result = delete_file_content(direct, fhdr, NULL,
+							      NULL, 0);
+	} else if (not_owned) {
 	    // bof puts it in the modlog: as a bad post if asked, but not if
 	    // the content could not be archived (no bad post then).
 	    bof_modlog_t log_plain;
@@ -3710,7 +3742,8 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
             // delete the file reference in BN_ALLPOST, or delete all related
             // posts if we (SYSOP) are working in a special board like
             // BN_NEWIDPOST.
-            deleteCrossPost(fhdr, bp->brdname);
+            if (!(currmode & MODE_DIGEST))
+                deleteCrossPost(fhdr, bp->brdname);
 
             // Below the post shown on line 2, as the questions are done.
             move(4, 0); clrtobot();
@@ -3850,15 +3883,12 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 
 	int y = show_post_line(modlog_form(currboard, "鎖定文章"), NULL, ent,
 			       fhdr) + 1;
-	y = MODLOG_FOR_POSTS() ?
-	    modlog_police_ask_reason(currboard, y, genbuf, MODLOG_REASON_LEN) :
-	    modlog_ask_reason_unlogged(y, genbuf, MODLOG_REASON_LEN);
+	y = modlog_police_ask_reason(currboard, y, genbuf, MODLOG_REASON_LEN);
 	if (y < 0)
 	    return FULLUPDATE;
 	bof_modlog_add_post(bof_modlog_init(&log, "鎖定文章"), fhdr);
 	log.reason_audit_only = 1;
-	if (MODLOG_FOR_POSTS())
-	    y = modlog_police_preview(y, currboard, genbuf, &log) + 1;
+	y = modlog_police_preview(y, currboard, genbuf, &log) + 1;
 	char ans[3];
 	getdata(y, 0, "要將文章鎖定嗎(y/N)?", ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
@@ -3882,8 +3912,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 			       ent, fhdr) + 1;
 	bof_modlog_add_post(bof_modlog_init(&log, "解除鎖定文章"), fhdr);
 	log.reason_audit_only = 1;
-	if (MODLOG_FOR_POSTS())
-	    y = modlog_police_preview(y, currboard, NULL, &log) + 1;
+	y = modlog_police_preview(y, currboard, NULL, &log) + 1;
 	char ans[3];
 	getdata(y, 0, "要將文章鎖定解除嗎(y/N)?", ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
@@ -3900,7 +3929,7 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
         .post = bof_ref(direct, ent, &orig),
         .locked = orig.filename[0] == 'M',
         .reason = genbuf,  // "" to unlock
-        .bbs_modlog = MODLOG_FOR_POSTS() ? &log : NULL,
+        .bbs_modlog = &log,
     };
     bof_post_response_t res = { .bbs_header = fhdr };
     if (bof_lock_post(&me, &req, &res) != BOF_OK) {
@@ -3983,12 +4012,10 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     bof_modlog_add_post(&log, fhdr);
     int y = show_post_line(modlog_form(currboard, "推薦值歸零"), NULL, ent,
                            fhdr) + 1;
-    if (MODLOG_FOR_POSTS()) {
-        if ((y = modlog_ask_reason(currboard, y, log_reason,
-                                   sizeof(log_reason))) < 0)
-            return FULLUPDATE;
-        y = modlog_preview(y, currboard, log_reason, &log) + 1;
-    }
+    if ((y = modlog_ask_reason(currboard, y, log_reason,
+                               sizeof(log_reason))) < 0)
+        return FULLUPDATE;
+    y = modlog_preview(y, currboard, log_reason, &log) + 1;
     getdata(y, 0, "確定要推薦歸零[y/N]? ", yn, 3, LCECHO);
     if (yn[0] != 'y')
 	return FULLUPDATE;
@@ -3996,7 +4023,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
     bof_actor_t me = bof_me();
     bof_bbs_reset_post_score_t req = {
         .post = bof_ref(direct, ent, fhdr), .reason = log_reason,
-        .bbs_modlog = MODLOG_FOR_POSTS() ? &log : NULL,
+        .bbs_modlog = &log,
     };
     bof_post_response_t res = { .bbs_header = fhdr };
     if (bof_bbs_reset_post_score(&me, &req, &res) != BOF_OK)
@@ -4646,17 +4673,14 @@ mask_post_content(int ent, fileheader_t * fhdr,
                        fhdr);
     mvprints(y, 0, "刪除文字: %s (共 %d 行)", pattern, found);
     // The reason is also put in the post.
-    y = MODLOG_FOR_POSTS() ?
-        modlog_ask_reason(currboard, y + 1, reason, sizeof(reason)) :
-        modlog_ask_reason_unlogged(y + 1, reason, sizeof(reason));
+    y = modlog_ask_reason(currboard, y + 1, reason, sizeof(reason));
     if (y < 0)
         return FULLUPDATE;
     bof_modlog_t log;
     bof_modlog_add_post(bof_modlog_init(&log, "刪除文章特定文字"), fhdr);
     // What was removed, for the audit record.
     bof_modlog_add_audit(&log, "樣式", "%s", pattern);
-    if (MODLOG_FOR_POSTS())
-        y = modlog_preview(y, currboard, reason, &log) + 1;
+    y = modlog_preview(y, currboard, reason, &log) + 1;
 
     // The post may change before the answer: bof masks what it has then.
     getdata(y, 0, "確定要刪除這些內容嗎? [y/N]: ", ans, sizeof(ans), LCECHO);
@@ -4668,7 +4692,7 @@ mask_post_content(int ent, fileheader_t * fhdr,
     bof_actor_t me = bof_me();
     bof_bbs_mask_post_t req = {
         .post = bof_ref(direct, ent, fhdr), .pattern = pattern,
-        .reason = reason, .bbs_modlog = MODLOG_FOR_POSTS() ? &log : NULL,
+        .reason = reason, .bbs_modlog = &log,
     };
     switch (bof_bbs_mask_post(&me, &req, NULL)) {
     case BOF_OK:
@@ -4908,6 +4932,28 @@ const cmd_t read_comms[] = {
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
+// The digest lists copies of posts marked into it: moderators can only take
+// them out (d); nothing else changes them, nor posts from there.
+static const cmd_t digest_comms[] = {
+    { KEY_RIGHT, "閱讀", "閱讀選取的文章", bbs_cmd_read_post, 0, CMD_PRIO_NORM, true },
+    { KEY_ENTER, NULL, NULL, bbs_cmd_read_post, 0, CMD_PRIO_NONE, true },
+    { 'r', NULL, NULL, bbs_cmd_read_post, 0, CMD_PRIO_NONE, true },
+    { 'l', NULL, NULL, bbs_cmd_read_post, 0, CMD_PRIO_NONE, true },
+    { KEY_TAB, "離開文摘", "離開文摘模式", bbs_cmd_board_digest, 0, CMD_PRIO_HIGH },
+    { 'z', "精華區", "進入看板精華區", bbs_cmd_man, 0, CMD_PRIO_NORM },
+    { 's', "選擇看板", "搜尋並切換至其他看板", bbs_cmd_select_board, 0, CMD_PRIO_NORM },
+    { 'b', "進板", "查看進板畫面與備忘錄", bbs_cmd_notes, 0, CMD_PRIO_NORM },
+    { 'B', NULL, NULL, bbs_cmd_notes, 0, CMD_PRIO_NONE },
+    { 'd', "刪除", "自文摘移除選取的文章", bbs_cmd_del_post, PERM_BM, CMD_PRIO_HIGH, true },
+    { 'v', "已讀/未讀", "切換文章已讀或未讀狀態", bbs_cmd_mark_read, 0, CMD_PRIO_LOW, true },
+    { Ctrl('Y'), NULL, "查詢目前位置", bbs_cmd_whereami, 0, CMD_PRIO_NONE },
+    { Ctrl('W'), NULL, NULL, bbs_cmd_whereami, 0, CMD_PRIO_NONE },
+    { 'F', NULL, "轉寄文章至信箱", bbs_cmd_forward_post, PERM_FORWARD, CMD_PRIO_NONE, true },
+    { 'Q', NULL, "查詢文章詳細資訊", bbs_cmd_view_postinfo, 0, CMD_PRIO_NONE, true },
+    { Ctrl('A'), NULL, "顯示文章檔名", bbs_cmd_show_filename, PERM_SYSOP, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
 /* Says why enter_board() failed. */
 static void
 say_enter_failed(int enter_ret)
@@ -4954,7 +5000,8 @@ Read(void)
 		      nreports);
 	}
 	bnote_lastbid = currbid;
-	i_read(READING, currdirect, readtitle, readdoent, read_comms,
+	i_read_digest(READING, currdirect, readtitle, readdoent, read_comms,
+		      digest_comms,
 	       currbid);
 	currmode &= ~MODE_POSTCHECKED;
 	brc_update();

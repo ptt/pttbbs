@@ -107,6 +107,9 @@ TagPruner(int bid)
     char direct[PATHLEN];
 
     assert(bid >= 0);   /* bid == 0 means in mailbox */
+    // The digest takes posts out one by one (d) only.
+    if (currmode & MODE_DIGEST)
+        return DONOTHING;
     if (bid && currstat != RMAIL){
 	bp = getbcache(bid);
 	if (is_readonly_board(bp->brdname))
@@ -122,9 +125,7 @@ TagPruner(int bid)
     if (IsEmptyTagList() || (currstat == READING && !CBRD_IS_BM()))
         return DONOTHING;
     int ntagged = TagCount();
-    const char *kind = (currmode & MODE_DIGEST) ? "文摘" : "文章";
-    // On boards: which posts, to mail them back (not for digests) and for
-    // the audit record.
+    // On boards: which posts, to mail them back and for the audit record.
     tag_prune_list_t list = { NULL, 0, 0, 0 };
     int mail_back = 0;
     if (bp) {
@@ -135,24 +136,21 @@ TagPruner(int bid)
             return FULLUPDATE;
         }
         apply_fileheader(direct, _iter_collect_tagged, &list);
-        if (!(currmode & MODE_DIGEST))
-            ntagged = list.n;
-        mail_back = !(currmode & MODE_DIGEST) &&
-                    list.n <= TAG_PRUNE_MAIL_MAX;
+        ntagged = list.n;
+        mail_back = list.n <= TAG_PRUNE_MAIL_MAX;
     }
 
-    // Moderators must say why, for the modlog, in a full screen form (not in
-    // the digest, see MODLOG_FOR_POSTS()).
-    bool log_it = bp && MODLOG_FOR_POSTS();
+    // Moderators must say why, for the modlog, in a full screen form.
+    bool log_it = bp != NULL;
     char log_reason[MODLOG_REASON_LEN] = "";
     int y = b_lines;
     if (log_it) {
         y = modlog_form(bp->brdname, "移除標記文章");
-        mvprints(y, 0, "共標記 %d 篇%s。", ntagged, kind);
+        mvprints(y, 0, "共標記 %d 篇文章。", ntagged);
         if (mail_back)
             mvouts(y + 1, 0, ANSI_COLOR(1;32) "移除後，原文會寄回各作者的信箱"
                    "(您自己的或作者帳號已不存在的除外)。" ANSI_RESET);
-        else if (!(currmode & MODE_DIGEST))
+        else
             mvprints(y + 1, 0, ANSI_COLOR(1;33) "超過 %d 篇，不會寄回原文。"
                      ANSI_RESET, TAG_PRUNE_MAIL_MAX);
         if ((y = modlog_ask_reason(bp->brdname, y + 3, log_reason,
@@ -191,7 +189,7 @@ TagPruner(int bid)
 
     // What was removed, or -1 when it could not be.
     int nremoved = ntagged;
-    if (bp && !(currmode & MODE_DIGEST)) {
+    if (bp) {
         // Posts on a board: archived and removed by bof, leaving tombstones
         // on boards with many readers, and put in the modlog.
         bof_modlog_t log;
@@ -224,7 +222,7 @@ TagPruner(int bid)
             nremoved = -1;
         free(posts);
     } else {
-        // The mailbox and digests (not in bof): first, delete and backup
+        // The mailbox (not in BoF): first, delete and backup
         // all files, then the records.
         apply_fileheader(direct, _iter_delete_tagged, direct);
         delete_range(currdirect, 0, 0);
@@ -236,8 +234,7 @@ TagPruner(int bid)
         if (nremoved < 0)
             vmsg("移除失敗，請重新進入看板後再試一次。");
         else if (mailed)
-            vmsgf("已移除 %d 篇%s，並寄回 %d 封原文。", nremoved, kind,
-                  mailed);
+            vmsgf("已移除 %d 篇文章，並寄回 %d 封原文。", nremoved, mailed);
     }
     if (bid) {
         setbtotal(bid);
@@ -348,6 +345,8 @@ read_view_p2v(const read_view_t *view, int p_recno) {
 
 typedef struct {
     const cmd_t    *rcmdlist;
+    const cmd_t    *digest_cmdlist;     // in the digest, if not NULL
+    cmd_layer_t    *cmd_layer;          // the layer of rcmdlist in psb_main
     keeploc_t      *locmem;
     keeploc_t       sr_locmem;
     int             cmdmode;
@@ -1757,6 +1756,14 @@ read_exec_item(read_item_func_t func, cmd_ctx_t *ctx) {
     }
 }
 
+// The commands of the list: in the digest (MODE_DIGEST), its own.
+static const cmd_t *
+read_cmdlist(const read_ctx_t *cx)
+{
+    return (currmode & MODE_DIGEST) && cx->digest_cmdlist ?
+        cx->digest_cmdlist : cx->rcmdlist;
+}
+
 static const char *
 i_read_caption(void)
 {
@@ -1776,7 +1783,7 @@ read_header(PSB_CTX *psbctx)
     if (cx->dotitle)
         (*cx->dotitle)(psbctx);
     const cmd_layer_t layers[] = {
-        { cx->rcmdlist,     NULL },
+        { read_cmdlist(cx), NULL },
         { read_common_cmds, NULL },
         { read_nav_cmds,    NULL },
         { bbs_global_cmds,  NULL },
@@ -1792,7 +1799,7 @@ read_footer(PSB_CTX *psbctx)
 {
     read_ctx_t *cx = (read_ctx_t *)psbctx->cmd.priv;
     const cmd_layer_t layers[] = {
-        { cx->rcmdlist,     NULL },
+        { read_cmdlist(cx), NULL },
         { read_common_cmds, NULL },
         { read_nav_cmds,    NULL },
         { bbs_global_cmds,  NULL },
@@ -1872,6 +1879,9 @@ read_loader(PSB_CTX *psbctx)
 
     setutmpmode(cx->cmdmode);
     psbctx->cmd.caption = i_read_caption();
+    // Entering or leaving the digest changes the commands.
+    if (cx->cmd_layer)
+        cx->cmd_layer->cmds = read_cmdlist(cx);
 
     if (psbctx->cmd.reload) {
         if (currmode & MODE_SELECT) {
@@ -2018,6 +2028,17 @@ i_read(int cmdmode, const char *direct, void (*dotitle)(PSB_CTX *),
        void (*doentry)(int, fileheader_t *, PSB_CTX *), const cmd_t *rcmdlist,
        int bidcache)
 {
+    i_read_digest(cmdmode, direct, dotitle, doentry, rcmdlist, NULL,
+                  bidcache);
+}
+
+// i_read() with other commands (digest_cmdlist) in the digest of a board.
+void
+i_read_digest(int cmdmode, const char *direct, void (*dotitle)(PSB_CTX *),
+              void (*doentry)(int, fileheader_t *, PSB_CTX *),
+              const cmd_t *rcmdlist, const cmd_t *digest_cmdlist,
+              int bidcache)
+{
     char            currdirect0[PATHLEN];
     int             last_line0 = last_line;
     fileheader_t   *headers0 = headers;
@@ -2038,6 +2059,7 @@ i_read(int cmdmode, const char *direct, void (*dotitle)(PSB_CTX *),
 
     read_ctx_t cx = {
         .rcmdlist = rcmdlist,
+        .digest_cmdlist = digest_cmdlist,
         .locmem = NULL,
         .cmdmode = cmdmode,
         .bid = currbid,
@@ -2052,12 +2074,13 @@ i_read(int cmdmode, const char *direct, void (*dotitle)(PSB_CTX *),
     };
 
     cmd_layer_t layers[] = {
-        { rcmdlist,         &cx },
+        { read_cmdlist(&cx), &cx },
         { read_common_cmds, &cx },
         { read_nav_cmds,    &cx },
         { bbs_global_cmds,  NULL },
         { NULL, NULL }
     };
+    cx.cmd_layer = &layers[0];
 
     PSB_CTX psbctx = {
         .cmd = {
