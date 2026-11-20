@@ -61,6 +61,22 @@ bof_bbs_is_moderator(const bof_person_t *p, const bof_community_t *c)
     return 0;
 }
 
+int
+bof_bbs_may_moderate(const bof_person_t *p, const bof_community_t *c)
+{
+    if (!p || !c)
+        return 0;
+    if (p->admin || has_perm(p, PERM_SYSOP))
+        return 1;
+    // As mbbsd gives the moderator mode (MODE_BM) on entering a board.
+    if (has_perm(p, PERM_NOCITIZEN))
+        return 0;
+    if (has_perm(p, PERM_BOARDS) || bof_bbs_is_moderator(p, c))
+        return 1;
+    return c->nmoderators == 0 &&
+        (bof_bbs_group_roles(p, c) & BOF_BBS_GROUP_OP) != 0;
+}
+
 int32_t
 bof_bbs_muted_until(const bof_person_t *p, const bof_community_t *c)
 {
@@ -105,7 +121,8 @@ bof_bbs_can_read(const bof_person_t *p, const bof_community_t *c,
         if (c->bbs_attr & BRD_POSTMASK)
             return deny(rule, BOF_BBS_RULE_HIDDEN,
                         BOF_ERR_COULDNT_FIND_COMMUNITY);
-        return allow(rule);
+        // Allowed, but told: the lists of the BBS treat it apart.
+        return deny(rule, BOF_BBS_RULE_HIDDEN, BOF_OK);
     }
     if ((c->bbs_attr & BRD_OVER18) && !(p && p->bbs_over_18))
         return deny(rule, BOF_BBS_RULE_ADULTS_ONLY, BOF_ERR_BBS_NOT_ALLOWED);

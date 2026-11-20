@@ -148,11 +148,35 @@ test_rules(void)
     other.bbs_over_18 = 1;
     EXPECT_OK(bof_bbs_can_read(&other, &alpha, &rule));
     EXPECT_OK(bof_bbs_can_read(&mod, &alpha, NULL));
+    EXPECT_INT(rule, BOF_BBS_RULE_NONE);
+    // A hidden board that does not hide its posts: read, but told.
+    EXPECT_OK(bof_bbs_can_read(&other, &hidden, &rule));
+    EXPECT_INT(rule, BOF_BBS_RULE_HIDDEN);
+    // The same by its place in the board cache, without the ID.
+    bof_community_t at;
+    EXPECT_OK(bof_bbs_get_community_at(2, &at));
+    EXPECT_STR(at.name, "Hidden");
+    EXPECT_INT(at.bbs_id, 2);
+    EXPECT(at.id == 0);
+    EXPECT_INT(bof_bbs_get_community_at(0, &at),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+    EXPECT_INT(bof_bbs_get_community_at(MAX_BOARD + 1, &at),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+    // The rules by the place, as the lists check every board.
+    EXPECT_OK(bof_bbs_can_read_at(&other, 2, &rule));
+    EXPECT_INT(rule, BOF_BBS_RULE_HIDDEN);
+    EXPECT_OK(bof_bbs_can_read_at(&other, 1, &rule));
+    EXPECT_INT(rule, BOF_BBS_RULE_NONE);
+    EXPECT_INT(bof_bbs_can_read_at(&other, 0, &rule),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+    EXPECT_INT(rule, BOF_BBS_RULE_NO_COMMUNITY);
     bcache[1].brdattr |= BRD_POSTMASK;
     bof_get_community("Hidden", &hidden);
     EXPECT_INT(bof_bbs_can_read(&other, &hidden, &rule),
                BOF_ERR_COULDNT_FIND_COMMUNITY);
     EXPECT_INT(rule, BOF_BBS_RULE_HIDDEN);
+    EXPECT_INT(bof_bbs_can_read_at(&other, 2, &rule),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
 
     // Posting: verified accounts; the limits of the board, which its
     // moderators pass.
@@ -215,6 +239,57 @@ test_rules(void)
     bof_storage_reset();
 }
 
+// Groups: Top (bid 3, right under the root), Sub in it (bid 4), and the
+// board Leaf in Sub (bid 5), without moderators of its own.
+static void
+test_group_roles(void)
+{
+    bof_community_t leaf;
+    bof_person_t lead = person("lead", PERM_BASIC | PERM_LOGINOK, 1700000000);
+    bof_person_t op = person("op", PERM_BASIC | PERM_LOGINOK, 1600000000);
+    bof_person_t admin = person("admin", PERM_BASIC | PERM_LOGINOK |
+                                PERM_BOARDS, 1500000000);
+
+    op.bbs_local_user = (uint64_t)1600000000 << 32 | 6;
+    admin.bbs_local_user = (uint64_t)1500000000 << 32 | 7;
+    strlcpy(bcache[2].brdname, "Top", sizeof(bcache[2].brdname));
+    bcache[2].brdattr = BRD_GROUPBOARD;
+    bcache[2].gid = 1;
+    bcache[2].moderators[0].unum = 5;
+    bcache[2].moderators[0].firstlogin = 1700000000;
+    strlcpy(bcache[3].brdname, "Sub", sizeof(bcache[3].brdname));
+    bcache[3].brdattr = BRD_GROUPBOARD;
+    bcache[3].gid = 3;
+    bcache[3].moderators[0].unum = 6;
+    strlcpy(bcache[4].brdname, "Leaf", sizeof(bcache[4].brdname));
+    bcache[4].gid = 4;
+    EXPECT_OK(bof_bbs_get_community_at(5, &leaf));
+
+    // The lead of Top leads and operates; the operator of Sub operates.
+    EXPECT_INT(bof_bbs_group_roles(&lead, &leaf),
+               BOF_BBS_GROUP_OP | BOF_BBS_GROUP_LEAD);
+    EXPECT_INT(bof_bbs_group_roles(&op, &leaf), BOF_BBS_GROUP_OP);
+    EXPECT_INT(bof_bbs_group_roles(&admin, &leaf), 0);
+    EXPECT_INT(bof_bbs_is_moderator(&op, &leaf), 0);
+    // So they moderate Leaf while it has no moderators; board admins always.
+    EXPECT_INT(bof_bbs_may_moderate(&op, &leaf), 1);
+    EXPECT_INT(bof_bbs_may_moderate(&lead, &leaf), 1);
+    EXPECT_INT(bof_bbs_may_moderate(&admin, &leaf), 1);
+    bcache[4].moderators[0].unum = 8;
+    EXPECT_OK(bof_bbs_get_community_at(5, &leaf));
+    EXPECT_INT(bof_bbs_may_moderate(&op, &leaf), 0);
+    EXPECT_INT(bof_bbs_may_moderate(&admin, &leaf), 1);
+    // Not for those who may not be moderators.
+    bcache[4].moderators[0].unum = 0;
+    EXPECT_OK(bof_bbs_get_community_at(5, &leaf));
+    op.bbs_perms |= PERM_NOCITIZEN;
+    EXPECT_INT(bof_bbs_group_roles(&op, &leaf), 0);
+    EXPECT_INT(bof_bbs_may_moderate(&op, &leaf), 0);
+    // A group that does not list its boards ends the chain.
+    bcache[3].brdattr |= BRD_SYMBOLIC;
+    EXPECT_INT(bof_bbs_group_roles(&lead, &leaf), 0);
+}
+
 int
 main(void)
 {
@@ -222,6 +297,7 @@ main(void)
     RUN(test_communities);
     RUN(test_persons);
     RUN(test_rules);
+    RUN(test_group_roles);
     free(SHM);
     return bof_test_report();
 }

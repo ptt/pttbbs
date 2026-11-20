@@ -169,6 +169,12 @@ typedef struct bof_community_t {
  * process of the BBS attaches it). Errors: couldnt_find_community. */
 bof_error_t bof_get_community(const char *name, bof_community_t *out);
 
+/* PTT: the same by its place in the board cache (bbs_id, 1-based), for a
+ * user interface going through all of them (the lists of boards); its id
+ * is left 0, as the backend may have to be asked (bof_bbs_community_id()).
+ * Errors: couldnt_find_community. */
+bof_error_t bof_bbs_get_community_at(int bbs_id, bof_community_t *out);
+
 /* Lemmy's ListCommunities, in the order of the board cache, page by page;
  * hidden boards and boards with a reading level only if bbs_all (the
  * caller then checks bof_bbs_can_read() for whom it lists them). */
@@ -223,11 +229,39 @@ typedef enum bof_bbs_rule_t {
 int bof_bbs_is_moderator(const bof_person_t *person,
                          const bof_community_t *community);
 
+/* PTT: the groups of boards (a board is in a group, and groups in groups)
+ * have moderators too, as Discourse's category moderators (Lemmy has no
+ * groups of communities). What person is by moderating a group community
+ * is in (a group that lists its boards, up the chain): a group operator
+ * (BOF_BBS_GROUP_OP), and also a group lead (BOF_BBS_GROUP_LEAD) for a
+ * group right under the root of the classes; 0 if neither. */
+#define BOF_BBS_GROUP_OP    (1)
+#define BOF_BBS_GROUP_LEAD  (2)
+int bof_bbs_group_roles(const bof_person_t *person,
+                        const bof_community_t *community);
+
+/* PTT: whether person may moderate community: an admin (sysop) or board
+ * admin (PERM_BOARDS), one of its moderators, or a group operator of it
+ * (bof_bbs_group_roles()) while it has no moderators of its own, as the
+ * BBS gives the moderator mode. bof checks this for an actor with a
+ * person (not_a_moderator). */
+int bof_bbs_may_moderate(const bof_person_t *person,
+                         const bof_community_t *community);
+
 /* PTT: whether person may read community. Errors: couldnt_find_community
- * (hidden), bbs_not_allowed; *rule (if not NULL) tells which rule. */
+ * (hidden), bbs_not_allowed; *rule (if not NULL) tells which rule. When
+ * allowed, *rule is BOF_BBS_RULE_HIDDEN if only because the hidden board
+ * does not hide its posts (BRD_HIDE without BRD_POSTMASK; not a friend of
+ * it), else BOF_BBS_RULE_NONE. */
 bof_error_t bof_bbs_can_read(const bof_person_t *person,
                              const bof_community_t *community,
                              bof_bbs_rule_t *rule);
+
+/* PTT: the same for the community at bbs_id in the board cache (as
+ * bof_bbs_get_community_at()), filling only what the rules read: for
+ * the lists of boards, which check every board. */
+bof_error_t bof_bbs_can_read_at(const bof_person_t *person, int bbs_id,
+                                bof_bbs_rule_t *rule);
 
 /* PTT: whether person may post in community, by its permissions (the
  * board's attributes and level, muting, tickets) and by the limits of the

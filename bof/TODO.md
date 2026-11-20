@@ -90,8 +90,9 @@ what BoF does only in part. See `README.md` for what BoF is.
   Mails, the digest and the announcement area are not posts of a board
   and keep their files.
 - **The rules of the BBS** (`policy.c`): mbbsd takes posting permission,
-  the limits of boards and closed comments from them. Still its own: who
-  may read a board in the lists (`HasBoardPerm`, for speed over thousands
-  of boards) and the moderators by the modes of the session
-  (`CBRD_IS_BM`: group operators); `bof_list_reports` has no actor to
+  the limits of boards, closed comments and who may read a board
+  (`HasBoardPerm`) from them. The moderator mode of a session
+  (`CBRD_IS_BM`) is still mbbsd's: a group operator gets it only after
+  entering through the group, where bof (`bof_bbs_may_moderate()`) goes
+  by the groups the board is in; `bof_list_reports` has no actor to
   check.

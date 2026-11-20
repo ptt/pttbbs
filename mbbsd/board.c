@@ -169,53 +169,68 @@ save_brdbuf(void)
     fav_free();
 }
 
+// Whether the user may read bptr, by the rules of bof (bof_bbs_can_read()),
+// sysops passing only if with_sysop: 0 (no), 1 (yes), or 2 (NBRD_BOARD) if
+// only as a hidden board that does not hide its posts (not as a friend of
+// it), which the lists treat apart.
+// mbbsd_person() for board_perm(), which the lists call for every board:
+// built again only when what the rules of reading look at changes.
+static const bof_person_t *
+list_person(void)
+{
+    static bof_person_t me;
+    static int me_usernum = -1, me_over_18;
+    static uint32_t me_level;
+    static time4_t me_firstlogin;
+
+    if (me_usernum != usernum || me_level != cuser.userlevel ||
+        me_firstlogin != cuser.firstlogin ||
+        me_over_18 != cuser.over_18) {
+        me = mbbsd_person();
+        me_usernum = usernum;
+        me_level = cuser.userlevel;
+        me_firstlogin = cuser.firstlogin;
+        me_over_18 = cuser.over_18;
+    }
+    return &me;
+}
+
+static int
+board_perm(const boardheader_t *bptr, int with_sysop)
+{
+    bof_bbs_rule_t rule;
+
+    // Sysops read every board, as bof_bbs_can_read() lets them: not
+    // asked for each board of a list.
+    if (with_sysop && HasUserPerm(PERM_SYSOP))
+        return 1;
+    bof_person_t me = *list_person();
+
+    // An empty slot (a deleted board) passes, as it always did.
+    if (!bptr->brdname[0])
+        return 1;
+    if (!with_sysop)
+        me.bbs_perms &= ~PERM_SYSOP;
+    if (bof_bbs_can_read_at(&me, (int)(bptr - bcache) + 1, &rule) !=
+        BOF_OK) {
+        // Without the shortcut of sysops, PERM_SYSOP still counts
+        // for the level of the board, as HasUserPerm() does.
+        return !with_sysop && rule == BOF_BBS_RULE_LEVEL &&
+            HasUserPerm(bptr->level);
+    }
+    return rule == BOF_BBS_RULE_HIDDEN ? 2 : 1;
+}
+
 static int
 HasBoardPermNormally(boardheader_t *bptr)
 {
-    register int    level, brdattr;
-
-    level = bptr->level;
-    brdattr = bptr->brdattr;
-
-    // allow POLICE to enter BM boards
-    if ((level & PERM_BM) &&
-	(HasUserPerm(PERM_POLICE) || HasUserPerm(PERM_POLICE_MAN)))
-	return 1;
-
-    /* 板主 */
-    if( is_board_moderator(bptr - bcache + 1) ) /* XXXbid */
-	return 1;
-
-    /* 祕密看板：核對首席板主的好友名單 */
-    if (brdattr & BRD_HIDE) {	/* 隱藏 */
-	if (!is_hidden_board_friend((int)(bptr - bcache) + 1, currutmp->uid)) {
-	    if (brdattr & BRD_POSTMASK)
-		return 0;
-	    else
-		return 2;  // What's this?
-	} else
-	    return 1;
-    }
-
-    // TODO Change this to a query on demand.
-    /* 十八禁看板 */
-    if( (brdattr & BRD_OVER18) && !cuser.over_18 )
-	return 0;
-
-    /* 限制閱讀權限 */
-    if (level && !(brdattr & BRD_POSTMASK) && !HasUserPerm(level))
-	return 0;
-
-    return 1;
+    return board_perm(bptr, 0);
 }
 
 int
 HasBoardPerm(boardheader_t *bptr)
 {
-    if (HasUserPerm(PERM_SYSOP))
-	return 1;
-
-    return HasBoardPermNormally(bptr);
+    return board_perm(bptr, 1);
 }
 
 int

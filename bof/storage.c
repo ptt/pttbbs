@@ -110,12 +110,12 @@ check_actor(const bof_actor_t *actor, const char *community, may_t may,
     case MAY_COMMENT:
         return bof_bbs_can_comment(p, &c, post, NULL);
     case MAY_EDIT:
-        if (p->admin || bof_bbs_is_moderator(p, &c) ||
+        if (bof_bbs_may_moderate(p, &c) ||
             (post && strcasecmp(post->owner, p->name) == 0))
             return BOF_OK;
         return BOF_ERR_NO_POST_EDIT_ALLOWED;
     case MAY_MODERATE:
-        return p->admin || bof_bbs_is_moderator(p, &c) ? BOF_OK :
+        return bof_bbs_may_moderate(p, &c) ? BOF_OK :
             BOF_ERR_NOT_A_MODERATOR;
     }
     return BOF_ERR_UNKNOWN;
