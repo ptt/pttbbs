@@ -74,6 +74,9 @@ bof_error_t bof_fs_get_post_revisions(void *ctx, const bof_post_ref_t *post,
 bof_error_t bof_fs_get_post_revision_file(void *ctx,
                                           const bof_post_ref_t *post, int rev,
                                           char *path, size_t sz);
+bof_error_t bof_fs_list_post_revisions(
+    void *ctx, const bof_bbs_list_post_revisions_t *req,
+    bof_bbs_list_post_revisions_response_t *out);
 bof_error_t bof_fs_list_removed_posts(
     void *ctx, const bof_bbs_list_removed_posts_t *req,
     bof_bbs_list_removed_posts_response_t *out);

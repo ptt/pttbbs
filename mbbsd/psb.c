@@ -1996,6 +1996,10 @@ typedef struct {
     int rev_base;
     int base_as_current;
     time4_t *timestamps;
+    // What bof knows of the versions of a post (from rev_base on): when
+    // and by whom, so the list needs not fetch each version.
+    bof_bbs_post_revision_t *revs;
+    int nrevs;
 } pveh_ctx;
 
 static int
@@ -2027,7 +2031,14 @@ pveh_renderer(int i, PSB_CTX *ctx) {
     pveh_ctx *cx = (pveh_ctx*) ctx->cmd.priv;
     int curr = ctx->cmd.curr, total = ctx->cmd.total;
     int rev = total - i; // i/curr = 0 based, rev = 1 based
+    const bof_bbs_post_revision_t *r = NULL;
 
+    if (!(cx->base_as_current && i == 0) && cx->revs &&
+        rev - 1 >= 0 && rev - 1 < cx->nrevs)
+        r = &cx->revs[rev - 1];
+    if (cx->timestamps[i] == 0 && r && r->edited_at) {
+        cx->timestamps[i] = r->edited_at;
+    }
     if (cx->timestamps[i] == 0) {
         pveh_solve_rev_filename(rev, i, fname, sizeof(fname), cx);
         ftime = dasht4(fname);
@@ -2055,7 +2066,11 @@ pveh_renderer(int i, PSB_CTX *ctx) {
         outs("[目前版本]");
     else
         prints("#%09d", rev + cx->rev_base);
-    prints("  時間: %-*s" ANSI_RESET, t_columns - 31, subject);
+    if (r && r->editor[0]) {
+        prints("  修改者: %-12s", r->editor);
+        prints("  時間: %-*s" ANSI_RESET, t_columns - 53, subject);
+    } else
+        prints("  時間: %-*s" ANSI_RESET, t_columns - 31, subject);
     return 0;
 }
 
@@ -2180,7 +2195,25 @@ psb_view_edit_history(const char *community, const char *dir,
     // load on demand!
     memset(pvehctx.timestamps, 0, sizeof(time4_t) * ctx.cmd.total);
 
+    // Of a post, what bof knows of its versions, all at once.
+    if (community && maxrev > pvehctx.rev_base &&
+        (pvehctx.revs = calloc(maxrev - pvehctx.rev_base,
+                               sizeof(*pvehctx.revs)))) {
+        bof_bbs_list_post_revisions_t req = {
+            .post = {
+                .community = community, .bbs_dir = dir, .bbs_header = fh,
+            },
+            .start = pvehctx.rev_base, .limit = maxrev - pvehctx.rev_base,
+        };
+        bof_bbs_list_post_revisions_response_t res = {
+            .revisions = pvehctx.revs,
+        };
+        if (bof_bbs_list_post_revisions(&req, &res) == BOF_OK)
+            pvehctx.nrevs = res.count;
+    }
+
     psb_main(&ctx);
+    free(pvehctx.revs);
     free(pvehctx.timestamps);
     return pvehctx.leave_for_recycle_bin;
 }

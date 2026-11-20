@@ -511,6 +511,29 @@ bof_fs_get_post_revision_file(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
 }
 
 bof_error_t
+bof_fs_list_post_revisions(void *ctx GCC_UNUSED,
+                           const bof_bbs_list_post_revisions_t *req,
+                           bof_bbs_list_post_revisions_response_t *out)
+{
+    char base[PATHLEN], path[PATHLEN];
+    int total;
+
+    setdirpath(base, req->post.bbs_dir, req->post.bbs_header->filename);
+    total = timecapsule_get_max_revision_number(base);
+    out->bbs_total = total > 0 ? total : 0;
+    // The files keep only the content: the time is that of its file.
+    for (int i = req->start; i < out->bbs_total && out->count < req->limit;
+         i++) {
+        bof_bbs_post_revision_t *r = &out->revisions[out->count++];
+        memset(r, 0, sizeof(*r));
+        r->number = i + 1;
+        if (timecapsule_get_by_revision(base, r->number, path, sizeof(path)))
+            r->edited_at = dasht4(path);
+    }
+    return BOF_OK;
+}
+
+bof_error_t
 bof_fs_list_removed_posts(void *ctx GCC_UNUSED,
                           const bof_bbs_list_removed_posts_t *req,
                           bof_bbs_list_removed_posts_response_t *out)

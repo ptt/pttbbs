@@ -568,6 +568,36 @@ bof_error_t bof_bbs_get_post_revisions(const bof_post_ref_t *post,
 bof_error_t bof_bbs_get_post_revision_file(const bof_post_ref_t *post,
                                            int rev, char *path, size_t sz);
 
+/* PTT: what is known of those versions, oldest first, from the start-th
+ * (0 is the oldest) up to limit; bbs_total is how many are kept. As
+ * Discourse's post_revisions (and bof_comment_revision_t): its number
+ * (as bof_bbs_get_post_revision_file() takes it), when it was saved and
+ * by whom, and its title (Lemmy's name) then. The time capsule of the
+ * files keeps neither the editor nor the title (""), and its time is
+ * that of the file kept. */
+typedef struct bof_bbs_post_revision_t {
+    int number;              /* 1-based */
+    int32_t edited_at;       /* 0 if not known */
+    char editor[16];         /* "" if not kept */
+    char name[80];           /* "" if not kept */
+} bof_bbs_post_revision_t;
+
+typedef struct bof_bbs_list_post_revisions_t {
+    bof_post_ref_t post;     /* bbs_index is not checked (may be 0) */
+    int start;
+    int limit;
+} bof_bbs_list_post_revisions_t;
+
+typedef struct bof_bbs_list_post_revisions_response_t {
+    bof_bbs_post_revision_t *revisions;  /* by the caller, room for limit */
+    int count;
+    int bbs_total;
+} bof_bbs_list_post_revisions_response_t;
+
+bof_error_t bof_bbs_list_post_revisions(
+    const bof_bbs_list_post_revisions_t *req,
+    bof_bbs_list_post_revisions_response_t *out);
+
 /* PTT: the posts deleted or removed from a list, as the time capsule keeps
  * them (its recycle bin): their records from the start-th (0 is the
  * oldest), up to limit, and how many it keeps (bbs_total). */

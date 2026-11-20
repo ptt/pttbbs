@@ -506,6 +506,19 @@ test_edit_post_body(void)
            == 0);
     EXPECT_INT(bof_bbs_get_post_revision_file(&post, 2, rpath, sizeof(rpath)),
                BOF_ERR_COULDNT_FIND_POST);
+    // What is known of it: its time; the files keep no editor.
+    bof_bbs_post_revision_t rinfo[4];
+    bof_bbs_list_post_revisions_t lreq = { .post = post, .limit = 4 };
+    bof_bbs_list_post_revisions_response_t lres = { .revisions = rinfo };
+    EXPECT_OK(bof_bbs_list_post_revisions(&lreq, &lres));
+    EXPECT_INT(lres.bbs_total, 1);
+    EXPECT_INT(lres.count, 1);
+    EXPECT_INT(rinfo[0].number, 1);
+    EXPECT(rinfo[0].edited_at != 0);
+    EXPECT_STR(rinfo[0].editor, "");
+    lreq.start = 1;
+    EXPECT_OK(bof_bbs_list_post_revisions(&lreq, &lres));
+    EXPECT_INT(lres.count, 0);
 
     // An edit from the old version fails now and keeps its file.
     spit("edit.tmp", "stale body\n");

@@ -554,6 +554,18 @@ bof_bbs_get_post_revision_file(const bof_post_ref_t *post, int rev,
 }
 
 bof_error_t
+bof_bbs_list_post_revisions(const bof_bbs_list_post_revisions_t *req,
+                            bof_bbs_list_post_revisions_response_t *out)
+{
+    if (!req || !req->post.bbs_dir || !req->post.bbs_header ||
+        !req->post.bbs_header->filename[0] || req->start < 0 ||
+        req->limit <= 0 || !out || !out->revisions)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    out->count = out->bbs_total = 0;
+    return READ(list_post_revisions, req, out);
+}
+
+bof_error_t
 bof_bbs_list_removed_posts(const bof_bbs_list_removed_posts_t *req,
                            bof_bbs_list_removed_posts_response_t *out)
 {

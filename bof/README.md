@@ -111,7 +111,7 @@ if (err != BOF_OK)
 | Reports | `CreatePostReport`, `CreateCommentReport`, `ListReports`, `Resolve*Report` | `bof_create_report()`, `bof_list_reports()`, `bof_resolve_report()` |
 | Modlog | `GetModlog`, `mod_*` | `bof_modlog_*()`; moderation calls take their record |
 | Bulk | Discourse's bulk delete | `bof_remove_posts()` |
-| BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()`, `bof_bbs_mask_post()`, `bof_bbs_remove_crosspost()`; the content: `bof_bbs_get_post_file()` (to read), `bof_bbs_get_post_body()` (to edit), `bof_bbs_name_post()`, `bof_bbs_format_post_header()`, `bof_bbs_format_post_origin()`, `bof_bbs_format_comment()` and `bof_bbs_comment_width()` (the line of a comment; `bof_create_comment()` makes it from the text alone); the time capsule: `bof_bbs_get_post_revisions()`, `bof_bbs_get_post_revision_file()`, `bof_bbs_list_removed_posts()` (Discourse's `post_revisions`) |
+| BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()`, `bof_bbs_mask_post()`, `bof_bbs_remove_crosspost()`; the content: `bof_bbs_get_post_file()` (to read), `bof_bbs_get_post_body()` (to edit), `bof_bbs_name_post()`, `bof_bbs_format_post_header()`, `bof_bbs_format_post_origin()`, `bof_bbs_format_comment()` and `bof_bbs_comment_width()` (the line of a comment; `bof_create_comment()` makes it from the text alone); the time capsule: `bof_bbs_get_post_revisions()`, `bof_bbs_get_post_revision_file()`, `bof_bbs_list_post_revisions()`, `bof_bbs_list_removed_posts()` (Discourse's `post_revisions`) |
 
 The API grows one feature at a time, as `mbbsd` moves onto it.
 
