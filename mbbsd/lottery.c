@@ -457,8 +457,8 @@ openticket(int bid)
 	    setbfile(buf, bh->brdname, FN_TICKET_USER);
 	    setbfile(bad, bh->brdname, FN_TICKET_USER ".bad");
 	    rename(buf, bad);
-	    modlog_t log;
-	    modlog(bh->brdname, NULL, modlog_init(&log, "結束無法開獎的樂透"));
+	    bof_modlog_t log;
+	    modlog(bh->brdname, NULL, bof_modlog_init(&log, "結束無法開獎的樂透"));
 	}
 	// No lottery (any more): drop a leftover ticket.end.
 	setbfile(buf, bh->brdname, FN_TICKET_END);
@@ -823,8 +823,8 @@ hold_gamble(void)
 	    vmsg("系統忙碌中，請稍後再試。");
 	    return FULLUPDATE;
 	}
-	modlog_t log;
-	modlog(currboard, NULL, modlog_init(&log, "樂透截止投注"));
+	bof_modlog_t log;
+	modlog(currboard, NULL, bof_modlog_init(&log, "樂透截止投注"));
 	if (bp->endgamble) {
 	    bp->endgamble = 0;
 	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
@@ -843,8 +843,8 @@ hold_gamble(void)
 	        vmsg("負荷過高 請於系統負荷低時開獎..");
 		return FULLUPDATE;
 	    }
-	modlog_t log;
-	modlog(currboard, NULL, modlog_init(&log, "樂透開獎"));
+	bof_modlog_t log;
+	modlog(currboard, NULL, bof_modlog_init(&log, "樂透開獎"));
 	openticket(currbid);
 	return FULLUPDATE;
     } else if (dashf(genbuf)) {
@@ -958,8 +958,8 @@ hold_gamble(void)
 	    assert(0<=currbid-1 && currbid-1<MAX_BOARD);
 	    substitute_record(FN_BOARD, bp, sizeof(boardheader_t), currbid);
 	}
-	modlog_t log;
-	modlog(currboard, NULL, modlog_init(&log, "舉辦樂透"));
+	bof_modlog_t log;
+	modlog(currboard, NULL, bof_modlog_init(&log, "舉辦樂透"));
     }
     // Unlock first: a kick held back exits at the restore.
     unlock_ticket(tkfd);

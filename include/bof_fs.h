@@ -43,6 +43,11 @@ BOF_FS_WRITE(bbs_remove_crosspost, bof_bbs_remove_crosspost_t,
 BOF_FS_WRITE(create_comment, bof_create_comment_t, bof_comment_response_t);
 BOF_FS_WRITE(remove_comment, bof_remove_comment_t, bof_comment_response_t);
 #undef BOF_FS_WRITE
+int bof_fs_write_modlog(void *ctx, const char *community,
+                        const bof_actor_t *actor, const char *reason,
+                        int reason_audit_only, const bof_modlog_t *m);
+int bof_fs_note_modlog_edit(void *ctx, const char *community,
+                            const bof_actor_t *actor);
 bof_error_t bof_fs_bbs_get_post_body(void *ctx, const bof_post_ref_t *post,
                                      const char *dest_path,
                                      bof_post_version_t *ver);

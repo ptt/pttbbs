@@ -6,8 +6,8 @@
  * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0-only
  *
  * See bof_storage.h: every call goes to the one backend. The work of the
- * bof API that is not about storage (the checks of the actor) is done
- * here, once, for any backend.
+ * bof API that is not about storage (the checks of the actor, the modlog
+ * of moderation actions) is done here, once, for any backend.
  */
 
 #include "bof_int.h"
@@ -48,6 +48,21 @@ get_backend(void)
         BOF_ERR_BBS_STORAGE_NOT_SUPPORTED; })
 #define WRITE(op, out, ...) CALL(op, __VA_ARGS__, (out))
 #define READ(op, ...) CALL(op, __VA_ARGS__)
+
+// Writes a record of the modlog. Returns 0, or -1.
+static int
+modlog_write_all(const char *community, const bof_actor_t *actor,
+                 const char *reason, int reason_audit_only,
+                 const bof_modlog_t *m)
+{
+    const bof_storage_ops_t *b = get_backend();
+
+    if (!b->write_modlog ||
+        b->write_modlog(backend_ctx, community, actor, reason,
+                        reason_audit_only, m) != 0)
+        return -1;
+    return 0;
+}
 
 /* ------------------------------------------------------------------------
  * Posts
@@ -162,6 +177,29 @@ bof_remove_comment(const bof_actor_t *actor, const bof_remove_comment_t *req,
 {
     bof_comment_response_t local = { 0 };
     return WRITE(remove_comment, out ? out : &local, actor, req);
+}
+
+/* ------------------------------------------------------------------------
+ * The modlog
+ * ------------------------------------------------------------------------ */
+
+int
+bof_modlog_write(const char *community, const bof_actor_t *actor,
+                 const char *reason, int reason_audit_only,
+                 const bof_modlog_t *m)
+{
+    return modlog_write_all(community, actor, reason, reason_audit_only, m);
+}
+
+int
+bof_modlog_note_edit(const char *community, const bof_actor_t *actor)
+{
+    const bof_storage_ops_t *b = get_backend();
+
+    if (!b->note_modlog_edit ||
+        b->note_modlog_edit(backend_ctx, community, actor) != 0)
+        return -1;
+    return 0;
 }
 
 /* ------------------------------------------------------------------------

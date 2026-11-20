@@ -113,6 +113,17 @@
 #define STR_MASKED_LINE     "[部份違規文字已刪除]"
 #define STR_MASK_NOTE       "%s 於 %s 刪除部份違規文字,原因: %s\n"
 #define STR_MASK_PATTERN    "違規文字樣式: %s\n"
+// The texts of modlog records: the quotes around what a record is about,
+// and the labels of a post, who did it and the reason; and the note in the
+// audit record of an edit of the public modlog. Fields are indented by
+// MODLOG_INDENT.
+#define MODLOG_INDENT       "  "
+#define STR_MODLOG_LQUOTE   "「"
+#define STR_MODLOG_RQUOTE   "」"
+#define STR_MODLOG_POST     "文章"
+#define STR_MODLOG_BY       "執行"
+#define STR_MODLOG_WHY      "理由"
+#define STR_MODLOG_EDITED   "編輯管理紀錄"
 #define FN_EDITHISTORY  ".history"
 
 #ifndef SAFE_ARTICLE_DELETE_NUSER

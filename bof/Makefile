@@ -5,11 +5,11 @@ include $(SRCROOT)/pttbbs.mk
 # See README.md. The core (the API and its checks), the files of a BBS
 # (files/) and the files backend (fs/).
 
-CORE_SRCS:=	bof.c storage.c
+CORE_SRCS:=	bof.c modlog.c storage.c
 FILES_SRCS:=	files/comment.c files/content.c files/crosspost.c \
 		files/record.c files/timecap.c
 FS_SRCS:=	fs/backend.c fs/comment.c fs/content.c fs/crosspost.c \
-		fs/post.c
+		fs/modlog.c fs/post.c
 # Other backends live where their services are, e.g. post.svc's in
 # bof/ps/ of pttbbs.cmd; whatever is there is built in.
 PS_SRCS:=	$(sort $(wildcard ps/*.c))
@@ -17,7 +17,7 @@ SRCS:=	$(CORE_SRCS) $(FILES_SRCS) $(FS_SRCS) $(PS_SRCS)
 LIB:=	libbof.a
 OBJS:=	$(SRCS:.c=.o)
 
-TESTS:=	tests/test_bof tests/test_post \
+TESTS:=	tests/test_bof tests/test_post tests/test_modlog \
 		tests/test_storage
 TEST_LDFLAGS:=	-L. -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
 		-L$(SRCROOT)/common/osdep

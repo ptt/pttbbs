@@ -579,9 +579,9 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
 	if ((y = modlog_ask_reason(bname, y + 2, log_reason,
 				   sizeof(log_reason))) < 0)
 	    return FULLUPDATE;
-	modlog_t log;
-	modlog_init(&log, "щ布");
-	modlog_add(&log, "щ布", "%s (%d 布)", ptitle, total);
+	bof_modlog_t log;
+	bof_modlog_init(&log, "щ布");
+	bof_modlog_add(&log, "щ布", "%s (%d 布)", ptitle, total);
 	y = modlog_preview(y, bname, log_reason, &log) + 1;
 	getdata(y, 0, "叫Ω絋粄щ布 (Y/N) [N] ", genbuf, 4, LCECHO);
 	if (genbuf[0] != 'y')
@@ -602,8 +602,8 @@ poll_view(const poll_buffer_t *vbuf, const char *bname)
 	if (genbuf[0] != 'y')
 	    return FULLUPDATE;
 
-	modlog_t log;
-	modlog_set_field(modlog_init(&log, "矗Ν秨布"), "щ布", "%s", ptitle);
+	bof_modlog_t log;
+	bof_modlog_set_field(bof_modlog_init(&log, "矗Ν秨布"), "щ布", "%s", ptitle);
 	modlog(bname, NULL, &log);
 	b_result_one(vbuf, fhp, &total);
 	fhp->npolls = poll_count(bname);
@@ -806,15 +806,15 @@ poll_maintain(const char *bname)
             if ((y = modlog_ask_reason(bname, y + 2, log_reason,
                                        sizeof(log_reason))) < 0)
                 return FULLUPDATE;
-            modlog_t log;
-            modlog_init(&log, "┮Τщ布 (%d )", (int)fhp->npolls);
+            bof_modlog_t log;
+            bof_modlog_init(&log, "┮Τщ布 (%d )", (int)fhp->npolls);
             y = modlog_preview(y, bname, log_reason, &log) + 1;
             getdata(y, 0, "叫Ω絋粄┮Τщ布 (Y/N) [N] ", genbuf, 4,
                     LCECHO);
             if (genbuf[0] != 'y')
                 return FULLUPDATE;
             // What was there when it was done.
-            modlog_init(&log, "┮Τщ布 (%d )", (int)fhp->npolls);
+            bof_modlog_init(&log, "┮Τщ布 (%d )", (int)fhp->npolls);
 
 	    for (i = 0; i < MAX_POLL_NR; i++) {
 		pollbuf_init(&vbuf, i);
@@ -1040,8 +1040,8 @@ poll_maintain(const char *bname)
     if (substitute_record(FN_BOARD, fhp, sizeof(*fhp), pos) == -1)
 	outs(ERR_BOARD_UPDATE);
     reset_board(pos);
-    modlog_t log;
-    modlog_set_field(modlog_init(&log, "羭快щ布"), "щ布", "%s", ptitle);
+    bof_modlog_t log;
+    bof_modlog_set_field(bof_modlog_init(&log, "羭快щ布"), "щ布", "%s", ptitle);
     modlog(bname, NULL, &log);
     vmsg("秨﹍щ布");
 

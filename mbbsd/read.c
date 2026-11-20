@@ -59,10 +59,10 @@ typedef struct {
 
 // What removing the tagged posts puts in the modlog, also previewed before
 // confirming. Returns log.
-static modlog_t *
-tag_prune_modlog(modlog_t *log, int n)
+static bof_modlog_t *
+tag_prune_modlog(bof_modlog_t *log, int n)
 {
-    modlog_init(log, "移除標記文章 (%d 篇)", n);
+    bof_modlog_init(log, "移除標記文章 (%d 篇)", n);
     return log;
 }
 
@@ -160,7 +160,7 @@ TagPruner(int bid)
             free(list.items);
             return FULLUPDATE;
         }
-        modlog_t log;
+        bof_modlog_t log;
         y = modlog_preview(y, bp->brdname, log_reason,
                            tag_prune_modlog(&log, ntagged)) + 1;
     }
@@ -215,7 +215,7 @@ TagPruner(int bid)
     ClearTagList();
     if (bp) {
         if (log_it && nremoved >= 0) {
-            modlog_t log;
+            bof_modlog_t log;
             tag_prune_modlog(&log, ntagged);
             // Which ones, in the audit record only.
             char *posts = list.n > 0 ?
@@ -225,7 +225,7 @@ TagPruner(int bid)
                 *p = '\0';
                 for (int i = 0; i < list.n; i++) {
                     char post[ANSILINELEN - 16];
-                    modlog_format_post(post, sizeof(post), &list.items[i].fh);
+                    bof_modlog_format_post(post, sizeof(post), &list.items[i].fh);
                     p += snprintf(p, ANSILINELEN, "  文章: %s\n", post);
                 }
                 log.audit_fields = posts;

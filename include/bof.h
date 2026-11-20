@@ -78,6 +78,12 @@ typedef struct bof_actor_t {
     bof_person_id_t person_id; /* 0 until people have IDs */
     const char *name;          /* BBS userid */
     const char *from;          /* where from (host), for logs; may be NULL */
+    /* PTT, for the modlog: how the actor is shown in it (the role, e.g.
+     * the moderators of the board, rather than the account, as Lemmy does
+     * with hide_modlog_mod_names), and whether the account is also hidden
+     * in the audit record (police doing police work). */
+    const char *bbs_role;
+    int bbs_hidden_in_audit;
 } bof_actor_t;
 
 /* ------------------------------------------------------------------------
@@ -384,6 +390,84 @@ typedef struct bof_remove_comment_t {
 bof_error_t bof_remove_comment(const bof_actor_t *actor,
                                const bof_remove_comment_t *req,
                                bof_comment_response_t *out);
+
+/* ------------------------------------------------------------------------
+ * Modlog
+ * ------------------------------------------------------------------------ */
+
+/* A record of the modlog of a board (Lemmy's modlog, which keeps a table
+ * per kind of action: mod_remove_post, mod_lock_post, ...). PTT records
+ * are text: an action (a short name) and fields, a line each, built with
+ * bof_modlog_*() and written to the public modlog and the audit record of
+ * the board. */
+/* Sizes as STRLEN (80) and ANSILINELEN (511) of the BBS. */
+typedef struct bof_modlog_t {
+    char action[80];
+    char fields[511 * 2];
+    /* Fields only in the audit record, added by bof_modlog_add_audit(). */
+    char audit_lines[511];
+    /* More lines only in the audit record, after those (e.g. which posts). */
+    const char *audit_fields;
+    /* Set by bof_modlog_set_*(): put after the action on the first line if
+     * it fits there (with the reason, if any, when both fit), or else
+     * first_lines as the first fields. */
+    char first[511];
+    char first_lines[511 * 2];
+} bof_modlog_t;
+
+/* Format checks (the BBS is built with gcc or clang). */
+#define BOF_PRINTF(f, a) __attribute__((format(printf, f, a)))
+
+/* Starts a record of the action (maybe with a short number, e.g. "muted
+ * for 7 days"). Returns m. */
+bof_modlog_t *bof_modlog_init(bof_modlog_t *m, const char *fmt, ...)
+    BOF_PRINTF(2, 3);
+/* Adds the field "label: value". */
+void bof_modlog_add(bof_modlog_t *m, const char *label, const char *fmt, ...)
+    BOF_PRINTF(3, 4);
+/* Adds the field "label: from => to" (to on the next line if too long). */
+void bof_modlog_add_change(bof_modlog_t *m, const char *label,
+                           const char *from, const char *to);
+/* Sets what the record is about: the value (or the change) after the action
+ * on the first line if it fits there, or else as the first field. */
+void bof_modlog_set_field(bof_modlog_t *m, const char *label,
+                          const char *fmt, ...) BOF_PRINTF(3, 4);
+void bof_modlog_set_change(bof_modlog_t *m, const char *label,
+                           const char *from, const char *to);
+/* The bits changed from from to to, as "+name -name" (names[i] for bit i):
+ * as a field, or as what the record is about. Nothing if none changed. */
+void bof_modlog_add_flags(bof_modlog_t *m, const char *label, uint32_t from,
+                          uint32_t to, const char * const *names, int nnames);
+void bof_modlog_set_flags(bof_modlog_t *m, const char *label, uint32_t from,
+                          uint32_t to, const char * const *names, int nnames);
+/* Adds the field "label: value" only to the audit record (e.g. what was
+ * removed). */
+void bof_modlog_add_audit(bof_modlog_t *m, const char *label,
+                          const char *fmt, ...) BOF_PRINTF(3, 4);
+/* A post as "date author title", as in the list; and as a field. */
+void bof_modlog_format_post(char *buf, size_t sz,
+                            const struct fileheader_t *fh);
+void bof_modlog_add_post(bof_modlog_t *m, const struct fileheader_t *fh);
+
+/* Formats the records of m by actor for the public modlog (*msg) and the
+ * audit record (*amsg), to free(), e.g. for a preview. The reason is
+ * left out of the public one if reason_audit_only (actions also recorded
+ * in the police log). Returns -1 if out of memory. */
+int bof_modlog_format(const bof_actor_t *actor, const char *reason,
+                      int reason_audit_only, const bof_modlog_t *m,
+                      char **msg, char **amsg);
+/* Writes the records of m into the modlog of community. Returns 0, or -1
+ * (invalid arguments, out of memory). */
+int bof_modlog_write(const char *community, const bof_actor_t *actor,
+                     const char *reason, int reason_audit_only,
+                     const bof_modlog_t *m);
+/* Notes in the audit record that actor edited the public modlog. Returns
+ * 0, or -1 if it could not be written. */
+int bof_modlog_note_edit(const char *community, const bof_actor_t *actor);
+/* Where the public modlog (or the audit record) of community is (Lemmy's
+ * GetModlog reads it from the database). */
+void bof_get_modlog_path(const char *community, int audit, char *path,
+                         size_t sz);
 
 #ifdef __cplusplus
 }

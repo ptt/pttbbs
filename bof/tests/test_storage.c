@@ -16,6 +16,7 @@ typedef struct {
     const char *name;
     char calls[256];
     bof_error_t result;
+    int modlogs;
 } mock_t;
 
 static void
@@ -47,16 +48,30 @@ mock_remove_post(void *ctx, const bof_actor_t *actor GCC_UNUSED,
     return ((mock_t *)ctx)->result;
 }
 
+static int
+mock_write_modlog(void *ctx, const char *community GCC_UNUSED,
+                  const bof_actor_t *actor GCC_UNUSED,
+                  const char *reason GCC_UNUSED,
+                  int reason_audit_only GCC_UNUSED,
+                  const bof_modlog_t *m GCC_UNUSED)
+{
+    called(ctx, "write_modlog");
+    ((mock_t *)ctx)->modlogs++;
+    return 0;
+}
+
 static const bof_storage_ops_t full_ops = {
     .name = "full",
     .delete_post = mock_delete_post,
     .remove_post = mock_remove_post,
+    .write_modlog = mock_write_modlog,
 };
 
 // Without remove_post.
 static const bof_storage_ops_t partial_ops = {
     .name = "partial",
     .delete_post = mock_delete_post,
+    .write_modlog = mock_write_modlog,
 };
 
 static void

@@ -2482,11 +2482,11 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
         modlog_ask_reason_unlogged(y + 2, reason, sizeof(reason));
     if (y < 0)
         return 0;
-    modlog_t log;
-    modlog_init(&log, "移除推文 (%s)", resp->userid);
-    modlog_add_post(&log, cx->fh);
+    bof_modlog_t log;
+    bof_modlog_init(&log, "移除推文 (%s)", resp->userid);
+    bof_modlog_add_post(&log, cx->fh);
     // What was removed, for the audit record.
-    modlog_add_audit(&log, "推文", "%s", msg);
+    bof_modlog_add_audit(&log, "推文", "%s", msg);
     if (MODLOG_FOR_POSTS())
         y = modlog_preview(y, key->board, reason, &log) + 1;
     char ans[3];

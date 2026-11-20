@@ -59,39 +59,10 @@ int edit_muted_list_for_board(const char *board);
 int edit_user_acl_for_board(const char *uid, const char *board);
 /* Modlog (ºÞ²z¬ö¿ý): see docs/modlog.md */
 #define MODLOG_REASON_LEN (50)
-// A record: the action (a short name) and the fields, a line each.
-typedef struct {
-    char action[STRLEN];
-    char fields[ANSILINELEN * 2];
-    // Fields only in the audit record, added by modlog_add_audit().
-    char audit_lines[ANSILINELEN];
-    // More lines only in the audit record, after those (e.g. which posts).
-    const char *audit_fields;
-    // Set by modlog_set_*(): put after the action on the first line if it
-    // fits there (and there is no reason), or else first_lines as the first
-    // fields.
-    char first[ANSILINELEN];
-    char first_lines[ANSILINELEN * 2];
-} modlog_t;
-modlog_t *modlog_init(modlog_t *m, const char *fmt, ...) GCC_CHECK_FORMAT(2, 3);
-void modlog_add(modlog_t *m, const char *label, const char *fmt, ...)
-    GCC_CHECK_FORMAT(3, 4);
-void modlog_add_change(modlog_t *m, const char *label, const char *from,
-                       const char *to);
-void modlog_set_field(modlog_t *m, const char *label, const char *fmt, ...)
-    GCC_CHECK_FORMAT(3, 4);
-void modlog_set_change(modlog_t *m, const char *label, const char *from,
-                       const char *to);
-void modlog_set_flags(modlog_t *m, const char *label, uint32_t from,
-                      uint32_t to, const char * const *names, int nnames);
-void modlog_add_flags(modlog_t *m, const char *label, uint32_t from,
-                      uint32_t to, const char * const *names, int nnames);
-void modlog_add_audit(modlog_t *m, const char *label, const char *fmt, ...)
-    GCC_CHECK_FORMAT(3, 4);
-void modlog_add_post(modlog_t *m, const fileheader_t *fh);
-void modlog_format_post(char *buf, size_t sz, const fileheader_t *fh);
-void modlog(const char *bname, const char *reason, const modlog_t *m);
-void modlog_police(const char *bname, const char *reason, const modlog_t *m);
+// Records are built with bof_modlog_*() (bof.h); these write them as the
+// current user.
+void modlog(const char *bname, const char *reason, const bof_modlog_t *m);
+void modlog_police(const char *bname, const char *reason, const bof_modlog_t *m);
 // Posts in the digest (g) are copies: changes to them are not recorded.
 #define MODLOG_FOR_POSTS() (!(currmode & MODE_DIGEST))
 int modlog_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
@@ -102,9 +73,9 @@ int modlog_ask_reason_list(const char *bname, int y, char *reason, size_t sz,
                            const char * const *defaults,
                            int ndefaults) EXCLUDES_ABORT_BLOCK;
 int modlog_preview(int y, const char *bname, const char *reason,
-                   const modlog_t *m);
+                   const bof_modlog_t *m);
 int modlog_police_preview(int y, const char *bname, const char *reason,
-                          const modlog_t *m);
+                          const bof_modlog_t *m);
 int modlog_form(const char *bname, const char *title);
 int modlog_view(const char *bname, int secure);
 int modlog_edit(const char *bname);

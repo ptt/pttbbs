@@ -1061,12 +1061,12 @@ edit_board_general_form(boardheader_t *bh, int bid)
              (newbh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常");
     post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
     if (name_changed || class_changed || desc_changed || reward_changed) {
-        modlog_t log;
+        bof_modlog_t log;
         // One change may fit on the first line.
-        void (*change)(modlog_t *, const char *, const char *, const char *) =
+        void (*change)(bof_modlog_t *, const char *, const char *, const char *) =
             (name_changed + class_changed + desc_changed + reward_changed == 1) ?
-            modlog_set_change : modlog_add_change;
-        modlog_init(&log, "修改看板設定");
+            bof_modlog_set_change : bof_modlog_add_change;
+        bof_modlog_init(&log, "修改看板設定");
         if (name_changed)
             change(&log, "看板名稱", bh->brdname, newbh.brdname);
         if (class_changed)
@@ -1184,8 +1184,8 @@ m_mod_board(char *bname)
 			  "屬性: 0x%08x => 0x%08x\n",
 		     bh.brdname, bh.brdattr, newbh.brdattr);
 	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
-	    modlog_t log;
-	    modlog_set_flags(modlog_init(&log, "修改看板屬性"), "屬性",
+	    bof_modlog_t log;
+	    bof_modlog_set_flags(bof_modlog_init(&log, "修改看板屬性"), "屬性",
 			     bh.brdattr, newbh.brdattr, str_permboard, NUMPERMS);
 	    modlog(newbh.brdname, NULL, &log);
 	    vmsg("看板屬性已更新完畢");
@@ -1235,22 +1235,22 @@ m_mod_board(char *bname)
 			  "權限: 0x%08x => 0x%08x\n",
 		     bh.brdname, bh.brdattr, newbh.brdattr, bh.level, newbh.level);
 	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
-	    modlog_t log;
-	    modlog_init(&log, "修改看板讀寫權限");
+	    bof_modlog_t log;
+	    bof_modlog_init(&log, "修改看板讀寫權限");
 	    bool mask_changed = (bh.brdattr ^ newbh.brdattr) & BRD_POSTMASK;
 	    // One change may fit on the first line.
 	    if (mask_changed && bh.level != newbh.level) {
-		modlog_add_change(&log, "限制",
+		bof_modlog_add_change(&log, "限制",
 				  (bh.brdattr & BRD_POSTMASK) ? "發表" : "閱讀",
 				  (newbh.brdattr & BRD_POSTMASK) ? "發表" : "閱讀");
-		modlog_add_flags(&log, "權限", bh.level, newbh.level,
+		bof_modlog_add_flags(&log, "權限", bh.level, newbh.level,
 				 str_permid, NUMPERMS);
 	    } else if (mask_changed) {
-		modlog_set_change(&log, "限制",
+		bof_modlog_set_change(&log, "限制",
 				  (bh.brdattr & BRD_POSTMASK) ? "發表" : "閱讀",
 				  (newbh.brdattr & BRD_POSTMASK) ? "發表" : "閱讀");
 	    } else {
-		modlog_set_flags(&log, "權限", bh.level, newbh.level,
+		bof_modlog_set_flags(&log, "權限", bh.level, newbh.level,
 				 str_permid, NUMPERMS);
 	    }
 	    modlog(newbh.brdname, NULL, &log);
@@ -1284,15 +1284,15 @@ m_mod_board(char *bname)
 			 bh.brdname, bm_buf1, bm_buf2,
 			 bh.moderator_notes, newbh.moderator_notes);
 		post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
-		modlog_t log;
-		modlog_init(&log, "修改板主名單");
+		bof_modlog_t log;
+		bof_modlog_init(&log, "修改板主名單");
 		bool bm_changed = strcmp(bm_buf1, bm_buf2) != 0;
 		bool notes_changed = strcmp(bh.moderator_notes,
 					    newbh.moderator_notes) != 0;
 		// One change may fit on the first line.
-		void (*change)(modlog_t *, const char *, const char *,
+		void (*change)(bof_modlog_t *, const char *, const char *,
 			       const char *) = (bm_changed && notes_changed) ?
-		    modlog_add_change : modlog_set_change;
+		    bof_modlog_add_change : bof_modlog_set_change;
 		if (bm_changed)
 		    change(&log, "板主", bm_buf1, bm_buf2);
 		if (notes_changed)
@@ -1316,8 +1316,8 @@ m_mod_board(char *bname)
 		break;
 	    setbfile(path, bname, FN_TICKET_END);
 	    if (rename(genbuf, path) == 0) {
-		modlog_t log;
-		modlog(bname, NULL, modlog_init(&log, "樂透解卡"));
+		bof_modlog_t log;
+		modlog(bname, NULL, bof_modlog_init(&log, "樂透解卡"));
 		vmsg("樂透已解卡");
 	    } else
 		vmsg("解卡失敗");
@@ -1331,8 +1331,8 @@ m_mod_board(char *bname)
 	  setbpath(bpath, bh.brdname);
 	  AUTO_STR(cmd, BBSHOME "/bin/buildir %s &", bpath);
 	  system(cmd);
-	  modlog_t log;
-	  modlog(bh.brdname, NULL, modlog_init(&log, "重建文章索引"));
+	  bof_modlog_t log;
+	  modlog(bh.brdname, NULL, bof_modlog_init(&log, "重建文章索引"));
 	  vmsg("已開始在背景重建文章索引");
 	}
 	break;
@@ -1355,8 +1355,8 @@ m_mod_board(char *bname)
             setbdir(fromdir, frombname);
             merge_dir(genbuf, fromdir, 0);
 	    touchbtotal(bid);
-	    modlog_t log;
-	    modlog_set_field(modlog_init(&log, "合併看板文章"), "來源看板", "%s",
+	    bof_modlog_t log;
+	    bof_modlog_set_field(bof_modlog_init(&log, "合併看板文章"), "來源看板", "%s",
 			     frombname);
 	    modlog(bname, NULL, &log);
 	    vmsg("看板合併完畢");
@@ -1383,11 +1383,11 @@ m_mod_board(char *bname)
 	    reset_board(bid);
 	    log_usies("SetBoardBvote", newbh.brdname);
 	    if (newbh.npolls != bh.npolls) {
-		modlog_t log;
+		bof_modlog_t log;
 		char n0[16], n1[16];
 		snprintf(n0, sizeof(n0), "%d", (int)bh.npolls);
 		snprintf(n1, sizeof(n1), "%d", (int)newbh.npolls);
-		modlog_set_change(modlog_init(&log, "修改看板設定"), "投票數",
+		bof_modlog_set_change(bof_modlog_init(&log, "修改看板設定"), "投票數",
 				  n0, n1);
 		modlog(newbh.brdname, NULL, &log);
 	    }
@@ -1415,8 +1415,8 @@ m_mod_board(char *bname)
 	    substitute_record(FN_BOARD, &newbh, sizeof(newbh), bid);
 	    reset_board(bid);
 	    log_usies("ViolateLawSet", newbh.brdname);
-	    modlog_t log;
-	    modlog_set_change(modlog_init(&log, "修改看板設定"), "文章金錢獎勵",
+	    bof_modlog_t log;
+	    bof_modlog_set_change(bof_modlog_init(&log, "修改看板設定"), "文章金錢獎勵",
 			      (bh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常",
 			      (newbh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常");
 	    modlog(newbh.brdname, NULL, &log);

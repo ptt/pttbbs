@@ -18,7 +18,9 @@
  *
  * Posts are named by their board and file name (bof_post_ref_t.community
  * and the file name of bbs_header); the position in a list (bbs_dir,
- * bbs_index) is for the files backend.
+ * bbs_index) is for the files backend. Records for the modlog given with
+ * an action are written (by write_modlog) by the bof API once the backend
+ * did it.
  */
 
 #ifndef INCLUDE_BOF_STORAGE_H
@@ -80,6 +82,13 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*remove_comment)(void *ctx, const bof_actor_t *actor,
                                   const bof_remove_comment_t *req,
                                   bof_comment_response_t *out);
+
+    /* The modlog: 0 or -1. */
+    int (*write_modlog)(void *ctx, const char *community,
+                        const bof_actor_t *actor, const char *reason,
+                        int reason_audit_only, const bof_modlog_t *m);
+    int (*note_modlog_edit)(void *ctx, const char *community,
+                            const bof_actor_t *actor);
 
     /* Reads. */
     bof_error_t (*get_post_body)(void *ctx, const bof_post_ref_t *post,
