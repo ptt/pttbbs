@@ -60,12 +60,13 @@ what BoF does only in part. See `README.md` for what BoF is.
 
 ### Others
 - **GetSiteMetadata** (previews of links): not for a terminal BBS.
-- **Communities** (boards): CreateCommunity, EditCommunity,
+- **Communities** (boards), beyond reading them (GetCommunity,
+  ListCommunities): CreateCommunity, EditCommunity,
   FollowCommunity (favorites), BlockCommunity, AddModToCommunity,
-  BanFromCommunity (muting), TransferCommunity; the board cache (SHM) and
-  the board header are still mbbsd's.
-- **Persons**: GetPersonDetails, BlockPerson (the BBS reject list),
-  BanPerson, accounts in a database (person IDs).
+  BanFromCommunity (muting), TransferCommunity; mbbsd still changes the
+  board header and the board cache (SHM) itself.
+- **Persons**, beyond reading one (GetPersonDetails): BlockPerson (the BBS
+  reject list), BanPerson, accounts in a database (person IDs).
 - **Federation** (ActivityPub): `ap_id`, `actor_id`, inboxes.
 - **Search** (`Search`): mbbsd searches the list itself.
 

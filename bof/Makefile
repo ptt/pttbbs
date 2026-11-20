@@ -2,10 +2,10 @@ SRCROOT:=	..
 include $(SRCROOT)/pttbbs.mk
 
 # bof: Birds Of Feather, the meta layer between BBS and community systems.
-# See README.md. The core (the API and its checks), the files of a BBS
-# (files/) and the files backend (fs/).
+# See README.md. The core (the API, its checks, communities and persons),
+# the files of a BBS (files/) and the files backend (fs/).
 
-CORE_SRCS:=	bof.c modlog.c readmarks.c storage.c
+CORE_SRCS:=	bof.c modlog.c people.c readmarks.c storage.c
 FILES_SRCS:=	files/comment.c files/content.c files/crosspost.c \
 		files/record.c files/timecap.c
 FS_SRCS:=	fs/backend.c fs/comment.c fs/content.c fs/crosspost.c \
@@ -18,7 +18,7 @@ LIB:=	libbof.a
 OBJS:=	$(SRCS:.c=.o)
 
 TESTS:=	tests/test_bof tests/test_post tests/test_modlog tests/test_readmarks \
-		tests/test_storage
+		tests/test_storage tests/test_people
 TEST_LDFLAGS:=	-L. -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
 		-L$(SRCROOT)/common/osdep
 TEST_LDLIBS:=	-lbof -lcmbbs -lcmsys -losdep $(LDLIBS)

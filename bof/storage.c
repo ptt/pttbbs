@@ -414,3 +414,12 @@ bof_bbs_find_post(const bof_post_key_t *key, bof_found_post_t *out)
         return BOF_ERR_INVALID_BODY_FIELD;
     return READ(find_post, key, out);
 }
+
+bof_error_t
+bof_bbs_community_id(const char *name, bof_community_id_t *id)
+{
+    if (!name || !*name || !id)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    *id = 0;
+    return READ(get_community_id, name, id);
+}

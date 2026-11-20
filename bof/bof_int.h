@@ -35,6 +35,7 @@
 #include "cmbbs.h"
 #include "ansi.h"
 #include "pttstruct.h"
+#include "perm.h"
 #include "common.h"
 #include "bof.h"
 #include "bof_files.h"

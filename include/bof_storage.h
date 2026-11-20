@@ -138,6 +138,8 @@ typedef struct bof_storage_ops_t {
                                 bof_post_key_t *key);
     bof_error_t (*find_post)(void *ctx, const bof_post_key_t *key,
                              bof_found_post_t *out);
+    bof_error_t (*get_community_id)(void *ctx, const char *name,
+                                    bof_community_id_t *id);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

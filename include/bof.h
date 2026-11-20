@@ -60,11 +60,16 @@ typedef enum bof_error_t {
     BOF_ERR_BBS_ALREADY_REPORTED,   /* bbs_already_reported: by them, open */
     BOF_ERR_COULDNT_RESOLVE_REPORT, /* couldnt_resolve_report */
     BOF_ERR_RATE_LIMITED,           /* rate_limit_error */
+    BOF_ERR_COULDNT_FIND_PERSON,    /* couldnt_find_person */
     BOF_ERR_MAX
 } bof_error_t;
 
 /* Returns the Lemmy name of an error, e.g. "couldnt_find_post". */
 const char *bof_error_name(bof_error_t err);
+
+/* Room for the names of communities (boards) and of the files of posts. */
+#define BOF_COMMUNITY_NAME_MAX 16
+#define BOF_POST_FILE_MAX 32
 
 /* ------------------------------------------------------------------------
  * People
@@ -76,6 +81,29 @@ const char *bof_error_name(bof_error_t err);
  * account behind a person (Lemmy's local_user) is its usernum and
  * firstlogin, as usernums of deleted accounts are reused. */
 typedef int32_t bof_person_id_t;
+
+/* A person as Lemmy shows one (GetPersonDetails), with what the rules of
+ * the BBS need (bof_bbs_can_*()); nothing private (no mail address, real
+ * name, IP or money). Texts are in the encoding of the files. */
+typedef struct bof_person_t {
+    bof_person_id_t id;        /* 0 until people have IDs */
+    char name[16];             /* the BBS userid */
+    char display_name[24];     /* the BBS nickname */
+    int32_t published;         /* when the account was made (firstlogin) */
+    int admin;                 /* Lemmy's admin: a sysop of the BBS */
+    /* PTT: the account (as bof_actor_t.bbs_local_user), its permissions
+     * (userlevel) and the counts the rules of boards look at. */
+    uint64_t bbs_local_user;
+    uint32_t bbs_perms;
+    int bbs_numlogindays;
+    int bbs_numposts;
+    int bbs_badpost;
+    int bbs_over_18;
+} bof_person_t;
+
+/* Lemmy's GetPersonDetails (the person only): from the BBS accounts.
+ * Errors: couldnt_find_person. */
+bof_error_t bof_get_person(const char *name, bof_person_t *out);
 
 /* Who calls bof (Lemmy's authenticated local user). bof trusts the caller
  * to have checked that the actor may do what it asks: permissions stay in
@@ -94,6 +122,67 @@ typedef struct bof_actor_t {
      * packed as post.svc takes them; 0 for the system or unknown. */
     uint64_t bbs_local_user;
 } bof_actor_t;
+
+/* ------------------------------------------------------------------------
+ * Communities
+ * ------------------------------------------------------------------------ */
+
+/* Lemmy's community.id: as post.svc gives it (boards are known by their
+ * names, and their places in the board cache are taken again by new
+ * boards); none in the files backend. */
+typedef int32_t bof_community_id_t;
+
+#define BOF_MODERATORS_MAX 8
+
+/* A community (board) as Lemmy shows one (GetCommunity), with what the
+ * rules of the BBS need (bof_bbs_can_*()). Texts are in the encoding of
+ * the files. */
+typedef struct bof_community_t {
+    bof_community_id_t id;     /* 0 unless the backend keeps IDs */
+    char name[BOF_COMMUNITY_NAME_MAX];
+    char title[64];            /* the description of the board */
+    int nsfw;                  /* only for adults (BRD_OVER18) */
+    int hidden;                /* a hidden board (Lemmy's visibility) */
+    /* PTT: its place in the board cache (bid; taken again by a new board
+     * once it is removed), its attributes (brdattr) and the permissions to
+     * read it (level), whether the system keeps it read only, and the
+     * limits for posting (as the board header keeps them). */
+    int bbs_id;
+    uint32_t bbs_attr;
+    uint32_t bbs_level;
+    int bbs_read_only;
+    int bbs_post_limit_logins;
+    int bbs_post_limit_badpost;
+    /* Its moderators, as accounts (see bof_actor_t.bbs_local_user). */
+    uint64_t moderators[BOF_MODERATORS_MAX];
+    int nmoderators;
+} bof_community_t;
+
+/* Lemmy's GetCommunity, by name: from the board cache of the BBS (each
+ * process of the BBS attaches it). Errors: couldnt_find_community. */
+bof_error_t bof_get_community(const char *name, bof_community_t *out);
+
+/* Lemmy's ListCommunities, in the order of the board cache, page by page;
+ * hidden boards and boards with a reading level only if bbs_all (the
+ * caller then checks bof_bbs_can_read() for whom it lists them). */
+typedef struct bof_list_communities_t {
+    int page;                  /* 1-based, of limit each; 0: the first */
+    int limit;
+    int bbs_all;
+} bof_list_communities_t;
+
+typedef struct bof_list_communities_response_t {
+    bof_community_t *communities;   /* by the caller, room for limit */
+    int count;
+} bof_list_communities_response_t;
+
+bof_error_t bof_list_communities(const bof_list_communities_t *req,
+                                 bof_list_communities_response_t *out);
+
+/* The ID of a community (Lemmy's community.id), into *id (0 if none).
+ * Errors: couldnt_find_community, bbs_storage_not_supported (the files
+ * backend). */
+bof_error_t bof_bbs_community_id(const char *name, bof_community_id_t *id);
 
 /* ------------------------------------------------------------------------
  * Posts
@@ -153,8 +242,6 @@ bof_comment_id_split(bof_comment_id_t id, bof_post_id_t *post_id, int *floor)
 
 /* What names a post across backends: its board and the name of its file
  * (the time and the random part in it, as PTT's article IDs, AIDs). */
-#define BOF_COMMUNITY_NAME_MAX 16
-#define BOF_POST_FILE_MAX 32
 typedef struct bof_post_key_t {
     char community[BOF_COMMUNITY_NAME_MAX];
     char bbs_post_file[BOF_POST_FILE_MAX];
