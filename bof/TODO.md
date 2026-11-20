@@ -39,6 +39,9 @@ what BoF does only in part. See `README.md` for what BoF is.
 - **Edit history of a comment**: in files, the whole post is kept in the
   time capsule at each edit; post.svc keeps revisions per comment.
 
+### Reports
+- **Private message reports** (`CreatePrivateMessageReport`): mail.
+
 ### Others
 - **GetSiteMetadata** (previews of links): not for a terminal BBS.
 - **Communities** (boards): CreateCommunity, EditCommunity,

@@ -4717,6 +4717,75 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     return FULLUPDATE;
 }
 
+#if IS_ENABLED(CONFIG_REPORT_CONTENT)
+// Reports the post, or a comment of it, to the moderators of the board
+// (CreatePostReport, CreateCommentReport).
+static int
+report_post(int ent, fileheader_t *fhdr, const char *direct)
+{
+    bof_comment_t c;
+    char reason[MODLOG_REASON_LEN], full[STRLEN];
+    const char *kind;
+    int site_rule = 0, floor = 0;
+
+    if (currstat == RMAIL || !HasUserPerm(PERM_LOGINOK) ||
+        fhdr->filename[0] == '.' || !fhdr->filename[0])
+        return DONOTHING;
+
+    int ans = vans("檢舉: [1] 這篇文章 [2] 文章中的推文 [q] 取消: ");
+    if (ans == '2') {
+        if (!psb_pick_comment(currboard, direct, ent, fhdr, &c))
+            return FULLUPDATE;
+        floor = c.bbs_floor;
+    } else if (ans != '1') {
+        return FULLUPDATE;
+    }
+
+    clear();
+    vs_hdr2(floor ? "檢舉推文" : "檢舉文章", currboard);
+    mvprints(2, 0, "文章: %.*s", t_columns - 8, fhdr->title);
+    if (floor)
+        mvprints(3, 0, "推文 #%d %s: %s", floor, c.creator, c.content);
+    mvouts(5, 0, "檢舉會送給本看板的板主，板主不會看到檢舉人是誰。\n"
+           "違反站規的檢舉，站方也看得到。請勿濫用。");
+    ans = vans("類別: [1] 違反板規 [2] 違反站規 [3] 其他 [q] 取消: ");
+    switch (ans) {
+    case '1': kind = "違反板規"; break;
+    case '2': kind = "違反站規"; site_rule = 1; break;
+    case '3': kind = "其他"; break;
+    default: return FULLUPDATE;
+    }
+    if (!getdata(b_lines - 2, 0, "理由: ", reason, sizeof(reason), DOECHO) ||
+        !*reason)
+        return FULLUPDATE;
+    snprintf(full, sizeof(full), "%s: %s", kind, reason);
+    if (vans("確定要送出檢舉嗎？[y/N] ") != 'y')
+        return FULLUPDATE;
+
+    bof_actor_t me = bof_me();
+    bof_create_report_t req = {
+        .post = bof_ref(direct, ent, fhdr), .bbs_floor = floor,
+        .bbs_comment_text = floor ? c.content : NULL, .reason = full,
+        .bbs_site_rule = site_rule,
+    };
+    switch (bof_create_report(&me, &req, NULL)) {
+    case BOF_OK:
+        vmsg("檢舉已送出，謝謝。");
+        break;
+    case BOF_ERR_BBS_ALREADY_REPORTED:
+        vmsg("您已檢舉過，板主尚未處理。");
+        break;
+    case BOF_ERR_COULDNT_FIND_POST:
+        vmsg("文章已不存在。");
+        break;
+    default:
+        vmsg("檢舉失敗，請稍後再試。");
+        break;
+    }
+    return FULLUPDATE;
+}
+#endif
+
 /* ----------------------------------------------------- */
 /* 看板功能表                                            */
 /* ----------------------------------------------------- */
@@ -4754,6 +4823,9 @@ DEFINE_READ_ITEM_CMD(bbs_cmd_call_in, b_call_in)
 DEFINE_READ_ITEM_CMD(bbs_cmd_reply_post, reply_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_man, b_man)
 DEFINE_READ_ITEM_CMD(bbs_cmd_view_history, view_posthistory)
+#if IS_ENABLED(CONFIG_REPORT_CONTENT)
+DEFINE_READ_ITEM_CMD(bbs_cmd_report_post, report_post)
+#endif
 
 const cmd_t read_comms[] = {
     { KEY_RIGHT, "閱讀", "閱讀選取的文章", bbs_cmd_read_post, 0, CMD_PRIO_NORM, true },
@@ -4786,6 +4858,9 @@ const cmd_t read_comms[] = {
     { 'R', NULL, "查看投票結果", bbs_cmd_poll_results, 0, CMD_PRIO_NONE },
     { 'f', NULL, "參與看板樂透投注", bbs_cmd_join_gamble, PERM_LOGINOK, CMD_PRIO_NONE },
     { 'Q', NULL, "查詢文章詳細資訊", bbs_cmd_view_postinfo, 0, CMD_PRIO_NONE, true },
+#if IS_ENABLED(CONFIG_REPORT_CONTENT)
+    { Ctrl('O'), NULL, "檢舉文章或推文給板主", bbs_cmd_report_post, PERM_LOGINOK, CMD_PRIO_NONE, true },
+#endif
     { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, PERM_BM | PERM_GROUP_OP | PERM_GROUP_LEAD, CMD_PRIO_NONE, true },
     { 'C', NULL, "設定發表/連署門檻限制", bbs_cmd_limitedit, PERM_BM | PERM_BOARDS | PERM_GROUP_LEAD, CMD_PRIO_NONE, true },
     { Ctrl('G'), NULL, "管理樂透", bbs_cmd_hold_gamble, PERM_BM, CMD_PRIO_NONE },

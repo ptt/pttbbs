@@ -32,10 +32,13 @@ const bof_storage_ops_t bof_storage_files = {
     // false) nor keep its history: see bof_delete_comment_t.
     .delete_comment = NULL,
     .remove_comment = bof_fs_remove_comment,
+    .create_report = bof_fs_create_report,
+    .resolve_report = bof_fs_resolve_report,
     .write_modlog = bof_fs_write_modlog,
     .note_modlog_edit = bof_fs_note_modlog_edit,
     .get_posts = bof_fs_get_posts,
     .get_post = bof_fs_get_post,
     .get_post_body = bof_fs_bbs_get_post_body,
     .get_comments = bof_fs_get_comments,
+    .list_reports = bof_fs_list_reports,
 };

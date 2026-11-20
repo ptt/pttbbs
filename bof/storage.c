@@ -226,8 +226,24 @@ bof_remove_comment(const bof_actor_t *actor, const bof_remove_comment_t *req,
 }
 
 /* ------------------------------------------------------------------------
- * The modlog
+ * Reports and the modlog
  * ------------------------------------------------------------------------ */
+
+bof_error_t
+bof_create_report(const bof_actor_t *actor, const bof_create_report_t *req,
+                  bof_report_t *out)
+{
+    bof_report_t local = { 0 };
+    return WRITE(create_report, out ? out : &local, actor, req);
+}
+
+bof_error_t
+bof_resolve_report(const bof_actor_t *actor, const bof_resolve_report_t *req,
+                   bof_report_t *out)
+{
+    bof_report_t local = { 0 };
+    return WRITE(resolve_report, out ? out : &local, actor, req);
+}
 
 int
 bof_modlog_write(const char *community, const bof_actor_t *actor,
@@ -276,4 +292,11 @@ bof_get_comments(const bof_get_comments_t *req,
                  bof_get_comments_response_t *out)
 {
     return READ(get_comments, req, out);
+}
+
+bof_error_t
+bof_list_reports(const bof_list_reports_t *req,
+                 bof_list_reports_response_t *out)
+{
+    return READ(list_reports, req, out);
 }

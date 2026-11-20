@@ -56,6 +56,9 @@ typedef enum bof_error_t {
     /* bbs_storage_not_supported: not by the storage backend */
     BOF_ERR_BBS_STORAGE_NOT_SUPPORTED,
     BOF_ERR_NO_COMMENT_EDIT_ALLOWED, /* no_comment_edit_allowed */
+    BOF_ERR_COULDNT_CREATE_REPORT,  /* couldnt_create_report */
+    BOF_ERR_BBS_ALREADY_REPORTED,   /* bbs_already_reported: by them, open */
+    BOF_ERR_COULDNT_RESOLVE_REPORT, /* couldnt_resolve_report */
     BOF_ERR_MAX
 } bof_error_t;
 
@@ -577,6 +580,88 @@ void bof_bbs_mark_community_read_until(int community_id, int32_t t);
  * *result: 1 found, 0 none, -1 no records for the board. */
 int bof_bbs_search_read(int community_id, int32_t ftime, int forward,
                         int32_t *result);
+
+/* ------------------------------------------------------------------------
+ * Reports
+ * ------------------------------------------------------------------------ */
+
+/* A report of a post or a comment to the moderators of its board (Lemmy's
+ * post_report and comment_report, in one list as Lemmy 1.0 lists them).
+ * Lemmy numbers reports globally; here they are numbered in their board,
+ * 1-based, in the order made. Lemmy keeps the reported text; for a post
+ * this keeps its title and the version of its content (the time capsule
+ * keeps what edits replace), for a comment what it said. Who reported is
+ * for the site's admins: the UI does not show it to moderators. */
+enum {
+    BOF_REPORT_POST = 1,
+    BOF_REPORT_COMMENT = 2,
+};
+
+typedef struct bof_report_t {
+    int64_t bbs_size;              /* the version of the post reported */
+    uint64_t bbs_hash;
+    int32_t id;
+    int32_t type;                  /* BOF_REPORT_* */
+    int32_t published;
+    int32_t updated;               /* resolved or reopened; 0 if never */
+    int32_t resolved;
+    int32_t bbs_floor;             /* the comment's */
+    int32_t bbs_site_rule;         /* against the rules of the site */
+    int32_t bbs_reserved;
+    char creator[16];              /* who reported */
+    char resolver[16];
+    char bbs_post_file[32];        /* the post's file name */
+    char original_post_name[80];   /* its title */
+    char original_comment_text[256];
+    char reason[128];
+    char bbs_community[16];        /* the board */
+} bof_report_t;
+
+/* Lemmy's CreatePostReport (no comment) and CreateCommentReport (with
+ * bbs_floor and what the comment said). One open report per person per
+ * post or comment (bbs_already_reported). out (if not NULL) gets it. */
+typedef struct bof_create_report_t {
+    bof_post_ref_t post;           /* bbs_index is not checked (may be 0) */
+    int bbs_floor;                 /* 0: the post */
+    const char *bbs_comment_text;  /* the comment's, as read */
+    const char *reason;
+    int bbs_site_rule;
+} bof_create_report_t;
+
+bof_error_t bof_create_report(const bof_actor_t *actor,
+                              const bof_create_report_t *req,
+                              bof_report_t *out);
+
+/* Lemmy's ListReports: the reports of a board, newest first. */
+typedef struct bof_list_reports_t {
+    const char *community;
+    int unresolved_only;
+    int limit;                     /* room in reports */
+} bof_list_reports_t;
+
+typedef struct bof_list_reports_response_t {
+    bof_report_t *reports;         /* by the caller */
+    int count;
+    int bbs_unresolved;            /* open reports of the board, in all */
+} bof_list_reports_response_t;
+
+bof_error_t bof_list_reports(const bof_list_reports_t *req,
+                             bof_list_reports_response_t *out);
+
+/* Lemmy's ResolvePostReport / ResolveCommentReport (resolved: 0 to open it
+ * again). Errors: couldnt_resolve_report (no such report). */
+typedef struct bof_resolve_report_t {
+    const char *community;
+    int32_t report_id;
+    int resolved;
+} bof_resolve_report_t;
+
+bof_error_t bof_resolve_report(const bof_actor_t *actor,
+                               const bof_resolve_report_t *req,
+                               bof_report_t *out);
+
+/* Whether a post still has the content reported (1), or was edited (0). */
+int bof_report_matches_post(const char *bbs_dir, const bof_report_t *r);
 
 /* ------------------------------------------------------------------------
  * Modlog

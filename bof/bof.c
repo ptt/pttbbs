@@ -25,6 +25,9 @@ static const char *const bof_error_names[BOF_ERR_MAX] = {
     [BOF_ERR_COULDNT_UPDATE_COMMENT] = "couldnt_update_comment",
     [BOF_ERR_BBS_STORAGE_NOT_SUPPORTED] = "bbs_storage_not_supported",
     [BOF_ERR_NO_COMMENT_EDIT_ALLOWED] = "no_comment_edit_allowed",
+    [BOF_ERR_COULDNT_CREATE_REPORT] = "couldnt_create_report",
+    [BOF_ERR_BBS_ALREADY_REPORTED] = "bbs_already_reported",
+    [BOF_ERR_COULDNT_RESOLVE_REPORT] = "couldnt_resolve_report",
 };
 
 const char *

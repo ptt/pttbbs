@@ -841,6 +841,73 @@ test_edit_comment(void)
 }
 
 static void
+test_reports(void)
+{
+    fileheader_t recs[64];
+    bof_actor_t reader = { .name = "nina" }, mod = { .name = "boss" };
+    bof_report_t r, list[8];
+    int n;
+
+    make_post("M.1700000091.A.091", "omar", "reported", 0);
+    n = read_dir(recs, 64);
+
+    bof_list_reports_t lreq = { .community = BOARD, .limit = 8 };
+    bof_list_reports_response_t lres = { .reports = list };
+    EXPECT_OK(bof_list_reports(&lreq, &lres));
+    EXPECT_INT(lres.count, 0);
+
+    // A post, then a comment of it.
+    bof_create_report_t creq = {
+        .post = ref(recs, n), .reason = "spam", .bbs_site_rule = 1,
+    };
+    EXPECT_OK(bof_create_report(&reader, &creq, &r));
+    EXPECT_INT(r.id, 1);
+    EXPECT_INT(r.type, BOF_REPORT_POST);
+    EXPECT_STR(r.original_post_name, "reported");
+    EXPECT_INT(bof_create_report(&reader, &creq, &r),
+               BOF_ERR_BBS_ALREADY_REPORTED);
+    creq.bbs_floor = 2;
+    creq.bbs_comment_text = "rude words";
+    creq.reason = "abuse";
+    creq.bbs_site_rule = 0;
+    EXPECT_OK(bof_create_report(&reader, &creq, &r));
+    EXPECT_INT(r.id, 2);
+    EXPECT_INT(r.type, BOF_REPORT_COMMENT);
+
+    // Newest first.
+    EXPECT_OK(bof_list_reports(&lreq, &lres));
+    EXPECT_INT(lres.count, 2);
+    EXPECT_INT(lres.bbs_unresolved, 2);
+    EXPECT_INT(list[0].id, 2);
+    EXPECT_STR(list[0].original_comment_text, "rude words");
+    EXPECT_STR(list[1].creator, "nina");
+    EXPECT_INT(list[1].bbs_site_rule, 1);
+    EXPECT(bof_report_matches_post(DIRPATH, &list[1]));
+
+    // Resolve one; it may be reported again then.
+    bof_resolve_report_t rreq = {
+        .community = BOARD, .report_id = 1, .resolved = 1,
+    };
+    EXPECT_OK(bof_resolve_report(&mod, &rreq, &r));
+    EXPECT_STR(r.resolver, "boss");
+    lreq.unresolved_only = 1;
+    EXPECT_OK(bof_list_reports(&lreq, &lres));
+    EXPECT_INT(lres.count, 1);
+    EXPECT_INT(lres.bbs_unresolved, 1);
+    creq.bbs_floor = 0;
+    creq.bbs_comment_text = NULL;
+    EXPECT_OK(bof_create_report(&reader, &creq, &r));
+    EXPECT_INT(r.id, 3);
+    rreq.report_id = 9;
+    EXPECT_INT(bof_resolve_report(&mod, &rreq, &r),
+               BOF_ERR_COULDNT_RESOLVE_REPORT);
+
+    // An edited post no longer has the content reported.
+    spit(BDIR "/M.1700000091.A.091", "edited\n");
+    EXPECT(!bof_report_matches_post(DIRPATH, &list[0]));
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -888,6 +955,7 @@ main(void)
     RUN(test_modlog_with_actions);
     RUN(test_get_posts);
     RUN(test_edit_comment);
+    RUN(test_reports);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

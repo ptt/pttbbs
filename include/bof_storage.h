@@ -89,6 +89,14 @@ typedef struct bof_storage_ops_t {
                                   const bof_remove_comment_t *req,
                                   bof_comment_response_t *out);
 
+    /* Reports. */
+    bof_error_t (*create_report)(void *ctx, const bof_actor_t *actor,
+                                 const bof_create_report_t *req,
+                                 bof_report_t *out);
+    bof_error_t (*resolve_report)(void *ctx, const bof_actor_t *actor,
+                                  const bof_resolve_report_t *req,
+                                  bof_report_t *out);
+
     /* The modlog: 0 or -1. */
     int (*write_modlog)(void *ctx, const char *community,
                         const bof_actor_t *actor, const char *reason,
@@ -106,6 +114,8 @@ typedef struct bof_storage_ops_t {
                                  bof_post_version_t *ver);
     bof_error_t (*get_comments)(void *ctx, const bof_get_comments_t *req,
                                 bof_get_comments_response_t *out);
+    bof_error_t (*list_reports)(void *ctx, const bof_list_reports_t *req,
+                                bof_list_reports_response_t *out);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

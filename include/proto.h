@@ -242,6 +242,10 @@ int psb_comment_editor(const char *board, const char *direct, int ent,
                        fileheader_t *fh);
 int psb_has_my_comments(const char *board, const char *direct, int ent,
                         const fileheader_t *fh);
+int psb_pick_comment(const char *board, const char *direct, int ent,
+                     const fileheader_t *fh, bof_comment_t *out);
+int psb_reports(const char *board);
+int board_open_reports(const char *board);
 
 /* chc */
 void chc(int s, ChessGameMode mode);

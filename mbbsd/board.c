@@ -1177,6 +1177,30 @@ bcfg_set_poll_voters(cmd_ctx_t *ctx)
     return 0;
 }
 
+#if IS_ENABLED(CONFIG_REPORT_CONTENT)
+static const char *
+bcfg_get_reports(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
+                 char *buf, size_t sz)
+{
+    int n = board_open_reports(cx->bp->brdname);
+    if (n > 0)
+        snprintf(buf, sz, ANSI_COLOR(1;31) "[%d 件未處理]" ANSI_RESET, n);
+    else
+        strlcpy(buf, "[無未處理]", sz);
+    return buf;
+}
+
+static int
+bcfg_set_reports(cmd_ctx_t *ctx)
+{
+    bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
+    ctx->reload = true;
+    psb_reports(cx->bp->brdname);
+    clear();
+    return 0;
+}
+#endif
+
 static int
 bcfg_set_poll_maintain(cmd_ctx_t *ctx)
 {
@@ -1308,6 +1332,9 @@ static const BConfigItem bconfig_items[] = {
     { 'o', "[名單] 投票限制名單", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_poll_voters, FN_POLL_VOTERS },
     // Changes are put in the modlog by poll_maintain().
     { 'm', "[管理] 舉辦與管理投票", NULL, NULL, 0, PERM_BM, bcfg_get_enter_entry, bcfg_set_poll_maintain },
+#if IS_ENABLED(CONFIG_REPORT_CONTENT)
+    { 't', "[管理] 處理檢舉", NULL, NULL, 0, PERM_BM, bcfg_get_reports, bcfg_set_reports, NULL, bcfg_set_reports },
+#endif
     { 'c', "[管理] 文章類別設定", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_posttype, FN_POSTTYPE },
     { 'n', "[管理] 發文注意事項", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_postnote, FN_POST_NOTE },
     { 'p', "[管理] 編輯進板畫面", NULL, NULL, 0, PERM_BM, bcfg_get_edit_entry, bcfg_set_notes_edit, "notes" },

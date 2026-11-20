@@ -35,7 +35,7 @@ flowchart LR
         lemmy["Lemmy clients (via a gateway)"]
     end
     subgraph BOF["BoF"]
-        api["Lemmy-shaped API: posts, comments, modlog"]
+        api["Lemmy-shaped API: posts, comments, reports, modlog"]
         virt["storage virtualization: one backend, checked requests"]
     end
     subgraph STORE["Storage backends"]
@@ -105,6 +105,7 @@ if (err != BOF_OK)
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
 | Reading | `GetPosts`, `GetPost`, `MarkPostAsRead` | `bof_get_posts()`, `bof_get_post()`, `bof_mark_post_as_read()` |
 | Comments | `CreateComment` (+ `CreatePostLike` for a push or boo), `GetComments`, `EditComment`, `DeleteComment`, `RemoveComment` | `bof_create_comment()`, `bof_get_comments()`, `bof_edit_comment()`, `bof_delete_comment()`, `bof_remove_comment()` |
+| Reports | `CreatePostReport`, `CreateCommentReport`, `ListReports`, `Resolve*Report` | `bof_create_report()`, `bof_list_reports()`, `bof_resolve_report()` |
 | Modlog | `GetModlog`, `mod_*` | `bof_modlog_*()`; moderation calls take their record |
 | Bulk | Discourse's bulk delete | `bof_remove_posts()` |
 | BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()`, `bof_bbs_mask_post()`, `bof_bbs_remove_crosspost()` |
@@ -119,7 +120,7 @@ keeping the BBS working exactly as before:
 1. **Skeleton** -- library, error names, tests. *(done)*
 2. **Posts** -- all the writes of posts on boards *(done)*; digests stay in
    `mbbsd`, as Lemmy has none.
-3. **Comments, modlog** *(done)*.
+3. **Comments, reports, modlog** *(done)*.
 4. **Listings** -- the post list and read records *(done)*.
 5. **Storage virtualization** -- the files backend behind it *(done)*;
    the `post.svc` backend next.

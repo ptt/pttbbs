@@ -2794,6 +2794,242 @@ psb_has_my_comments(const char *board, const char *direct, int ent,
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// Reports: picking a comment to report, and the queue of reports of a
+// board for its moderators (bof_*_report*()).
+
+typedef struct {
+    bof_comment_t comments[PVCE_MAX];
+    int picked;
+} pvpc_ctx;
+
+static int
+pvpc_header(PSB_CTX *ctx GCC_UNUSED) {
+    vs_draw_hdr2("檢舉推文", "選擇要檢舉的推文");
+    move(1, 0);
+    vbar(ANSI_REVERSE "  樓 層 | 作  者     | 內  容");
+    return 0;
+}
+
+static int
+pvpc_renderer(int i, PSB_CTX *ctx) {
+    pvpc_ctx *cx = (pvpc_ctx *)ctx->cmd.priv;
+    const bof_comment_t *c = &cx->comments[i];
+
+    prints("%c %6d %-12.12s %s", (i == ctx->cmd.curr) ? '>' : ' ',
+           c->bbs_floor, c->creator,
+           c->removed ? ANSI_COLOR(0;30;47) "<已移除>" ANSI_RESET : c->content);
+    return 0;
+}
+
+static int
+pvpc_cmd_pick(cmd_ctx_t *ctx) {
+    pvpc_ctx *cx = (pvpc_ctx *)ctx->priv;
+    if (cx->comments[ctx->curr].removed) {
+        vmsg("此推文已被移除。");
+        ctx->redraw = true;
+        return 0;
+    }
+    cx->picked = ctx->curr;
+    ctx->quit = true;
+    return 0;
+}
+
+static const cmd_t pvpc_cmds[] = {
+    { KEY_ENTER, "檢舉", "檢舉選取的推文", pvpc_cmd_pick, 0, CMD_PRIO_MAX, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+int
+psb_pick_comment(const char *board, const char *direct, int ent,
+                 const fileheader_t *fh, bof_comment_t *out) {
+    pvpc_ctx *cx = calloc(1, sizeof(*cx));
+    int ok = 0;
+
+    if (!cx)
+        return 0;
+    cx->picked = -1;
+    bof_get_comments_t req = {
+        .post = { .community = board, .bbs_dir = direct, .bbs_index = ent,
+                  .bbs_header = fh },
+        .limit = PVCE_MAX,
+    };
+    bof_get_comments_response_t res = { .comments = cx->comments };
+    PSB_CTX ctx = {
+        .cmd = { .curr = 0, .priv = (void *)cx, .caption = "檢舉推文" },
+        .header_lines = 2,
+        .footer_lines = 2,
+        .allow_pbs_version_message = 0,
+        .header = pvpc_header,
+        .renderer = pvpc_renderer,
+        .cmds = pvpc_cmds,
+    };
+    if (bof_get_comments(&req, &res) == BOF_OK && res.count > 0) {
+        ctx.cmd.total = res.count;
+        psb_main(&ctx);
+        if (cx->picked >= 0) {
+            *out = cx->comments[cx->picked];
+            ok = 1;
+        }
+    } else {
+        vmsg("此文章沒有推文。");
+    }
+    free(cx);
+    return ok;
+}
+
+#define PVRQ_MAX (500)
+
+typedef struct {
+    const char *board;
+    int all;            // also the resolved ones
+    int show_creator;   // who reported, for the site's admins only
+    bof_report_t reports[PVRQ_MAX];
+} pvrq_ctx;
+
+static int
+pvrq_load(pvrq_ctx *cx) {
+    bof_list_reports_t req = {
+        .community = cx->board, .unresolved_only = !cx->all,
+        .limit = PVRQ_MAX,
+    };
+    bof_list_reports_response_t res = { .reports = cx->reports };
+    return bof_list_reports(&req, &res) == BOF_OK ? res.count : 0;
+}
+
+static int
+pvrq_header(PSB_CTX *ctx) {
+    pvrq_ctx *cx = (pvrq_ctx *)ctx->cmd.priv;
+    vs_draw_hdr2("檢舉處理", cx->all ? "全部檢舉" : "未處理檢舉");
+    move(1, 0);
+    vbar(ANSI_REVERSE "  編號 狀態   對象       理由 / 標題");
+    return 0;
+}
+
+static int
+pvrq_renderer(int i, PSB_CTX *ctx) {
+    pvrq_ctx *cx = (pvrq_ctx *)ctx->cmd.priv;
+    const bof_report_t *r = &cx->reports[i];
+    char target[16], line[ANSILINELEN];
+
+    if (r->type == BOF_REPORT_COMMENT)
+        snprintf(target, sizeof(target), "推文 #%d", r->bbs_floor);
+    else
+        strlcpy(target, "文章", sizeof(target));
+    snprintf(line, sizeof(line), "%s%s / %s%s%s",
+             r->bbs_site_rule ? "[站規] " : "", r->reason,
+             r->original_post_name, cx->show_creator ? " " : "",
+             cx->show_creator ? r->creator : "");
+    strip_control_sequence(line, line);
+    prints("%c %4d %s %-10s %s", (i == ctx->cmd.curr) ? '>' : ' ', r->id,
+           r->resolved ? "已處理" : ANSI_COLOR(1;31) "未處理" ANSI_RESET,
+           target, line);
+    return 0;
+}
+
+static int
+pvrq_cmd_view(cmd_ctx_t *ctx) {
+    pvrq_ctx *cx = (pvrq_ctx *)ctx->priv;
+    const bof_report_t *r = &cx->reports[ctx->curr];
+    char path[PATHLEN];
+
+    ctx->redraw = true;
+    setbfile(path, cx->board, r->bbs_post_file);
+    if (!dashf(path)) {
+        vmsg("文章已不存在 (可能已被刪除)。");
+        return 0;
+    }
+    if (r->type == BOF_REPORT_COMMENT) {
+        clear();
+        vs_hdr2("檢舉推文", cx->board);
+        mvprints(2, 0, "文章: %s", r->original_post_name);
+        mvprints(3, 0, "推文 #%d (檢舉時的內容):", r->bbs_floor);
+        mvouts(4, 0, r->original_comment_text);
+        mvprints(6, 0, "理由: %s", r->reason);
+        if (vmsg("按 v 看全文，其他鍵返回") != 'v')
+            return 0;
+    } else if (!bof_report_matches_post(TEMP_BDIR(cx->board), r)) {
+        vmsg("注意: 文章在檢舉後已被修改 (修改前的內容在文章修改記錄)。");
+    }
+    more(path, YEA);
+    return 0;
+}
+
+static int
+pvrq_cmd_resolve(cmd_ctx_t *ctx) {
+    pvrq_ctx *cx = (pvrq_ctx *)ctx->priv;
+    bof_report_t *r = &cx->reports[ctx->curr];
+    bof_actor_t me = mbbsd_actor(cx->board, false);
+    bof_resolve_report_t req = {
+        .community = cx->board, .report_id = r->id, .resolved = !r->resolved,
+    };
+
+    ctx->redraw = true;
+    if (bof_resolve_report(&me, &req, r) != BOF_OK)
+        vmsg("設定失敗，請稍後再試。");
+    return 0;
+}
+
+static int
+pvrq_cmd_all(cmd_ctx_t *ctx) {
+    pvrq_ctx *cx = (pvrq_ctx *)ctx->priv;
+
+    cx->all = !cx->all;
+    ctx->total = pvrq_load(cx);
+    ctx->curr = 0;
+    ctx->redraw = true;
+    return 0;
+}
+
+static const cmd_t pvrq_cmds[] = {
+    { KEY_ENTER, "檢視", "檢視被檢舉的文章或推文", pvrq_cmd_view, 0, CMD_PRIO_MAX, true },
+    { 'r', "處理", "標記為已處理 / 重新開啟", pvrq_cmd_resolve, 0, CMD_PRIO_HIGH, true },
+    { 'a', "全部", "切換顯示全部或未處理", pvrq_cmd_all, 0, CMD_PRIO_HIGH },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+int
+psb_reports(const char *board) {
+    pvrq_ctx *cx = calloc(1, sizeof(*cx));
+
+    if (!cx)
+        return FULLUPDATE;
+    cx->board = board;
+    cx->show_creator = HasUserPerm(PERM_SYSOP | PERM_POLICE);
+    PSB_CTX ctx = {
+        .cmd = { .curr = 0, .total = pvrq_load(cx), .priv = (void *)cx,
+                 .caption = "檢舉處理" },
+        .header_lines = 2,
+        .footer_lines = 2,
+        .allow_pbs_version_message = 0,
+        .header = pvrq_header,
+        .renderer = pvrq_renderer,
+        .cmds = pvrq_cmds,
+    };
+    if (ctx.cmd.total == 0) {
+        // Maybe all are resolved: show them.
+        cx->all = 1;
+        ctx.cmd.total = pvrq_load(cx);
+    }
+    if (ctx.cmd.total > 0)
+        psb_main(&ctx);
+    else
+        vmsg("本看板沒有檢舉。");
+    free(cx);
+    return FULLUPDATE;
+}
+
+// How many reports of the board are open.
+int
+board_open_reports(const char *board) {
+    bof_report_t r;
+    bof_list_reports_t req = {
+        .community = board, .unresolved_only = 1, .limit = 1,
+    };
+    bof_list_reports_response_t res = { .reports = &r };
+    return bof_list_reports(&req, &res) == BOF_OK ? res.bbs_unresolved : 0;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // Admin Edit
 
 // Since admin edit is usually rarely used, no need to write dynamic allocation
