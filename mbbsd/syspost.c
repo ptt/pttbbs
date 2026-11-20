@@ -28,7 +28,7 @@ int post_msg2(const char* bname, const char* title, const char *msg,
     /* 將檔案加入列表 */
     STRLCPY(fhdr.title, title);
     STRLCPY(fhdr.owner, author);
-    if (PostAddRecord(bname, &fhdr, now) != -1)
+    if (PostAddRecord(bname, &fhdr, NULL) != -1)
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
     return 0;

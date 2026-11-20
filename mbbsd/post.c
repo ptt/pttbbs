@@ -5,13 +5,15 @@
 // crossposts (and their notes in ALLPOST), petitions and posts by the
 // system.
 int
-PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime GCC_UNUSED)
+PostAddRecord(const char *board, const fileheader_t *fhdr,
+              const char *content_path)
 {
     // The list of the board itself, also from the digest.
     AUTO_BFILE(dir, board, FN_DIR);
-    bof_actor_t me = { .name = cuser.userid, .from = fromhost };
+    bof_actor_t me = mbbsd_user_actor();
     bof_create_post_t req = {
         .community = board, .bbs_dir = dir, .bbs_header = fhdr,
+        .bbs_content_path = content_path,
     };
     return bof_create_post(&me, &req, NULL) == BOF_OK ? 0 : -1;
 }
@@ -31,7 +33,7 @@ CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                  int ent, int type, const char *msg GCC_UNUSED, const char *formatted)
 {
     SCOPED_STAT(STAT_DOCOMMENT);
-    bof_actor_t me = { .name = cuser.userid, .from = fromhost };
+    bof_actor_t me = mbbsd_user_actor();
     bof_create_comment_t req = {
         .post = {
             .community = board, .bbs_dir = direct, .bbs_index = ent,

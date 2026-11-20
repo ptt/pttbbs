@@ -251,7 +251,7 @@ poll_report(const char *bname, const char *post_bname, const char *fname)
     Copy(fname, buf);
 
     /* append record to .DIR */
-    if (PostAddRecord(post_bname, &header, now) >= 0)
+    if (PostAddRecord(post_bname, &header, NULL) >= 0)
 	if ((bid = getbnum(post_bname)) > 0)
 	    touchbtotal(bid);
 }

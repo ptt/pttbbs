@@ -90,6 +90,9 @@ typedef struct bof_actor_t {
      * in the audit record (police doing police work). */
     const char *bbs_role;
     int bbs_hidden_in_audit;
+    /* The BBS account (Lemmy's local_user): its usernum and firstlogin,
+     * packed as post.svc takes them; 0 for the system or unknown. */
+    uint64_t bbs_local_user;
 } bof_actor_t;
 
 /* ------------------------------------------------------------------------
@@ -187,6 +190,9 @@ typedef struct bof_create_post_t {
     const char *community;                  /* board name */
     const char *bbs_dir;                    /* the list (.DIR) to add it to */
     const struct fileheader_t *bbs_header;  /* its record */
+    /* Where its content (Lemmy's body) is, if not at its place in the
+     * board yet (the caller moves it there); NULL: at its place. */
+    const char *bbs_content_path;
 } bof_create_post_t;
 
 /* What changing a post gives back (Lemmy's PostResponse has the post view;

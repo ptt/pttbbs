@@ -70,7 +70,7 @@ apply_badpost(const char *userid, const fileheader_t *fhdr,
 	    file_appendf(rptpath, "\n°h¤å­ì¦]: %s\n", genbuf);
 	    file_append(rptpath, "\n");
 
-	    PostAddRecord(BAD_POST_RECORD, &report_fh, now);
+	    PostAddRecord(BAD_POST_RECORD, &report_fh, NULL);
 
 	    touchbtotal(rpt_bid);
 	}

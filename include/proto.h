@@ -62,9 +62,13 @@ int edit_user_acl_for_board(const char *uid, const char *board);
 // Records are built with bof_modlog_*() (bof.h); these write them as the
 // current user.
 void modlog(const char *bname, const char *reason, const bof_modlog_t *m);
-// The current user as the actor of bof calls on the board, as shown in its
-// modlog; police: for actions also recorded in BN_POLICELOG.
+// The current user as the actor of bof calls on the board: the account, and
+// how it is shown in the modlog; police: for actions also recorded in
+// BN_POLICELOG.
 bof_actor_t mbbsd_actor(const char *bname, bool police);
+// The current user as the actor of what any user does (posting, commenting):
+// the account, without a role for the modlog.
+bof_actor_t mbbsd_user_actor(void);
 void modlog_police(const char *bname, const char *reason, const bof_modlog_t *m);
 // Posts in the digest (g) are copies: changes to them are not recorded.
 #define MODLOG_FOR_POSTS() (!(currmode & MODE_DIGEST))
@@ -226,7 +230,10 @@ const struct CommentKeyReq *CommentsGetKeyReq(void *ctx);
 #endif
 
 /* post & comment storage */
-int PostAddRecord(const char *board, const fileheader_t *fhdr, time4_t ctime);
+// content_path: where the content is if not at its place in the board yet
+// (NULL: at its place).
+int PostAddRecord(const char *board, const fileheader_t *fhdr,
+                  const char *content_path);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
 void post_record_changed(const char *direct, int ent, const fileheader_t *fhdr);

@@ -2668,7 +2668,7 @@ pvce_cmd_edit(cmd_ctx_t *ctx) {
     if (content_check(CONTENT_KIND_COMMENT, NULL, 0, 0, NULL, NULL, msg))
         return 0;
 
-    bof_actor_t me = { .name = cuser.userid, .from = fromhost };
+    bof_actor_t me = mbbsd_actor(cx->board, false);
     bof_edit_comment_t req = {
         .post = { .community = cx->board, .bbs_dir = cx->direct,
                   .bbs_index = cx->ent, .bbs_header = cx->fh },
@@ -2711,7 +2711,7 @@ pvce_cmd_delete(cmd_ctx_t *ctx) {
         return 0;
     if (vans("確定要刪除此推文嗎？[y/N] ") != 'y')
         return 0;
-    bof_actor_t me = { .name = cuser.userid, .from = fromhost };
+    bof_actor_t me = mbbsd_actor(cx->board, false);
     bof_delete_comment_t req = {
         .post = { .community = cx->board, .bbs_dir = cx->direct,
                   .bbs_index = cx->ent, .bbs_header = cx->fh },

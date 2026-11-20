@@ -2377,7 +2377,7 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	    vmsg("看板已不存在，文章未轉錄。");
 	    return FULLUPDATE;
 	}
-	PostAddRecord(xboard, &xfile, now);
+	PostAddRecord(xboard, &xfile, NULL);
 	setbtotal(xbid);
 
         log_crosspost_in_allpost(xboard, &xfile);

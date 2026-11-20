@@ -606,16 +606,26 @@ modlog_role(const char *bname, bool anonymous)
     return "管理人員";
 }
 
+bof_actor_t
+mbbsd_user_actor(void)
+{
+    user_t me = { .unum = usernum, .firstlogin = cuser.firstlogin };
+    bof_actor_t actor = { .name = cuser.userid, .from = fromhost };
+    // The account, packed as post.svc keys it.
+    _Static_assert(sizeof(me) == sizeof(actor.bbs_local_user), "user_t");
+    if (usernum > 0)
+        memcpy(&actor.bbs_local_user, &me, sizeof(me));
+    return actor;
+}
+
 // The actor for bof: the current user, shown in the modlog as its role, and
 // hidden in the audit record too when anonymous (police).
 static bof_actor_t
 modlog_actor(const char *bname, bool anonymous)
 {
-    bof_actor_t actor = {
-        .name = cuser.userid, .from = fromhost,
-        .bbs_role = modlog_role(bname, anonymous),
-        .bbs_hidden_in_audit = anonymous,
-    };
+    bof_actor_t actor = mbbsd_user_actor();
+    actor.bbs_role = modlog_role(bname, anonymous);
+    actor.bbs_hidden_in_audit = anonymous;
     return actor;
 }
 
