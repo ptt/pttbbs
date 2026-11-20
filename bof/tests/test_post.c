@@ -981,6 +981,79 @@ test_report_limits(void)
     EXPECT_INT(list[0].bbs_site_rule, 1);
 }
 
+// The last record archived in the time capsule of the board.
+static int
+last_archived(fileheader_t *fh)
+{
+    int n = timecapsule_get_max_archive_number(DIRPATH, sizeof(*fh));
+    if (n < 1 || timecapsule_get_archive_blobs(DIRPATH, n - 1, 1, fh,
+                                               sizeof(*fh)) < 1)
+        return 0;
+    fileheader_storage_to_mem(fh, 1);
+    return 1;
+}
+
+static void
+test_restore_post(void)
+{
+    fileheader_t recs[64], ar, updated;
+    bof_actor_t mod = { .name = "boss", .from = "here", .bbs_role = "BM" };
+    bof_post_result_t res;
+    bof_post_response_t pres = { .bbs_header = &updated };
+    bof_modlog_t log;
+    char buf[4096];
+    int n, i;
+
+    // Removed with a tombstone: back in its place.
+    make_post("M.1700000301.A.301", "yuki", "keep me", 0);
+    make_post("M.1700000302.A.302", "yuki", "after", 0);
+    n = read_dir(recs, 64);
+    bof_remove_post_t rm = {
+        .post = ref(recs, n - 1), .removed = 1, .reason = "oops",
+        .bbs_keep_record = 1,
+    };
+    EXPECT_OK(bof_remove_post(&mod, &rm, &res));
+    EXPECT(!exists(BDIR "/M.1700000301.A.301"));
+    EXPECT(last_archived(&ar));
+    EXPECT_STR(ar.filename, "M.1700000301.A.301");
+    bof_modlog_init(&log, "restore");
+    bof_restore_post_t rs = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_archived = &ar,
+        .reason = "mistake", .bbs_modlog = &log,
+    };
+    EXPECT_OK(bof_restore_post(&mod, &rs, &pres));
+    // The tombstone stays, and it is put back in the order of time.
+    EXPECT_INT(read_dir(recs, 64), n + 1);
+    n = read_dir(recs, 64);
+    for (i = 0; i < n && strcmp(recs[i].filename, "M.1700000301.A.301"); i++)
+        ;
+    EXPECT(i < n);
+    EXPECT_STR(recs[i].title, "keep me");
+    EXPECT_STR(recs[i].owner, "yuki");
+    EXPECT_STR(recs[i + 1].filename, "M.1700000302.A.302");
+    slurp(BDIR "/M.1700000301.A.301", buf, sizeof(buf));
+    EXPECT(strstr(buf, "the content of M.1700000301.A.301") != NULL);
+    EXPECT(strstr(buf, "Restored by: boss (here)") != NULL);
+    EXPECT(strstr(slurp(BDIR "/" FN_MODLOG, buf, sizeof(buf)),
+                  " BM restore: mistake\n") != NULL);
+    // Twice: it is there already.
+    EXPECT_INT(bof_restore_post(&mod, &rs, &pres),
+               BOF_ERR_COULDNT_UPDATE_POST);
+
+    // Dropped from the list: back in the order of time.
+    rm.post = ref(recs, i + 1);
+    rm.bbs_keep_record = 0;
+    EXPECT_OK(bof_remove_post(&mod, &rm, &res));
+    EXPECT_INT(read_dir(recs, 64), n - 1);
+    EXPECT(last_archived(&ar));
+    EXPECT_OK(bof_restore_post(&mod, &rs, &pres));
+    EXPECT_INT(read_dir(recs, 64), n);
+    for (i = 0; i < n && strcmp(recs[i].filename, "M.1700000301.A.301"); i++)
+        ;
+    EXPECT(i < n);
+    EXPECT_STR(recs[i + 1].filename, "M.1700000302.A.302");
+}
+
 static void
 test_tombstone_titles(void)
 {
@@ -1032,6 +1105,7 @@ main(void)
     RUN(test_reports);
     RUN(test_remove_post_modlog);
     RUN(test_report_limits);
+    RUN(test_restore_post);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

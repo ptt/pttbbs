@@ -31,6 +31,7 @@ BOF_FS_WRITE(edit_post, bof_edit_post_t, bof_post_response_t);
 BOF_FS_WRITE(delete_post, bof_delete_post_t, bof_post_result_t);
 BOF_FS_WRITE(remove_post, bof_remove_post_t, bof_post_result_t);
 BOF_FS_WRITE(remove_posts, bof_remove_posts_t, int);
+BOF_FS_WRITE(restore_post, bof_restore_post_t, bof_post_response_t);
 BOF_FS_WRITE(lock_post, bof_lock_post_t, bof_post_response_t);
 BOF_FS_WRITE(feature_post, bof_feature_post_t, bof_post_response_t);
 BOF_FS_WRITE(bbs_set_post_modes, bof_bbs_set_post_modes_t,

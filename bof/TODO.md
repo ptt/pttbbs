@@ -26,6 +26,11 @@ what BoF does only in part. See `README.md` for what BoF is.
   person, as post.svc does.
 
 ### Restoring
+- **No UI to restore posts**: `bof_restore_post` is in the API (and
+  tested), but mbbsd never had restoring in its UI.
+- **Restored posts lose their marks and money**: the time capsule keeps
+  only the author, date, title and content (`bof_restore_post`); copies
+  in ALLPOST are not restored either.
 - **DeleteComment** (by its creator): gives `bbs_storage_not_supported`
   for posts in files, as a comment taken out of a file can be neither
   restored nor keep its history; works once comments live in post.svc.

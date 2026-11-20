@@ -289,3 +289,112 @@ bof_fs_remove_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     *count = n;
     return BOF_OK;
 }
+
+// Inserts fh into direct in the order of the times in the file names,
+// before the first record of a later time, under the lock of the list.
+// Returns 0, or -1.
+static int
+insert_record(const char *direct, const fileheader_t *fh)
+{
+    char newfn[PATHLEN], lockfn[PATHLEN];
+    fileheader_t rec, stored = *fh;
+    int fdr, fdw, fd, done = 0, ok = 1;
+    int stamp = get_fhdr_stamp_ts(fh->filename);
+
+    // The records are copied as stored; this one is converted to that.
+    fileheader_mem_to_storage(&stored);
+    snprintf(newfn, sizeof(newfn), "%s.ins", direct);
+    snprintf(lockfn, sizeof(lockfn), "%s.lock", direct);
+    if ((fd = OpenCreate(lockfn, O_RDWR | O_APPEND)) == -1)
+        return -1;
+    flock(fd, LOCK_EX);
+    fdr = open(direct, O_RDONLY);
+    if ((fdw = OpenCreate(newfn, O_WRONLY | O_TRUNC)) == -1) {
+        if (fdr >= 0)
+            close(fdr);
+        flock(fd, LOCK_UN);
+        close(fd);
+        return -1;
+    }
+    while (fdr >= 0 && ok &&
+           read(fdr, &rec, sizeof(rec)) == (ssize_t)sizeof(rec)) {
+        if (!done && rec.filename[0] &&
+            time4_gt(get_fhdr_stamp_ts(rec.filename), stamp)) {
+            ok = write(fdw, &stored, sizeof(stored)) == (ssize_t)sizeof(stored);
+            done = 1;
+        }
+        ok = ok && write(fdw, &rec, sizeof(rec)) == (ssize_t)sizeof(rec);
+    }
+    if (ok && !done)
+        ok = write(fdw, &stored, sizeof(stored)) == (ssize_t)sizeof(stored);
+    if (fdr >= 0)
+        close(fdr);
+    close(fdw);
+    if (!ok || Rename(newfn, direct) != 0) {
+        unlink(newfn);
+        ok = 0;
+    }
+    flock(fd, LOCK_UN);
+    close(fd);
+    return ok ? 0 : -1;
+}
+
+bof_error_t
+bof_fs_restore_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                    const bof_restore_post_t *req, bof_post_response_t *out)
+{
+    const fileheader_t *ar = req->bbs_archived;
+    char path[PATHLEN], revpath[PATHLEN], tmp[PATHLEN];
+    fileheader_t restored, rec;
+    time4_t now = time4(NULL);
+    int maxrev, i;
+
+    if (!req->bbs_dir || !ar || !ar->filename[0] || ar->filename[0] == '.')
+        return BOF_ERR_INVALID_BODY_FIELD;
+    setdirpath(path, req->bbs_dir, ar->filename);
+    // Not deleted, or restored already.
+    if (dashf(path))
+        return BOF_ERR_COULDNT_UPDATE_POST;
+    if ((maxrev = timecapsule_get_max_revision_number(path)) < 1 ||
+        !timecapsule_get_by_revision(path, maxrev, revpath, sizeof(revpath)) ||
+        !dashf(revpath))
+        return BOF_ERR_COULDNT_FIND_POST;
+    // Made aside and linked into place, which fails if something (another
+    // restore) put the post back meanwhile.
+    snprintf(tmp, sizeof(tmp), "%s.rs%d", path, (int)getpid());
+    if (Copy(revpath, tmp) < 0) {
+        unlink(tmp);
+        return BOF_ERR_COULDNT_UPDATE_POST;
+    }
+    file_appendf(tmp, "\n" STR_POST_MARK "Restored by: %s (%s) %s\n",
+                 actor && actor->name ? actor->name : "",
+                 actor && actor->from ? actor->from : "", Cdatelite(&now));
+    i = link(tmp, path);
+    unlink(tmp);
+    if (i != 0)
+        return BOF_ERR_COULDNT_UPDATE_POST;
+
+    // The archive keeps the author, date, title and file name.
+    memset(&restored, 0, sizeof(restored));
+    strlcpy(restored.filename, ar->filename, sizeof(restored.filename));
+    strlcpy(restored.owner, ar->owner, sizeof(restored.owner));
+    strlcpy(restored.date, ar->date, sizeof(restored.date));
+    strlcpy(restored.title, ar->title, sizeof(restored.title));
+    restored.modified = dasht4(path);
+
+    // In place of its record, if only the file was gone, or else into the
+    // list in the order of time (a tombstone, FN_SAFEDEL, stays).
+    if ((i = search_dir_by_filename(req->bbs_dir, restored.filename,
+                                    &rec)) > 0) {
+        if (substitute_fileheader(req->bbs_dir, &rec, &restored, i) != 0) {
+            unlink(path);
+            return BOF_ERR_COULDNT_UPDATE_POST;
+        }
+    } else if (insert_record(req->bbs_dir, &restored) != 0) {
+        unlink(path);
+        return BOF_ERR_COULDNT_UPDATE_POST;
+    }
+    if (out && out->bbs_header)
+        *out->bbs_header = restored;
+    return BOF_OK;
+}

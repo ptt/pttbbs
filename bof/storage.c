@@ -137,6 +137,17 @@ bof_remove_posts(const bof_actor_t *actor, const bof_remove_posts_t *req,
 }
 
 bof_error_t
+bof_restore_post(const bof_actor_t *actor, const bof_restore_post_t *req,
+                 bof_post_response_t *out)
+{
+    bof_post_response_t local = { 0 };
+    bof_error_t err = WRITE(restore_post, out ? out : &local, actor, req);
+    if (err == BOF_OK)
+        modlog_done(req->community, actor, req->reason, req->bbs_modlog);
+    return err;
+}
+
+bof_error_t
 bof_lock_post(const bof_actor_t *actor, const bof_lock_post_t *req,
               bof_post_response_t *out)
 {

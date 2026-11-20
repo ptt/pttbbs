@@ -132,7 +132,7 @@ bof_error_t bof_bbs_get_post_body(const bof_post_ref_t *post,
 /* Lemmy's DeletePost: the creator deletes the post. */
 typedef struct bof_delete_post_t {
     bof_post_ref_t post;
-    int deleted;            /* must be 1: restoring is not supported yet */
+    int deleted;            /* must be 1: see bof_restore_post() */
     /* PTT: keep a record (with bbs_title) in the list instead of dropping
      * it, as boards with many readers do. */
     int bbs_keep_record;
@@ -142,7 +142,7 @@ typedef struct bof_delete_post_t {
 /* Lemmy's RemovePost: a moderator removes the post, for a reason. */
 typedef struct bof_remove_post_t {
     bof_post_ref_t post;
-    int removed;            /* must be 1: restoring is not supported yet */
+    int removed;            /* must be 1: see bof_restore_post() */
     const char *reason;     /* also appended to the archived post */
     int bbs_keep_record;    /* as in bof_delete_post_t */
     const char *bbs_title;  /* NULL or "": the default for removed posts */
@@ -229,6 +229,28 @@ typedef struct bof_remove_posts_t {
 
 bof_error_t bof_remove_posts(const bof_actor_t *actor,
                              const bof_remove_posts_t *req, int *count);
+
+/* Lemmy's DeletePost with deleted: false and RemovePost with removed:
+ * false: puts a deleted or removed post back from the archive (the time
+ * capsule; its recycle bin lists the archived records) into its list, in
+ * place of its record if only its file was gone, or else in the order of
+ * time (a tombstone it left stays).
+ * The archive keeps its author, date, title and content (with the notes
+ * of its deletion, and now of who restored it); its marks and money are
+ * not kept. Errors: couldnt_find_post (not in the archive anymore),
+ * couldnt_update_post (it is in the list already, or cannot be written).
+ * Copies in other boards (ALLPOST) are not restored. */
+typedef struct bof_restore_post_t {
+    const char *community;
+    const char *bbs_dir;
+    const struct fileheader_t *bbs_archived;  /* its record in the archive */
+    const char *reason;                       /* may be NULL */
+    const struct bof_modlog_t *bbs_modlog;    /* see bof_lock_post_t */
+} bof_restore_post_t;
+
+bof_error_t bof_restore_post(const bof_actor_t *actor,
+                             const bof_restore_post_t *req,
+                             bof_post_response_t *out);
 
 /* Lemmy's EditPost: the title, the body, and (PTT) other fields of the
  * record. */
