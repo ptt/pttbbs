@@ -15,21 +15,39 @@ FS_SRCS:=	fs/backend.c fs/comment.c fs/content.c fs/crosspost.c \
 PS_SRCS:=	$(sort $(wildcard ps/*.c))
 SRCS:=	$(CORE_SRCS) $(FILES_SRCS) $(FS_SRCS) $(PS_SRCS)
 LIB:=	libbof.a
+# For programs other than the BBS (gateways): BoF, a way to open it, and
+# the globals of the BBS (SHM, ...), as util has them.
+GATEWAY_LIB:=	libbof_gateway.a
 OBJS:=	$(SRCS:.c=.o)
 
 TESTS:=	tests/test_bof tests/test_post tests/test_modlog tests/test_readmarks \
-		tests/test_storage tests/test_people
+		tests/test_storage tests/test_people tests/test_gateway
 TEST_LDFLAGS:=	-L. -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
 		-L$(SRCROOT)/common/osdep
 TEST_LDLIBS:=	-lbof -lcmbbs -lcmsys -losdep $(LDLIBS)
 
 .PHONY: all clean install test
 
-all:	$(SRCROOT)/include/var.h $(LIB)
+all:	$(SRCROOT)/include/var.h $(LIB) $(GATEWAY_LIB)
 
 $(LIB): $(OBJS)
 	rm -f $@
 	$(AR) rcs $@ $^
+
+$(GATEWAY_LIB): $(OBJS) gateway.o gateway_var.o
+	rm -f $@
+	$(AR) rcs $@ $^
+
+gateway.o: gateway.c bof_int.h $(SRCROOT)/include/bof.h $(SRCROOT)/include/bof_gateway.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+gateway_var.o: $(SRCROOT)/mbbsd/var.c $(SRCROOT)/include/var.h
+	$(CC) $(CFLAGS) -D_BBS_UTIL_C_ -c -o $@ $<
+
+# Links with the gateway library alone.
+tests/test_gateway: tests/test_gateway.c $(GATEWAY_LIB)
+	$(CC) $(CFLAGS) $< -o $@ -L. -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
+		-L$(SRCROOT)/common/osdep -lbof_gateway -lcmbbs -lcmsys -losdep $(LDLIBS)
 
 %.o: %.c bof_int.h $(SRCROOT)/include/bof.h $(SRCROOT)/include/bof_files.h $(SRCROOT)/include/bof_fs.h $(SRCROOT)/include/bof_storage.h
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -47,4 +65,4 @@ test: $(TESTS)
 install:
 
 clean:
-	rm -f $(OBJS) $(LIB) $(TESTS) tests/var.o
+	rm -f $(OBJS) $(LIB) $(GATEWAY_LIB) gateway.o gateway_var.o $(TESTS) tests/var.o

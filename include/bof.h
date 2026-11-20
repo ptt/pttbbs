@@ -893,7 +893,7 @@ bof_error_t bof_get_comment_revisions(
  * them), and they get FILE_BOTTOM. */
 typedef struct bof_get_posts_t {
     const char *community;
-    const char *bbs_dir;
+    const char *bbs_dir;         /* NULL: the list of community itself */
     int bbs_start;               /* 1-based position of the first to get */
     int limit;                   /* how many at most */
     /* How many posts the list has, as the UI last saw it: none after that

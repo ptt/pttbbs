@@ -19,17 +19,25 @@ bof_fs_get_posts(void *ctx GCC_UNUSED, const bof_get_posts_t *req,
 {
     fileheader_t *buf;
     int total, n, rv = 0, fstart, avail;
+    char bdir[PATHLEN];
+    const char *dir = req->bbs_dir;
+
+    // The list of the board itself, if not given (e.g. by a gateway).
+    if (!dir && req->community && is_valid_brdname(req->community)) {
+        setbfile(bdir, req->community, FN_DIR);
+        dir = bdir;
+    }
 
     if (!out)
         return BOF_ERR_INVALID_BODY_FIELD;
     buf = out->posts;
     out->count = 0;
     out->bbs_total = 0;
-    if (!req->bbs_dir || !buf || req->limit <= 0 || req->bbs_start <= 0 ||
+    if (!dir || !buf || req->limit <= 0 || req->bbs_start <= 0 ||
         (req->bbs_nfeatured > 0 && !req->bbs_featured))
         return BOF_ERR_INVALID_BODY_FIELD;
     total = req->bbs_total > 0 ? req->bbs_total :
-        get_num_records(req->bbs_dir, sizeof(fileheader_t));
+        get_num_records(dir, sizeof(fileheader_t));
     out->bbs_total = total;
 
     // The posts of the list from bbs_start, as many as fit (and not after
@@ -38,12 +46,12 @@ bof_fs_get_posts(void *ctx GCC_UNUSED, const bof_get_posts_t *req,
     if (n >= req->limit || req->bbs_nfeatured <= 0) {
         int want = n < req->limit ? n : req->limit;
         rv = want > 0 ?
-            get_fileheaders(req->bbs_dir, buf, req->bbs_start, want) : 0;
+            get_fileheaders(dir, buf, req->bbs_start, want) : 0;
         out->count = rv < 0 ? 0 : rv;
         return BOF_OK;
     }
     if (n > 0) {
-        rv = get_fileheaders(req->bbs_dir, buf, req->bbs_start, n);
+        rv = get_fileheaders(dir, buf, req->bbs_start, n);
         if (rv < 0)
             rv = 0;
         fstart = 1;
@@ -61,7 +69,7 @@ bof_fs_get_posts(void *ctx GCC_UNUSED, const bof_get_posts_t *req,
             int idx = (fstart - 1) + i;
             if (idx < 0 || idx >= req->bbs_nfeatured)
                 continue;
-            if (get_fileheader_keep(req->bbs_dir, &buf[rv],
+            if (get_fileheader_keep(dir, &buf[rv],
                                     req->bbs_featured[idx], &fd) > 0) {
                 buf[rv].filemode |= FILE_BOTTOM;
                 rv++;

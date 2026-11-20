@@ -115,6 +115,49 @@ if (err != BOF_OK)
 
 The API grows one feature at a time, as `mbbsd` moves onto it.
 
+## Gateways
+
+A program other than the BBS, such as a Lemmy API server in front of it,
+uses BoF the same way `mbbsd` does:
+
+- **Linking and opening.** Link `bof/libbof_gateway.a` (BoF with the
+  globals the programs of the BBS define themselves) and the libraries in
+  `common/`, include [`include/bof_gateway.h`](../include/bof_gateway.h),
+  and call `bof_gateway_open()` once: it enters `BBSHOME` and attaches the
+  board cache of the running BBS.
+- **One call at a time.** BoF is not thread-safe (the date functions of
+  the common library, the backend in use, the read records of a
+  session): a server serializes its calls (one lock) or runs them in
+  worker processes. The read records (`readmarks.c`) are those of one
+  person per process, not for a server yet.
+- **IDs.** Lemmy's IDs are post.svc's, so a gateway needs it as the
+  backend. A post ID gives its key (`bof_get_post_key()`), the key
+  where it is now (`bof_bbs_find_post()`), which makes the
+  `bof_post_ref_t` the other calls take; a comment ID is its post and
+  floor (`bof_comment_id_split()`); `bof_bbs_community_id()` gives the ID
+  of a community.
+- **Who.** `bof_get_person()` gives the person of the authenticated user;
+  an actor with it (`bbs_person`, with `name`, `from` and
+  `bbs_local_user`) has BoF check the rules of the BBS on each call, as
+  Lemmy does. Before listing, check `bof_bbs_can_read()`.
+- **Texts.** The files are in Big5 (with ANSI colors): a gateway converts
+  to and from UTF-8. A new post is given by its body alone
+  (`bof_create_post_t.body`), which BoF writes as the editor of the BBS
+  would; posts are read from `bof_bbs_get_post_file()`.
+- **Errors.** `bof_error_name()` gives Lemmy's names (`{"error": ...}`);
+  the BBS's own are `bbs_`-prefixed.
+
+| Lemmy | BoF |
+|---|---|
+| `GET /community`, `/community/list` | `bof_get_community()`, `bof_list_communities()` |
+| `GET /user` | `bof_get_person()` |
+| `GET /post/list`, `/post` | `bof_get_posts()`, `bof_get_post()`, `bof_bbs_get_post_file()` |
+| `POST /post`, `PUT /post`, `/post/delete`, `/post/remove`, `/post/lock`, `/post/feature` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
+| `GET /comment/list`, `POST /comment`, `PUT /comment`, `/comment/delete`, `/comment/remove` | `bof_get_comments()`, `bof_create_comment()`, `bof_edit_comment()`, `bof_delete_comment()`, `bof_remove_comment()` |
+| `POST /post/like` | `bof_create_post_like()` (post.svc) |
+| `/post/report`, `/comment/report`, `/report/list`, `/*/report/resolve` | `bof_create_report()`, `bof_list_reports()`, `bof_resolve_report()` |
+| `POST /post/mark_as_read` | `bof_mark_post_as_read()` (one person per process) |
+
 ## Status and roadmap
 
 BoF is new. It is being introduced into PTT BBS step by step, each step
@@ -164,7 +207,7 @@ The sources are in three parts:
 
 | Directory | What | Header |
 |---|---|---|
-| `bof/` | The core: the API, its checks and the backend in use (`storage.c`), communities and persons (`people.c`), the rules of the BBS (`policy.c`), the records of the modlog (`modlog.c`), the read records (`readmarks.c`), error names (`bof.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h) |
+| `bof/` | The core: the API, its checks and the backend in use (`storage.c`), communities and persons (`people.c`), the rules of the BBS (`policy.c`), the records of the modlog (`modlog.c`), the read records (`readmarks.c`), error names (`bof.c`), opening for gateways (`gateway.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h), [`include/bof_gateway.h`](../include/bof_gateway.h) |
 | `bof/files/` | The files of a BBS, as primitives with no actor or rules: records of lists, the content of posts, the line of a comment, aggregate boards, the time capsule | [`include/bof_files.h`](../include/bof_files.h) |
 | `bof/fs/` | The files backend (`bof_storage_files`): the calls of the API done with the files | [`include/bof_fs.h`](../include/bof_fs.h) |
 | `bof/ps/` | The post.svc backend, in pttbbs.cmd where post.svc is: post.svc, with the files backend as its cache | |

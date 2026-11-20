@@ -755,6 +755,12 @@ test_get_posts(void)
     EXPECT_STR(got[2].filename, recs[0].filename);
     EXPECT(got[2].filemode & FILE_BOTTOM);
 
+    // By the community alone, as a gateway asks.
+    req.bbs_dir = NULL;
+    EXPECT_OK(bof_get_posts(&req, &res));
+    EXPECT_INT(res.count, 3);
+    req.bbs_dir = DIRPATH;
+
     // Only the featured part; a short page of the list.
     req.bbs_start = n + 1;
     EXPECT_OK(bof_get_posts(&req, &res));
