@@ -186,6 +186,29 @@ bof_error_t bof_create_post(const bof_actor_t *actor,
                             const bof_create_post_t *req,
                             bof_post_response_t *out);
 
+/* Removes many posts of a board at once, e.g. those tagged in the UI.
+ * Lemmy and Reddit have none; this is Discourse's bulk delete of posts
+ * (destroy_many), as RemovePost does each: the content of each is archived
+ * (with reason), then the records are dropped, or replaced with
+ * tombstones (bbs_keep_record), in one rewrite of the list. Posts with any
+ * of bbs_keep_modes (marked, pinned, digest) are kept. Posts are chosen
+ * by bbs_selected (index is 1-based) rather than by IDs, which posts in
+ * files do not have; bbs_removed (if not NULL) is called for each removed.
+ * *count gets how many. */
+typedef struct bof_remove_posts_t {
+    const char *community;
+    const char *bbs_dir;
+    int (*bbs_selected)(const struct fileheader_t *fh, int index, void *ctx);
+    void (*bbs_removed)(const struct fileheader_t *fh, void *ctx);
+    void *bbs_ctx;
+    uint16_t bbs_keep_modes;
+    int bbs_keep_record;
+    const char *reason;     /* may be NULL */
+} bof_remove_posts_t;
+
+bof_error_t bof_remove_posts(const bof_actor_t *actor,
+                             const bof_remove_posts_t *req, int *count);
+
 /* Lemmy's EditPost: the title, the body, and (PTT) other fields of the
  * record. */
 typedef struct bof_edit_post_t {

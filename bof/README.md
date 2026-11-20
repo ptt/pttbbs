@@ -104,6 +104,7 @@ if (err != BOF_OK)
 | People | `person`, `local_user` | `bof_person_id_t`, `bof_actor_t` |
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
 | Comments | `CreateComment` (+ `CreatePostLike` for a push or boo), `RemoveComment` | `bof_create_comment()`, `bof_remove_comment()` |
+| Bulk | Discourse's bulk delete | `bof_remove_posts()` |
 | BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()`, `bof_bbs_mask_post()`, `bof_bbs_remove_crosspost()` |
 
 The API grows one feature at a time, as `mbbsd` moves onto it.

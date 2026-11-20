@@ -246,3 +246,39 @@ bof_fs_create_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
         *out->bbs_header = *req->bbs_header;
     return BOF_OK;
 }
+
+bof_error_t
+bof_fs_remove_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                    const bof_remove_posts_t *req, int *count)
+{
+    const char *deleter = actor ? actor->name : NULL;
+    fileheader_t fh;
+    int fd, index, n;
+
+    *count = 0;
+    if (!req->bbs_dir || !req->bbs_selected)
+        return BOF_ERR_INVALID_BODY_FIELD;
+
+    // First archive the content of each, while the records are all there;
+    // then drop the records (or leave tombstones) at once.
+    if ((fd = open(req->bbs_dir, O_RDONLY)) < 0)
+        return BOF_ERR_COULDNT_FIND_COMMUNITY;
+    for (index = 1; read_fileheader(fd, &fh) == 1; index++) {
+        if ((fh.filemode & req->bbs_keep_modes) ||
+            !req->bbs_selected(&fh, index, req->bbs_ctx))
+            continue;
+        // The reason is in the modlog, not in the archived posts.
+        bof_files_delete_content(req->bbs_dir, &fh, req->bbs_dir, NULL, 0,
+                                 NULL, deleter,
+                                 actor ? actor->from : NULL);
+    }
+    close(fd);
+
+    n = bof_files_prune(req->bbs_dir, req->bbs_keep_modes,
+                        req->bbs_keep_record, req->bbs_selected,
+                        req->bbs_removed, req->bbs_ctx, deleter);
+    if (n < 0)
+        return BOF_ERR_COULDNT_UPDATE_POST;
+    *count = n;
+    return BOF_OK;
+}

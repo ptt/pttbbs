@@ -81,6 +81,12 @@ _iter_collect_tagged(void *ptr, void *opt) {
 }
 
 static int
+tag_selected(const fileheader_t *fh, int index GCC_UNUSED, void *ctx GCC_UNUSED)
+{
+    return FindTaggedItem(fh) != NULL;
+}
+
+static int
 _iter_delete_tagged(void *ptr, void *opt) {
     fileheader_t *fh = (fileheader_t*) ptr;
     const char *direct = (const char*)opt;
@@ -183,21 +189,32 @@ TagPruner(int bid)
     outmsg("處理中,請稍後...");
     refresh();
 
-    // first, delete and backup all files
-    apply_fileheader(direct, _iter_delete_tagged, direct);
-
-    // now, delete the header
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-    if(bp && !(currmode & MODE_DIGEST) &&
-       bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
-        safe_delete_range(currdirect, 0, 0);
-    else
-#endif
+    // What was removed, or -1 when it could not be.
+    int nremoved = ntagged;
+    if (bp && !(currmode & MODE_DIGEST)) {
+        // Posts on a board: archived and removed by bof, leaving tombstones
+        // on boards with many readers.
+        bof_actor_t me = { .name = cuser.userid, .from = fromhost };
+        bof_remove_posts_t req = {
+            .community = bp->brdname, .bbs_dir = direct,
+            .bbs_selected = tag_selected,
+            .bbs_keep_modes = FILE_MARKED | FILE_BOTTOM | FILE_DIGEST,
+            .bbs_keep_record = IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+                               bp->nuser >= SAFE_ARTICLE_DELETE_NUSER,
+            .reason = log_reason,
+        };
+        if (bof_remove_posts(&me, &req, &nremoved) != BOF_OK)
+            nremoved = -1;
+    } else {
+        // The mailbox and digests (not in bof): first, delete and backup
+        // all files, then the records.
+        apply_fileheader(direct, _iter_delete_tagged, direct);
         delete_range(currdirect, 0, 0);
+    }
 
     ClearTagList();
     if (bp) {
-        if (log_it) {
+        if (log_it && nremoved >= 0) {
             modlog_t log;
             tag_prune_modlog(&log, ntagged);
             // Which ones, in the audit record only.
@@ -217,8 +234,10 @@ TagPruner(int bid)
             free(posts);
         }
         free(list.items);
-        if (mailed)
-            vmsgf("已移除 %d 篇%s，並寄回 %d 封原文。", ntagged, kind,
+        if (nremoved < 0)
+            vmsg("移除失敗，請重新進入看板後再試一次。");
+        else if (mailed)
+            vmsgf("已移除 %d 篇%s，並寄回 %d 封原文。", nremoved, kind,
                   mailed);
     }
     if (bid) {

@@ -86,6 +86,14 @@ bof_remove_post(const bof_actor_t *actor, const bof_remove_post_t *req,
 }
 
 bof_error_t
+bof_remove_posts(const bof_actor_t *actor, const bof_remove_posts_t *req,
+                 int *count)
+{
+    int local;
+    return WRITE(remove_posts, count ? count : &local, actor, req);
+}
+
+bof_error_t
 bof_lock_post(const bof_actor_t *actor, const bof_lock_post_t *req,
               bof_post_response_t *out)
 {

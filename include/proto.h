@@ -783,11 +783,6 @@ int stampfile_u(char *fpath, fileheader_t *fh);
 int stampadir(char *fpath, fileheader_t * fh, int large_set);
 int delete_files(const char* dirname, int (*filecheck)(), int record);
 void set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle);
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-#ifndef _BBS_UTIL_C_
-void safe_delete_range(const char *fpath, int id1, int id2);
-#endif
-#endif
 int safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, 
                         const char *newtitle);
 int safe_article_delete_range(const char *direct, int from, int to);

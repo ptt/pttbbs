@@ -602,6 +602,41 @@ test_crosspost(void)
     EXPECT(!exists(BDIR "/M.1700000053.A.053"));
 }
 
+static int
+select_owner(const fileheader_t *fh, int index GCC_UNUSED, void *ctx)
+{
+    return strcmp(fh->owner, (const char *)ctx) == 0;
+}
+
+static void
+test_remove_posts(void)
+{
+    fileheader_t recs[64];
+    bof_actor_t mod = { .name = "boss" };
+    int n, count;
+
+    make_post("M.1700000061.A.061", "oscar", "one", 0);
+    make_post("M.1700000062.A.062", "oscar", "two", FILE_MARKED);
+    make_post("M.1700000063.A.063", "oscar", "three", 0);
+    n = read_dir(recs, 64);
+    bof_remove_posts_t req = {
+        .community = BOARD, .bbs_dir = DIRPATH,
+        .bbs_selected = select_owner, .bbs_ctx = "oscar",
+        .bbs_keep_modes = FILE_MARKED | FILE_BOTTOM | FILE_DIGEST,
+        .reason = "bulk",
+    };
+    EXPECT_OK(bof_remove_posts(&mod, &req, &count));
+    EXPECT_INT(count, 2);
+    EXPECT_INT(read_dir(recs, 64), n - 2);
+    EXPECT(!exists(BDIR "/M.1700000061.A.061"));
+    EXPECT(exists(BDIR "/M.1700000062.A.062"));
+    EXPECT(!exists(BDIR "/M.1700000063.A.063"));
+    // Archived in the time capsule.
+    EXPECT_INT(timecapsule_get_max_archive_number(DIRPATH,
+                                                  sizeof(fileheader_t)) > 0,
+               1);
+}
+
 static void
 test_tombstone_titles(void)
 {
@@ -646,6 +681,7 @@ main(void)
     RUN(test_edit_post_body);
     RUN(test_mask_post);
     RUN(test_crosspost);
+    RUN(test_remove_posts);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

@@ -36,7 +36,7 @@ get_sum_records(const char *fpath, int size)
     return ans / 1024;
 }
 
-// What delete_range() and safe_delete_range() remove: the records in
+// What delete_range() removes: the records in
 // [id1, id2], or (with id1 == 0) the tagged ones.
 typedef struct {
     int id1, id2;
@@ -65,16 +65,6 @@ range_keep_modes(void)
     return currstat == RMAIL ? FILE_MARKED :
         (FILE_MARKED | FILE_BOTTOM | FILE_DIGEST);
 }
-
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-void safe_delete_range(const char *fpath, int id1, int id2)
-{
-    range_t r = { id1, id2 };
-    // Only boards; FILE_BOTTOM is always kept there.
-    bof_files_prune(fpath, FILE_MARKED | FILE_BOTTOM | FILE_DIGEST, 1,
-                    range_selected, NULL, &r, cuser.userid);
-}
-#endif
 
 int
 delete_range(const char *fpath, int id1, int id2)
