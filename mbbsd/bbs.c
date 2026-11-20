@@ -3026,17 +3026,8 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     if(type >  RECTYPE_MAX || type < 0)
 	type = RECTYPE_ARROW;
 
-    maxlength = 78 -
-	3 /* lead */ -
-	6 /* date */ -
-	1 /* space */ -
-	6 /* time */;
-
     if (bp->brdattr & BRD_COMMENT_SHOWIP)
-    {
-	maxlength -= 15 /* IP */;
 	logIP = 1;
-    }
 
     if (IS_ENABLED(CONFIG_ANGEL) && HasUserPerm(PERM_ANGEL) && (bp->brdattr & BRD_ANGELANONYMOUS) &&
 	vans("要使用小天使匿名推文嗎？ [Y/n]: ") != 'n')
@@ -3055,12 +3046,11 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	myid = mynick;
     }
 
-    maxlength -= strlen(myid);
+    // The room left in the line of the comment (bof makes the line).
+    maxlength = bof_bbs_comment_width(myid, logIP);
     if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
-	maxlength -= 2; /* '推' */
 	sprintf(buf, "%s %s:", "→", myid);
     } else {
-	maxlength--;  /* space after colon */
 	sprintf(buf, "%s%s%s %s: ",
 		ctype_attr[type], ctype[type], ANSI_RESET, myid);
     }
@@ -3109,23 +3099,10 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     site_on_comment(bp, fhdr, type, myid, msg);
 
-    {
-	/* build tail first. */
-	char tail[STRLEN];
-
-	if(logIP)
-	{
-	    SNPRINTF(tail, "%15s %s",
-		    FROMHOST,
-		    Cdate_mdHM(&now));
-	} else {
-	    SNPRINTF(tail, " %s",
-		    Cdate_mdHM(&now));
-	}
-
-        bof_files_format_comment(buf, sizeof(buf), type,
-                                 myid, maxlength, msg, tail);
-    }
+    bof_bbs_format_comment(buf, sizeof(buf),
+                           type == RECTYPE_GOOD ? 1 :
+                           type == RECTYPE_BAD ? -1 : 0,
+                           myid, msg, logIP ? FROMHOST : NULL, now);
 
     if (CommentAddRecord(bp->brdname, direct, fhdr, ent, type, msg, buf) < 0)
         return DIRCHANGED;

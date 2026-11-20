@@ -303,7 +303,32 @@ bof_create_comment(const bof_actor_t *actor, const bof_create_comment_t *req,
                    bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
+    bof_create_comment_t made;
+    char line[STRLEN * 2];
     CHECK(actor, req->post.community, MAY_COMMENT, req->post.bbs_header);
+    if (!req->content) {
+        // Only what was typed (a gateway): the line as the board shows it.
+        bof_community_t c;
+        char author[IDLEN + 1];
+        uint32_t attr = 0;
+
+        if (!req->bbs_text || !actor || !actor->name)
+            return BOF_ERR_INVALID_BODY_FIELD;
+        if (req->post.community &&
+            bof_get_community(req->post.community, &c) == BOF_OK)
+            attr = c.bbs_attr;
+        snprintf(author, sizeof(author),
+                 (attr & BRD_ALIGNEDCMT) ? "%-*s" : "%.*s", IDLEN,
+                 actor->name);
+        bof_bbs_format_comment(line, sizeof(line), req->bbs_vote, author,
+                               req->bbs_text,
+                               (attr & BRD_COMMENT_SHOWIP) ?
+                               (actor->from ? actor->from : "") : NULL,
+                               (int32_t)time(NULL));
+        made = *req;
+        made.content = line;
+        req = &made;
+    }
     return WRITE(create_comment, out ? out : &local, actor, req);
 }
 

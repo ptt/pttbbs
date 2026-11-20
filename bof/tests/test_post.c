@@ -1153,6 +1153,49 @@ test_restore_post(void)
 }
 
 static void
+test_comment_from_text(void)
+{
+    fileheader_t recs[64];
+    bof_actor_t me = { .name = "kate", .from = "1.2.3.4" };
+    bof_comment_t cs[4];
+    char line[ANSILINELEN], longtext[200];
+    int n;
+
+    // The room: the screen less the mark, the author and the date.
+    int w = bof_bbs_comment_width("kate", 0);
+    EXPECT_INT(bof_bbs_comment_width("kate", 1), w - 15);
+    EXPECT_INT(bof_bbs_comment_width("kate12", 0), w - 2);
+    // A line, cut to the room, control characters made spaces.
+    memset(longtext, 'x', sizeof(longtext) - 1);
+    longtext[sizeof(longtext) - 1] = 0;
+    longtext[0] = '\t';
+    bof_bbs_format_comment(line, sizeof(line), 1, "kate", longtext, NULL,
+                           1700000000);
+    EXPECT(strstr(line, "kate") != NULL);
+    EXPECT(strchr(line, '\t') == NULL);
+    EXPECT(line[strlen(line) - 1] == '\n');
+    EXPECT(strlen(line) < 120);
+
+    // CreateComment with only what was typed, as a gateway gives it.
+    make_post("M.1700000501.A.501", "yuki", "talk", 0);
+    n = read_dir(recs, 64);
+    bof_create_comment_t c = {
+        .post = ref(recs, n), .bbs_text = "hello\nthere", .bbs_vote = 1,
+    };
+    EXPECT_OK(bof_create_comment(&me, &c, NULL));
+    bof_get_comments_t get = { .post = ref(recs, n), .limit = 4 };
+    bof_get_comments_response_t gres = { .comments = cs };
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_INT(gres.count, 1);
+    EXPECT_STR(cs[0].creator, "kate");
+    EXPECT_STR(cs[0].content, "hello there");
+    EXPECT_INT(cs[0].bbs_width, w);
+    // Neither content nor text.
+    c.bbs_text = NULL;
+    EXPECT_INT(bof_create_comment(&me, &c, NULL), BOF_ERR_INVALID_BODY_FIELD);
+}
+
+static void
 test_files_extras(void)
 {
     fileheader_t recs[64], updated;
@@ -1405,6 +1448,7 @@ main(void)
     RUN(test_remove_post_modlog);
     RUN(test_report_limits);
     RUN(test_restore_post);
+    RUN(test_comment_from_text);
     RUN(test_files_extras);
     RUN(test_tombstone_titles);
     RUN(test_quiet_edit_and_purge);

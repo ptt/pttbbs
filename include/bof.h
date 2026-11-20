@@ -745,7 +745,11 @@ bof_error_t bof_bbs_remove_crosspost(const bof_actor_t *actor,
  * Lemmy's CreatePostLike would). */
 typedef struct bof_create_comment_t {
     bof_post_ref_t post;
-    const char *content;    /* the comment, as the lines for the file */
+    /* The comment, as the lines for the file; if NULL, bof makes the line
+     * from bbs_text (bof_bbs_format_comment()) as the board shows its
+     * comments: the actor's name (aligned if BRD_ALIGNEDCMT), where from
+     * (actor->from, if BRD_COMMENT_SHOWIP) and now. */
+    const char *content;
     /* What the commenter typed (Lemmy's content), for backends that keep
      * comments apart from the file; NULL if only content is known. */
     const char *bbs_text;
@@ -771,7 +775,8 @@ typedef struct bof_comment_response_t {
 
 /* Errors: couldnt_find_post (no file), bbs_read_only,
  * couldnt_create_comment (the file stayed locked), couldnt_update_post
- * (appended, but the record of the post has changed meanwhile). */
+ * (appended, but the record of the post has changed meanwhile),
+ * invalid_body_field (neither content nor bbs_text). */
 bof_error_t bof_create_comment(const bof_actor_t *actor,
                                const bof_create_comment_t *req,
                                bof_comment_response_t *out);
@@ -798,6 +803,18 @@ typedef struct bof_comment_t {
 } bof_comment_t;
 
 #define BOF_COMMENT_EDITED_MARK '~'
+
+/* PTT: a comment of the BBS is one line as wide as the screen: its mark
+ * (push, boo or arrow by vote: +1, -1, 0), the author as shown
+ * (author_shown: the userid, padded for aligned boards, or the nickname
+ * of an angel), what was typed, where from (from; NULL if the board does
+ * not show it) and when. bof_bbs_comment_width() is the room left for what
+ * is typed; bof_bbs_format_comment() makes the line (with its newline),
+ * text cut to the room, control characters made spaces. */
+int bof_bbs_comment_width(const char *author_shown, int show_from);
+void bof_bbs_format_comment(char *buf, size_t sz, int vote,
+                            const char *author_shown, const char *text,
+                            const char *from, int32_t when);
 
 
 /* Lemmy's GetComments, for one post, in order. */

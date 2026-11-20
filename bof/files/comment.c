@@ -43,3 +43,52 @@ bof_files_format_comment(char *buf, size_t szbuf, int type, const char *author,
              ": %-*s" ANSI_RESET "%s\n",
              attrs[type], kinds[type], author, width, content, tail);
 }
+
+int
+bof_bbs_comment_width(const char *author_shown, int show_from)
+{
+    int width = 78 - 3 /* mark */ - 6 /* date */ - 1 - 6 /* time */;
+
+    if (show_from)
+        width -= 15;
+    width -= strlen(author_shown ? author_shown : "");
+    // The old format ends with a push mark; the new one has a space
+    // after the colon.
+    width -= IS_ENABLED(CONFIG_OLD_RECOMMEND) ? 2 : 1;
+    return width > 0 ? width : 0;
+}
+
+void
+bof_bbs_format_comment(char *buf, size_t sz, int vote,
+                       const char *author_shown, const char *text,
+                       const char *from, int32_t when)
+{
+    char said[STRLEN], tail[STRLEN];
+    time4_t t = when;
+    int width = bof_bbs_comment_width(author_shown, from != NULL);
+    int i, n = 0;
+
+    if (width >= (int)sizeof(said))
+        width = sizeof(said) - 1;
+    // One line, cut to the room without splitting a double-byte character.
+    for (i = 0; text && text[i] && n < width; i++) {
+        unsigned char c = text[i];
+        if (c & 0x80) {
+            if (!text[i + 1] || n + 2 > width)
+                break;
+            said[n++] = text[i++];
+            said[n++] = text[i];
+            continue;
+        }
+        said[n++] = c < ' ' || c == 0x7f ? ' ' : c;
+    }
+    said[n] = 0;
+    if (from)
+        snprintf(tail, sizeof(tail), "%15s %s", from, Cdate_mdHM(&t));
+    else
+        snprintf(tail, sizeof(tail), " %s", Cdate_mdHM(&t));
+    bof_files_format_comment(buf, sz, vote > 0 ? RECTYPE_GOOD :
+                             vote < 0 ? RECTYPE_BAD : RECTYPE_ARROW,
+                             author_shown ? author_shown : "", width, said,
+                             tail);
+}
