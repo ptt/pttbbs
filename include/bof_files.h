@@ -16,6 +16,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -111,6 +112,48 @@ int bof_files_prune(const char *direct, uint16_t keep_modes, int keep_records,
                                     void *ctx),
                     void (*removed)(const struct fileheader_t *fh, void *ctx),
                     void *ctx, const char *deleter);
+
+/* The content of posts (bof/files/content.c). */
+struct bof_post_version_t;
+
+/* The version of the first size bytes of the file open as fd. Returns 0,
+ * or -1 if it cannot be read that far. */
+int bof_files_get_version(int fd, int64_t size,
+                          struct bof_post_version_t *ver);
+
+/* Replaces the post at path with new_path, a new content made from version
+ * ver of it: under the lock of the post, checks that it still has that
+ * content, appends to new_path what was appended to the post after ver
+ * (with CONFIG_EDITPOST_SMARTMERGE; without it, the post must have nothing
+ * after ver), keeps it in the time capsule (appending rev_note, if not
+ * NULL, to that revision), and renames new_path over the post if it is
+ * still the same file. *saved tells if new_path took the place of the post
+ * (it may have when an error is returned). Returns 0 or a bof error:
+ * couldnt_find_post, read_only, couldnt_update_post (changed meanwhile). */
+int bof_files_replace_post(const char *path, const char *new_path,
+                           const struct bof_post_version_t *ver,
+                           const char *rev_note, int *saved);
+
+/* Rewrites the post at path line by line: filter() writes what replaces a
+ * line to out and returns 1, or returns 0 to keep it. If any line was
+ * replaced (*matched counts them), tail (if not NULL) is appended and the
+ * result replaces the post as bof_files_replace_post() does, keeping lines
+ * appended while rewriting. Returns 0 (also when nothing matched) or a
+ * bof error. */
+int bof_files_rewrite_post(const char *path,
+                           int (*filter)(const char *line, FILE *out,
+                                         void *ctx),
+                           void *ctx, const char *tail, const char *rev_note,
+                           int *matched);
+
+/* Comments in the files of posts (bof/files/comment.c). */
+
+/* Formats the line of a comment of type (RECTYPE_*) by author saying
+ * content (padded to width) followed by tail (e.g. where from and when),
+ * as it is written into the file of the post. */
+void bof_files_format_comment(char *buf, size_t szbuf, int type,
+                              const char *author, int width,
+                              const char *content, const char *tail);
 
 #ifdef __cplusplus
 }

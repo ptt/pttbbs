@@ -3214,8 +3214,8 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 		    Cdate_mdHM(&now));
 	}
 
-        FormatCommentString(buf, sizeof(buf), type,
-                            myid, maxlength, msg, tail);
+        bof_files_format_comment(buf, sizeof(buf), type,
+                                 myid, maxlength, msg, tail);
     }
 
     if (CommentAddRecord(bp->brdname, direct, fhdr, ent, type, msg, buf) < 0)

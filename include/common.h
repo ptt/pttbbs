@@ -100,6 +100,14 @@
 // The label of the reason appended to a deleted post (bof keeps its sources
 // ASCII, so its Big5 text is here).
 #define STR_DELETE_REASON   "刪除原因"
+// The marks of comments (push, boo, arrow) in the files of posts, and what
+// is left of a removed comment (by, of whom, reason) and noted in the
+// revision of the post kept before it (when, by, reason, of whom, comment).
+#define STR_COMMENT_PUSH    "推"
+#define STR_COMMENT_BOO     "噓"
+#define STR_COMMENT_ARROW   "→"
+#define STR_COMMENT_REMOVED_LINE "(%s 刪除 %s 的推文: %s)"
+#define STR_COMMENT_REMOVED_NOTE "刪除推文: %s %s理由: %s\n推文內容: %s: %s\n"
 #define FN_EDITHISTORY  ".history"
 
 #ifndef SAFE_ARTICLE_DELETE_NUSER

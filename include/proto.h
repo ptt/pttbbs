@@ -256,10 +256,6 @@ int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
 void post_record_changed(const char *direct, int ent, const fileheader_t *fhdr);
 
-void FormatCommentString(char *buf, size_t szbuf, int type,
-                         const char *myid, int maxlength,
-                         const char *msg, const char *tail);
-
 /* psb (page and service browser) */
 /* Returns non-zero if the user left for the recycle bin ('~'). */
 int psb_view_edit_history(const char *base, const char *subject,

@@ -130,3 +130,11 @@ bof_create_comment(const bof_actor_t *actor, const bof_create_comment_t *req,
     bof_comment_response_t local = { 0 };
     return WRITE(create_comment, out ? out : &local, actor, req);
 }
+
+bof_error_t
+bof_remove_comment(const bof_actor_t *actor, const bof_remove_comment_t *req,
+                   bof_comment_response_t *out)
+{
+    bof_comment_response_t local = { 0 };
+    return WRITE(remove_comment, out ? out : &local, actor, req);
+}

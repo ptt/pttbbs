@@ -5,41 +5,6 @@
 #include "daemons.h"
 #include "comments.h"
 
-void FormatCommentString(char *buf, size_t szbuf, int type GCC_UNUSED,
-                         const char *myid, int maxlength,
-                         const char *msg, const char *tail)
-{
-    if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
-    snprintf(buf, szbuf,
-             ANSI_COLOR(1;31) "→ " ANSI_COLOR(33) "%s" ANSI_RESET
-             ANSI_COLOR(33) ":%-*s" ANSI_RESET "推%s\n",
-             myid, maxlength, msg, tail);
-    } else {
-    // TODO(piaip) Make bbs.c#recomment use same structure.
-    // Now we just assume they are the same.
-    static const char *ctype[] = {
-        "推", "噓", "→",
-    };
-    // Note attr2 is slightly different from ctype_attr in bbs.c#recommend
-    static const char *ctype_attr2[] = {
-        ANSI_COLOR(1;37),
-        ANSI_COLOR(1;31),
-        ANSI_COLOR(1;31),
-    };
-    // Callers check type against RECTYPE_SIZE; these must cover it all.
-    _Static_assert(ARRAY_SIZE(ctype) == RECTYPE_SIZE,
-                   "ctype must have one entry per comment type");
-    _Static_assert(ARRAY_SIZE(ctype_attr2) == RECTYPE_SIZE,
-                   "ctype_attr2 must have one entry per comment type");
-    snprintf(buf, szbuf,
-             "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33)
-             ": %-*s" ANSI_RESET "%s\n",
-             ctype_attr2[type], ctype[type], myid,
-             maxlength, msg, tail);
-    }
-
-}
-
 #ifdef USE_COMMENTD
 /* Locally defined context. */
 typedef struct {
@@ -242,97 +207,41 @@ int CommentsGetCount(void *ctx)
     return num;
 }
 
-// Older comments may have no space after the colon.
-static void
-strip_comment_sep_space(char *s)
-{
-    char *p = strstr(s, ": ");
-    if (p)
-        memmove(p + 1, p + 2, strlen(p + 2) + 1);
-}
-
+// Removes comment i from the file of the post (see bof_remove_comment()),
+// then marks it deleted in commentd. Returns 0, -2 if the file has no such
+// comment (e.g. it was edited), or -1.
 int CommentsDeleteFromTextFile(void *ctx, int i, const char *reason)
 {
-    size_t pattern_len, pattern2_len;
     CommentsCtx *c = (CommentsCtx *)ctx;
-    const CommentBodyReq *req;
-    char buf[ANSILINELEN], pattern[ANSILINELEN], pattern2[ANSILINELEN];
-    FILE *in, *out;
-    int found = 0;
+    const CommentBodyReq *req = CommentsRead(ctx, i);
+    fileheader_t fh = {0};
 
-    req = CommentsRead(ctx, i);
     if (!req || req->type < 0)
         return -1;
 
-    AUTO_BFILE(filename, c->key.board, c->key.file);
-    AUTO_STR(tmpfile, "%s.tmp", filename);
-    FormatCommentString(pattern, sizeof(pattern), req->type,
-                        req->userid, 0, req->msg, "");
-    sprintf(buf, "%-*s", IDLEN, req->userid);
-    FormatCommentString(pattern2, sizeof(pattern2), req->type,
-                        buf, 0, req->msg, "");
-    // It's stupid but we have to remove the trailing ANSI_RESET
-    // for comparison.
-    *strrchr(pattern, ESC_CHR) = 0;
-    *strrchr(pattern2, ESC_CHR) = 0;
-    const int legacy = !IS_ENABLED(CONFIG_OLD_RECOMMEND);
-    char pattern3[ANSILINELEN] = "", pattern4[ANSILINELEN] = "";
-    size_t pattern3_len = 0, pattern4_len = 0;
-    if (legacy) {
-        strlcpy(pattern3, pattern, sizeof(pattern3));
-        strlcpy(pattern4, pattern2, sizeof(pattern4));
-        strip_comment_sep_space(pattern3);
-        strip_comment_sep_space(pattern4);
-        pattern3_len = strlen(pattern3);
-        pattern4_len = strlen(pattern4);
-    }
-    /* Remove the trailing \n for strncmp. */
-    pattern_len = strlen(pattern);
-    pattern2_len = strlen(pattern2);
-    // Now, try to construct and filter the message from file.
-    in = fopen(filename, "rt");
-    out = fopen(tmpfile, "wt");
-    while (fgets(buf, sizeof(buf), in)) {
-        if (!found && (
-            (strncmp(buf, pattern, pattern_len) == 0 &&
-             (buf[pattern_len] == ' ' || buf[pattern_len] == ESC_CHR)) ||
-            (strncmp(buf, pattern2, pattern2_len) == 0 &&
-             (buf[pattern2_len] == ' ' || buf[pattern2_len] == ESC_CHR)) ||
-            (legacy && strncmp(buf, pattern3, pattern3_len) == 0 &&
-             (buf[pattern3_len] == ' ' || buf[pattern3_len] == ESC_CHR)) ||
-            (legacy && strncmp(buf, pattern4, pattern4_len) == 0 &&
-             (buf[pattern4_len] == ' ' || buf[pattern4_len] == ESC_CHR)))) {
-            // Note reason is 40 chars in length.
-            fprintf(out, ANSI_COLOR(1;30)
-                    "(%s 刪除 %s 的推文: %s)" ANSI_RESET "\n",
-                    cuser.userid, req->userid, reason);
-            found = 1;
-        } else {
-            fputs(buf, out);
-        }
-    }
-    fclose(out);
-    fclose(in);
-    if (found) {
-        // For everytime we have to use time capsule system.
-        int rev = timecapsule_add_revision(filename);
-
-        remove(filename);
-        rename(tmpfile, filename);
-        if (rev > 0) {
-            char revfn[PATHLEN];
-            timecapsule_get_by_revision(filename, rev, revfn, sizeof(revfn));
-            if (dashf(revfn))
-            file_appendf(revfn, "\n" STR_POST_MARK "刪除推文: %s %s理由: %s\n"
-                      "推文內容: %s: %s\n", Cdatelite(&now), cuser.userid,
-                      reason, req->userid, req->msg);
-        }
+    STRLCPY(fh.filename, c->key.file);
+    AUTO_BDIR(dir, c->key.board);
+    bof_actor_t me = { .name = cuser.userid, .from = fromhost };
+    bof_remove_comment_t rm = {
+        .post = {
+            .community = c->key.board, .bbs_dir = dir,
+            .bbs_header = &fh,
+        },
+        .bbs_vote = req->type == RECTYPE_GOOD ? 1 :
+                    req->type == RECTYPE_BAD ? -1 : 0,
+        .bbs_author = req->userid,
+        .bbs_content = req->msg,
+        .reason = reason,
+    };
+    switch (bof_remove_comment(&me, &rm, NULL)) {
+    case BOF_OK:
         CommentsDelete(ctx, i);
-    } else {
-        remove(tmpfile);
+        return 0;
+    case BOF_ERR_COULDNT_FIND_COMMENT:
         return -2;
+    default:
+        return -1;
     }
-    return 0;
 }
 
 const struct CommentKeyReq *CommentsGetKeyReq(void *ctx)

@@ -378,6 +378,58 @@ test_create_post_and_comment(void)
 }
 
 static void
+test_remove_comment(void)
+{
+    fileheader_t fh, kept;
+    bof_actor_t mod = { .name = "boss" };
+    bof_comment_response_t cres = { .bbs_header = &kept };
+    char push[ANSILINELEN], boo[ANSILINELEN], buf[4096];
+    FILE *fp;
+    size_t n;
+
+    memset(&fh, 0, sizeof(fh));
+    strlcpy(fh.filename, "M.1700000021.A.021", sizeof(fh.filename));
+    bof_files_format_comment(push, sizeof(push), RECTYPE_GOOD, "ivan", 20,
+                             "nice", " 01/01 00:00");
+    bof_files_format_comment(boo, sizeof(boo), RECTYPE_BAD, "judy", 20,
+                             "bad", " 01/01 00:01");
+    fp = fopen(BDIR "/M.1700000021.A.021", "w");
+    fprintf(fp, "body\n%s%s", push, boo);
+    fclose(fp);
+
+    bof_remove_comment_t rm = {
+        .post = { .community = BOARD, .bbs_dir = DIRPATH, .bbs_header = &fh },
+        .bbs_vote = -1, .bbs_author = "judy", .bbs_content = "bad",
+        .reason = "spam",
+    };
+    EXPECT_OK(bof_remove_comment(&mod, &rm, &cres));
+    EXPECT_STR(kept.filename, fh.filename);
+    fp = fopen(BDIR "/M.1700000021.A.021", "r");
+    n = fread(buf, 1, sizeof(buf) - 1, fp);
+    fclose(fp);
+    buf[n] = '\0';
+    EXPECT_INT(cres.bbs_file_size, n);
+    EXPECT(strstr(buf, push) != NULL);
+    EXPECT(strstr(buf, boo) == NULL);
+    EXPECT(strstr(buf, "boss") != NULL && strstr(buf, "spam") != NULL);
+
+    // It is gone now; the push is not a boo (comments of the old style all
+    // look the same).
+    EXPECT_INT(bof_remove_comment(&mod, &rm, NULL),
+               BOF_ERR_COULDNT_FIND_COMMENT);
+    rm.bbs_author = "ivan";
+    rm.bbs_content = "nice";
+    if (!IS_ENABLED(CONFIG_OLD_RECOMMEND))
+        EXPECT_INT(bof_remove_comment(&mod, &rm, NULL),
+                   BOF_ERR_COULDNT_FIND_COMMENT);
+    rm.bbs_vote = 1;
+    EXPECT_OK(bof_remove_comment(&mod, &rm, NULL));
+
+    strlcpy(fh.filename, "M.1700000022.A.022", sizeof(fh.filename));
+    EXPECT_INT(bof_remove_comment(&mod, &rm, NULL), BOF_ERR_COULDNT_FIND_POST);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -417,6 +469,7 @@ main(void)
     RUN(test_lock_feature_score);
     RUN(test_prune);
     RUN(test_create_post_and_comment);
+    RUN(test_remove_comment);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

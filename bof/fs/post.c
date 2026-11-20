@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0-only
  *
  * The calls of bof.h on posts, done with the records and files of a board
- * (files/record.c) and the time capsule.
+ * (files/record.c, files/content.c) and the time capsule.
  */
 
 #include "../bof_int.h"

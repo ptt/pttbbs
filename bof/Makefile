@@ -6,7 +6,8 @@ include $(SRCROOT)/pttbbs.mk
 # (files/) and the files backend (fs/).
 
 CORE_SRCS:=	bof.c storage.c
-FILES_SRCS:=	files/record.c files/timecap.c
+FILES_SRCS:=	files/comment.c files/content.c \
+		files/record.c files/timecap.c
 FS_SRCS:=	fs/backend.c fs/comment.c \
 		fs/post.c
 # Other backends live where their services are, e.g. post.svc's in

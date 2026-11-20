@@ -38,5 +38,6 @@
 #include "common.h"
 #include "bof.h"
 #include "bof_files.h"
+#include "fnv_hash.h"
 
 #endif /* BOF_BOF_INT_H */

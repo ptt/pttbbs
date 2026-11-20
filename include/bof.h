@@ -100,6 +100,17 @@ typedef struct bof_post_ref_t {
     const struct fileheader_t *bbs_header;  /* the record there */
 } bof_post_ref_t;
 
+/* PTT: the version of the content of a post as read, like an ETag: its
+ * first size bytes, by their hash. The file of a post is its body followed
+ * by lines appended later (comments); a change of the content made from a
+ * version checks that those bytes are still there, and keeps the lines
+ * appended after them meanwhile (the files backend without
+ * CONFIG_EDITPOST_SMARTMERGE fails with couldnt_update_post instead). */
+typedef struct bof_post_version_t {
+    int64_t size;
+    uint64_t hash;
+} bof_post_version_t;
+
 /* Lemmy's DeletePost: the creator deletes the post. */
 typedef struct bof_delete_post_t {
     bof_post_ref_t post;
@@ -261,6 +272,28 @@ typedef struct bof_comment_response_t {
  * (appended, but the record of the post has changed meanwhile). */
 bof_error_t bof_create_comment(const bof_actor_t *actor,
                                const bof_create_comment_t *req,
+                               bof_comment_response_t *out);
+
+/* Lemmy's RemoveComment, by a moderator. Comments in the files of a board
+ * have no IDs yet, so the comment is given as the comment database
+ * (commentd) remembers it: the first line of the file that looks like a
+ * comment of bbs_vote by bbs_author saying bbs_content is it. That line is
+ * replaced with a note of who removed it and why, and the file before is
+ * kept as a revision in the time capsule. Unlike Lemmy (removed: false),
+ * a removed comment cannot be restored: its line is gone. */
+typedef struct bof_remove_comment_t {
+    bof_post_ref_t post;       /* bbs_index is not checked (may be 0) */
+    int bbs_vote;              /* +1 (push), -1 (boo) or 0 (arrow) */
+    const char *bbs_author;    /* the BBS userid who commented */
+    const char *bbs_content;   /* what the comment says */
+    const char *reason;        /* may be NULL */
+} bof_remove_comment_t;
+
+/* Errors: couldnt_find_post (no file), couldnt_find_comment (no such line,
+ * e.g. the post was edited). out->bbs_header (if not NULL) gets the
+ * record of the post, which does not change. */
+bof_error_t bof_remove_comment(const bof_actor_t *actor,
+                               const bof_remove_comment_t *req,
                                bof_comment_response_t *out);
 
 #ifdef __cplusplus
