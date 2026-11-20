@@ -103,6 +103,7 @@ if (err != BOF_OK)
 | Errors | `couldnt_find_post`, ... | `bof_error_t`, `bof_error_name()` |
 | People | `person`, `local_user`, `GetPersonDetails` | `bof_person_id_t`, `bof_actor_t`, `bof_person_t`, `bof_get_person()` |
 | Communities | `community`, `GetCommunity`, `ListCommunities` | `bof_community_t`, `bof_get_community()`, `bof_list_communities()`, `bof_bbs_community_id()` |
+| Rules | checked in each call (bans, locked posts, moderators) | `bof_bbs_can_read()`, `bof_bbs_can_post()`, `bof_bbs_can_comment()`, `bof_bbs_is_moderator()`; checked by the API for an actor with `bbs_person` |
 | IDs | `post.id`, `comment.id` (post.svc's: a serial; the post and floor) | `bof_post_id_t`, `bof_comment_id()`, `bof_get_post_id()`, `bof_get_post_key()`, `bof_bbs_find_post()` |
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost` (and restoring), `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_restore_post()`, `bof_lock_post()`, `bof_feature_post()` |
 | Reading | `GetPosts`, `GetPost`, `MarkPostAsRead` | `bof_get_posts()`, `bof_get_post()`, `bof_mark_post_as_read()` |
@@ -163,7 +164,7 @@ The sources are in three parts:
 
 | Directory | What | Header |
 |---|---|---|
-| `bof/` | The core: the API, its checks and the backend in use (`storage.c`), communities and persons (`people.c`), the records of the modlog (`modlog.c`), the read records (`readmarks.c`), error names (`bof.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h) |
+| `bof/` | The core: the API, its checks and the backend in use (`storage.c`), communities and persons (`people.c`), the rules of the BBS (`policy.c`), the records of the modlog (`modlog.c`), the read records (`readmarks.c`), error names (`bof.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h) |
 | `bof/files/` | The files of a BBS, as primitives with no actor or rules: records of lists, the content of posts, the line of a comment, aggregate boards, the time capsule | [`include/bof_files.h`](../include/bof_files.h) |
 | `bof/fs/` | The files backend (`bof_storage_files`): the calls of the API done with the files | [`include/bof_fs.h`](../include/bof_fs.h) |
 | `bof/ps/` | The post.svc backend, in pttbbs.cmd where post.svc is: post.svc, with the files backend as its cache | |

@@ -30,6 +30,8 @@ static const char *const bof_error_names[BOF_ERR_MAX] = {
     [BOF_ERR_COULDNT_RESOLVE_REPORT] = "couldnt_resolve_report",
     [BOF_ERR_RATE_LIMITED] = "rate_limit_error",
     [BOF_ERR_COULDNT_FIND_PERSON] = "couldnt_find_person",
+    [BOF_ERR_BANNED_FROM_COMMUNITY] = "banned_from_community",
+    [BOF_ERR_BBS_NOT_ALLOWED] = "bbs_not_allowed",
 };
 
 const char *

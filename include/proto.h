@@ -69,6 +69,9 @@ bof_actor_t mbbsd_actor(const char *bname, bool police);
 // The current user as the actor of what any user does (posting, commenting):
 // the account, without a role for the modlog.
 bof_actor_t mbbsd_user_actor(void);
+// The current user as a person for the rules bof keeps (bof_bbs_can_*()),
+// from the account in memory.
+bof_person_t mbbsd_person(void);
 void modlog_police(const char *bname, const char *reason, const bof_modlog_t *m);
 int modlog_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;
 int modlog_police_ask_reason(const char *bname, int y, char *reason, size_t sz) EXCLUDES_ABORT_BLOCK;

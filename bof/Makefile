@@ -2,10 +2,10 @@ SRCROOT:=	..
 include $(SRCROOT)/pttbbs.mk
 
 # bof: Birds Of Feather, the meta layer between BBS and community systems.
-# See README.md. The core (the API, its checks, communities and persons),
-# the files of a BBS (files/) and the files backend (fs/).
+# See README.md. The core (the API, its checks, communities, persons and
+# rules), the files of a BBS (files/) and the files backend (fs/).
 
-CORE_SRCS:=	bof.c modlog.c people.c readmarks.c storage.c
+CORE_SRCS:=	bof.c modlog.c people.c policy.c readmarks.c storage.c
 FILES_SRCS:=	files/comment.c files/content.c files/crosspost.c \
 		files/record.c files/timecap.c
 FS_SRCS:=	fs/backend.c fs/comment.c fs/content.c fs/crosspost.c \

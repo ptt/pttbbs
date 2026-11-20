@@ -800,6 +800,14 @@
 #define BRC_MAXNUM      80
 #endif
 
+/* The board only its moderators (and sysops, group ops) comment on, from
+ * BN_ONLY_OP_CAN_ADD_COMMENT; "" for none. */
+#ifdef BN_ONLY_OP_CAN_ADD_COMMENT
+#define ONLY_OP_COMMENT_BOARD BN_ONLY_OP_CAN_ADD_COMMENT
+#else
+#define ONLY_OP_COMMENT_BOARD ""
+#endif
+
 /* BOF_DEFAULT_STORAGE: the storage backend of BoF when none is set: the
  * files backend unless pttbbs.conf (or CONFIG_POST_SVC above) names
  * another. */

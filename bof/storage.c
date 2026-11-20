@@ -77,6 +77,57 @@ modlog_done(const char *community, const bof_actor_t *actor,
 }
 
 /* ------------------------------------------------------------------------
+ * The checks of an actor with a person (as Lemmy checks each call)
+ * ------------------------------------------------------------------------ */
+
+typedef enum {
+    MAY_READ,       // read the community (e.g. to report)
+    MAY_POST,       // post in it
+    MAY_COMMENT,    // comment on (or vote on) post
+    MAY_EDIT,       // change post as its author, or as a moderator
+    MAY_MODERATE,   // as a moderator of the community (or an admin)
+} may_t;
+
+static bof_error_t
+check_actor(const bof_actor_t *actor, const char *community, may_t may,
+            const fileheader_t *post)
+{
+    const bof_person_t *p = actor ? actor->bbs_person : NULL;
+    bof_community_t c;
+    bof_error_t err;
+
+    if (!p)
+        return BOF_OK;      // the caller has checked
+    if (!community || bof_get_community(community, &c) != BOF_OK)
+        return BOF_ERR_COULDNT_FIND_COMMUNITY;
+    if ((err = bof_bbs_can_read(p, &c, NULL)) != BOF_OK)
+        return err;
+    switch (may) {
+    case MAY_READ:
+        return BOF_OK;
+    case MAY_POST:
+        return bof_bbs_can_post(p, &c, NULL);
+    case MAY_COMMENT:
+        return bof_bbs_can_comment(p, &c, post, NULL);
+    case MAY_EDIT:
+        if (p->admin || bof_bbs_is_moderator(p, &c) ||
+            (post && strcasecmp(post->owner, p->name) == 0))
+            return BOF_OK;
+        return BOF_ERR_NO_POST_EDIT_ALLOWED;
+    case MAY_MODERATE:
+        return p->admin || bof_bbs_is_moderator(p, &c) ? BOF_OK :
+            BOF_ERR_NOT_A_MODERATOR;
+    }
+    return BOF_ERR_UNKNOWN;
+}
+
+#define CHECK(actor, community, may, post) do {                             \
+    bof_error_t ce_ = check_actor((actor), (community), (may), (post));     \
+    if (ce_ != BOF_OK)                                                      \
+        return ce_;                                                         \
+} while (0)
+
+/* ------------------------------------------------------------------------
  * Posts
  * ------------------------------------------------------------------------ */
 
@@ -85,6 +136,7 @@ bof_create_post(const bof_actor_t *actor, const bof_create_post_t *req,
                 bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    CHECK(actor, req->community, MAY_POST, NULL);
     return WRITE(create_post, out ? out : &local, actor, req);
 }
 
@@ -93,6 +145,7 @@ bof_edit_post(const bof_actor_t *actor, const bof_edit_post_t *req,
               bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_EDIT, req->post.bbs_header);
     bof_error_t err = WRITE(edit_post, out ? out : &local, actor, req);
     if (err == BOF_OK)
         modlog_done(req->post.community, actor, NULL, req->bbs_modlog);
@@ -104,6 +157,7 @@ bof_delete_post(const bof_actor_t *actor, const bof_delete_post_t *req,
                 bof_post_result_t *out)
 {
     bof_post_result_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_EDIT, req->post.bbs_header);
     return WRITE(delete_post, out ? out : &local, actor, req);
 }
 
@@ -113,6 +167,7 @@ bof_remove_post(const bof_actor_t *actor, const bof_remove_post_t *req,
 {
     bof_post_result_t local = { 0 };
     bof_post_result_t *res = out ? out : &local;
+    CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(remove_post, res, actor, req);
 
     if (err == BOF_OK && req->bbs_modlog) {
@@ -132,6 +187,7 @@ bof_remove_posts(const bof_actor_t *actor, const bof_remove_posts_t *req,
                  int *count)
 {
     int local;
+    CHECK(actor, req->community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(remove_posts, count ? count : &local, actor,
                             req);
     if (err == BOF_OK)
@@ -144,6 +200,7 @@ bof_purge_posts(const bof_actor_t *actor, const bof_purge_posts_t *req,
                 int *count)
 {
     int local;
+    CHECK(actor, req->community, MAY_MODERATE, NULL);
     if (!req->bbs_selected)
         return BOF_ERR_INVALID_BODY_FIELD;
     return WRITE(purge_posts, count ? count : &local, actor, req);
@@ -154,6 +211,7 @@ bof_restore_post(const bof_actor_t *actor, const bof_restore_post_t *req,
                  bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    CHECK(actor, req->community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(restore_post, out ? out : &local, actor, req);
     if (err == BOF_OK)
         modlog_done(req->community, actor, req->reason, req->bbs_modlog);
@@ -165,6 +223,7 @@ bof_lock_post(const bof_actor_t *actor, const bof_lock_post_t *req,
               bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(lock_post, out ? out : &local, actor, req);
     if (err == BOF_OK)
         modlog_done(req->post.community, actor, req->reason, req->bbs_modlog);
@@ -176,6 +235,7 @@ bof_feature_post(const bof_actor_t *actor, const bof_feature_post_t *req,
                  bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     return WRITE(feature_post, out ? out : &local, actor, req);
 }
 
@@ -185,6 +245,7 @@ bof_bbs_set_post_modes(const bof_actor_t *actor,
                        bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     return WRITE(set_post_modes, out ? out : &local, actor, req);
 }
 
@@ -194,6 +255,7 @@ bof_bbs_reset_post_score(const bof_actor_t *actor,
                          bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(reset_post_score, out ? out : &local, actor, req);
     if (err == BOF_OK)
         modlog_done(req->post.community, actor, req->reason, req->bbs_modlog);
@@ -205,6 +267,7 @@ bof_bbs_mask_post(const bof_actor_t *actor, const bof_bbs_mask_post_t *req,
                   bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(mask_post, out ? out : &local, actor, req);
     if (err == BOF_OK)
         modlog_done(req->post.community, actor, req->reason, req->bbs_modlog);
@@ -217,6 +280,7 @@ bof_bbs_remove_crosspost(const bof_actor_t *actor,
                          bof_post_result_t *out)
 {
     bof_post_result_t local = { 0 };
+    CHECK(actor, req->community, MAY_MODERATE, NULL);
     return WRITE(remove_crosspost, out ? out : &local, actor, req);
 }
 
@@ -226,6 +290,7 @@ bof_create_post_like(const bof_actor_t *actor,
                      bof_post_like_response_t *out)
 {
     bof_post_like_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_COMMENT, req->post.bbs_header);
     return WRITE(create_post_like, out ? out : &local, actor, req);
 }
 
@@ -238,6 +303,7 @@ bof_create_comment(const bof_actor_t *actor, const bof_create_comment_t *req,
                    bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_COMMENT, req->post.bbs_header);
     return WRITE(create_comment, out ? out : &local, actor, req);
 }
 
@@ -246,6 +312,7 @@ bof_edit_comment(const bof_actor_t *actor, const bof_edit_comment_t *req,
                  bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_COMMENT, req->post.bbs_header);
     return WRITE(edit_comment, out ? out : &local, actor, req);
 }
 
@@ -254,6 +321,7 @@ bof_delete_comment(const bof_actor_t *actor, const bof_delete_comment_t *req,
                    bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_READ, NULL);
     if (!req->post.bbs_header || req->bbs_floor <= 0 || !req->bbs_creator)
         return BOF_ERR_INVALID_BODY_FIELD;
     return WRITE(delete_comment, out ? out : &local, actor, req);
@@ -264,6 +332,7 @@ bof_remove_comment(const bof_actor_t *actor, const bof_remove_comment_t *req,
                    bof_comment_response_t *out)
 {
     bof_comment_response_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_MODERATE, NULL);
     bof_error_t err = WRITE(remove_comment, out ? out : &local, actor, req);
     if (err == BOF_OK)
         modlog_done(req->post.community, actor, req->reason, req->bbs_modlog);
@@ -279,6 +348,7 @@ bof_create_report(const bof_actor_t *actor, const bof_create_report_t *req,
                   bof_report_t *out)
 {
     bof_report_t local = { 0 };
+    CHECK(actor, req->post.community, MAY_READ, NULL);
     return WRITE(create_report, out ? out : &local, actor, req);
 }
 
@@ -287,6 +357,7 @@ bof_resolve_report(const bof_actor_t *actor, const bof_resolve_report_t *req,
                    bof_report_t *out)
 {
     bof_report_t local = { 0 };
+    CHECK(actor, req->community, MAY_MODERATE, NULL);
     return WRITE(resolve_report, out ? out : &local, actor, req);
 }
 

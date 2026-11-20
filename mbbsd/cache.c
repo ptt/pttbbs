@@ -190,63 +190,37 @@ muted_msg(const char *bname)
     return NULL;
 }
 
-// TODO move this to board.c
+// Why the current user may not post in board bname (NULL if they may),
+// by the rules bof keeps for any user interface.
 const char *
 postperm_msg(const char *bname)
 {
-    register int    i;
-    boardheader_t   *bp = NULL;
+    bof_person_t me = mbbsd_person();
+    bof_community_t c;
+    bof_bbs_rule_t rule;
 
-    if (!(i = getbnum(bname)))
+    if (bof_get_community(bname, &c) != BOF_OK)
 	return "看板不存在";
-
-    // system internal read only boards (no matter what attribute/flag set)
-    if (is_readonly_board(bname))
-	return "看板唯讀";
-
-    if (HasUserPerm(PERM_SYSOP))
-	return NULL;
-
-    do {
-        const char *msg;
-        if ((msg = muted_msg(bname)) != NULL)
-            return msg;
-    } while (0);
-
-    if (!strcasecmp(bname, DEFAULT_BOARD))
-	return NULL;
-
-    assert(0<=i-1 && i-1<MAX_BOARD);
-    bp = getbcache(i);
-
-    if (bp->brdattr & BRD_NOREG_CAN_POST)
+    if (bof_bbs_post_permission(&me, &c, &rule) == BOF_OK)
         return NULL;
-
-    if (!HasUserPerm(PERM_POST))
-	return (PERM_POST == PERM_LOGINOK) ? "未完成認證" :
-            "無發文權限";
-
-    /* 秘密看板特別處理 */
-    if (bp->brdattr & BRD_HIDE)
-	return NULL;
-    else if (bp->brdattr & BRD_RESTRICTEDPOST &&
-	    !is_hidden_board_friend(i, usernum))
-	return "看板限制發文";
-
-    if (HasUserPerm(PERM_VIOLATELAW))
-    {
-	// 在罰單的討論相關板可以發文
-	if (bp->level & PERM_VIOLATELAW)
-	    return NULL;
-	else
-	    return "罰單未繳";
+    switch (rule) {
+    case BOF_BBS_RULE_READ_ONLY:
+	return "看板唯讀";
+    case BOF_BBS_RULE_MUTED: {
+        const char *msg = muted_msg(bname);
+        return msg ? msg : "使用者不可發言";
     }
-
-    if (!(bp->level & ~PERM_POST))
-	return NULL;
-    if (!HasUserPerm(bp->level & ~PERM_POST))
+    case BOF_BBS_RULE_NOT_VERIFIED:
+	return (PERM_POST == PERM_LOGINOK) ? "未完成認證" : "無發文權限";
+    case BOF_BBS_RULE_RESTRICTED:
+	return "看板限制發文";
+    case BOF_BBS_RULE_UNPAID_TICKET:
+	return "罰單未繳";
+    case BOF_BBS_RULE_LEVEL:
 	return "未達看板要求權限";
-    return NULL;
+    default:
+	return "看板不存在";
+    }
 }
 
 // TODO move this to board.c

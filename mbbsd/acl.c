@@ -606,6 +606,23 @@ modlog_role(const char *bname, bool anonymous)
     return "管理人員";
 }
 
+bof_person_t
+mbbsd_person(void)
+{
+    bof_person_t p = { 0 };
+    STRLCPY(p.name, cuser.userid);
+    STRLCPY(p.display_name, cuser.nickname);
+    p.published = cuser.firstlogin;
+    p.admin = HasUserPerm(PERM_SYSOP);
+    p.bbs_local_user = mbbsd_user_actor().bbs_local_user;
+    p.bbs_perms = cuser.userlevel;
+    p.bbs_numlogindays = cuser.numlogindays;
+    p.bbs_numposts = cuser.numposts;
+    p.bbs_badpost = cuser.badpost;
+    p.bbs_over_18 = cuser.over_18;
+    return p;
+}
+
 bof_actor_t
 mbbsd_user_actor(void)
 {

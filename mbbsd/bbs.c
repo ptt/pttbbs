@@ -408,18 +408,20 @@ CheckPostPerm(void)
 }
 
 
+// Why the current user may not post in board bid by its limits (NULL if
+// they may), by the rules bof keeps for any user interface.
 char* get_board_restriction_reason(int bid, size_t sz_msg, char *msg)
 {
+    bof_person_t me = mbbsd_person();
+    bof_community_t c;
     boardheader_t *bp;
-    if (HasUserPerm(PERM_SYSOP))
-	return NULL;
+
     assert(0<=bid-1 && bid-1<MAX_BOARD);
-
-    // XXX currmode 是目前看板不是 bid...
-    if (is_board_moderator(bid))
-	return NULL;
     bp = getbcache(bid);
-
+    if (bof_get_community(bp->brdname, &c) != BOF_OK ||
+        bof_bbs_post_restriction(&me, &c, NULL) == BOF_OK)
+	return NULL;
+    // In the words of the BBS, with the numbers.
     return get_restriction_reason(
         cuser.numlogindays, cuser.badpost,
         bp->post_limit_logins, bp->post_limit_badpost,

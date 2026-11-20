@@ -61,6 +61,8 @@ typedef enum bof_error_t {
     BOF_ERR_COULDNT_RESOLVE_REPORT, /* couldnt_resolve_report */
     BOF_ERR_RATE_LIMITED,           /* rate_limit_error */
     BOF_ERR_COULDNT_FIND_PERSON,    /* couldnt_find_person */
+    BOF_ERR_BANNED_FROM_COMMUNITY,  /* banned_from_community (muted) */
+    BOF_ERR_BBS_NOT_ALLOWED,        /* bbs_not_allowed: by a BBS rule */
     BOF_ERR_MAX
 } bof_error_t;
 
@@ -105,9 +107,10 @@ typedef struct bof_person_t {
  * Errors: couldnt_find_person. */
 bof_error_t bof_get_person(const char *name, bof_person_t *out);
 
-/* Who calls bof (Lemmy's authenticated local user). bof trusts the caller
- * to have checked that the actor may do what it asks: permissions stay in
- * the user interface for now. */
+/* Who calls bof (Lemmy's authenticated local user). With bbs_person, bof
+ * checks that the actor may do what it asks (as Lemmy does): the rules of
+ * the BBS (bof_bbs_can_*()), being the author (no_post_edit_allowed) or a
+ * moderator (not_a_moderator); without, the caller has checked. */
 typedef struct bof_actor_t {
     bof_person_id_t person_id; /* 0 until people have IDs */
     const char *name;          /* BBS userid */
@@ -121,6 +124,10 @@ typedef struct bof_actor_t {
     /* The BBS account (Lemmy's local_user): its usernum and firstlogin,
      * packed as post.svc takes them; 0 for the system or unknown. */
     uint64_t bbs_local_user;
+    /* The person, for bof to check the rules (bof_bbs_can_*()) itself, as
+     * Lemmy does for each call; NULL: the caller has checked them (mbbsd,
+     * which also posts for the system where the user could not). */
+    const struct bof_person_t *bbs_person;
 } bof_actor_t;
 
 /* ------------------------------------------------------------------------
@@ -183,6 +190,72 @@ bof_error_t bof_list_communities(const bof_list_communities_t *req,
  * Errors: couldnt_find_community, bbs_storage_not_supported (the files
  * backend). */
 bof_error_t bof_bbs_community_id(const char *name, bof_community_id_t *id);
+
+/* ------------------------------------------------------------------------
+ * The rules of the BBS (who may do what)
+ * ------------------------------------------------------------------------ */
+
+struct fileheader_t;
+
+/* PTT: which rule of the BBS keeps a person from doing something, so that
+ * the UI can say why in its own words; the calls return the Lemmy error as
+ * well. */
+typedef enum bof_bbs_rule_t {
+    BOF_BBS_RULE_NONE = 0,
+    BOF_BBS_RULE_NO_COMMUNITY,      /* there is no such board */
+    BOF_BBS_RULE_READ_ONLY,         /* the system keeps it read only */
+    BOF_BBS_RULE_MUTED,             /* muted in the board */
+    BOF_BBS_RULE_NOT_VERIFIED,      /* no permission to post (PERM_POST) */
+    BOF_BBS_RULE_RESTRICTED,        /* only its friends post (restricted) */
+    BOF_BBS_RULE_UNPAID_TICKET,     /* a ticket is not paid (VIOLATELAW) */
+    BOF_BBS_RULE_LEVEL,             /* the level the board asks for */
+    BOF_BBS_RULE_TOO_FEW_LOGINS,    /* fewer login days than the board asks */
+    BOF_BBS_RULE_TOO_MANY_BADPOSTS, /* more bad posts than the board allows */
+    BOF_BBS_RULE_NO_COMMENTS,       /* comments are closed (board or post) */
+    BOF_BBS_RULE_ONLY_OPS_COMMENT,  /* only operators comment in the board */
+    BOF_BBS_RULE_DELETED,           /* the post is deleted */
+    BOF_BBS_RULE_HIDDEN,            /* a hidden board, not a friend of it */
+    BOF_BBS_RULE_ADULTS_ONLY,       /* only for adults */
+} bof_bbs_rule_t;
+
+/* PTT: whether person is a moderator of community (one of its moderators,
+ * as the same account). */
+int bof_bbs_is_moderator(const bof_person_t *person,
+                         const bof_community_t *community);
+
+/* PTT: whether person may read community. Errors: couldnt_find_community
+ * (hidden), bbs_not_allowed; *rule (if not NULL) tells which rule. */
+bof_error_t bof_bbs_can_read(const bof_person_t *person,
+                             const bof_community_t *community,
+                             bof_bbs_rule_t *rule);
+
+/* PTT: whether person may post in community, by its permissions (the
+ * board's attributes and level, muting, tickets) and by the limits of the
+ * board (login days, bad posts), which its moderators and sysops pass.
+ * Errors: couldnt_find_community, banned_from_community,
+ * bbs_not_allowed. */
+bof_error_t bof_bbs_post_permission(const bof_person_t *person,
+                                    const bof_community_t *community,
+                                    bof_bbs_rule_t *rule);
+bof_error_t bof_bbs_post_restriction(const bof_person_t *person,
+                                     const bof_community_t *community,
+                                     bof_bbs_rule_t *rule);
+bof_error_t bof_bbs_can_post(const bof_person_t *person,
+                             const bof_community_t *community,
+                             bof_bbs_rule_t *rule);
+
+/* PTT: whether person may comment on post (its record) in community: as
+ * for posting, and only where comments are open (not closed on the board
+ * or the post, the post not locked nor deleted). Errors: as
+ * bof_bbs_can_post(), and locked. */
+bof_error_t bof_bbs_can_comment(const bof_person_t *person,
+                                const bof_community_t *community,
+                                const struct fileheader_t *post,
+                                bof_bbs_rule_t *rule);
+
+/* PTT: until when person is muted in community, or 0 if not. */
+int32_t bof_bbs_muted_until(const bof_person_t *person,
+                            const bof_community_t *community);
 
 /* ------------------------------------------------------------------------
  * Posts

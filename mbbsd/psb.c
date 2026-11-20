@@ -2738,19 +2738,28 @@ pvcm_allowed(const char *board, const fileheader_t *fh)
         vmsg("本看板禁止修改或刪除推文。");
         return false;
     }
-    if ((bp && (bp->brdattr & BRD_NO_COMMENTS)) || fh->filename[0] == 'L' ||
-        ((fh->filemode & FILE_MARKED) && (fh->filemode & FILE_SOLVED))) {
+    // Where they could not comment, by the rules bof keeps.
+    bof_person_t me = mbbsd_person();
+    bof_community_t c;
+    bof_bbs_rule_t rule = BOF_BBS_RULE_NONE;
+    if (!bp || bof_get_community(bp->brdname, &c) != BOF_OK ||
+        bof_bbs_can_comment(&me, &c, fh, &rule) == BOF_OK)
+        return true;
+    switch (rule) {
+    case BOF_BBS_RULE_NO_COMMENTS:
         vmsg("抱歉, 禁止推薦");
-        return false;
-    }
-#ifdef BN_ONLY_OP_CAN_ADD_COMMENT
-    if (bp && strcmp(bp->brdname, BN_ONLY_OP_CAN_ADD_COMMENT) == 0 &&
-        !HasUserPerm(PERM_SYSOP | PERM_GROUP_LEAD | PERM_GROUP_OP)) {
+        break;
+    case BOF_BBS_RULE_ONLY_OPS_COMMENT:
         vmsg("本板推文限定管理人員使用。");
-        return false;
+        break;
+    case BOF_BBS_RULE_DELETED:
+        vmsg("本文已刪除");
+        break;
+    default:
+        vmsg("您目前無法在此看板推文。");
+        break;
     }
-#endif
-    return true;
+    return false;
 }
 
 // Lemmy's EditComment, by its creator.

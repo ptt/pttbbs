@@ -7,6 +7,34 @@
 
 #include "bbs.h"
 #include "bof_test.h"
+#include "bof_storage.h"
+
+// A backend that only counts what it is asked to write.
+static int writes;
+
+static bof_error_t
+count_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                const bof_edit_post_t *req GCC_UNUSED,
+                bof_post_response_t *out GCC_UNUSED)
+{
+    writes++;
+    return BOF_OK;
+}
+
+static bof_error_t
+count_lock_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
+                const bof_lock_post_t *req GCC_UNUSED,
+                bof_post_response_t *out GCC_UNUSED)
+{
+    writes++;
+    return BOF_OK;
+}
+
+static const bof_storage_ops_t counting_ops = {
+    .name = "counting",
+    .edit_post = count_edit_post,
+    .lock_post = count_lock_post,
+};
 
 int bof_test_failures;
 
@@ -81,12 +109,119 @@ test_persons(void)
     EXPECT_INT(bof_get_person("nobody", &p), BOF_ERR_COULDNT_FIND_PERSON);
 }
 
+// A person with the permissions given, of account slot 5.
+static bof_person_t
+person(const char *name, uint32_t perms, uint32_t firstlogin)
+{
+    bof_person_t p = { 0 };
+    strlcpy(p.name, name, sizeof(p.name));
+    p.bbs_perms = perms;
+    p.bbs_local_user = (uint64_t)firstlogin << 32 | 5;
+    p.bbs_numlogindays = 100;
+    return p;
+}
+
+static void
+test_rules(void)
+{
+    bof_community_t alpha, hidden;
+    bof_bbs_rule_t rule;
+    fileheader_t post;
+    bof_person_t mod = person("mod", PERM_BASIC | PERM_LOGINOK | PERM_POST,
+                              1700000000);
+    bof_person_t other = person("other", PERM_BASIC | PERM_LOGINOK |
+                                PERM_POST, 1600000000);
+    bof_person_t guest = person("guest", PERM_BASIC, 1600000000);
+
+    bof_get_community("Alpha", &alpha);
+    bof_get_community("Hidden", &hidden);
+
+    // Moderators: the same account.
+    EXPECT_INT(bof_bbs_is_moderator(&mod, &alpha), 1);
+    EXPECT_INT(bof_bbs_is_moderator(&other, &alpha), 0);
+    EXPECT_INT(bof_bbs_is_moderator(NULL, &alpha), 0);
+
+    // Reading: adults only; a hidden board that hides posting too.
+    EXPECT_INT(bof_bbs_can_read(&other, &alpha, &rule),
+               BOF_ERR_BBS_NOT_ALLOWED);
+    EXPECT_INT(rule, BOF_BBS_RULE_ADULTS_ONLY);
+    other.bbs_over_18 = 1;
+    EXPECT_OK(bof_bbs_can_read(&other, &alpha, &rule));
+    EXPECT_OK(bof_bbs_can_read(&mod, &alpha, NULL));
+    bcache[1].brdattr |= BRD_POSTMASK;
+    bof_get_community("Hidden", &hidden);
+    EXPECT_INT(bof_bbs_can_read(&other, &hidden, &rule),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+    EXPECT_INT(rule, BOF_BBS_RULE_HIDDEN);
+
+    // Posting: verified accounts; the limits of the board, which its
+    // moderators pass.
+    EXPECT_INT(bof_bbs_can_post(&guest, &alpha, &rule),
+               BOF_ERR_BBS_NOT_ALLOWED);
+    EXPECT_INT(rule, BOF_BBS_RULE_NOT_VERIFIED);
+    EXPECT_OK(bof_bbs_can_post(&other, &alpha, &rule));
+    other.bbs_numlogindays = 20;
+    EXPECT_INT(bof_bbs_can_post(&other, &alpha, &rule),
+               BOF_ERR_BBS_NOT_ALLOWED);
+    EXPECT_INT(rule, BOF_BBS_RULE_TOO_FEW_LOGINS);
+    mod.bbs_numlogindays = 20;
+    EXPECT_OK(bof_bbs_can_post(&mod, &alpha, &rule));
+    other.bbs_numlogindays = 100;
+
+    // Commenting: not on locked, closed or deleted posts.
+    memset(&post, 0, sizeof(post));
+    strlcpy(post.filename, "M.1700000000.A.000", sizeof(post.filename));
+    strlcpy(post.owner, "someone", sizeof(post.owner));
+    EXPECT_OK(bof_bbs_can_comment(&other, &alpha, &post, &rule));
+    post.filename[0] = 'L';
+    EXPECT_INT(bof_bbs_can_comment(&other, &alpha, &post, &rule),
+               BOF_ERR_LOCKED);
+    post.filename[0] = 'M';
+    post.filemode = FILE_MARKED | FILE_SOLVED;
+    EXPECT_INT(bof_bbs_can_comment(&other, &alpha, &post, &rule),
+               BOF_ERR_BBS_NOT_ALLOWED);
+    EXPECT_INT(rule, BOF_BBS_RULE_NO_COMMENTS);
+    post.filemode = 0;
+    if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)) {
+        strlcpy(post.owner, "-", sizeof(post.owner));
+        EXPECT_INT(bof_bbs_can_comment(&other, &alpha, &post, &rule),
+                   BOF_ERR_COULDNT_FIND_POST);
+        strlcpy(post.owner, "someone", sizeof(post.owner));
+    }
+
+    // The API checks an actor with a person, before any backend.
+    bof_storage_reset();
+    bof_storage_set(&counting_ops, NULL);
+    writes = 0;
+    bof_actor_t me = { .name = "other", .bbs_person = &other };
+    bof_lock_post_t lock = {
+        .post = { .community = "Alpha", .bbs_header = &post }, .locked = 1,
+    };
+    EXPECT_INT(bof_lock_post(&me, &lock, NULL), BOF_ERR_NOT_A_MODERATOR);
+    bof_edit_post_t edit = { .post = lock.post, .name = "new title" };
+    EXPECT_INT(bof_edit_post(&me, &edit, NULL),
+               BOF_ERR_NO_POST_EDIT_ALLOWED);
+    bof_create_post_t create = { .community = "Alpha", .bbs_header = &post };
+    me.bbs_person = &guest;
+    EXPECT_INT(bof_create_post(&me, &create, NULL), BOF_ERR_BBS_NOT_ALLOWED);
+    create.community = "Nothing";
+    EXPECT_INT(bof_create_post(&me, &create, NULL),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+    // None of them got to the backend; the moderator does.
+    EXPECT_INT(writes, 0);
+    me.bbs_person = &mod;
+    EXPECT_OK(bof_lock_post(&me, &lock, NULL));
+    EXPECT_INT(writes, 1);
+    bof_storage_reset();
+}
+
 int
 main(void)
 {
     setup_boards();
     RUN(test_communities);
     RUN(test_persons);
+    RUN(test_rules);
     free(SHM);
     return bof_test_report();
 }
