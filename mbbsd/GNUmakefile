@@ -97,7 +97,7 @@ OBJS     += recover.o register_sms.o \
 	    verifydb.o verifydb_info.o verifydb_search.o
 endif
 
-TEST_PROGS = test_brc test_pfterm test_mime
+TEST_PROGS = test_pfterm test_mime
 
 #######################################################################
 # variables

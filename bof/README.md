@@ -103,7 +103,7 @@ if (err != BOF_OK)
 | Errors | `couldnt_find_post`, ... | `bof_error_t`, `bof_error_name()` |
 | People | `person`, `local_user` | `bof_person_id_t`, `bof_actor_t` |
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
-| Reading | `GetPosts`, `GetPost` | `bof_get_posts()`, `bof_get_post()` |
+| Reading | `GetPosts`, `GetPost`, `MarkPostAsRead` | `bof_get_posts()`, `bof_get_post()`, `bof_mark_post_as_read()` |
 | Comments | `CreateComment` (+ `CreatePostLike` for a push or boo), `RemoveComment` | `bof_create_comment()`, `bof_remove_comment()` |
 | Modlog | `GetModlog`, `mod_*` | `bof_modlog_*()`; moderation calls take their record |
 | Bulk | Discourse's bulk delete | `bof_remove_posts()` |
@@ -120,7 +120,7 @@ keeping the BBS working exactly as before:
 2. **Posts** -- all the writes of posts on boards *(done)*; digests stay in
    `mbbsd`, as Lemmy has none.
 3. **Comments, modlog** *(done)*.
-4. **Listings** -- the post list *(done)*.
+4. **Listings** -- the post list and read records *(done)*.
 5. **Storage virtualization** -- the files backend behind it *(done)*;
    the `post.svc` backend next.
 6. **Communities** -- boards and moderators.
@@ -155,7 +155,7 @@ The sources are in three parts:
 
 | Directory | What | Header |
 |---|---|---|
-| `bof/` | The core: the API, its checks and the backend in use (`storage.c`), the records of the modlog (`modlog.c`), error names (`bof.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h) |
+| `bof/` | The core: the API, its checks and the backend in use (`storage.c`), the records of the modlog (`modlog.c`), the read records (`readmarks.c`), error names (`bof.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h) |
 | `bof/files/` | The files of a BBS, as primitives with no actor or rules: records of lists, the content of posts, the line of a comment, aggregate boards, the time capsule | [`include/bof_files.h`](../include/bof_files.h) |
 | `bof/fs/` | The files backend (`bof_storage_files`): the calls of the API done with the files | [`include/bof_fs.h`](../include/bof_fs.h) |
 | `bof/ps/` | The post.svc backend, in pttbbs.cmd where post.svc is: post.svc, with the files backend as its cache | |
@@ -165,7 +165,9 @@ BoF sources are plain ASCII C (Big5 texts are macros in
 libraries in `common/`, through `bof_int.h`. They do not include the
 headers of mbbsd (`bbs.h`, `proto.h`, `var.h`), so they cannot use the
 globals of a session (the current user, board, SHM): callers pass what
-BoF needs.
+BoF needs. The exception is the records of posts read (`readmarks.c`),
+which BoF keeps for the person in session, one per process, as the BBS
+always has.
 
 ## Author
 
@@ -178,3 +180,9 @@ BoF is dual-licensed: you may use it under either the
 [BSD 2-Clause License](LICENSE) or the
 [GNU General Public License, version 2](COPYING.GPL-2), at your choice
 (SPDX: `BSD-2-Clause OR GPL-2.0-only`). See [LICENSE](LICENSE).
+
+The exception is `readmarks.c` (the records of posts read), moved from
+`mbbsd/brc.c` of PTT BBS, which has several authors: it is only under the
+GNU General Public License, version 2, as the rest of PTT BBS, until it
+is rewritten; so is its test (`tests/test_readmarks.c`), which includes
+it.

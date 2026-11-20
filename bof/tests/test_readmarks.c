@@ -1,54 +1,35 @@
+/*
+ * test_readmarks.c - tests of the records of posts read (readmarks.c).
+ *
+ * Moved from mbbsd/test_brc.c of PTT BBS; it includes readmarks.c, so it
+ * is only under the GPL of PTT BBS, version 2, as readmarks.c is.
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include "bbs.h"
 
-#ifdef BRC_MAXSIZE
+// The sizes the tests are written for, whatever pttbbs.conf sets.
 #undef BRC_MAXSIZE
-#endif
-#ifdef BRC_MAXNUM
 #undef BRC_MAXNUM
-#endif
+#define BRC_MAXSIZE     65536
+#define BRC_MAXNUM      80
 
-// Include brc.c directly to test internal static functions
-#include "brc.c"
+// Include readmarks.c directly to test internal static functions. The
+// globals of the BBS (SHM, now) come from tests/var.o.
+#include "../readmarks.c"
 
-// Dummy definitions for symbols needed by brc.c
-static boardheader_t dummy_bcache[MAX_BOARD];
-boardheader_t *bcache = dummy_bcache;
-const char *currboard = "";
-int currbid = 0;
-unsigned int currbrdattr = 0;
-userec_t pwcuser;
-time4_t now = 1700000000;
-time4_t login_start_time = 1700000000;
-SHM_t mock_shm;
-SHM_t *SHM = &mock_shm;
-
-int b_lines = 24;
-void mvprints(int y, int x, const char *fmt, ...) { (void)y; (void)x; (void)fmt; }
-void refresh(void) {}
-
-int getbnum(const char *bname) {
-    (void)bname;
-    return 1;
-}
-
-void setuserfile(char *buf, const char *fname) {
-    snprintf(buf, STRLEN, "/tmp/test_%s", fname);
-}
 
 static void setup_test(void) {
-    brc_release();
+    bof_bbs_read_marks_release();
     brc_initialized = 1;
     brc_currbid = 0;
     brc_num = 0;
     brc_expire_time = now - 365 * DAY_SECONDS;
-    pwcuser.userlevel = PERM_BASIC;
-
-    memset(&mock_shm, 0, sizeof(mock_shm));
-    SHM = &mock_shm;
+    rm_savable = 1;
 }
 
 static void test_basic_unread(void) {
@@ -208,14 +189,14 @@ static void test_preserve_latest_read_timestamp_and_unread_semantics(void) {
 
     // Verify unread logic:
     // Any post on or before t3 is considered READ (0)
-    assert(brc_unread_time(101, t3, 0) == 0);
-    assert(brc_unread_time(101, t2, 0) == 0);
-    assert(brc_unread_time(101, t1, 0) == 0);
-    assert(brc_unread_time(101, t1 - 100, 0) == 0);
+    assert(bof_bbs_post_unread_time(101, t3, 0) == 0);
+    assert(bof_bbs_post_unread_time(101, t2, 0) == 0);
+    assert(bof_bbs_post_unread_time(101, t1, 0) == 0);
+    assert(bof_bbs_post_unread_time(101, t1 - 100, 0) == 0);
 
     // Any new post after t3 is considered UNREAD (1)
     time4_t t_new = t3 + 50;
-    assert(brc_unread_time(101, t_new, 0) == 1);
+    assert(bof_bbs_post_unread_time(101, t_new, 0) == 1);
 
     printf("  -> PASS\n");
 }
@@ -237,7 +218,6 @@ static void test_recovery_after_compact(void) {
 
     // User enters board 105
     brc_currbid = 105;
-    currbid = 105;
     currboard = "test105";
     brc_read_record(105, &brc_num, brc_list);
     assert(brc_num == 1 && brc_list[0].create == t_base);
@@ -245,20 +225,20 @@ static void test_recovery_after_compact(void) {
     // User reads an older post (t_base - 50) -> ignored by brc_addlist (already read)
     char fn_old[32];
     snprintf(fn_old, sizeof(fn_old), "M.%d.A.001", (int)(t_base - 50));
-    brc_addlist(fn_old, t_base - 50);
+    bof_mark_post_as_read(brc_currbid, fn_old, t_base - 50);
     assert(brc_num == 1);
 
     // User reads a newer post (now - 10) -> added and num expands to 2!
     time4_t t_new = now - 10;
     char fn_new[32];
     snprintf(fn_new, sizeof(fn_new), "M.%d.A.002", (int)t_new);
-    brc_addlist(fn_new, t_new);
+    bof_mark_post_as_read(brc_currbid, fn_new, t_new);
     assert(brc_num == 2);
     assert(brc_list[0].create == t_new);
     assert(brc_list[1].create == t_base);
 
     // Update back to buffer
-    brc_update();
+    bof_bbs_read_marks_update();
     const brc_rec *rec = brc_find_record(105, &bnum);
     assert(rec && bnum == 2);
     assert(rec[0].create == t_new && rec[1].create == t_base);
@@ -343,7 +323,7 @@ static void test_buffer_overflow_with_compact(void) {
 static void test_brcstore_filename(void) {
     printf("Testing brcstore filename hashing and generation...\n");
     char path[PATHLEN];
-    strcpy(pwcuser.userid, "SYSOP");
+    strcpy(rm_userid, "SYSOP");
     get_brc_alt_filename(path);
     unsigned hash = StringHash("SYSOP") & 0xffff;
     char expected[PATHLEN];
@@ -355,6 +335,7 @@ static void test_brcstore_filename(void) {
 }
 
 int main(void) {
+    now = 1700000000;
     printf("Running comprehensive BRC on-demand compacting tests...\n");
     test_basic_unread();
     test_move_to_front();

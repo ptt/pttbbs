@@ -9,12 +9,15 @@ what BoF does only in part. See `README.md` for what BoF is.
 - **SavePost** (`SavePost {post_id, save}`, Reddit's "save"): a person
   bookmarks posts, listed with `GetPosts(saved_only)`. PTT has nothing
   alike: favorites are boards only, and people mail posts to themselves
-  or keep them in their own announcement area.
+  or keep them in their own announcement area. Keep it per person, next
+  to the read records (`readmarks.c`).
 - **SaveComment**: the same for comments.
 - **HidePost** (`HidePost {post_ids, hide}`): a person hides posts from
   their own listings only; others still see them, and nothing goes to
   the modlog. Unlike RemovePost, which moderators do for everyone with a
   reason. `bof_get_posts` would take an option to skip them.
+- **MarkPostAsRead** for many posts at once, and `read: false` (unread
+  again) for one post; BoF marks one post read, or a whole board.
 
 ### Votes
 - **CreatePostLike / CreateCommentLike** without a comment: on PTT a vote
@@ -43,6 +46,10 @@ what BoF does only in part. See `README.md` for what BoF is.
 ## Parts of BoF to finish
 - The aggregate boards (ALLPOST and others) are kept as copies; Lemmy and
   Reddit list such feeds without copies.
+- `readmarks.c` is from PTT BBS and only under the GPL version 2; rewrite
+  it to have all of BoF under both licenses.
 - **The post.svc backend**: the calls of `postsvc.c` in pttbbs.cmd as a
   backend of the storage virtualization (`bof_storage.h`), made of post.svc
   and the files backend (its cache), and set in `pttbbs.conf`.
+- **The read records** (`readmarks.c`) are kept by BoF for the session,
+  not through the storage virtualization yet.

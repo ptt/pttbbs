@@ -744,7 +744,7 @@ GotoNewHand(){
     if (currutmp && currutmp->mode == EDITING)
 	return;
 
-    // usually crashed as 'assert(currbid == brc_currbid)'
+    // Leave the board, so that enter_board() enters it again afterwards.
     if (currboard[0]) {
 	strlcpy(old_board, currboard, IDLEN + 1);
 	currboard = ""; // force enter_board

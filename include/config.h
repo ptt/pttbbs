@@ -792,6 +792,14 @@
 #define GUEST_URL ""
 #endif
 
+/* The records of posts read (bof/readmarks.c): the effective size of the
+ * file of a person and the posts kept per board; pttbbs.conf may set both.
+ * BRC_MAXSIZE must not exceed 64KB. */
+#ifndef BRC_MAXNUM
+#define BRC_MAXSIZE     65536
+#define BRC_MAXNUM      80
+#endif
+
 #if defined(DEBUG) && !defined(CONFIG_DEBUG)
 #define CONFIG_DEBUG 1
 #endif

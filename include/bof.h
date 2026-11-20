@@ -468,6 +468,42 @@ typedef struct bof_get_post_response_t {
 bof_error_t bof_get_post(const bof_get_post_t *req,
                          bof_get_post_response_t *out);
 
+/* Which posts a person has read (Lemmy's post_read), kept for the person
+ * in session (one per process) as the BBS read records: per board (by its
+ * ID, Lemmy's community_id), the times of the posts read, plus "all read
+ * up to" marks. Posts made a year before login count as read. The records
+ * are loaded when first needed and saved by
+ * bof_bbs_read_marks_finalize(). The session is PTT's (Lemmy keeps
+ * post_read in its database), hence bbs_. */
+void bof_bbs_read_marks_set_person(const char *userid, int savable,
+                                   int32_t login_time);
+int bof_bbs_read_marks_initialize(void);  /* 1 if it was already */
+void bof_bbs_read_marks_update(void);     /* the board's into the buffer */
+void bof_bbs_read_marks_finalize(void);   /* saves and releases */
+void bof_bbs_read_marks_release(void);
+/* Makes community the board read now. Returns how many records it has. */
+int bof_bbs_read_marks_enter(int community_id);
+
+/* Lemmy's MarkPostAsRead (read: true), for the post with file name fname
+ * changed at modified, on the board entered. Returns -1 if community_id is
+ * not that board. */
+int bof_mark_post_as_read(int community_id, const char *fname,
+                          int32_t modified);
+/* Whether a post is unread (Lemmy's read: false): 0 read, 1 unread, 2 read
+ * but changed since (PTT's; Lemmy has no such state). By its file name, or
+ * by the time in it. */
+int bof_post_is_unread(int community_id, const char *fname,
+                       int32_t modified);
+int bof_bbs_post_unread_time(int community_id, int32_t ftime,
+                             int32_t modified);
+/* PTT: marks a whole board read (or unread), or read up to a time. */
+void bof_bbs_mark_community_read(int community_id, int is_all_read);
+void bof_bbs_mark_community_read_until(int community_id, int32_t t);
+/* PTT: the post read nearest to ftime, newer (forward) or older, into
+ * *result: 1 found, 0 none, -1 no records for the board. */
+int bof_bbs_search_read(int community_id, int32_t ftime, int forward,
+                        int32_t *result);
+
 /* ------------------------------------------------------------------------
  * Modlog
  * ------------------------------------------------------------------------ */
