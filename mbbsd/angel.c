@@ -736,42 +736,6 @@ FindAngel(void){
     return 0;
 }
 
-#ifdef BN_NEWBIE
-static void
-GotoNewHand(){
-    char old_board[IDLEN + 1] = "";
-
-    if (currutmp && currutmp->mode == EDITING)
-	return;
-
-    // Leave the board, so that enter_board() enters it again afterwards.
-    if (currboard[0]) {
-	strlcpy(old_board, currboard, IDLEN + 1);
-	currboard = ""; // force enter_board
-    }
-
-    int groupop = groupop_save();
-    // Read() sets READING. Anything else, a board list or a screen opened on
-    // top of one, keeps the modes it has.
-    int reading = currutmp && currutmp->mode == READING;
-    if (enter_board(BN_NEWBIE) == 0)
-	Read();
-    else
-	vmsg("無法進入新手板。");
-
-    // Go back even if BN_NEWBIE could not be entered: currboard was cleared.
-    // Then give the caller its group modes back. With no board to go back
-    // to, the caller is not reading one. A board being read gets back only
-    // those that entering it again gives, as its group may have moved
-    // meanwhile; a board list's are its own, whatever board was read last.
-    // If the board can't be entered, the board read last stays current, with
-    // the modes set_board() gave it.
-    if (!old_board[0])
-	groupop_restore(groupop);
-    else if (enter_board(old_board) == 0)
-	groupop_restore(reading ? groupop & groupop_save() : groupop);
-}
-#endif
 
 
 static void
@@ -782,18 +746,16 @@ NoAngelFound(const char* msg){
     grayout(0, b_lines-3, GRAYOUT_DARK);
     move(b_lines-4, 0); clrtobot();
     outs(MSG_SEPARATOR);
-    move(b_lines-2, 0);
+    move(b_lines-3, 0);
     if (!msg)
 	msg = "你的小天使現在不在線上";
     outs(msg);
 #ifdef BN_NEWBIE
-    if (currutmp == NULL || currutmp->mode != EDITING)
-	outs("，請先在新手板上尋找答案或按 Ctrl-P 發問");
-    if (vmsg("請按任意鍵繼續，若想直接進入新手板發文請按 p") == 'p')
-	GotoNewHand();
-#else
-    pressanykey();
+    // On a line of its own, so that a long message and a long board name
+    // still fit in 80 columns.
+    mvouts(b_lines-2, 0, "請先在 " BN_NEWBIE " 板上尋找答案或發問");
 #endif
+    pressanykey();
 }
 
 static void
@@ -820,21 +782,9 @@ AngelNotOnline(){
     prints("您的%s小天使現在不在線上，祂留言給你：\n", _myangel_nick);
     angel_display_message(FN_ANGEL_OFFLINE2, msg_fn, 1, 5, 4, 9, 53);
 
-    // Query if user wants to go to newbie board
-    switch(tolower(vmsg("想換成目前在線上的小天使請按 h, "
-#ifdef BN_NEWBIE
-                    "進新手板請按 p, "
-#endif
-                    "其它任意鍵離開"))) {
-        case 'h':
-            move(b_lines - 4, 0); clrtobot();
-            do_changeangel(1);
-            break;
-#ifdef BN_NEWBIE
-        case 'p':
-            GotoNewHand();
-            break;
-#endif
+    if (tolower(vmsg("想換成目前在線上的小天使請按 h, 其它任意鍵離開")) == 'h') {
+        move(b_lines - 4, 0); clrtobot();
+        do_changeangel(1);
     }
 }
 
