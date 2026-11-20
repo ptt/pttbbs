@@ -69,6 +69,14 @@ int bof_fs_post_version_matches(void *ctx, const bof_post_ref_t *post,
 bof_error_t bof_fs_refresh_post(void *ctx, const bof_post_ref_t *post);
 bof_error_t bof_fs_find_post(void *ctx, const bof_post_key_t *key,
                              bof_found_post_t *out);
+bof_error_t bof_fs_get_post_revisions(void *ctx, const bof_post_ref_t *post,
+                                      int *count);
+bof_error_t bof_fs_get_post_revision_file(void *ctx,
+                                          const bof_post_ref_t *post, int rev,
+                                          char *path, size_t sz);
+bof_error_t bof_fs_list_removed_posts(
+    void *ctx, const bof_bbs_list_removed_posts_t *req,
+    bof_bbs_list_removed_posts_response_t *out);
 
 #ifdef __cplusplus
 }

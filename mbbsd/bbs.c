@@ -4306,7 +4306,7 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 }
 
 static int
-view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *direct)
+view_posthistory(int ent, const fileheader_t * fhdr, const char *direct)
 {
     const char *err_no_history = "此篇文章暫無編輯歷史記錄。"
                                  "要進資源回收筒請再按一次 ~";
@@ -4318,7 +4318,7 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
 
     if (!fhdr || !fhdr->filename[0]) {
         if (vmsg(err_no_history) == '~')
-            psb_recycle_bin(direct, currboard);
+            psb_recycle_bin(currboard, direct, currboard);
         return FULLUPDATE;
     }
 
@@ -4326,20 +4326,22 @@ view_posthistory(int ent GCC_UNUSED, const fileheader_t * fhdr, const char *dire
     // bin.
     if (fhdr->filename[0] == '.') {
         if (vmsg(err_no_history) == '~')
-            psb_recycle_bin(direct, currboard);
+            psb_recycle_bin(currboard, direct, currboard);
         return FULLUPDATE;
     }
 
-    AUTO_BFILE(fpath, currboard, fhdr->filename);
-    maxrev = timecapsule_get_max_revision_number(fpath);
+    // The versions bof keeps (the time capsule of the files).
+    bof_post_ref_t ref = bof_ref(direct, ent, fhdr);
+    if (bof_bbs_get_post_revisions(&ref, &maxrev) != BOF_OK)
+        maxrev = 0;
     if (maxrev < 1) {
         if (vmsg(err_no_history) == '~')
-            psb_recycle_bin(direct, currboard);
+            psb_recycle_bin(currboard, direct, currboard);
         return FULLUPDATE;
     }
 
-    if (psb_view_edit_history(fpath, fhdr->title, maxrev, 1))
-        psb_recycle_bin(direct, currboard);
+    if (psb_view_edit_history(currboard, direct, fhdr, maxrev, 1))
+        psb_recycle_bin(currboard, direct, currboard);
     return FULLUPDATE;
 }
 

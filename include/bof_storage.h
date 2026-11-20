@@ -140,6 +140,15 @@ typedef struct bof_storage_ops_t {
                              bof_found_post_t *out);
     bof_error_t (*get_community_id)(void *ctx, const char *name,
                                     bof_community_id_t *id);
+    /* The time capsule: versions of posts and the recycle bin. */
+    bof_error_t (*get_post_revisions)(void *ctx, const bof_post_ref_t *post,
+                                      int *count);
+    bof_error_t (*get_post_revision_file)(void *ctx,
+                                          const bof_post_ref_t *post,
+                                          int rev, char *path, size_t sz);
+    bof_error_t (*list_removed_posts)(
+        void *ctx, const bof_bbs_list_removed_posts_t *req,
+        bof_bbs_list_removed_posts_response_t *out);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

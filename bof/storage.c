@@ -494,3 +494,38 @@ bof_bbs_community_id(const char *name, bof_community_id_t *id)
     *id = 0;
     return READ(get_community_id, name, id);
 }
+
+/* ------------------------------------------------------------------------
+ * The time capsule
+ * ------------------------------------------------------------------------ */
+
+bof_error_t
+bof_bbs_get_post_revisions(const bof_post_ref_t *post, int *count)
+{
+    if (!post || !post->bbs_dir || !post->bbs_header ||
+        !post->bbs_header->filename[0] || !count)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    *count = 0;
+    return READ(get_post_revisions, post, count);
+}
+
+bof_error_t
+bof_bbs_get_post_revision_file(const bof_post_ref_t *post, int rev,
+                               char *path, size_t sz)
+{
+    if (!post || !post->bbs_dir || !post->bbs_header ||
+        !post->bbs_header->filename[0] || rev <= 0 || !path || !sz)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    return READ(get_post_revision_file, post, rev, path, sz);
+}
+
+bof_error_t
+bof_bbs_list_removed_posts(const bof_bbs_list_removed_posts_t *req,
+                           bof_bbs_list_removed_posts_response_t *out)
+{
+    if (!req || !req->bbs_dir || req->start < 0 || req->limit <= 0 ||
+        !out || !out->posts)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    out->count = out->bbs_total = 0;
+    return READ(list_removed_posts, req, out);
+}

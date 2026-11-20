@@ -480,3 +480,56 @@ bof_fs_restore_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         *out->bbs_header = restored;
     return BOF_OK;
 }
+
+/* ------------------------------------------------------------------------
+ * The time capsule: versions of posts and the recycle bin
+ * ------------------------------------------------------------------------ */
+
+bof_error_t
+bof_fs_get_post_revisions(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
+                          int *count)
+{
+    char path[PATHLEN];
+    int n;
+
+    setdirpath(path, post->bbs_dir, post->bbs_header->filename);
+    n = timecapsule_get_max_revision_number(path);
+    *count = n > 0 ? n : 0;
+    return BOF_OK;
+}
+
+bof_error_t
+bof_fs_get_post_revision_file(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
+                              int rev, char *path, size_t sz)
+{
+    char base[PATHLEN];
+
+    setdirpath(base, post->bbs_dir, post->bbs_header->filename);
+    if (!timecapsule_get_by_revision(base, rev, path, sz) || !dashf(path))
+        return BOF_ERR_COULDNT_FIND_POST;
+    return BOF_OK;
+}
+
+bof_error_t
+bof_fs_list_removed_posts(void *ctx GCC_UNUSED,
+                          const bof_bbs_list_removed_posts_t *req,
+                          bof_bbs_list_removed_posts_response_t *out)
+{
+    int total = timecapsule_get_max_archive_number(req->bbs_dir,
+                                                   sizeof(fileheader_t));
+    int n;
+
+    out->bbs_total = total > 0 ? total : 0;
+    n = out->bbs_total - req->start;
+    if (n > req->limit)
+        n = req->limit;
+    if (n <= 0)
+        return BOF_OK;
+    // All of them, or none (it returns whether it could).
+    if (timecapsule_get_archive_blobs(req->bbs_dir, req->start, n,
+                                      out->posts, sizeof(fileheader_t))) {
+        fileheader_storage_to_mem(out->posts, n);
+        out->count = n;
+    }
+    return BOF_OK;
+}

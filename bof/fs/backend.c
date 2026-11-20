@@ -54,4 +54,7 @@ const bof_storage_ops_t bof_storage_files = {
     .get_post_key = NULL,
     .find_post = bof_fs_find_post,
     .get_community_id = NULL,
+    .get_post_revisions = bof_fs_get_post_revisions,
+    .get_post_revision_file = bof_fs_get_post_revision_file,
+    .list_removed_posts = bof_fs_list_removed_posts,
 };

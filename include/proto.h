@@ -242,9 +242,12 @@ void post_record_changed(const char *direct, int ent, const fileheader_t *fhdr);
 
 /* psb (page and service browser) */
 /* Returns non-zero if the user left for the recycle bin ('~'). */
-int psb_view_edit_history(const char *base, const char *subject,
-                          int maxrev, int current_as_base);
-int psb_recycle_bin(const char *base, const char *title);
+// community: the board of dir (through bof), or NULL for a mailbox.
+int psb_view_edit_history(const char *community, const char *dir,
+                          const fileheader_t *fh, int maxrev,
+                          int current_as_base);
+int psb_recycle_bin(const char *community, const char *base,
+                    const char *title);
 int psb_admin_edit();
 #ifdef USE_COMMENTD
 int psb_commentd_manager(const char *board, const fileheader_t *fh);

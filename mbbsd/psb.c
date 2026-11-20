@@ -1944,9 +1944,54 @@ psb_main(PSB_CTX *psbctx)
 #define PVEH_LIMIT_NUMBER   (199)
 #endif
 
+// The versions the time capsule keeps of fh in dir: of a post of a board
+// (community) through bof, or of another file (a mail) in it directly.
+static int
+tc_revisions(const char *community, const char *dir, const fileheader_t *fh)
+{
+    char path[PATHLEN];
+    int n = 0;
+
+    if (community) {
+        bof_post_ref_t ref = {
+            .community = community, .bbs_dir = dir, .bbs_header = fh,
+        };
+        return bof_bbs_get_post_revisions(&ref, &n) == BOF_OK ? n : 0;
+    }
+    setdirpath(path, dir, fh->filename);
+    n = timecapsule_get_max_revision_number(path);
+    return n > 0 ? n : 0;
+}
+
+// The file of version rev (0: the current one) of fh in dir, as above.
+static void
+tc_revision_file(const char *community, const char *dir,
+                 const fileheader_t *fh, int rev, char *fname, size_t sz)
+{
+    char path[PATHLEN];
+
+    if (community) {
+        bof_post_ref_t ref = {
+            .community = community, .bbs_dir = dir, .bbs_header = fh,
+        };
+        if ((rev ? bof_bbs_get_post_revision_file(&ref, rev, fname, sz) :
+                   bof_bbs_get_post_file(&ref, fname, sz)) == BOF_OK)
+            return;
+        // Not there (e.g. an expired revision): by its name, as for the
+        // mailbox below, so it shows as expired.
+    }
+    setdirpath(path, dir, fh->filename);
+    if (!rev)
+        strlcpy(fname, path, sz);
+    else if (!timecapsule_get_by_revision(path, rev, fname, sz))
+        snprintf(fname, sz, "%s", "/dev/null");
+}
+
 typedef struct {
     const char *subject;
-    const char *filebase;
+    const char *community;      // NULL: not a board (a mailbox)
+    const char *dir;
+    const fileheader_t *fh;
     int leave_for_recycle_bin;
     int rev_base;
     int base_as_current;
@@ -1967,10 +2012,10 @@ static void
 pveh_solve_rev_filename(int rev, int i, char *fname, size_t sz_fname,
                         pveh_ctx *cx) {
     if (cx->base_as_current && i == 0)
-        strlcpy(fname, cx->filebase, sz_fname);
+        tc_revision_file(cx->community, cx->dir, cx->fh, 0, fname, sz_fname);
     else
-        timecapsule_get_by_revision(
-                cx->filebase, rev + cx->rev_base, fname, sz_fname);
+        tc_revision_file(cx->community, cx->dir, cx->fh, rev + cx->rev_base,
+                         fname, sz_fname);
 }
 
 static int
@@ -2094,11 +2139,14 @@ pveh_welcome() {
 
 
 int
-psb_view_edit_history(const char *base, const char *subject,
-                      int maxrev, int current_as_base) {
+psb_view_edit_history(const char *community, const char *dir,
+                      const fileheader_t *fh, int maxrev,
+                      int current_as_base) {
     pveh_ctx pvehctx = {
-        .subject = subject,
-        .filebase = base,
+        .subject = fh->title,
+        .community = community,
+        .dir = dir,
+        .fh = fh,
         .rev_base = 0,
         .base_as_current = current_as_base,
     };
@@ -2144,6 +2192,7 @@ psb_view_edit_history(const char *base, const char *subject,
 #endif
 
 typedef struct {
+    const char *community;      // NULL: not a board (a mailbox)
     const char *dirbase;
     const char *subject;
     int viewbase;
@@ -2254,16 +2303,15 @@ pvrb_cmd_view(cmd_ctx_t *ctx) {
     fileheader_t *fh = &cx->records[ctx->total - ctx->curr - 1];
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
-    AUTO_DIRPATH(fname, cx->dirbase, fh->filename);
-    maxrev = timecapsule_get_max_revision_number(fname);
+    maxrev = tc_revisions(cx->community, cx->dirbase, fh);
     if (maxrev == 1) {
         char revfname[PATHLEN];
-        timecapsule_get_by_revision(
-                fname, 1, revfname, sizeof(revfname));
+        tc_revision_file(cx->community, cx->dirbase, fh, 1, revfname,
+                         sizeof(revfname));
         more(revfname, YEA);
         ctx->redraw = true;
     } else if (maxrev > 1) {
-        psb_view_edit_history(fname, fh->title, maxrev, 0);
+        psb_view_edit_history(cx->community, cx->dirbase, fh, maxrev, 0);
         ctx->redraw = true;
     } else {
         vmsg(err_no_rev);
@@ -2279,16 +2327,15 @@ pvrb_cmd_mail(cmd_ctx_t *ctx) {
     fileheader_t *fh = &cx->records[ctx->total - ctx->curr - 1];
     const char *err_no_rev = "抱歉，本文歷史資料已被系統清除。";
 
-    AUTO_DIRPATH(fname, cx->dirbase, fh->filename);
-    maxrev = timecapsule_get_max_revision_number(fname);
+    maxrev = tc_revisions(cx->community, cx->dirbase, fh);
     if (maxrev < 1) {
         vmsg(err_no_rev);
         ctx->redraw_footer_lines = 1;
     } else {
         char revfname[PATHLEN];
         char ans[3];
-        timecapsule_get_by_revision(
-                fname, maxrev, revfname, sizeof(revfname));
+        tc_revision_file(cx->community, cx->dirbase, fh, maxrev, revfname,
+                         sizeof(revfname));
         getdata(b_lines-2, 0, "確定要把此份文件回存至信箱嗎? [y/N]: ",
                 ans, sizeof(ans), LCECHO);
         if (*ans == 'y') {
@@ -2366,9 +2413,10 @@ pvrb_welcome() {
 }
 
 int
-psb_recycle_bin(const char *base, const char *title) {
+psb_recycle_bin(const char *community, const char *base, const char *title) {
     int nrecords = 0, viewbase = 0;
     pvrb_ctx pvrbctx = {
+        .community = community,
         .dirbase = base,
         .subject = title,
     };
@@ -2390,8 +2438,19 @@ psb_recycle_bin(const char *base, const char *title) {
         .cmds = pvrb_cmds,
     };
 
-    nrecords = timecapsule_get_max_archive_number(base, sizeof(fileheader_t));
-    if (!nrecords) {
+    // The records of the recycle bin: of a board through bof.
+    bof_bbs_list_removed_posts_t lreq = {
+        .community = community, .bbs_dir = base, .limit = 1,
+    };
+    fileheader_t one;
+    bof_bbs_list_removed_posts_response_t lres = { .posts = &one };
+    if (community)
+        nrecords = bof_bbs_list_removed_posts(&lreq, &lres) == BOF_OK ?
+                   lres.bbs_total : 0;
+    else
+        nrecords = timecapsule_get_max_archive_number(base,
+                                                      sizeof(fileheader_t));
+    if (nrecords <= 0) {
         vmsg("目前" RECYCLE_BIN_NAME "內無任何內容。");
         return FULLUPDATE;
     }
@@ -2410,9 +2469,18 @@ psb_recycle_bin(const char *base, const char *title) {
         vmsgf("內部錯誤，請至" BN_BUGREPORT "看板報告，謝謝");
         return FULLUPDATE;
     }
-    timecapsule_get_archive_blobs(base, viewbase, nrecords, pvrbctx.records,
-                                  sizeof(fileheader_t));
-    fileheader_storage_to_mem(pvrbctx.records, nrecords);
+    if (community) {
+        lreq.start = viewbase;
+        lreq.limit = nrecords;
+        lres.posts = pvrbctx.records;
+        if (bof_bbs_list_removed_posts(&lreq, &lres) != BOF_OK ||
+            lres.count != nrecords)
+            memset(pvrbctx.records, 0, sizeof(fileheader_t) * nrecords);
+    } else {
+        timecapsule_get_archive_blobs(base, viewbase, nrecords,
+                                      pvrbctx.records, sizeof(fileheader_t));
+        fileheader_storage_to_mem(pvrbctx.records, nrecords);
+    }
     psb_main(&ctx);
     free(pvrbctx.records);
     return DIRCHANGED;

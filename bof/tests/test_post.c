@@ -493,6 +493,19 @@ test_edit_post_body(void)
     // The old content is in the time capsule, with when it was made.
     EXPECT_INT(timecapsule_get_max_revision_number(
                    BDIR "/M.1700000031.A.031"), 1);
+    // And bof gives it back.
+    int revs = -1;
+    char rpath[PATHLEN];
+    EXPECT_OK(bof_bbs_get_post_revisions(&post, &revs));
+    EXPECT_INT(revs, 1);
+    EXPECT_OK(bof_bbs_get_post_revision_file(&post, 1, rpath, sizeof(rpath)));
+    // The whole file as it was, with the comment that came meanwhile.
+    EXPECT(strncmp(slurp(rpath, buf, sizeof(buf)),
+                   "the content of M.1700000031.A.031\na comment\n",
+                   strlen("the content of M.1700000031.A.031\na comment\n"))
+           == 0);
+    EXPECT_INT(bof_bbs_get_post_revision_file(&post, 2, rpath, sizeof(rpath)),
+               BOF_ERR_COULDNT_FIND_POST);
 
     // An edit from the old version fails now and keeps its file.
     spit("edit.tmp", "stale body\n");
@@ -1083,6 +1096,24 @@ test_restore_post(void)
     EXPECT(!exists(BDIR "/M.1700000301.A.301"));
     EXPECT(last_archived(&ar));
     EXPECT_STR(ar.filename, "M.1700000301.A.301");
+    // The recycle bin of bof has it last.
+    {
+        fileheader_t bin[4];
+        bof_bbs_list_removed_posts_t lr = {
+            .community = BOARD, .bbs_dir = DIRPATH, .limit = 4,
+        };
+        bof_bbs_list_removed_posts_response_t lo = { .posts = bin };
+        EXPECT_OK(bof_bbs_list_removed_posts(&lr, &lo));
+        EXPECT(lo.bbs_total >= 1);
+        lr.start = lo.bbs_total - 1;
+        EXPECT_OK(bof_bbs_list_removed_posts(&lr, &lo));
+        EXPECT_INT(lo.count, 1);
+        EXPECT_STR(bin[0].filename, "M.1700000301.A.301");
+        EXPECT_STR(bin[0].title, "keep me");
+        lr.start = lo.bbs_total;
+        EXPECT_OK(bof_bbs_list_removed_posts(&lr, &lo));
+        EXPECT_INT(lo.count, 0);
+    }
     bof_modlog_init(&log, "restore");
     bof_restore_post_t rs = {
         .community = BOARD, .bbs_dir = DIRPATH, .bbs_archived = &ar,

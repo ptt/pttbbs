@@ -523,6 +523,36 @@ int bof_bbs_post_version_matches(const bof_post_ref_t *post,
 bof_error_t bof_bbs_get_post_file(const bof_post_ref_t *post, char *path,
                                   size_t sz);
 
+/* PTT: the earlier versions of a post the time capsule keeps (Discourse's
+ * post_revisions; Lemmy keeps none): how many (*count; 1 is the oldest),
+ * and the file to read version rev from. Also for a post deleted or
+ * removed, by its record in the recycle bin (bof_bbs_list_removed_posts()).
+ * Errors: couldnt_find_post (version rev is not kept). */
+bof_error_t bof_bbs_get_post_revisions(const bof_post_ref_t *post,
+                                       int *count);
+bof_error_t bof_bbs_get_post_revision_file(const bof_post_ref_t *post,
+                                           int rev, char *path, size_t sz);
+
+/* PTT: the posts deleted or removed from a list, as the time capsule keeps
+ * them (its recycle bin): their records from the start-th (0 is the
+ * oldest), up to limit, and how many it keeps (bbs_total). */
+typedef struct bof_bbs_list_removed_posts_t {
+    const char *community;
+    const char *bbs_dir;
+    int start;
+    int limit;
+} bof_bbs_list_removed_posts_t;
+
+typedef struct bof_bbs_list_removed_posts_response_t {
+    struct fileheader_t *posts;     /* by the caller, room for limit */
+    int count;
+    int bbs_total;
+} bof_bbs_list_removed_posts_response_t;
+
+bof_error_t bof_bbs_list_removed_posts(
+    const bof_bbs_list_removed_posts_t *req,
+    bof_bbs_list_removed_posts_response_t *out);
+
 /* PTT: names a new post of community before it is created (e.g. to put its
  * address, which comes from the name, in its content): its file name and
  * date into fh, the rest of fh kept. The name is taken until

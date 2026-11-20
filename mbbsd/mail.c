@@ -2622,7 +2622,7 @@ mail_wmsg(int ent GCC_UNUSED, fileheader_t * fhdr,
 
 static int
 mail_recycle_bin(void) {
-    return psb_recycle_bin(currdirect, "個人信箱");
+    return psb_recycle_bin(NULL, currdirect, "個人信箱");
 }
 
 ////////////////////////////////////////////////////////////////////////
