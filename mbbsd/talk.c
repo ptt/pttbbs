@@ -851,9 +851,10 @@ partition_bfriend(int *slots, int count)
     int left = 0, right = count - 1;
     while (left <= right) {
         userinfo_t *u = &SHM->uinfo[slots[left]];
+        /* Friends on this board are listed here too (and also in the
+         * friend section above), as pickup_bfriend() always did. */
         bool is_bf = (u->brc_id == currutmp->brc_id && u != currutmp &&
-                      isvisible(currutmp, u) &&
-                      !(friend_stat(currutmp, u) & (IFH | HFM)));
+                      isvisible(currutmp, u));
         if (is_bf) {
             left++;
         } else {
