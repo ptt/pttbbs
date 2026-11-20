@@ -1657,14 +1657,14 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     if (!is_file_owner(fhdr, &cuser)) {
         if (!my_comments)
             return DONOTHING;
-        if (psb_comment_editor(currboard, direct, ent, fhdr))
+        if (psb_comment_editor(currboard, direct, ent, fhdr, 0))
             brc_addlist(fhdr->filename, fhdr->modified);
         return FULLUPDATE;
     }
     if (my_comments) {
         int ans = vans("編輯: [1] 文章內文 [2] 我的推文 [q] 取消: ");
         if (ans == '2') {
-            if (psb_comment_editor(currboard, direct, ent, fhdr))
+            if (psb_comment_editor(currboard, direct, ent, fhdr, 0))
                 brc_addlist(fhdr->filename, fhdr->modified);
             return FULLUPDATE;
         }
@@ -4718,11 +4718,11 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     snprintf(prompt, sizeof(prompt), "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字%s%s:",
              IS_ENABLED(CONFIG_SUSPICIOUS_MARK) ? " [S]標記待證" : "",
 #ifdef USE_COMMENTD
-             " [V]推文管理"
+             " [V]推文管理");
 #else
-             ""
+             IS_ENABLED(CONFIG_COMMENT_MODERATION) ?
+             " [V]推文管理" : "");
 #endif
-             );
 
     if (currstat == RMAIL)
         return DONOTHING;
@@ -4756,15 +4756,22 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
                 mark_suspicious(ent, fhdr, direct);
             break;
 
-#ifdef USE_COMMENTD
         case 'v':
+#ifndef USE_COMMENTD
+            if (!IS_ENABLED(CONFIG_COMMENT_MODERATION))
+                break;
+#endif
             if (currbrdattr & (BRD_ANGELANONYMOUS | BRD_ANONYMOUS)) {
                 vmsg("抱歉，暫時不支援匿名板。");
-            } else  {
-                psb_comment_manager(currboard, fhdr);
+            } else if (IS_ENABLED(CONFIG_COMMENT_MODERATION)) {
+                psb_comment_manager(currboard, direct, ent, fhdr);
+            } else {
+#ifdef USE_COMMENTD
+                // The list of commentd, as before.
+                psb_commentd_manager(currboard, fhdr);
+#endif
             }
             break;
-#endif
     }
     return FULLUPDATE;
 }
@@ -4796,8 +4803,12 @@ report_post(int ent, fileheader_t *fhdr, const char *direct)
     clear();
     vs_hdr2(floor ? "檢舉推文" : "檢舉文章", currboard);
     mvprints(2, 0, "文章: %.*s", t_columns - 8, fhdr->title);
-    if (floor)
-        mvprints(3, 0, "推文 #%d %s: %s", floor, c.creator, c.content);
+    if (floor) {
+        char line[sizeof(c.content)];
+        psb_comment_line(line, sizeof(line), c.content);
+        mvprints(3, 0, "推文 #%d %s: %.*s", floor, c.creator,
+                 t_columns > 30 ? t_columns - 30 : 0, line);
+    }
     mvouts(5, 0, "檢舉會送給本看板的板主，板主不會看到檢舉人是誰。\n"
            "違反站規的檢舉，站方也看得到。請勿濫用。");
     ans = vans("類別: [1] 違反板規 [2] 違反站規 [3] 其他 [q] 取消: ");

@@ -104,7 +104,7 @@ if (err != BOF_OK)
 | People | `person`, `local_user` | `bof_person_id_t`, `bof_actor_t` |
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost` (and restoring), `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_restore_post()`, `bof_lock_post()`, `bof_feature_post()` |
 | Reading | `GetPosts`, `GetPost`, `MarkPostAsRead` | `bof_get_posts()`, `bof_get_post()`, `bof_mark_post_as_read()` |
-| Comments | `CreateComment` (+ `CreatePostLike` for a push or boo), `GetComments`, `EditComment`, `DeleteComment`, `RemoveComment` | `bof_create_comment()`, `bof_get_comments()`, `bof_edit_comment()`, `bof_delete_comment()`, `bof_remove_comment()` |
+| Comments | `CreateComment` (+ `CreatePostLike` for a push or boo), `GetComments`, `EditComment`, `DeleteComment`, `RemoveComment`; Discourse's `post_revisions` | `bof_create_comment()`, `bof_get_comments()`, `bof_edit_comment()`, `bof_delete_comment()`, `bof_remove_comment()`, `bof_get_comment_revisions()` |
 | Reports | `CreatePostReport`, `CreateCommentReport`, `ListReports`, `Resolve*Report` | `bof_create_report()`, `bof_list_reports()`, `bof_resolve_report()` |
 | Modlog | `GetModlog`, `mod_*` | `bof_modlog_*()`; moderation calls take their record |
 | Bulk | Discourse's bulk delete | `bof_remove_posts()` |

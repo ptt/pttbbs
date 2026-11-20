@@ -241,9 +241,15 @@ int psb_view_edit_history(const char *base, const char *subject,
                           int maxrev, int current_as_base);
 int psb_recycle_bin(const char *base, const char *title);
 int psb_admin_edit();
-int psb_comment_manager(const char *board, const fileheader_t *fh);
+#ifdef USE_COMMENTD
+int psb_commentd_manager(const char *board, const fileheader_t *fh);
+#endif
+int psb_comment_manager(const char *board, const char *direct, int ent,
+                        fileheader_t *fh);
 int psb_comment_editor(const char *board, const char *direct, int ent,
-                       fileheader_t *fh);
+                       fileheader_t *fh, int multiline);
+// A comment (bof_comment_t.content, maybe of several lines) in one line.
+void psb_comment_line(char *dst, size_t sz, const char *s);
 int psb_has_my_comments(const char *board, const char *direct, int ent,
                         const fileheader_t *fh);
 int psb_pick_comment(const char *board, const char *direct, int ent,

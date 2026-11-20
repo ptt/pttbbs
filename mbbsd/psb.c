@@ -1,4 +1,5 @@
 #include "bbs.h"
+#include "comments.h"
 #include "content.h"
 #include "daemons.h"
 #include "psb.h"
@@ -2418,17 +2419,19 @@ psb_recycle_bin(const char *base, const char *title) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// Comment Management
+// Comment Management by commentd (USE_COMMENTD): the list of commentd,
+// for the moderators to remove comments, where they are not managed
+// through bof (CONFIG_COMMENT_MODERATION).
 
 #ifdef USE_COMMENTD
 typedef struct {
     void *cmctx;
     // The post, for the modlog.
     const fileheader_t *fh;
-} pvcm_ctx;
+} pvcd_ctx;
 
 static int
-pvcm_header(PSB_CTX *ctx GCC_UNUSED) {
+pvcd_header(PSB_CTX *ctx GCC_UNUSED) {
     vs_draw_hdr2("推文管理", "刪除推文");
     move(1, 0);
     vbar(ANSI_REVERSE "  編 號 | 作  者     | 內  容");
@@ -2436,8 +2439,8 @@ pvcm_header(PSB_CTX *ctx GCC_UNUSED) {
 }
 
 static int
-pvcm_renderer(int i, PSB_CTX *ctx) {
-    pvcm_ctx *cx = (pvcm_ctx*) ctx->cmd.priv;
+pvcd_renderer(int i, PSB_CTX *ctx) {
+    pvcd_ctx *cx = (pvcd_ctx*) ctx->cmd.priv;
     int curr = ctx->cmd.curr;
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, i);
     char msg[sizeof(resp->msg)];
@@ -2461,8 +2464,8 @@ pvcm_renderer(int i, PSB_CTX *ctx) {
 }
 
 static int
-pvcm_cmd_delete(cmd_ctx_t *ctx) {
-    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+pvcd_cmd_delete(cmd_ctx_t *ctx) {
+    pvcd_ctx *cx = (pvcd_ctx *)ctx->priv;
     char reason[40];
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
     const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
@@ -2499,8 +2502,8 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
 }
 
 static int
-pvcm_cmd_acl(cmd_ctx_t *ctx) {
-    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+pvcd_cmd_acl(cmd_ctx_t *ctx) {
+    pvcd_ctx *cx = (pvcd_ctx *)ctx->priv;
     const CommentKeyReq *key = CommentsGetKeyReq(cx->cmctx);
     const CommentBodyReq *resp = CommentsRead(cx->cmctx, ctx->curr);
     // commentd replays what its clients sent: check the ID (the ACL code
@@ -2520,15 +2523,15 @@ pvcm_cmd_acl(cmd_ctx_t *ctx) {
     return 0;
 }
 
-static const cmd_t pvcm_cmds[] = {
-    { 'd', "刪除", "刪除選取的推文並記錄原因", pvcm_cmd_delete, 0, CMD_PRIO_MAX, true },
-    { KEY_DEL, NULL, NULL, pvcm_cmd_delete, 0, CMD_PRIO_NONE, true },
-    { 'U', "快速禁言", "設定該推文作者的看板禁言權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
+static const cmd_t pvcd_cmds[] = {
+    { 'd', "刪除", "刪除選取的推文並記錄原因", pvcd_cmd_delete, 0, CMD_PRIO_MAX, true },
+    { KEY_DEL, NULL, NULL, pvcd_cmd_delete, 0, CMD_PRIO_NONE, true },
+    { 'U', "快速禁言", "設定該推文作者的看板禁言權限", pvcd_cmd_acl, 0, CMD_PRIO_HIGH, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
 static int
-pvcm_welcome() {
+pvcd_welcome() {
     clear();
     vs_hdr2("刪除推文", "警告");
     move(2, 0);
@@ -2546,8 +2549,8 @@ pvcm_welcome() {
 }
 
 int
-psb_comment_manager(const char *board, const fileheader_t *fh) {
-    pvcm_ctx pvcmctx = {
+psb_commentd_manager(const char *board, const fileheader_t *fh) {
+    pvcd_ctx pvcmctx = {
         NULL,
         fh,
     };
@@ -2561,9 +2564,9 @@ psb_comment_manager(const char *board, const fileheader_t *fh) {
         .header_lines = 2,
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
-        .header = pvcm_header,
-        .renderer = pvcm_renderer,
-        .cmds = pvcm_cmds,
+        .header = pvcd_header,
+        .renderer = pvcd_renderer,
+        .cmds = pvcd_cmds,
     };
     pvcmctx.cmctx = CommentsOpen(board, fh->filename);
     if (!pvcmctx.cmctx) {
@@ -2572,7 +2575,7 @@ psb_comment_manager(const char *board, const fileheader_t *fh) {
     }
     ctx.cmd.total = CommentsGetCount(pvcmctx.cmctx);
     if (ctx.cmd.total){
-        pvcm_welcome();
+        pvcd_welcome();
         psb_main(&ctx);
     } else {
         vmsg("此文章無推文資料。");
@@ -2583,68 +2586,177 @@ psb_comment_manager(const char *board, const fileheader_t *fh) {
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
-// My Comments: the current user edits (or deletes) their comments on a
-// post, through bof (EditComment, DeleteComment).
+// Comment Management: the comments of a post, through bof, for the
+// current user (their own: edit, delete) or for the moderators (all:
+// remove, ban the author, history). bof does not care about the UI: how
+// many lines an edit may have is the caller's choice (one in the files of
+// a board, several where the backend keeps comments apart).
 
-#define PVCE_MAX (256)
+// Comments are read by pages of this many.
+#define PVCM_PAGE (256)
+#ifndef PVCM_EDIT_LINES
+#define PVCM_EDIT_LINES (5)
+#endif
 
 typedef struct {
     const char *board;
     const char *direct;
     int ent;
-    fileheader_t *fh;
-    bof_comment_t comments[PVCE_MAX];
-    int changed;
-} pvce_ctx;
+    fileheader_t *fh;       // the post; its record follows the changes
+    bool mine;              // only the current user's comments
+    bool multiline;         // edits may have several lines
+    bool changed;
+    int count;
+    bof_comment_t *comments;    // all of them, to free()
+} pvcm_ctx;
 
-static int
-pvce_load(pvce_ctx *cx)
+// s in one line for the screen ("a / b" for lines a and b), without
+// control codes or broken characters.
+void
+psb_comment_line(char *dst, size_t sz, const char *s)
 {
-    bof_get_comments_t req = {
-        .post = { .community = cx->board, .bbs_dir = cx->direct,
-                  .bbs_index = cx->ent, .bbs_header = cx->fh },
-        .bbs_creator = cuser.userid, .limit = PVCE_MAX,
+    size_t n = 0;
+
+    if (!sz)
+        return;
+    for (; *s && n + 4 < sz; s++) {
+        if (*s != '\n' && *s != '\r') {
+            dst[n++] = *s;
+        } else if (n >= 3 && strncmp(dst + n - 3, " / ", 3) != 0) {
+            memcpy(dst + n, " / ", 3);
+            n += 3;
+        }
+    }
+    while (n >= 3 && strncmp(dst + n - 3, " / ", 3) == 0)
+        n -= 3;
+    dst[n] = '\0';
+    strip_control_sequence(dst, dst);
+    mbs_sanitize(dst, sz);
+}
+
+static bof_post_ref_t
+pvcm_ref(const pvcm_ctx *cx)
+{
+    bof_post_ref_t ref = {
+        .community = cx->board, .bbs_dir = cx->direct, .bbs_index = cx->ent,
+        .bbs_header = cx->fh,
     };
-    bof_get_comments_response_t res = { .comments = cx->comments };
-    return bof_get_comments(&req, &res) == BOF_OK ? res.count : 0;
+    return ref;
+}
+
+// All the comments of a post (by creator, if not NULL), page by page, into
+// *out (to free()). Returns how many.
+static int
+psb_load_comments(const bof_post_ref_t *ref, const char *creator,
+                  bof_comment_t **out)
+{
+    bof_comment_t *all = NULL, *more;
+    int n = 0;
+
+    for (int page = 1; (more = realloc(all, (n + PVCM_PAGE) * sizeof(*all)));
+         page++) {
+        all = more;
+        bof_get_comments_t req = {
+            .post = *ref, .bbs_creator = creator, .page = page,
+            .limit = PVCM_PAGE,
+        };
+        bof_get_comments_response_t res = { .comments = all + n };
+        if (bof_get_comments(&req, &res) != BOF_OK)
+            break;
+        n += res.count;
+        if (res.count < PVCM_PAGE)
+            break;
+    }
+    *out = all;
+    return n;
 }
 
 static int
-pvce_header(PSB_CTX *ctx GCC_UNUSED) {
-    vs_draw_hdr2("我的推文", "修改推文");
+pvcm_load(pvcm_ctx *cx)
+{
+    bof_post_ref_t ref = pvcm_ref(cx);
+
+    free(cx->comments);
+    cx->count = psb_load_comments(&ref, cx->mine ? cuser.userid : NULL,
+                                  &cx->comments);
+    return cx->count;
+}
+
+// After a change: the comments again, and the record of the post.
+static void
+pvcm_changed(pvcm_ctx *cx, cmd_ctx_t *ctx, const fileheader_t *updated)
+{
+    cx->changed = true;
+    if (updated && cx->ent > 0) {
+        *cx->fh = *updated;
+        post_record_changed(cx->direct, cx->ent, updated);
+    }
+    ctx->total = pvcm_load(cx);
+    if (ctx->curr >= ctx->total)
+        ctx->curr = ctx->total > 0 ? ctx->total - 1 : 0;
+    if (ctx->total <= 0)
+        ctx->quit = true;
+}
+
+static int
+pvcm_header(PSB_CTX *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->cmd.priv;
+    vs_draw_hdr2(cx->mine ? "我的推文" : "推文管理",
+                 cx->mine ? "修改推文" : "移除推文");
     move(1, 0);
-    vbar(ANSI_REVERSE "  樓 層 | 內  容");
+    vbar(ANSI_REVERSE "  樓 層 | 作  者     | 內  容");
     return 0;
 }
 
 static int
-pvce_renderer(int i, PSB_CTX *ctx) {
-    pvce_ctx *cx = (pvce_ctx *)ctx->cmd.priv;
+pvcm_renderer(int i, PSB_CTX *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->cmd.priv;
     const bof_comment_t *c = &cx->comments[i];
+    char line[sizeof(c->content)];
 
-    prints("%c %6d %s%s", (i == ctx->cmd.curr) ? '>' : ' ', c->bbs_floor,
-           c->removed ? ANSI_COLOR(0;30;47) "<已移除>" ANSI_RESET : c->content,
-           c->removed ? "" : c->bbs_tail);
+    if (c->removed)
+        strlcpy(line, ANSI_COLOR(0;30;47) "<已移除>" ANSI_RESET, sizeof(line));
+    else
+        psb_comment_line(line, sizeof(line), c->content);
+    prints("%c %6d %-12.12s %s", (i == ctx->cmd.curr) ? '>' : ' ',
+           c->bbs_floor, c->creator, line);
     return 0;
 }
 
-// Whether the board lets the current user change their comments.
+// Whether the board lets the current user change their comments on fh:
+// not where they could not comment (as comment() checks), nor on boards
+// that keep comments as they are; moderators may.
 static bool
-pvce_allowed(const char *board)
+pvcm_allowed(const char *board, const fileheader_t *fh)
 {
     int bid = getbnum(board);
     boardheader_t *bp = bid > 0 ? getbcache(bid) : NULL;
 
-    if (bp && (bp->brdattr & BRD_COMMENT_READONLY) && !CBRD_IS_BM()) {
+    if (CBRD_IS_BM())
+        return true;
+    if (bp && (bp->brdattr & BRD_COMMENT_READONLY)) {
         vmsg("本看板禁止修改或刪除推文。");
         return false;
     }
+    if ((bp && (bp->brdattr & BRD_NO_COMMENTS)) || fh->filename[0] == 'L' ||
+        ((fh->filemode & FILE_MARKED) && (fh->filemode & FILE_SOLVED))) {
+        vmsg("抱歉, 禁止推薦");
+        return false;
+    }
+#ifdef BN_ONLY_OP_CAN_ADD_COMMENT
+    if (bp && strcmp(bp->brdname, BN_ONLY_OP_CAN_ADD_COMMENT) == 0 &&
+        !HasUserPerm(PERM_SYSOP | PERM_GROUP_LEAD | PERM_GROUP_OP)) {
+        vmsg("本板推文限定管理人員使用。");
+        return false;
+    }
+#endif
     return true;
 }
 
+// Lemmy's EditComment, by its creator.
 static int
-pvce_cmd_edit(cmd_ctx_t *ctx) {
-    pvce_ctx *cx = (pvce_ctx *)ctx->priv;
+pvcm_cmd_edit(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
     bof_comment_t *c = &cx->comments[ctx->curr];
     char msg[sizeof(c->content)];
 
@@ -2653,38 +2765,53 @@ pvce_cmd_edit(cmd_ctx_t *ctx) {
         vmsg("已移除的推文無法修改。");
         return 0;
     }
-    if (!pvce_allowed(cx->board))
+    if (strcasecmp(c->creator, cuser.userid) != 0) {
+        vmsg("只有原作者可以修改推文。");
         return 0;
-    // Within the room of the old content, so the line keeps its shape.
-    int len = c->bbs_width + 1;
-    if (len > (int)sizeof(msg))
-        len = sizeof(msg);
-    if (!getdata_str(b_lines - 1, 0, "新內容: ", msg, len, DOECHO,
-                     c->content) || strcmp(msg, c->content) == 0)
+    }
+    if (!pvcm_allowed(cx->board, cx->fh))
+        return 0;
+    if (cx->multiline) {
+        strlcpy(msg, c->content, sizeof(msg));
+        if (v_multiline_text(msg, sizeof(msg), PVCM_EDIT_LINES,
+                             COMMENT_LINE_LEN,
+                             "請編輯推文內容: (可多行，按 TAB 加行，"
+                             "Backspace 刪空行，Ctrl-C 取消)",
+                             " 修改推文 ", NULL, VMULTI_NO_SCROLL) <= 0)
+            return 0;
+    } else {
+        // Within the room of the old content, so the line keeps its shape.
+        int len = c->bbs_width + 1;
+        if (len > (int)sizeof(msg))
+            len = sizeof(msg);
+        if (len < 2) {
+            vmsg("這則推文沒有可以修改的空間。");
+            return 0;
+        }
+        if (!getdata_str(b_lines - 1, 0, "新內容: ", msg, len, DOECHO,
+                         c->content))
+            return 0;
+    }
+    if (!msg[0] || strcmp(msg, c->content) == 0)
         return 0;
     if (content_check(CONTENT_KIND_COMMENT, NULL, 0, 0, NULL, NULL, msg))
         return 0;
 
     bof_actor_t me = mbbsd_actor(cx->board, false);
     bof_edit_comment_t req = {
-        .post = { .community = cx->board, .bbs_dir = cx->direct,
-                  .bbs_index = cx->ent, .bbs_header = cx->fh },
-        .bbs_floor = c->bbs_floor, .bbs_creator = c->creator,
-        .bbs_old_content = c->content, .content = msg,
+        .post = pvcm_ref(cx), .bbs_floor = c->bbs_floor,
+        .bbs_creator = c->creator, .bbs_old_content = c->content,
+        .content = msg,
     };
     fileheader_t updated;
     bof_comment_response_t res = { .bbs_header = &updated };
     switch (bof_edit_comment(&me, &req, &res)) {
     case BOF_OK:
-        post_record_changed(cx->direct, cx->ent, &updated);
-        *cx->fh = updated;
-        cx->changed = 1;
-        strlcpy(c->content, msg, sizeof(c->content));
+        pvcm_changed(cx, ctx, &updated);
         vmsg("推文已修改。");
         break;
     case BOF_ERR_COULDNT_UPDATE_POST:
-        cx->changed = 1;
-        strlcpy(c->content, msg, sizeof(c->content));
+        pvcm_changed(cx, ctx, NULL);
         vmsg("推文已修改，但文章列表未能更新。");
         break;
     case BOF_ERR_COULDNT_UPDATE_COMMENT:
@@ -2698,26 +2825,35 @@ pvce_cmd_edit(cmd_ctx_t *ctx) {
     return 0;
 }
 
+// Lemmy's DeleteComment, by its creator.
 static int
-pvce_cmd_delete(cmd_ctx_t *ctx) {
-    pvce_ctx *cx = (pvce_ctx *)ctx->priv;
+pvcm_cmd_delete(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
     const bof_comment_t *c = &cx->comments[ctx->curr];
 
     ctx->redraw = true;
-    if (c->removed || !pvce_allowed(cx->board))
+    if (c->removed || !pvcm_allowed(cx->board, cx->fh))
         return 0;
+    if (strcasecmp(c->creator, cuser.userid) != 0) {
+        vmsg("只能刪除自己的推文。");
+        return 0;
+    }
     if (vans("確定要刪除此推文嗎？[y/N] ") != 'y')
         return 0;
     bof_actor_t me = mbbsd_actor(cx->board, false);
     bof_delete_comment_t req = {
-        .post = { .community = cx->board, .bbs_dir = cx->direct,
-                  .bbs_index = cx->ent, .bbs_header = cx->fh },
-        .bbs_floor = c->bbs_floor, .bbs_creator = c->creator,
-        .bbs_content = c->content, .deleted = 1,
+        .post = pvcm_ref(cx), .bbs_floor = c->bbs_floor,
+        .bbs_creator = c->creator, .bbs_content = c->content, .deleted = 1,
     };
-    switch (bof_delete_comment(&me, &req, NULL)) {
+    fileheader_t updated;
+    bof_comment_response_t res = { .bbs_header = &updated };
+    switch (bof_delete_comment(&me, &req, &res)) {
     case BOF_OK:
-        cx->changed = 1;
+        pvcm_changed(cx, ctx, &updated);
+        vmsg("推文已刪除。");
+        break;
+    case BOF_ERR_COULDNT_UPDATE_POST:
+        pvcm_changed(cx, ctx, NULL);
         vmsg("推文已刪除。");
         break;
     case BOF_ERR_BBS_STORAGE_NOT_SUPPORTED:
@@ -2730,19 +2866,176 @@ pvce_cmd_delete(cmd_ctx_t *ctx) {
     return 0;
 }
 
-static const cmd_t pvce_cmds[] = {
-    { KEY_ENTER, "修改", "修改推文內容", pvce_cmd_edit, 0, CMD_PRIO_MAX, true },
-    { 'e', NULL, NULL, pvce_cmd_edit, 0, CMD_PRIO_NONE, true },
-    { 'E', NULL, NULL, pvce_cmd_edit, 0, CMD_PRIO_NONE, true },
-    { 'd', "刪除", "刪除推文", pvce_cmd_delete, 0, CMD_PRIO_HIGH, true },
-    { KEY_DEL, NULL, NULL, pvce_cmd_delete, 0, CMD_PRIO_NONE, true },
+// Lemmy's RemoveComment, by the moderators, with the reason in the modlog.
+static int
+pvcm_cmd_remove(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+    const bof_comment_t *c = &cx->comments[ctx->curr];
+    char reason[MODLOG_REASON_LEN] = "", msg[sizeof(c->content)], ans[3];
+
+    ctx->redraw = true;
+    if (c->removed || !CBRD_IS_BM())
+        return 0;
+    psb_comment_line(msg, sizeof(msg), c->content);
+    int y = modlog_form(cx->board, "移除推文");
+    mvprints(y, 0, "%-12.12s %s", c->creator, msg);
+    // The reason is also put in the post.
+    if ((y = modlog_ask_reason(cx->board, y + 2, reason, sizeof(reason))) < 0)
+        return 0;
+    bof_modlog_t log;
+    bof_modlog_init(&log, "移除推文 (%s)", c->creator);
+    bof_modlog_add_post(&log, cx->fh);
+    // What was removed, for the audit record.
+    bof_modlog_add_audit(&log, "推文", "%s", msg);
+    y = modlog_preview(y, cx->board, reason, &log) + 1;
+    getdata(y, 0, "確定要移除嗎？ (y/N) ", ans, sizeof(ans), LCECHO);
+    if (ans[0] != 'y')
+        return 0;
+
+    // bof also puts it in the modlog.
+    bof_actor_t me = mbbsd_actor(cx->board, false);
+    bof_remove_comment_t req = {
+        .post = pvcm_ref(cx), .bbs_floor = c->bbs_floor,
+        .bbs_vote = c->bbs_vote, .bbs_author = c->creator,
+        .bbs_content = c->content, .reason = reason, .bbs_modlog = &log,
+    };
+    fileheader_t updated;
+    bof_comment_response_t res = { .bbs_header = &updated };
+    switch (bof_remove_comment(&me, &req, &res)) {
+    case BOF_OK:
+        pvcm_changed(cx, ctx, &updated);
+        vmsg("推文已移除。");
+        break;
+    case BOF_ERR_COULDNT_FIND_COMMENT:
+        vmsg("移除失敗。可能原文已被修改。");
+        break;
+    default:
+        vmsg("移除失敗。");
+        break;
+    }
+    return 0;
+}
+
+static int
+pvcm_cmd_acl(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+    const bof_comment_t *c = &cx->comments[ctx->curr];
+    char uid[IDLEN + 1] = "";
+
+    ctx->redraw = true;
+    if (!CBRD_IS_BM())
+        return 0;
+    // Check the ID (the ACL code asserts on an invalid one) and take its
+    // stored case, as board.c does.
+    if (strnlen(c->creator, sizeof(c->creator)) < sizeof(uid))
+        strlcpy(uid, c->creator, sizeof(uid));
+    if (!is_validuserid(uid) || !searchuser(uid, uid))
+        vmsg("該使用者帳號不存在");
+    else
+        edit_user_acl_for_board(uid, cx->board);
+    return 0;
+}
+
+// The revisions of a comment (Discourse's post_revisions), where the
+// backend keeps them.
+static int
+pvcm_cmd_history(cmd_ctx_t *ctx) {
+    pvcm_ctx *cx = (pvcm_ctx *)ctx->priv;
+    const bof_comment_t *c = &cx->comments[ctx->curr];
+    bof_comment_revision_t *revs;
+    char *buf;
+    size_t cap = 4096, len = 0;
+    int n;
+
+    ctx->redraw = true;
+    if (!CBRD_IS_BM())
+        return 0;
+    if (!(revs = calloc(PVCM_PAGE, sizeof(*revs))))
+        return 0;
+    bof_get_comment_revisions_t req = {
+        .post = pvcm_ref(cx), .bbs_floor = c->bbs_floor, .limit = PVCM_PAGE,
+    };
+    bof_get_comment_revisions_response_t res = { .revisions = revs };
+    bof_error_t err = bof_get_comment_revisions(&req, &res);
+    if (err == BOF_ERR_BBS_STORAGE_NOT_SUPPORTED) {
+        vmsg("本站推文沒有另外保存修訂歷史。");
+    } else if (err != BOF_OK || res.count <= 0) {
+        vmsg("此推文沒有修訂歷史。");
+    } else if ((buf = malloc(cap))) {
+        len = snprintf(buf, cap, ANSI_COLOR(1;36) "【推文修訂歷史】" ANSI_RESET
+                       " %s 推文 #%d (%s)\n\n", cx->board, c->bbs_floor,
+                       c->creator);
+        // Newest first.
+        for (n = res.count - 1; n >= 0; n--) {
+            const bof_comment_revision_t *r = &revs[n];
+            time4_t t = r->edited_at;
+            // What the backend gives, without control codes.
+            char editor[sizeof(r->editor)], reason[sizeof(r->reason)];
+            char content[sizeof(r->content)];
+            psb_comment_line(editor, sizeof(editor), r->editor);
+            psb_comment_line(reason, sizeof(reason), r->reason);
+            strlcpy(content, r->content, sizeof(content));
+            strip_control_sequence(content, content);
+            mbs_sanitize(content, sizeof(content));
+            size_t need = strlen(content) + 512;
+            if (len + need >= cap) {
+                char *nb = realloc(buf, (len + need) * 2);
+                if (!nb)
+                    break;
+                buf = nb;
+                cap = (len + need) * 2;
+            }
+            len += snprintf(buf + len, cap - len,
+                            ANSI_COLOR(1;33) "#%d" ANSI_RESET " %s %s %s%s%s\n"
+                            "%s\n\n", r->number, Cdatelite(&t), editor,
+                            r->deleted ? "刪除/移除" : "修改",
+                            reason[0] ? " 理由: " : "", reason, content);
+        }
+        struct pmore_callbacks cb = {0};
+        pmore2_inmemory(buf, len, 0, NULL, &cb);
+        free(buf);
+    }
+    free(revs);
+    return 0;
+}
+
+static const cmd_t pvcm_user_cmds[] = {
+    { KEY_ENTER, "修改", "修改推文內容", pvcm_cmd_edit, 0, CMD_PRIO_MAX, true },
+    { 'e', NULL, NULL, pvcm_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'E', NULL, NULL, pvcm_cmd_edit, 0, CMD_PRIO_NONE, true },
+    { 'd', "刪除", "刪除推文", pvcm_cmd_delete, 0, CMD_PRIO_HIGH, true },
+    { KEY_DEL, NULL, NULL, pvcm_cmd_delete, 0, CMD_PRIO_NONE, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
-int
-psb_comment_editor(const char *board, const char *direct, int ent,
-                   fileheader_t *fh) {
-    pvce_ctx *cx = calloc(1, sizeof(*cx));
+static const cmd_t pvcm_mod_cmds[] = {
+    { 'd', "移除", "移除選取的推文並記錄原因", pvcm_cmd_remove, 0, CMD_PRIO_MAX, true },
+    { KEY_DEL, NULL, NULL, pvcm_cmd_remove, 0, CMD_PRIO_NONE, true },
+    { 'U', "快速禁言", "設定該推文作者的看板禁言權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
+    { '~', "歷史", "檢視推文修訂歷史", pvcm_cmd_history, 0, CMD_PRIO_HIGH, true },
+    { 'h', NULL, NULL, pvcm_cmd_history, 0, CMD_PRIO_NONE, true },
+    { 'H', NULL, NULL, pvcm_cmd_history, 0, CMD_PRIO_NONE, true },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+static void
+pvcm_welcome() {
+    clear();
+    vs_hdr2("推文管理", "說明");
+    move(2, 0);
+    outs(ANSI_COLOR(1;33)
+"  這是移除違規推文的界面。\n\n" ANSI_RESET
+"  提醒您: (1) 移除的推文會留下移除的註記與原因，並記在看板的管理記錄。\n\n"
+"          (2) 推文只存在文章檔案中的看板，原作者修改文章時可能改到推文\n"
+"              的樣子；推文另外保存的看板則沒有這個問題。\n\n"
+        "");
+    pressanykey();
+}
+
+static int
+pvcm_main(const char *board, const char *direct, int ent, fileheader_t *fh,
+          bool mine, bool multiline) {
+    pvcm_ctx *cx = calloc(1, sizeof(*cx));
     int changed;
 
     if (!cx) {
@@ -2753,27 +3046,49 @@ psb_comment_editor(const char *board, const char *direct, int ent,
     cx->direct = direct;
     cx->ent = ent;
     cx->fh = fh;
+    cx->mine = mine;
+    cx->multiline = multiline;
     PSB_CTX ctx = {
         .cmd = {
             .curr = 0,
-            .total = pvce_load(cx),
+            .total = pvcm_load(cx),
             .priv = (void *)cx,
-            .caption = "我的推文",
+            .caption = mine ? "我的推文" : "推文管理",
         },
         .header_lines = 2,
         .footer_lines = 2,
         .allow_pbs_version_message = 0,
-        .header = pvce_header,
-        .renderer = pvce_renderer,
-        .cmds = pvce_cmds,
+        .header = pvcm_header,
+        .renderer = pvcm_renderer,
+        .cmds = mine ? pvcm_user_cmds : pvcm_mod_cmds,
     };
-    if (ctx.cmd.total > 0)
+    if (ctx.cmd.total > 0) {
+        if (!mine)
+            pvcm_welcome();
         psb_main(&ctx);
-    else
-        vmsg("您在此文章沒有推文。");
+    } else {
+        vmsg(mine ? "您在此文章沒有推文。" : "此文章沒有推文。");
+    }
     changed = cx->changed;
+    free(cx->comments);
     free(cx);
     return changed;
+}
+
+// The current user edits or deletes their comments on a post; multiline:
+// edits may have several lines. Returns 1 if any changed.
+int
+psb_comment_editor(const char *board, const char *direct, int ent,
+                   fileheader_t *fh, int multiline) {
+    return pvcm_main(board, direct, ent, fh, true, multiline);
+}
+
+// The moderators remove comments of a post.
+int
+psb_comment_manager(const char *board, const char *direct, int ent,
+                    fileheader_t *fh) {
+    return pvcm_main(board, direct, ent, fh, false, false) ? DIRCHANGED :
+                                                             FULLUPDATE;
 }
 
 // Whether the current user has comments on the post.
@@ -2795,7 +3110,7 @@ psb_has_my_comments(const char *board, const char *direct, int ent,
 // board for its moderators (bof_*_report*()).
 
 typedef struct {
-    bof_comment_t comments[PVCE_MAX];
+    bof_comment_t *comments;    // all of them, to free()
     int picked;
 } pvpc_ctx;
 
@@ -2811,10 +3126,12 @@ static int
 pvpc_renderer(int i, PSB_CTX *ctx) {
     pvpc_ctx *cx = (pvpc_ctx *)ctx->cmd.priv;
     const bof_comment_t *c = &cx->comments[i];
+    char line[sizeof(c->content)];
 
+    psb_comment_line(line, sizeof(line), c->content);
     prints("%c %6d %-12.12s %s", (i == ctx->cmd.curr) ? '>' : ' ',
            c->bbs_floor, c->creator,
-           c->removed ? ANSI_COLOR(0;30;47) "<已移除>" ANSI_RESET : c->content);
+           c->removed ? ANSI_COLOR(0;30;47) "<已移除>" ANSI_RESET : line);
     return 0;
 }
 
@@ -2845,12 +3162,11 @@ psb_pick_comment(const char *board, const char *direct, int ent,
     if (!cx)
         return 0;
     cx->picked = -1;
-    bof_get_comments_t req = {
-        .post = { .community = board, .bbs_dir = direct, .bbs_index = ent,
-                  .bbs_header = fh },
-        .limit = PVCE_MAX,
+    bof_post_ref_t ref = {
+        .community = board, .bbs_dir = direct, .bbs_index = ent,
+        .bbs_header = fh,
     };
-    bof_get_comments_response_t res = { .comments = cx->comments };
+    int count = psb_load_comments(&ref, NULL, &cx->comments);
     PSB_CTX ctx = {
         .cmd = { .curr = 0, .priv = (void *)cx, .caption = "檢舉推文" },
         .header_lines = 2,
@@ -2860,8 +3176,8 @@ psb_pick_comment(const char *board, const char *direct, int ent,
         .renderer = pvpc_renderer,
         .cmds = pvpc_cmds,
     };
-    if (bof_get_comments(&req, &res) == BOF_OK && res.count > 0) {
-        ctx.cmd.total = res.count;
+    if (count > 0) {
+        ctx.cmd.total = count;
         psb_main(&ctx);
         if (cx->picked >= 0) {
             *out = cx->comments[cx->picked];
@@ -2870,6 +3186,7 @@ psb_pick_comment(const char *board, const char *direct, int ent,
     } else {
         vmsg("此文章沒有推文。");
     }
+    free(cx->comments);
     free(cx);
     return ok;
 }

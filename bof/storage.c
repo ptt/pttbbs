@@ -340,6 +340,17 @@ bof_get_comments(const bof_get_comments_t *req,
 }
 
 bof_error_t
+bof_get_comment_revisions(const bof_get_comment_revisions_t *req,
+                          bof_get_comment_revisions_response_t *out)
+{
+    out->count = 0;
+    if (!req->post.bbs_header || req->bbs_floor <= 0 || req->limit <= 0 ||
+        !out->revisions)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    return READ(get_comment_revisions, req, out);
+}
+
+bof_error_t
 bof_list_reports(const bof_list_reports_t *req,
                  bof_list_reports_response_t *out)
 {

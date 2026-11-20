@@ -177,6 +177,17 @@ test_files_by_default(void)
     strlcpy(fh.filename, "M.42.A.000", sizeof(fh.filename));
     EXPECT_INT(bof_delete_comment(NULL, &req, &res),
                BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    // Nor do they keep revisions of their own.
+    bof_comment_revision_t rev;
+    bof_get_comment_revisions_t rreq = {
+        .post = req.post, .bbs_floor = 1, .limit = 1,
+    };
+    bof_get_comment_revisions_response_t rres = { .revisions = &rev };
+    EXPECT_INT(bof_get_comment_revisions(&rreq, &rres),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    rreq.bbs_floor = 0;
+    EXPECT_INT(bof_get_comment_revisions(&rreq, &rres),
+               BOF_ERR_INVALID_BODY_FIELD);
     EXPECT_STR(bof_storage_files.name, "files");
 }
 

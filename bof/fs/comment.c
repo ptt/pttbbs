@@ -113,13 +113,74 @@ comment_prefix(char *buf, int strip_sep)
     return strlen(buf);
 }
 
-// Finds the line of a comment (the first that looks like it) and replaces
-// it with a note of its removal.
+static int parse_comment_line(const char *line, bof_comment_t *c,
+                              size_t *coff, size_t *clen);
+
+// Where the comments of the file of a post begin: after its origin line
+// (STR_POST_MARK STR_POST_ORIGIN, as the BBS writes it under the body),
+// the last one, as a crosspost copies another post whole, its comments
+// too, and adds its own. Lines of the body that look like comments (quoted,
+// copied, or a summary of comments) are not comments. Returns the offset
+// after that line, or 0 if there is none (posts of old may have none:
+// then all lines count).
+static off_t
+comments_offset(FILE *fp)
+{
+    static const char origin[] = STR_POST_MARK STR_POST_ORIGIN;
+    char buf[ANSILINELEN];
+    off_t pos = 0, after = 0;
+    int start = 1, in_origin = 0;
+
+    while (fgets(buf, sizeof(buf), fp)) {
+        size_t n = strlen(buf);
+        if (start)
+            in_origin = strncmp(buf, origin, sizeof(origin) - 1) == 0;
+        pos += n;
+        start = n > 0 && buf[n - 1] == '\n';
+        if (in_origin && start)
+            after = pos;
+    }
+    if (in_origin && !start)
+        after = pos;
+    return after;
+}
+
+// The same, of the file at path (0 if it cannot be read).
+static off_t
+comments_offset_of(const char *path)
+{
+    FILE *fp = fopen(path, "r");
+    off_t off;
+
+    if (!fp)
+        return 0;
+    off = comments_offset(fp);
+    fclose(fp);
+    return off;
+}
+
+// For the filters of bof_files_rewrite_post(), which see every line in
+// order: whether line (read at *pos, which it moves past) is where comments
+// may be, at or after from.
+static int
+in_comments(const char *line, off_t *pos, off_t from)
+{
+    off_t at = *pos;
+
+    *pos += (off_t)strlen(line);
+    return at >= from;
+}
+
+// Finds the line of a comment (the one at floor, or else the first that
+// looks like it) and replaces it with a note of its removal.
 typedef struct {
     char patterns[4][ANSILINELEN];
     size_t lens[4];
     int npatterns;
     int found;
+    const bof_remove_comment_t *req;
+    int floor;      // of the line read
+    off_t from, pos;    // where the comments begin; where the line is
     const char *remover, *author, *reason;
 } remove_ctx;
 
@@ -129,12 +190,28 @@ remove_line(const char *line, FILE *out, void *vctx)
     remove_ctx *c = (remove_ctx *)vctx;
     int i, match = 0;
 
-    for (i = 0; !c->found && !match && i < c->npatterns; i++)
-        match = strncmp(line, c->patterns[i], c->lens[i]) == 0 &&
-                (line[c->lens[i]] == ' ' || line[c->lens[i]] == ESC_CHR);
+    if (!in_comments(line, &c->pos, c->from) || c->found)
+        return 0;
+    if (c->req->bbs_floor > 0) {
+        // By its floor: still the comment the moderator saw.
+        bof_comment_t pc;
+        if (!parse_comment_line(line, &pc, NULL, NULL) ||
+            ++c->floor != c->req->bbs_floor)
+            return 0;
+        // (Comments of the old style all look the same, whatever vote.)
+        match = !pc.removed &&
+                (IS_ENABLED(CONFIG_OLD_RECOMMEND) ||
+                 pc.bbs_vote == c->req->bbs_vote) &&
+                strcasecmp(pc.creator, c->req->bbs_author) == 0 &&
+                strcmp(pc.content, c->req->bbs_content) == 0;
+    } else {
+        for (i = 0; !match && i < c->npatterns; i++)
+            match = strncmp(line, c->patterns[i], c->lens[i]) == 0 &&
+                    (line[c->lens[i]] == ' ' || line[c->lens[i]] == ESC_CHR);
+    }
     if (!match)
         return 0;
-    // The reason is at most 40 characters.
+    // The reason is short (the UI asks for one of MODLOG_REASON_LEN).
     fprintf(out, ANSI_COLOR(1;30) STR_COMMENT_REMOVED_LINE ANSI_RESET "\n",
             c->remover, c->author, c->reason);
     c->found = 1;
@@ -160,6 +237,7 @@ bof_fs_remove_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         return BOF_ERR_INVALID_BODY_FIELD;
     type = req->bbs_vote > 0 ? RECTYPE_GOOD :
            req->bbs_vote < 0 ? RECTYPE_BAD : RECTYPE_ARROW;
+    c.req = req;
     c.remover = actor->name;
     c.author = req->bbs_author;
     c.reason = reason;
@@ -175,6 +253,7 @@ bof_fs_remove_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     }
 
     setdirpath(path, post->bbs_dir, fh->filename);
+    c.from = comments_offset_of(path);
     snprintf(rev_note, sizeof(rev_note),
              "\n" STR_POST_MARK STR_COMMENT_REMOVED_NOTE, Cdatelite(&now),
              actor->name, reason, req->bbs_author, req->bbs_content);
@@ -313,21 +392,31 @@ bof_fs_get_comments(void *ctx GCC_UNUSED, const bof_get_comments_t *req,
     char path[PATHLEN], line[ANSILINELEN];
     bof_comment_t c;
     FILE *fp;
-    int floor = 0;
+    int floor = 0, skip;
 
     out->count = 0;
     if (!req->post.bbs_dir || !fh || !fh->filename[0] || !out->comments ||
-        req->limit <= 0)
+        req->limit <= 0 || req->page < 0)
         return BOF_ERR_INVALID_BODY_FIELD;
+    // The pages before.
+    skip = req->page > 1 ? (req->page - 1) * req->limit : 0;
     setdirpath(path, req->post.bbs_dir, fh->filename);
     if (!(fp = fopen(path, "r")))
         return BOF_ERR_COULDNT_FIND_POST;
+    if (fseeko(fp, comments_offset(fp), SEEK_SET) != 0) {
+        fclose(fp);
+        return BOF_ERR_COULDNT_FIND_POST;
+    }
     while (out->count < req->limit && fgets(line, sizeof(line), fp)) {
         if (!parse_comment_line(line, &c, NULL, NULL))
             continue;
         c.bbs_floor = ++floor;
         if (req->bbs_creator && strcasecmp(c.creator, req->bbs_creator) != 0)
             continue;
+        if (skip > 0) {
+            skip--;
+            continue;
+        }
         out->comments[out->count++] = c;
     }
     fclose(fp);
@@ -338,6 +427,7 @@ bof_fs_get_comments(void *ctx GCC_UNUSED, const bof_get_comments_t *req,
 typedef struct {
     const bof_edit_comment_t *req;
     int floor;
+    off_t from, pos;    // where the comments begin; where the line is
     int mismatch;
     int too_long;   // the new content does not fit in the room of the old
 } edit_ctx;
@@ -349,7 +439,8 @@ edit_line(const char *line, FILE *out, void *vctx)
     bof_comment_t c;
     size_t coff, clen, n;
 
-    if (!parse_comment_line(line, &c, &coff, &clen) ||
+    if (!in_comments(line, &x->pos, x->from) ||
+        !parse_comment_line(line, &c, &coff, &clen) ||
         ++x->floor != x->req->bbs_floor)
         return 0;
     if (c.removed || strcasecmp(c.creator, x->req->bbs_creator) != 0 ||
@@ -409,6 +500,7 @@ bof_fs_edit_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         return BOF_ERR_NO_COMMENT_EDIT_ALLOWED;
 
     setdirpath(path, post->bbs_dir, fh->filename);
+    x.from = comments_offset_of(path);
     snprintf(rev_note, sizeof(rev_note),
              "\n" STR_POST_MARK STR_COMMENT_EDITED_NOTE, Cdatelite(&now),
              actor->name, req->bbs_creator, req->bbs_old_content);

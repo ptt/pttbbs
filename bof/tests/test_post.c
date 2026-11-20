@@ -812,16 +812,28 @@ test_edit_comment(void)
     EXPECT_STR(cs[1].content, "second");
     EXPECT_STR(cs[1].bbs_tail, " 01/01 00:01");
     EXPECT_INT(cs[1].bbs_width, 20);
+    // By pages (Lemmy's page and limit).
+    get.limit = 2;
+    get.page = 2;
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_INT(gres.count, 1);
+    EXPECT_INT(cs[0].bbs_floor, 3);
+    get.limit = 8;
+    get.page = 0;
     get.bbs_creator = "IVAN";
     EXPECT_OK(bof_get_comments(&get, &gres));
     EXPECT_INT(gres.count, 2);
     EXPECT_INT(cs[1].bbs_floor, 3);
 
-    // A removed comment keeps its floor.
+    // By its floor, which must still be that comment; a removed comment
+    // keeps its floor.
     bof_remove_comment_t rm = {
-        .post = ref(recs, n), .bbs_vote = 0, .bbs_author = "judy",
-        .bbs_content = "second", .reason = "spam",
+        .post = ref(recs, n), .bbs_floor = 1, .bbs_vote = 0,
+        .bbs_author = "judy", .bbs_content = "second", .reason = "spam",
     };
+    EXPECT_INT(bof_remove_comment(&mod, &rm, NULL),
+               BOF_ERR_COULDNT_FIND_COMMENT);
+    rm.bbs_floor = 2;
     EXPECT_OK(bof_remove_comment(&mod, &rm, NULL));
     get.bbs_creator = NULL;
     EXPECT_OK(bof_get_comments(&get, &gres));
@@ -1175,6 +1187,60 @@ test_tombstone_titles(void)
         EXPECT_INT(fh.title[k], 0);
 }
 
+// The comments of a post are the lines after its origin line: lines of the
+// body that look like comments (a crosspost copies another post with its
+// comments) are not.
+static void
+test_comments_after_origin(void)
+{
+    fileheader_t recs[64];
+    bof_actor_t zed = { .name = "zed" }, mod = { .name = "boss" };
+    bof_comment_t cs[4];
+    char copied[ANSILINELEN], mine[ANSILINELEN], origin[ANSILINELEN];
+    char buf[4096];
+    int n;
+
+    make_post("M.1700000801.A.801", "kate", "crossposted", 0);
+    n = read_dir(recs, 64);
+    bof_files_format_comment(copied, sizeof(copied), RECTYPE_GOOD, "zed", 20,
+                             "copied", " 01/01 00:00");
+    bof_files_format_comment(mine, sizeof(mine), RECTYPE_GOOD, "ivan", 20,
+                             "real", " 01/02 00:00");
+    snprintf(origin, sizeof(origin), "%s",
+             STR_POST_MARK STR_POST_ORIGIN " " BBSNAME "(" MYHOSTNAME ")");
+    // The copied post (with its origin and comments), then the origin of
+    // this one, then its comments.
+    snprintf(buf, sizeof(buf), "body\n--\n%s\n%s\n--\n%s\n%s", origin, copied,
+             origin, mine);
+    spit(BDIR "/M.1700000801.A.801", buf);
+
+    bof_get_comments_t get = { .post = ref(recs, n), .limit = 4 };
+    bof_get_comments_response_t gres = { .comments = cs };
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_INT(gres.count, 1);
+    EXPECT_STR(cs[0].creator, "ivan");
+    EXPECT_INT(cs[0].bbs_floor, 1);
+
+    // The line copied cannot be edited or removed as a comment.
+    bof_edit_comment_t ec = {
+        .post = ref(recs, n), .bbs_floor = 1, .bbs_creator = "zed",
+        .bbs_old_content = "copied", .content = "changed",
+    };
+    EXPECT(bof_edit_comment(&zed, &ec, NULL) != BOF_OK);
+    bof_remove_comment_t rm = {
+        .post = ref(recs, n), .bbs_vote = 1, .bbs_author = "zed",
+        .bbs_content = "copied", .reason = "x",
+    };
+    EXPECT_INT(bof_remove_comment(&mod, &rm, NULL),
+               BOF_ERR_COULDNT_FIND_COMMENT);
+    rm.bbs_author = "ivan";
+    rm.bbs_content = "real";
+    EXPECT_OK(bof_remove_comment(&mod, &rm, NULL));
+    // The body is as it was.
+    EXPECT(strstr(slurp(BDIR "/M.1700000801.A.801", buf, sizeof(buf)),
+                  "copied") != NULL);
+}
+
 int
 main(void)
 {
@@ -1200,6 +1266,7 @@ main(void)
     RUN(test_files_extras);
     RUN(test_tombstone_titles);
     RUN(test_quiet_edit_and_purge);
+    RUN(test_comments_after_origin);
     cleanup();
     return bof_test_report();
 }

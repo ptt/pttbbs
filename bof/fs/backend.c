@@ -44,6 +44,8 @@ const bof_storage_ops_t bof_storage_files = {
     .get_post = bof_fs_get_post,
     .get_post_body = bof_fs_bbs_get_post_body,
     .get_comments = bof_fs_get_comments,
+    // Comments in files keep no revisions of their own.
+    .get_comment_revisions = NULL,
     .list_reports = bof_fs_list_reports,
     .post_version_matches = bof_fs_post_version_matches,
     .refresh_post = bof_fs_refresh_post,

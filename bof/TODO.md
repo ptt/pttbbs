@@ -43,8 +43,10 @@ what BoF does only in part. See `README.md` for what BoF is.
 - **Comment IDs**: comments in files are numbered by floor; post.svc keys
   them by (post ID, floor). Multi-line comments (post.svc) are one line
   in files.
-- **Edit history of a comment**: in files, the whole post is kept in the
-  time capsule at each edit; post.svc keeps revisions per comment.
+- **Edit history of a comment**: `bof_get_comment_revisions()` gives the
+  revisions where the backend keeps them per comment (post.svc); in
+  files, the whole post is kept in the time capsule at each edit, so the
+  files backend gives `bbs_storage_not_supported`.
 
 ### Reports
 - **A menu for admins**: the site's reports of all boards are reached

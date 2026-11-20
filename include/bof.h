@@ -496,12 +496,16 @@ bof_error_t bof_create_comment(const bof_actor_t *actor,
  * part). Comments in files have no IDs: they are numbered by their floor,
  * the order among the comments of the post (counting removed ones, whose
  * lines note it), as post.svc keys them by (post, floor). */
+#define BOF_COMMENT_CONTENT_LEN (1024)
+
 typedef struct bof_comment_t {
     int bbs_floor;           /* 1-based */
     int bbs_vote;            /* +1 (push), -1 (boo) or 0 (arrow) */
     int removed;             /* only a note of its removal is left */
     char creator[16];        /* BBS userid */
-    char content[256];       /* without the padding */
+    /* Without the padding. One line in files; backends that keep comments
+     * apart (post.svc) may give several, separated by '\n'. */
+    char content[BOF_COMMENT_CONTENT_LEN];
     char bbs_tail[64];       /* what follows: where from and when */
     int bbs_width;           /* the room for the content in the line */
     /* Edited (Lemmy's updated is a time; a line keeps only the mark of an
@@ -516,6 +520,7 @@ typedef struct bof_comment_t {
 typedef struct bof_get_comments_t {
     bof_post_ref_t post;     /* bbs_index is not checked (may be 0) */
     const char *bbs_creator; /* only those by them, or NULL for all */
+    int page;                /* 1-based, of limit each; 0: the first */
     int limit;               /* room in comments */
 } bof_get_comments_t;
 
@@ -565,12 +570,14 @@ bof_error_t bof_delete_comment(const bof_actor_t *actor,
                                bof_comment_response_t *out);
 
 /* Lemmy's RemoveComment, by a moderator. Comments in the files of a board
- * have no IDs yet, so the comment is given as the comment database
- * (commentd) remembers it: the first line of the file that looks like a
- * comment of bbs_vote by bbs_author saying bbs_content is it. That line is
- * replaced with a note of who removed it and why, and the file before is
- * kept as a revision in the time capsule. Unlike Lemmy (removed: false),
- * a removed comment cannot be restored: its line is gone. */
+ * have no IDs yet, so the comment is given by its floor (as
+ * bof_get_comments() numbers them) and what it is: the comment at
+ * bbs_floor must still be of bbs_vote by bbs_author saying bbs_content
+ * (else couldnt_find_comment); without a floor, the first line of the file
+ * that looks like such a comment is it. That line is replaced with a note
+ * of who removed it and why, and the file before is kept as a revision in
+ * the time capsule. Unlike Lemmy (removed: false), a removed comment
+ * cannot be restored: its line is gone. */
 typedef struct bof_remove_comment_t {
     bof_post_ref_t post;       /* bbs_index is not checked (may be 0) */
     int bbs_floor;             /* the floor if known; 0: found by the rest */
@@ -590,6 +597,35 @@ typedef struct bof_remove_comment_t {
 bof_error_t bof_remove_comment(const bof_actor_t *actor,
                                const bof_remove_comment_t *req,
                                bof_comment_response_t *out);
+
+/* Discourse's post_revisions, for a comment (Lemmy keeps none): how the
+ * comment at bbs_floor was before each change, oldest first. Comments in
+ * files keep no revisions of their own (the time capsule keeps the whole
+ * post): there, it is bbs_storage_not_supported. */
+typedef struct bof_comment_revision_t {
+    int number;              /* 1-based */
+    int32_t edited_at;       /* when it was changed */
+    char editor[16];         /* who changed it */
+    int deleted;             /* the change took it out (deleted, removed) */
+    char reason[64];         /* why, if it was taken out */
+    char content[BOF_COMMENT_CONTENT_LEN];  /* what it said then */
+} bof_comment_revision_t;
+
+typedef struct bof_get_comment_revisions_t {
+    bof_post_ref_t post;     /* bbs_index is not checked (may be 0) */
+    int bbs_floor;
+    int limit;               /* room in revisions */
+} bof_get_comment_revisions_t;
+
+typedef struct bof_get_comment_revisions_response_t {
+    bof_comment_revision_t *revisions;  /* by the caller, room for limit */
+    int count;
+} bof_get_comment_revisions_response_t;
+
+/* Errors: couldnt_find_comment, bbs_storage_not_supported. */
+bof_error_t bof_get_comment_revisions(
+    const bof_get_comment_revisions_t *req,
+    bof_get_comment_revisions_response_t *out);
 
 /* ------------------------------------------------------------------------
  * Reading posts

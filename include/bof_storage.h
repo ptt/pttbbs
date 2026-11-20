@@ -122,6 +122,9 @@ typedef struct bof_storage_ops_t {
                                  bof_post_version_t *ver);
     bof_error_t (*get_comments)(void *ctx, const bof_get_comments_t *req,
                                 bof_get_comments_response_t *out);
+    bof_error_t (*get_comment_revisions)(
+        void *ctx, const bof_get_comment_revisions_t *req,
+        bof_get_comment_revisions_response_t *out);
     bof_error_t (*list_reports)(void *ctx, const bof_list_reports_t *req,
                                 bof_list_reports_response_t *out);
     /* 1 if the post still has the content of ver, else 0. */

@@ -204,6 +204,8 @@
 #define STR_AUTHOR2     "發信人:"
 #define STR_POST1       "看板:"
 #define STR_POST2       "站內:"
+// The origin line of a post, under its body (the comments come after it).
+#define STR_POST_ORIGIN "發信站:"
 
 #define STR_LOGINDAYS	"登入次數"
 #define STR_LOGINDAYS_QTY "次"
