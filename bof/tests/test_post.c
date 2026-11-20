@@ -515,6 +515,38 @@ test_edit_post_body(void)
 }
 
 static void
+test_mask_post(void)
+{
+    fileheader_t fh;
+    bof_actor_t mod = { .name = "boss" };
+    char buf[4096];
+
+    memset(&fh, 0, sizeof(fh));
+    strlcpy(fh.filename, "M.1700000041.A.041", sizeof(fh.filename));
+    spit(BDIR "/M.1700000041.A.041",
+         "fine line\nsome \033[1mba\033[md\033[m word\nanother fine\n");
+    bof_bbs_mask_post_t req = {
+        .post = { .community = BOARD, .bbs_dir = DIRPATH, .bbs_header = &fh },
+        .pattern = "bad", .reason = "rude",
+    };
+    EXPECT_OK(bof_bbs_mask_post(&mod, &req, NULL));
+    slurp(BDIR "/M.1700000041.A.041", buf, sizeof(buf));
+    EXPECT(strncmp(buf, "fine line\n" STR_POST_MARK STR_MASKED_LINE
+                   "\nanother fine\n", strlen("fine line\n" STR_POST_MARK
+                   STR_MASKED_LINE "\nanother fine\n")) == 0);
+    EXPECT(strstr(buf, "boss") != NULL && strstr(buf, "rude") != NULL);
+    EXPECT(strstr(buf, "bad") == NULL);
+    EXPECT_INT(timecapsule_get_max_revision_number(
+                   BDIR "/M.1700000041.A.041"), 1);
+
+    // Nothing left to mask; too short a pattern.
+    EXPECT_INT(bof_bbs_mask_post(&mod, &req, NULL), BOF_ERR_NOT_FOUND);
+    req.pattern = "b";
+    EXPECT_INT(bof_bbs_mask_post(&mod, &req, NULL),
+               BOF_ERR_INVALID_BODY_FIELD);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -556,6 +588,7 @@ main(void)
     RUN(test_create_post_and_comment);
     RUN(test_remove_comment);
     RUN(test_edit_post_body);
+    RUN(test_mask_post);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

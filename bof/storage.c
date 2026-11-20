@@ -119,6 +119,14 @@ bof_bbs_reset_post_score(const bof_actor_t *actor,
     return WRITE(reset_post_score, out ? out : &local, actor, req);
 }
 
+bof_error_t
+bof_bbs_mask_post(const bof_actor_t *actor, const bof_bbs_mask_post_t *req,
+                  bof_post_response_t *out)
+{
+    bof_post_response_t local = { 0 };
+    return WRITE(mask_post, out ? out : &local, actor, req);
+}
+
 /* ------------------------------------------------------------------------
  * Comments
  * ------------------------------------------------------------------------ */

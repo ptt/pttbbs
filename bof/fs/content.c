@@ -5,8 +5,8 @@
  * Copyright (c) 2026 Hung-Te Lin (piaip) <hungte@gmail.com>
  * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0-only
  *
- * The body to edit and the version of the content, done with
- * files/content.c.
+ * The body to edit, masking lines and the version of the content, done
+ * with files/content.c.
  */
 
 #include "../bof_int.h"
@@ -49,5 +49,47 @@ bof_fs_bbs_get_post_body(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
     close(fd_src);
     if (err != BOF_OK)
         unlink(dest_path);
+    return err;
+}
+
+// Masks lines whose text (without color codes) has the pattern.
+static int
+mask_line(const char *line, FILE *out, void *ctx)
+{
+    char text[ANSILINELEN];
+
+    strip_control_sequence(text, line);
+    if (!mbs_strstr(text, (const char *)ctx))
+        return 0;
+    fputs(STR_POST_MARK STR_MASKED_LINE "\n", out);
+    return 1;
+}
+
+bof_error_t
+bof_fs_bbs_mask_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                     const bof_bbs_mask_post_t *req, bof_post_response_t *out)
+{
+    const bof_post_ref_t *post = &req->post;
+    const char *reason = req->reason ? req->reason : "";
+    char path[PATHLEN], note[ANSILINELEN], rev_note[ANSILINELEN * 2];
+    time4_t now = time4(NULL);
+    int matched;
+    bof_error_t err;
+
+    if (!post->bbs_dir || !post->bbs_header ||
+        !post->bbs_header->filename[0] || !req->pattern ||
+        strlen(req->pattern) < 2 || !actor || !actor->name)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    setdirpath(path, post->bbs_dir, post->bbs_header->filename);
+    snprintf(note, sizeof(note), STR_POST_MARK STR_MASK_NOTE,
+             actor->name, Cdatelite(&now), reason);
+    snprintf(rev_note, sizeof(rev_note), "%s" STR_POST_MARK STR_MASK_PATTERN,
+             note, req->pattern);
+    err = bof_files_rewrite_post(path, mask_line, (void *)req->pattern, note,
+                                 rev_note, &matched);
+    if (err == BOF_OK && !matched)
+        return BOF_ERR_NOT_FOUND;
+    if (err == BOF_OK && out && out->bbs_header)
+        *out->bbs_header = *post->bbs_header;
     return err;
 }

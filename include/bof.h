@@ -259,6 +259,24 @@ bof_error_t bof_bbs_reset_post_score(const bof_actor_t *actor,
                                      const bof_bbs_reset_post_score_t *req,
                                      bof_post_response_t *out);
 
+/* PTT: masks the lines of a post that have pattern (at least 2 bytes, in
+ * the text without color codes), as moderators of some boards may. None of
+ * Lemmy, Reddit or Discourse has it; the nearest is Discourse's staff edit
+ * with an edit reason. Each such line becomes a mark, a note of who, when
+ * and why is appended, and the post before is kept in the time capsule with
+ * the pattern noted. Lines appended meanwhile (comments) are kept. Errors:
+ * couldnt_find_post, not_found (no line has it), couldnt_update_post
+ * (changed meanwhile). */
+typedef struct bof_bbs_mask_post_t {
+    bof_post_ref_t post;       /* bbs_index is not checked (may be 0) */
+    const char *pattern;
+    const char *reason;        /* may be NULL */
+} bof_bbs_mask_post_t;
+
+bof_error_t bof_bbs_mask_post(const bof_actor_t *actor,
+                              const bof_bbs_mask_post_t *req,
+                              bof_post_response_t *out);
+
 /* ------------------------------------------------------------------------
  * Comments
  * ------------------------------------------------------------------------ */

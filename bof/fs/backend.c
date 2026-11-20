@@ -23,6 +23,7 @@ const bof_storage_ops_t bof_storage_files = {
     .feature_post = bof_fs_feature_post,
     .set_post_modes = bof_fs_bbs_set_post_modes,
     .reset_post_score = bof_fs_bbs_reset_post_score,
+    .mask_post = bof_fs_bbs_mask_post,
     .create_comment = bof_fs_create_comment,
     .remove_comment = bof_fs_remove_comment,
     .get_post_body = bof_fs_bbs_get_post_body,

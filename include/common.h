@@ -108,6 +108,11 @@
 #define STR_COMMENT_ARROW   "→"
 #define STR_COMMENT_REMOVED_LINE "(%s 刪除 %s 的推文: %s)"
 #define STR_COMMENT_REMOVED_NOTE "刪除推文: %s %s理由: %s\n推文內容: %s: %s\n"
+// What replaces a masked line of a post, the note appended (by, when,
+// reason) and the pattern noted in the revision kept.
+#define STR_MASKED_LINE     "[部份違規文字已刪除]"
+#define STR_MASK_NOTE       "%s 於 %s 刪除部份違規文字,原因: %s\n"
+#define STR_MASK_PATTERN    "違規文字樣式: %s\n"
 #define FN_EDITHISTORY  ".history"
 
 #ifndef SAFE_ARTICLE_DELETE_NUSER

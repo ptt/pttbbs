@@ -64,6 +64,9 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*reset_post_score)(void *ctx, const bof_actor_t *actor,
                                     const bof_bbs_reset_post_score_t *req,
                                     bof_post_response_t *out);
+    bof_error_t (*mask_post)(void *ctx, const bof_actor_t *actor,
+                             const bof_bbs_mask_post_t *req,
+                             bof_post_response_t *out);
 
     /* Comments. */
     bof_error_t (*create_comment)(void *ctx, const bof_actor_t *actor,

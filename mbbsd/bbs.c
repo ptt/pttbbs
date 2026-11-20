@@ -1640,71 +1640,6 @@ reply_post(int ent GCC_UNUSED, fileheader_t * fhdr,
 
 
 int
-append_merge_replace(const char *ref_fn, const char *mod_fn, size_t sz_orig,
-                     const struct stat *expect) {
-    // assumption:
-    //  1. ref_fn was sized in sz_orig, and no one has edited it.
-    //  2. ref_fn only get appened.
-    //  3. ref_fn must be replaced by content from mod_fn
-    // expect, when given: the file ref_fn must still be (dev and ino), as
-    // checked once it is open and locked.
-    int fd_src, fd_dest;
-    ssize_t sz;
-    char buf[1024];
-    int ret = 1;
-
-    fd_dest = open(mod_fn, O_APPEND | O_WRONLY);
-    if (fd_dest < 0)
-        return 0;
-
-    fd_src = open(ref_fn, O_RDONLY);
-    if (fd_src < 0) {
-	close(fd_dest);
-	return 0;
-    }
-    if ((size_t)dashs(ref_fn) < sz_orig) {
-        close(fd_src);
-        close(fd_dest);
-        return 0;
-    }
-
-    // during lock, only record error and never break.
-    flock(fd_src, LOCK_EX);
-    struct stat st_src, st_ref;
-    if (fstat(fd_src, &st_src) != 0 ||
-        (expect && (st_src.st_dev != expect->st_dev ||
-                    st_src.st_ino != expect->st_ino))) {
-        flock(fd_src, LOCK_UN);
-        close(fd_src);
-        close(fd_dest);
-        return 0;
-    }
-    if (lseek(fd_src, (off_t)sz_orig, SEEK_SET) != (off_t)sz_orig)
-        ret = 0;
-    while ((sz = read(fd_src, buf, sizeof(buf))) > 0) {
-        if (write(fd_dest, buf, sz) != sz)
-            ret = 0;
-    }
-    if (sz != 0)
-        ret = 0;
-    // close and flush the merged file
-    close(fd_dest);
-
-    // Rename() replaces ref_fn at once; unlinking it first left a moment
-    // in which the post did not exist for readers and comments. But only
-    // while ref_fn is still the file read: one deleted or replaced
-    // meanwhile must not be brought back or overwritten.
-    if (stat(ref_fn, &st_ref) != 0 ||
-        st_src.st_dev != st_ref.st_dev || st_src.st_ino != st_ref.st_ino ||
-        Rename(mod_fn, ref_fn) != 0)
-        ret = 0;
-
-    flock(fd_src, LOCK_UN);
-    close(fd_src);
-    return ret;
-}
-
-int
 edit_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            fpath[PATHLEN];
@@ -4636,11 +4571,10 @@ mask_post_content(int ent, fileheader_t * fhdr,
                   const char *direct) {
     char pattern[STRLEN];
     char reason[MODLOG_REASON_LEN];
-    char buf[ANSILINELEN], buf2[ANSILINELEN];
-    char revpath[PATHLEN];
+    char buf[ANSILINELEN];
     char ans[3];
-    FILE *fp, *fpw;
-    int i, rev, found = 0;
+    FILE *fp;
+    int i, found = 0;
     boardheader_t *bp;
 
     if (currstat == RMAIL)
@@ -4716,63 +4650,28 @@ mask_post_content(int ent, fileheader_t * fhdr,
     if (MODLOG_FOR_POSTS())
         y = modlog_preview(y, currboard, reason, &log) + 1;
 
-    /* XXX race condition here... */
+    // The post may change before the answer: bof masks what it has then.
     getdata(y, 0, "確定要刪除這些內容嗎? [y/N]: ", ans, sizeof(ans), LCECHO);
     if (*ans != 'y') {
         vmsg("未修改檔案。");
         return FULLUPDATE;
     }
 
-    rev = timecapsule_add_revision(fpath);
-    if (rev <= 0 ||
-        !timecapsule_get_by_revision(fpath, rev, revpath, sizeof(revpath)) ||
-        !(fp = fopen(revpath, "rt"))) {
+    bof_actor_t me = bof_me();
+    bof_bbs_mask_post_t req = {
+        .post = bof_ref(direct, ent, fhdr), .pattern = pattern,
+        .reason = reason,
+    };
+    switch (bof_bbs_mask_post(&me, &req, NULL)) {
+    case BOF_OK:
+        break;
+    case BOF_ERR_NOT_FOUND:
+        vmsg("未修改檔案。");
+        return FULLUPDATE;
+    default:
         vmsg("系統錯誤，無法修改。");
         return FULLUPDATE;
     }
-
-    // Build a new file and move it over the post: the post is a hard link
-    // of the revision, so it must not be written in place, and readers
-    // must never see it missing or half written.
-    AUTO_STR(tmppath, "%s.mask%d", fpath, (int)currpid);
-    if (!(fpw = fopen(tmppath, "wt"))) {
-        fclose(fp);
-        vmsg("系統錯誤，無法修改。");
-        return FULLUPDATE;
-    }
-    while (fgets(buf, sizeof(buf), fp)) {
-        strip_control_sequence(buf2, buf);
-        if (mbs_strstr(buf2, pattern)) {
-            fputs(STR_POST_MARK "[部份違規文字已刪除]\n", fpw);
-            continue;
-        }
-        fputs(buf, fpw);
-    }
-    // What was read; append_merge_replace() adds what is appended to the
-    // post (comments) from here on.
-    off_t sz_read = ferror(fp) ? -1 : ftello(fp);
-    // The revision is a hard link of the post as it was read; the merge
-    // must only replace that same file, not one an edit put there since.
-    struct stat st_rev;
-    if (fstat(fileno(fp), &st_rev) != 0)
-        sz_read = -1;
-    fclose(fp);
-    int werr = ferror(fpw);
-    if (fclose(fpw) != 0 || werr || sz_read < 0 ||
-        // file_appendf() converts to the storage encoding, as before
-        file_appendf(tmppath, STR_POST_MARK "%s 於 %s 刪除部份違規文字,原因: %s\n",
-                     cuser.userid, Cdatelite(&now), reason) != 0 ||
-        // when it fails after the rename, the post is replaced already
-        (!append_merge_replace(fpath, tmppath, (size_t)sz_read, &st_rev) &&
-         dashf(tmppath))) {
-        unlink(tmppath);
-        vmsg("系統錯誤，無法修改。");
-        return FULLUPDATE;
-    }
-    file_appendf(revpath,
-              STR_POST_MARK "%s 於 %s 刪除部份違規文字,原因: %s\n"
-              STR_POST_MARK "違規文字樣式: %s\n",
-              cuser.userid, Cdatelite(&now), reason, pattern);
 
     if (MODLOG_FOR_POSTS())
         modlog(currboard, reason, &log);
