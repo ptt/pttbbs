@@ -94,5 +94,4 @@ what BoF does only in part. See `README.md` for what BoF is.
   (`HasBoardPerm`) from them. The moderator mode of a session
   (`CBRD_IS_BM`) is still mbbsd's: a group operator gets it only after
   entering through the group, where bof (`bof_bbs_may_moderate()`) goes
-  by the groups the board is in; `bof_list_reports` has no actor to
-  check.
+  by the groups the board is in.

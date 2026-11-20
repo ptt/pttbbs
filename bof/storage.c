@@ -447,9 +447,18 @@ bof_get_comment_revisions(const bof_get_comment_revisions_t *req,
 }
 
 bof_error_t
-bof_list_reports(const bof_list_reports_t *req,
+bof_list_reports(const bof_actor_t *actor, const bof_list_reports_t *req,
                  bof_list_reports_response_t *out)
 {
+    const bof_person_t *p = actor ? actor->bbs_person : NULL;
+
+    if (!req)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if (req->community)
+        CHECK(actor, req->community, MAY_MODERATE, NULL);
+    else if (p && !p->admin &&
+             !(p->bbs_perms & (PERM_SYSOP | PERM_POLICE)))
+        return BOF_ERR_NOT_AN_ADMIN;
     return READ(list_reports, req, out);
 }
 

@@ -231,6 +231,21 @@ test_rules(void)
     create.community = "Nothing";
     EXPECT_INT(bof_create_post(&me, &create, NULL),
                BOF_ERR_COULDNT_FIND_COMMUNITY);
+    // Reports: of the board for its moderators, of the site for admins
+    // and the police.
+    bof_report_t reps[2];
+    bof_list_reports_t lr = { .community = "Alpha", .limit = 2 };
+    bof_list_reports_response_t lres = { .reports = reps };
+    me.bbs_person = &other;
+    EXPECT_INT(bof_list_reports(&me, &lr, &lres), BOF_ERR_NOT_A_MODERATOR);
+    lr.community = NULL;
+    EXPECT_INT(bof_list_reports(&me, &lr, &lres), BOF_ERR_NOT_AN_ADMIN);
+    bof_person_t police = other;
+    police.bbs_perms |= PERM_POLICE;
+    me.bbs_person = &police;
+    EXPECT(bof_list_reports(&me, &lr, &lres) != BOF_ERR_NOT_AN_ADMIN);
+    me.bbs_person = &guest;
+
     // None of them got to the backend; the moderator does.
     EXPECT_INT(writes, 0);
     me.bbs_person = &mod;

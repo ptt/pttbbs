@@ -3285,7 +3285,8 @@ pvrq_load(pvrq_ctx *cx) {
         .unresolved_only = !cx->all, .limit = PVRQ_MAX,
     };
     bof_list_reports_response_t res = { .reports = cx->reports };
-    return bof_list_reports(&req, &res) == BOF_OK ? res.count : 0;
+    bof_actor_t me = mbbsd_user_actor();
+    return bof_list_reports(&me, &req, &res) == BOF_OK ? res.count : 0;
 }
 
 static int
@@ -3437,7 +3438,8 @@ board_open_reports(const char *board) {
         .community = board, .unresolved_only = 1, .limit = 1,
     };
     bof_list_reports_response_t res = { .reports = &r };
-    return bof_list_reports(&req, &res) == BOF_OK ? res.bbs_unresolved : 0;
+    bof_actor_t me = mbbsd_user_actor();
+    return bof_list_reports(&me, &req, &res) == BOF_OK ? res.bbs_unresolved : 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////

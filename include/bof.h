@@ -63,6 +63,7 @@ typedef enum bof_error_t {
     BOF_ERR_COULDNT_FIND_PERSON,    /* couldnt_find_person */
     BOF_ERR_BANNED_FROM_COMMUNITY,  /* banned_from_community (muted) */
     BOF_ERR_BBS_NOT_ALLOWED,        /* bbs_not_allowed: by a BBS rule */
+    BOF_ERR_NOT_AN_ADMIN,           /* not_an_admin */
     BOF_ERR_MAX
 } bof_error_t;
 
@@ -1122,7 +1123,11 @@ typedef struct bof_list_reports_response_t {
     int bbs_unresolved;            /* open reports of the board, in all */
 } bof_list_reports_response_t;
 
-bof_error_t bof_list_reports(const bof_list_reports_t *req,
+/* For an actor with a person: the moderators of the board
+ * (bof_bbs_may_moderate(): not_a_moderator), or for the site's, its admins
+ * and the police (not_an_admin). */
+bof_error_t bof_list_reports(const bof_actor_t *actor,
+                             const bof_list_reports_t *req,
                              bof_list_reports_response_t *out);
 
 /* Lemmy's ResolvePostReport / ResolveCommentReport (resolved: 0 to open it

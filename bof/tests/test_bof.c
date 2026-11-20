@@ -18,6 +18,7 @@ test_error_names(void)
     EXPECT_STR(bof_error_name(BOF_OK), "ok");
     EXPECT_STR(bof_error_name(BOF_ERR_COULDNT_FIND_POST), "couldnt_find_post");
     EXPECT_STR(bof_error_name(BOF_ERR_NOT_A_MODERATOR), "not_a_moderator");
+    EXPECT_STR(bof_error_name(BOF_ERR_NOT_AN_ADMIN), "not_an_admin");
     EXPECT_STR(bof_error_name(BOF_ERR_MAX), "unknown");
     EXPECT_STR(bof_error_name((bof_error_t)-1), "unknown");
     for (int e = 0; e < BOF_ERR_MAX; e++)

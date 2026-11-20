@@ -933,7 +933,7 @@ test_reports(void)
 
     bof_list_reports_t lreq = { .community = BOARD, .limit = 8 };
     bof_list_reports_response_t lres = { .reports = list };
-    EXPECT_OK(bof_list_reports(&lreq, &lres));
+    EXPECT_OK(bof_list_reports(NULL, &lreq, &lres));
     EXPECT_INT(lres.count, 0);
 
     // A post, then a comment of it.
@@ -955,7 +955,7 @@ test_reports(void)
     EXPECT_INT(r.type, BOF_REPORT_COMMENT);
 
     // Newest first.
-    EXPECT_OK(bof_list_reports(&lreq, &lres));
+    EXPECT_OK(bof_list_reports(NULL, &lreq, &lres));
     EXPECT_INT(lres.count, 2);
     EXPECT_INT(lres.bbs_unresolved, 2);
     EXPECT_INT(list[0].id, 2);
@@ -971,7 +971,7 @@ test_reports(void)
     EXPECT_OK(bof_resolve_report(&mod, &rreq, &r));
     EXPECT_STR(r.resolver, "boss");
     lreq.unresolved_only = 1;
-    EXPECT_OK(bof_list_reports(&lreq, &lres));
+    EXPECT_OK(bof_list_reports(NULL, &lreq, &lres));
     EXPECT_INT(lres.count, 1);
     EXPECT_INT(lres.bbs_unresolved, 1);
     creq.bbs_floor = 0;
@@ -1055,7 +1055,7 @@ test_report_limits(void)
     // The site's list has them, with their boards.
     bof_list_reports_t lreq = { .community = NULL, .limit = 16 };
     bof_list_reports_response_t lres = { .reports = list };
-    EXPECT_OK(bof_list_reports(&lreq, &lres));
+    EXPECT_OK(bof_list_reports(NULL, &lreq, &lres));
     EXPECT(lres.count >= BOF_REPORT_RATE_MAX);
     EXPECT_STR(list[0].bbs_community, BOARD);
     EXPECT_INT(list[0].bbs_site_rule, 1);
