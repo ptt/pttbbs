@@ -2478,9 +2478,7 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
     int y = modlog_form(key->board, "移除推文");
     mvprints(y, 0, "%-12.12s %s", resp->userid, msg);
     // The reason is also put in the post.
-    y = MODLOG_FOR_POSTS() ?
-        modlog_ask_reason(key->board, y + 2, reason, sizeof(reason)) :
-        modlog_ask_reason_unlogged(y + 2, reason, sizeof(reason));
+    y = modlog_ask_reason(key->board, y + 2, reason, sizeof(reason));
     if (y < 0)
         return 0;
     bof_modlog_t log;
@@ -2488,14 +2486,13 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
     bof_modlog_add_post(&log, cx->fh);
     // What was removed, for the audit record.
     bof_modlog_add_audit(&log, "推文", "%s", msg);
-    if (MODLOG_FOR_POSTS())
-        y = modlog_preview(y, key->board, reason, &log) + 1;
+    y = modlog_preview(y, key->board, reason, &log) + 1;
     char ans[3];
     getdata(y, 0, "確定要移除嗎？ (y/N) ", ans, sizeof(ans), LCECHO);
     if (ans[0] == 'y') {
         // bof also puts it in the modlog.
         if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason,
-                                       MODLOG_FOR_POSTS() ? &log : NULL) != 0)
+                                       &log) != 0)
             vmsg("刪除失敗。可能原文已被修改。");
     }
     return 0;
