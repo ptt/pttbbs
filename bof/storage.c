@@ -207,6 +207,15 @@ bof_bbs_remove_crosspost(const bof_actor_t *actor,
     return WRITE(remove_crosspost, out ? out : &local, actor, req);
 }
 
+bof_error_t
+bof_create_post_like(const bof_actor_t *actor,
+                     const bof_create_post_like_t *req,
+                     bof_post_like_response_t *out)
+{
+    bof_post_like_response_t local = { 0 };
+    return WRITE(create_post_like, out ? out : &local, actor, req);
+}
+
 /* ------------------------------------------------------------------------
  * Comments
  * ------------------------------------------------------------------------ */
@@ -322,4 +331,31 @@ bof_list_reports(const bof_list_reports_t *req,
                  bof_list_reports_response_t *out)
 {
     return READ(list_reports, req, out);
+}
+
+int
+bof_bbs_post_version_matches(const bof_post_ref_t *post,
+                             const bof_post_version_t *ver)
+{
+    const bof_storage_ops_t *b = get_backend();
+    return b->post_version_matches ?
+        b->post_version_matches(backend_ctx, post, ver) : 0;
+}
+
+bof_error_t
+bof_bbs_get_post_file(const bof_post_ref_t *post, char *path, size_t sz)
+{
+    char buf[PATHLEN];
+    bof_error_t err;
+
+    if (!post || !post->bbs_dir || !post->bbs_header ||
+        !post->bbs_header->filename[0] || !path || !sz)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // The files of a board are the posts, or the cache of the backend.
+    if ((err = READ(refresh_post, post)) != BOF_OK)
+        return err;
+    setdirpath(buf, post->bbs_dir, post->bbs_header->filename);
+    if (strlcpy(path, buf, sz) >= sz)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    return BOF_OK;
 }

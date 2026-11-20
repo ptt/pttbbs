@@ -1055,6 +1055,48 @@ test_restore_post(void)
 }
 
 static void
+test_files_extras(void)
+{
+    fileheader_t recs[64], updated;
+    bof_actor_t me = { .name = "voter" };
+    bof_post_version_t ver;
+    int n;
+
+    make_post("M.1700000401.A.401", "abe", "extras", 0);
+    n = read_dir(recs, 64);
+    bof_post_ref_t post = ref(recs, n);
+
+    // Counting comments in the record.
+    EXPECT_INT(bof_files_count_comments(DIRPATH, n, recs[n - 1].filename,
+                                        1700000999, 1, 2, &updated), 0);
+    EXPECT_INT(updated.comments, 2);
+    EXPECT_INT(updated.score, 1);
+    EXPECT_INT(updated.modified, 1700000999);
+
+    // A vote alone is not kept by files.
+    bof_create_post_like_t like = { .post = post, .score = 1 };
+    EXPECT_INT(bof_create_post_like(&me, &like, NULL),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+
+    // The version of the content, through the storage.
+    EXPECT_OK(bof_bbs_get_post_body(&post, "extras.tmp", &ver));
+    EXPECT(bof_bbs_post_version_matches(&post, &ver));
+    spit(BDIR "/M.1700000401.A.401", "changed\n");
+    EXPECT(!bof_bbs_post_version_matches(&post, &ver));
+    unlink("extras.tmp");
+
+    // The file to read: the post's own.
+    char path[PATHLEN];
+    EXPECT_OK(bof_bbs_get_post_file(&post, path, sizeof(path)));
+    EXPECT_STR(path, BDIR "/M.1700000401.A.401");
+    EXPECT_INT(bof_bbs_get_post_file(&post, path, 4),
+               BOF_ERR_INVALID_BODY_FIELD);
+    unlink(BDIR "/M.1700000401.A.401");
+    EXPECT_INT(bof_bbs_get_post_file(&post, path, sizeof(path)),
+               BOF_ERR_COULDNT_FIND_POST);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -1106,6 +1148,7 @@ main(void)
     RUN(test_remove_post_modlog);
     RUN(test_report_limits);
     RUN(test_restore_post);
+    RUN(test_files_extras);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();

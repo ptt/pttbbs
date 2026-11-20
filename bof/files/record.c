@@ -55,6 +55,7 @@ struct record_changes {
     time4_t modified;
     const char *title, *owner, *date;
     int score_delta;
+    int comments_delta;
     const void *multi;
     uint16_t enable_modes, disable_modes;
 };
@@ -84,6 +85,23 @@ apply_record_changes(fileheader_t *fhdr, const void *ctx)
         else if (score < -MAX_DISPLAY_SCORE) score = -MAX_DISPLAY_SCORE;
         fhdr->score = score;
     }
+    if (c->comments_delta) {
+        int n = (int)fhdr->comments + c->comments_delta;
+        fhdr->comments = n < 0 ? 0 : n > 65535 ? 65535 : n;
+    }
+}
+
+int
+bof_files_count_comments(const char *direct, int ent, const char *fhdr_name,
+                         time4_t modified, int score_delta,
+                         int comments_delta, fileheader_t *out)
+{
+    struct record_changes c = {
+        .modified = modified, .score_delta = score_delta,
+        .comments_delta = comments_delta,
+    };
+    return bof_files_update_record(direct, ent, fhdr_name,
+                                   apply_record_changes, &c, out);
 }
 
 int

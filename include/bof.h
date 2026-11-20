@@ -193,6 +193,10 @@ typedef struct bof_create_post_t {
     /* Where its content (Lemmy's body) is, if not at its place in the
      * board yet (the caller moves it there); NULL: at its place. */
     const char *bbs_content_path;
+    /* A crosspost (Reddit's crosspost_parent): the post it was copied
+     * from, by its board and file name; NULL if none. */
+    const char *bbs_crosspost_community;
+    const char *bbs_crosspost_file;
 } bof_create_post_t;
 
 /* What changing a post gives back (Lemmy's PostResponse has the post view;
@@ -235,6 +239,37 @@ typedef struct bof_remove_posts_t {
 
 bof_error_t bof_remove_posts(const bof_actor_t *actor,
                              const bof_remove_posts_t *req, int *count);
+
+/* Lemmy's CreatePostLike, a vote alone (score +1, -1 or 0 to take it
+ * back), for boards that keep votes apart from comments. One vote per
+ * person. The files backend keeps votes only with comments: there, it is
+ * bbs_storage_not_supported. */
+typedef struct bof_create_post_like_t {
+    bof_post_ref_t post;
+    int score;
+} bof_create_post_like_t;
+
+typedef struct bof_post_like_response_t {
+    /* If not NULL, gets the updated record of the post. */
+    struct fileheader_t *bbs_header;
+    int bbs_score_delta;       /* how the score of the post changed */
+} bof_post_like_response_t;
+
+bof_error_t bof_create_post_like(const bof_actor_t *actor,
+                                 const bof_create_post_like_t *req,
+                                 bof_post_like_response_t *out);
+
+/* PTT: whether the content of a post is still of version ver (see
+ * bof_bbs_get_post_body()), to tell early that an edit would fail. */
+int bof_bbs_post_version_matches(const bof_post_ref_t *post,
+                                 const bof_post_version_t *ver);
+
+/* PTT: the file to read a post from, up to date, into path (a backend that
+ * keeps posts elsewhere writes it first, as a cache of them), so that the
+ * UI reads posts without knowing where they are kept. Errors:
+ * couldnt_find_post. */
+bof_error_t bof_bbs_get_post_file(const bof_post_ref_t *post, char *path,
+                                  size_t sz);
 
 /* Lemmy's DeletePost with deleted: false and RemovePost with removed:
  * false: puts a deleted or removed post back from the archive (the time
@@ -406,6 +441,9 @@ bof_error_t bof_bbs_remove_crosspost(const bof_actor_t *actor,
 typedef struct bof_create_comment_t {
     bof_post_ref_t post;
     const char *content;    /* the comment, as the lines for the file */
+    /* What the commenter typed (Lemmy's content), for backends that keep
+     * comments apart from the file; NULL if only content is known. */
+    const char *bbs_text;
     int bbs_vote;           /* +1 (push), -1 (boo) or 0 (arrow) */
     /* Lock the file while appending (it may be being edited), trying
      * again for a while; bbs_on_wait (if not NULL) is called before each
@@ -420,6 +458,10 @@ typedef struct bof_comment_response_t {
     struct fileheader_t *bbs_header;
     /* The size of the file after the comment (a token for live updates). */
     int64_t bbs_file_size;
+    /* The floor of the comment, if the backend numbers them (0 if not),
+     * and whether it was merged into the commenter's previous one. */
+    int bbs_floor;
+    int bbs_merged;
 } bof_comment_response_t;
 
 /* Errors: couldnt_find_post (no file), bbs_read_only,
@@ -510,6 +552,7 @@ bof_error_t bof_delete_comment(const bof_actor_t *actor,
  * a removed comment cannot be restored: its line is gone. */
 typedef struct bof_remove_comment_t {
     bof_post_ref_t post;       /* bbs_index is not checked (may be 0) */
+    int bbs_floor;             /* the floor if known; 0: found by the rest */
     int bbs_vote;              /* +1 (push), -1 (boo) or 0 (arrow) */
     const char *bbs_author;    /* the BBS userid who commented */
     const char *bbs_content;   /* what the comment says */

@@ -63,6 +63,9 @@ bof_error_t bof_fs_get_comments(void *ctx, const bof_get_comments_t *req,
                                 bof_get_comments_response_t *out);
 bof_error_t bof_fs_list_reports(void *ctx, const bof_list_reports_t *req,
                                 bof_list_reports_response_t *out);
+int bof_fs_post_version_matches(void *ctx, const bof_post_ref_t *post,
+                                const bof_post_version_t *ver);
+bof_error_t bof_fs_refresh_post(void *ctx, const bof_post_ref_t *post);
 
 #ifdef __cplusplus
 }

@@ -93,3 +93,27 @@ bof_fs_bbs_mask_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         *out->bbs_header = *post->bbs_header;
     return err;
 }
+
+int
+bof_fs_post_version_matches(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
+                            const bof_post_version_t *ver)
+{
+    char path[PATHLEN];
+
+    if (!post->bbs_dir || !post->bbs_header || !ver)
+        return 0;
+    setdirpath(path, post->bbs_dir, post->bbs_header->filename);
+    return bof_files_version_matches(path, ver);
+}
+
+bof_error_t
+bof_fs_refresh_post(void *ctx GCC_UNUSED, const bof_post_ref_t *post)
+{
+    char path[PATHLEN];
+
+    // The files are the posts: nothing to do but to tell if it is there.
+    if (!post->bbs_dir || !post->bbs_header)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    setdirpath(path, post->bbs_dir, post->bbs_header->filename);
+    return dashf(path) ? BOF_OK : BOF_ERR_COULDNT_FIND_POST;
+}

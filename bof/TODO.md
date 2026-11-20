@@ -20,8 +20,10 @@ what BoF does only in part. See `README.md` for what BoF is.
   again) for one post; BoF marks one post read, or a whole board.
 
 ### Votes
-- **CreatePostLike / CreateCommentLike** without a comment: on PTT a vote
-  is always a comment (push or boo). Votes on comments do not exist.
+- **CreatePostLike** without a comment: `bof_create_post_like` is in the
+  API for backends that keep votes apart (post.svc); the files backend
+  does not have it, as on PTT a vote is always a comment (push or boo).
+- **CreateCommentLike**: votes on comments do not exist.
 - **ListPostLikes / ListCommentLikes** (who voted): needs votes kept by
   person, as post.svc does.
 

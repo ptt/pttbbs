@@ -30,7 +30,7 @@ comment_wait(int tries_left, void *ctx GCC_UNUSED)
 
 int
 CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
-                 int ent, int type, const char *msg GCC_UNUSED, const char *formatted)
+                 int ent, int type, const char *msg, const char *formatted)
 {
     SCOPED_STAT(STAT_DOCOMMENT);
     bof_actor_t me = mbbsd_user_actor();
@@ -39,7 +39,7 @@ CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
             .community = board, .bbs_dir = direct, .bbs_index = ent,
             .bbs_header = fhdr,
         },
-        .content = formatted,
+        .content = formatted, .bbs_text = msg,
         .bbs_vote = type == RECTYPE_GOOD ? 1 : type == RECTYPE_BAD ? -1 : 0,
         .bbs_lock = IS_ENABLED(CONFIG_EDITPOST_SMARTMERGE),
         .bbs_on_wait = comment_wait,

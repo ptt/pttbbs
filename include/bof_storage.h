@@ -77,6 +77,9 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*remove_crosspost)(void *ctx, const bof_actor_t *actor,
                                     const bof_bbs_remove_crosspost_t *req,
                                     bof_post_result_t *out);
+    bof_error_t (*create_post_like)(void *ctx, const bof_actor_t *actor,
+                                    const bof_create_post_like_t *req,
+                                    bof_post_like_response_t *out);
 
     /* Comments. */
     bof_error_t (*create_comment)(void *ctx, const bof_actor_t *actor,
@@ -119,6 +122,10 @@ typedef struct bof_storage_ops_t {
                                 bof_get_comments_response_t *out);
     bof_error_t (*list_reports)(void *ctx, const bof_list_reports_t *req,
                                 bof_list_reports_response_t *out);
+    /* 1 if the post still has the content of ver, else 0. */
+    int (*post_version_matches)(void *ctx, const bof_post_ref_t *post,
+                                const bof_post_version_t *ver);
+    bof_error_t (*refresh_post)(void *ctx, const bof_post_ref_t *post);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

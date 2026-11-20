@@ -1733,7 +1733,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // already too late.
     outs("\n\n" ANSI_COLOR(1;30) "正在檢查檔案是否被修改過..." ANSI_RESET);
     refresh();
-    if (!bof_files_version_matches(genbuf, &ver))
+    if (!bof_bbs_post_version_matches(&ref, &ver))
         is_race_condition = 1;
     if (is_race_condition) {
         // save to ~/buf.0
@@ -2273,10 +2273,11 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 
     STATINC(STAT_READPOST);
     setdirpath(genbuf, direct, fhdr->filename);
+    // The board of the post read, if it is not the current one.
+    char bnbuf[BRDNAME_SIZE] = "";
 
     if (IS_ENABLED(CONFIG_LIVE_ALLPOST)) do {
         char allpost_dir[PATHLEN];
-        char bnbuf[BRDNAME_SIZE] = "";
 
         setbdir(allpost_dir, BN_ALLPOST);
         if (strcmp(direct, allpost_dir))
@@ -2299,6 +2300,21 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
         if (IS_ENABLED(CONFIG_DEBUG))
             vmsgf("redirect: %s", genbuf);
     } while (0);
+
+    // A post of a board is read from the file bof gives, up to date (a
+    // backend may keep it as a cache of the post), in the board it is read
+    // from; mails and the digest are files of their own.
+    if (currstat != RMAIL && !(currmode & MODE_DIGEST)) {
+        bof_post_ref_t ref = bof_ref(direct, ent, fhdr);
+        char refdir[PATHLEN];
+        if (bnbuf[0]) {
+            setbfile(refdir, bnbuf, FN_DIR);
+            ref.community = bnbuf;
+            ref.bbs_dir = refdir;
+            ref.bbs_index = 0;
+        }
+        bof_bbs_get_post_file(&ref, genbuf, sizeof(genbuf));
+    }
 
     if (fhdr->filemode & FILE_SUSPICIOUS)
     {

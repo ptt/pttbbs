@@ -80,6 +80,15 @@ int bof_files_update_record(const char *direct, int ent,
                                            const void *ctx),
                             const void *ctx, struct fileheader_t *out);
 
+/* Updates the record of the post named fhdr_name at position ent of direct
+ * for comments: modified (if not 0), the score by score_delta (within
+ * MAX_DISPLAY_SCORE) and the count of comments by comments_delta. out (if
+ * not NULL) gets the updated record. Returns 0, or -1. */
+int bof_files_count_comments(const char *direct, int ent,
+                             const char *fhdr_name, time4_t modified,
+                             int score_delta, int comments_delta,
+                             struct fileheader_t *out);
+
 /* Turns the record of a post into the record left for it when it is
  * deleted (by deleter, as the creator if deleter is its owner) or removed:
  * titled title, or by default as deleted or removed. */

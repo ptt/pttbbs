@@ -27,6 +27,8 @@ const bof_storage_ops_t bof_storage_files = {
     .reset_post_score = bof_fs_bbs_reset_post_score,
     .mask_post = bof_fs_bbs_mask_post,
     .remove_crosspost = bof_fs_bbs_remove_crosspost,
+    // Votes are kept only with comments in files.
+    .create_post_like = NULL,
     .create_comment = bof_fs_create_comment,
     .edit_comment = bof_fs_edit_comment,
     // A comment taken out of a file could neither be restored (deleted:
@@ -42,4 +44,6 @@ const bof_storage_ops_t bof_storage_files = {
     .get_post_body = bof_fs_bbs_get_post_body,
     .get_comments = bof_fs_get_comments,
     .list_reports = bof_fs_list_reports,
+    .post_version_matches = bof_fs_post_version_matches,
+    .refresh_post = bof_fs_refresh_post,
 };
