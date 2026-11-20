@@ -37,6 +37,7 @@ apply_badpost(const char *userid, const fileheader_t *fhdr,
 {
     char genbuf[STRLEN];
     char rptpath[PATHLEN];
+    bool drafted = false;   // rptpath is a draft to remove at the end
     int tusernum = searchuser(userid, NULL);
 
     // The account may be gone since the caller looked it up.
@@ -60,8 +61,10 @@ apply_badpost(const char *userid, const fileheader_t *fhdr,
 	if (rpt_bid > 0) {
 	    fileheader_t report_fh;
 
-	    setbpath(rptpath, BAD_POST_RECORD);
-	    stampfile(rptpath, &report_fh);
+	    // Written aside, created through bof.
+	    post_draft_path(rptpath, sizeof(rptpath));
+	    drafted = true;
+	    memset(&report_fh, 0, sizeof(report_fh));
 
 	    strcpy(report_fh.owner, "[" BBSMNAME "警察局]");
 	    SNPRINTF(report_fh.title, "%s 板 %s 板主退回 %s 文章",
@@ -70,7 +73,7 @@ apply_badpost(const char *userid, const fileheader_t *fhdr,
 	    file_appendf(rptpath, "\n退文原因: %s\n", genbuf);
 	    file_append(rptpath, "\n");
 
-	    PostAddRecord(BAD_POST_RECORD, &report_fh, NULL);
+	    PostAddRecord(BAD_POST_RECORD, &report_fh, rptpath);
 
 	    touchbtotal(rpt_bid);
 	}
@@ -79,6 +82,8 @@ apply_badpost(const char *userid, const fileheader_t *fhdr,
 
     sendalert(userid,  ALERT_PWD_PERM);
     mail_send_file(userid, genbuf, rptpath, cuser.userid);
+    if (drafted)
+        unlink(rptpath);
 }
 
 int

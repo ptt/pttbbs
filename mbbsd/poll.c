@@ -136,16 +136,11 @@ poll_repair_count(boardheader_t *fhp, int pos)
     reset_board(pos);
 }
 
+// A file for the report of a poll, aside (it is posted through bof).
 static int
-poll_stampfile(char *filepath, const char *boardname)
+poll_stampfile(char *filepath, const char *boardname GCC_UNUSED)
 {
-    fileheader_t    fh;
-    char	    buf[PATHLEN];
-
-    setbpath(buf, boardname);
-    if(stampfile(buf, &fh) < 0)
-        return -1;
-    setbfile(filepath, boardname, fh.filename);
+    post_draft_path(filepath, PATHLEN);
     return 0;
 }
 
@@ -240,18 +235,14 @@ static void
 poll_report(const char *bname, const char *post_bname, const char *fname)
 {
     int bid;
-    char buf[PATHLEN];
     fileheader_t header;
 
-    setbpath(buf, post_bname);
-    stampfile(buf, &header);
+    memset(&header, 0, sizeof(header));
     STRLCPY(header.owner, "[馬路探子]");
     SNPRINTF(header.title, "[%s] 看板 選情報導", bname);
 
-    Copy(fname, buf);
-
-    /* append record to .DIR */
-    if (PostAddRecord(post_bname, &header, NULL) >= 0)
+    // The report itself is the content; bof copies it into the board.
+    if (PostAddRecord(post_bname, &header, fname) >= 0)
 	if ((bid = getbnum(post_bname)) > 0)
 	    touchbtotal(bid);
 }

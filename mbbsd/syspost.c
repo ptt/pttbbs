@@ -1,22 +1,19 @@
 #include "bbs.h"
 
+// Posts msg (and attach_file after it, if not NULL) in bname. Returns 0,
+// or -1.
 int post_msg2(const char* bname, const char* title, const char *msg,
-              const char* author, char *output_path)
+              const char* author, const char *attach_file)
 {
     char fname[PATHLEN];
     FILE           *fp;
-    int             bid;
+    int             bid, ret = -1;
     fileheader_t    fhdr;
 
     /* 在 bname 板發表新文章 */
-    setbpath(fname, bname);
-    stampfile(fname, &fhdr);
-    fp = fopen(fname, "w");
-
-    if (output_path)
-        strlcpy(output_path, fname, PATHLEN);
-
-    if (!fp)
+    // Written aside, and created through bof.
+    post_draft_path(fname, sizeof(fname));
+    if (!(fp = fopen(fname, "w")))
 	return -1;
 
     fprintf(fp, "作者: %s 看板: %s\n標題: %s \n", author, bname, title);
@@ -24,14 +21,20 @@ int post_msg2(const char* bname, const char* title, const char *msg,
 
     fputs(msg, fp);
     fclose(fp);
+    if (attach_file)
+        AppendTail(attach_file, fname, 0);
 
     /* 將檔案加入列表 */
+    memset(&fhdr, 0, sizeof(fhdr));
     STRLCPY(fhdr.title, title);
     STRLCPY(fhdr.owner, author);
-    if (PostAddRecord(bname, &fhdr, NULL) != -1)
+    if (PostAddRecord(bname, &fhdr, fname) != -1) {
 	if ((bid = getbnum(bname)) > 0)
 	    setbtotal(bid);
-    return 0;
+        ret = 0;
+    }
+    unlink(fname);
+    return ret;
 }
 
 int post_msg(const char* bname, const char* title, const char *msg,
@@ -303,37 +306,28 @@ post_newboard(const char *bgroup, const char *bname, const char *bms)
 void post_policelog_spam(const char *bname, const char *attach_file,
 			 const char *reporter)
 {
-    char fpath[PATHLEN] = "";
-    if (post_msg2(BN_POLICELOG,
+    assert(attach_file && *attach_file);
+    post_msg2(BN_POLICELOG,
 		  TEMPFORMAT(STRLEN, "[報告] %s:偵測到不當發言", cuser.userid),
 		  TEMPFORMAT(ANSILINELEN, "%s 偵測到 %s 試圖於 %s %s 發表不當言論，\n"
 			     "原文如下 (不予發出，但有備份至使用者信箱):\n%s\n\n",
 			     reporter ? reporter : "系統",
 			     cuser.userid, bname ? "看板" : "郵件", bname ? bname : "",
 			     MSG_SEPARATOR),
-		  "[系統]", fpath))
-        return;
-    assert(attach_file && *attach_file);
-    if (*fpath)
-        AppendTail(attach_file, fpath, 0);
+		  "[系統]", attach_file);
 }
 
 void
 post_policelog2(const char *bname, const char *atitle, const char *action,
                 const char *reason, const int toggle, const char *attach_file)
 {
-    char msg_file[PATHLEN];
-
-    if (post_msg2(BN_POLICELOG,
+    post_msg2(BN_POLICELOG,
 		  TEMPFORMAT(TTLEN + 1, "[%s][%s] %s by %s", action,
 			     toggle ? "開啟" : "關閉", bname, cuser.userid),
 		  TEMPFORMAT(ANSILINELEN, "%s (%s) %s %s 看板 %s 功能\n原因 : %s\n%s%s\n\n",
 			     cuser.userid, fromhost, toggle ? "開啟" : "關閉", bname, action,
 			     reason, atitle ? "文章標題 : " : "", atitle ? atitle : ""),
-		  "[系統]", msg_file) == 0) {
-        if (attach_file)
-            AppendTail(attach_file, msg_file, 0);
-    }
+		  "[系統]", attach_file);
 }
 
 void

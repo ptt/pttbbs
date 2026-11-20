@@ -789,8 +789,9 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
     if ((bid = getbnum(info->constants->log_board)) == 0)
 	return;
 
-    setbpath(fname, info->constants->log_board);
-    stampfile(fname, &log_header);
+    // Written aside, created through bof.
+    post_draft_path(fname, sizeof(fname));
+    memset(&log_header, 0, sizeof(log_header));
 
     fp = fopen(fname, "w");
     if (fp != NULL) {
@@ -804,7 +805,8 @@ ChessGenLogGlobal(ChessInfo* info, ChessGameResult result)
 	info->actions->genlog(info, fp, result);
 	fclose(fp);
 
-	PostAddRecord(info->constants->log_board, &log_header, NULL);
+	PostAddRecord(info->constants->log_board, &log_header, fname);
+	unlink(fname);
 
 	setbtotal(bid);
     }

@@ -82,3 +82,11 @@ what BoF does only in part. See `README.md` for what BoF is.
   (`BOF_STORAGE_LOG`; post.svc has `sync-dir`).
 - **The read records** (`readmarks.c`) are kept by BoF for the session,
   not through the storage virtualization yet.
+- **The UI and the files of posts**: mbbsd reads posts from the file
+  `bof_bbs_get_post_file()` gives and writes new ones aside (`tmp/`),
+  created by `bof_create_post()`. Still reaching the files of a board:
+  the time capsule (the edit history `~` and the recycle bin read it, as
+  there is no `bof_get_post_revisions()` or list of removed posts yet),
+  forwarding a post by mail, the check for a crosspost whose name is
+  taken, and `delete_allpost`. Mails, the digest and the announcement
+  area are not posts of a board and keep their files.

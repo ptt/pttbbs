@@ -2333,11 +2333,9 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	}
 	if (crosspost_denied(0, fhdr->filename, xbid))
 	    return FULLUPDATE;
-	setbpath(xfpath, xboard);
-	if (stampfile(xfpath, &xfile) < 0) {
-	    vmsg("系統錯誤: 無法寫入檔案");
-	    return FULLUPDATE;
-	}
+	// Written aside, created through bof.
+	post_draft_path(xfpath, sizeof(xfpath));
+	memset(&xfile, 0, sizeof(xfile));
         STRLCPY(xfile.owner, cuser.userid);
 	STRLCPY(xfile.title, xtitle);
 	if (genbuf[0] == 'l') {
@@ -2377,7 +2375,13 @@ mail_cross_post(int unused_arg GCC_UNUSED, fileheader_t * fhdr,
 	    vmsg("看板已不存在，文章未轉錄。");
 	    return FULLUPDATE;
 	}
-	PostAddRecord(xboard, &xfile, NULL);
+	if (PostAddRecord(xboard, &xfile, xfpath) == -1) {
+	    unlink(xfpath);
+	    currmode = currmode0;
+	    vmsg("系統錯誤: 無法寫入檔案");
+	    return FULLUPDATE;
+	}
+	unlink(xfpath);
 	setbtotal(xbid);
 
         log_crosspost_in_allpost(xboard, &xfile);

@@ -227,9 +227,11 @@ const struct CommentKeyReq *CommentsGetKeyReq(void *ctx);
 #endif
 
 /* post & comment storage */
-// content_path: where the content is if not at its place in the board yet
-// (NULL: at its place).
-int PostAddRecord(const char *board, const fileheader_t *fhdr,
+// content_path: the content, written aside (post_draft_path()); NULL for a
+// record without its own content. fhdr gets the record (named by bof if its
+// filename is empty).
+void post_draft_path(char *buf, size_t sz);
+int PostAddRecord(const char *board, fileheader_t *fhdr,
                   const char *content_path);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
@@ -944,7 +946,7 @@ int ParseDateTime(const char *date, int *year, int *month, int *day,
 /* syspost */
 int post_msg(const char* bname, const char* title, const char *msg, const char* author);
 int post_msg2(const char* bname, const char* title, const char *msg,
-              const char* author, char *output_path);
+              const char* author, const char *attach_file);
 int post_file(const char *bname, const char *title, const char *filename, const char *author);
 void post_newboard(const char *bgroup, const char *bname, const char *bms);
 void violatelaw_post(const char *userid, const char *police, const char *reason, const char *result, const char *memo);

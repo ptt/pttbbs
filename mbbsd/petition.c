@@ -449,8 +449,9 @@ do_petition(int type)
     strcat(genbuf, "\n\n");
     strcat(genbuf, PETITION_DIVIDER "支持" PETITION_DIVIDER "\n");
     strcat(genbuf, PETITION_DIVIDER "反對" PETITION_DIVIDER "\n");
-    setbpath(fpath, currboard);
-    stampfile(fpath, &petitionfile);
+    // Written aside, created through bof.
+    post_draft_path(fpath, sizeof(fpath));
+    memset(&petitionfile, 0, sizeof(petitionfile));
 
     if (!(fp = fopen(fpath, "w"))) {
 	vmsg("開檔失敗，請稍候重來一次");
@@ -466,8 +467,13 @@ do_petition(int type)
     STRLCPY(petitionfile.owner, cuser.userid);
     STRLCPY(petitionfile.title, title);
     petitionfile.filemode |= FILE_PETITION;
-    if (PostAddRecord(currboard, &petitionfile, NULL) != -1)
-	setbtotal(currbid);
+    if (PostAddRecord(currboard, &petitionfile, fpath) == -1) {
+        unlink(fpath);
+        vmsg("開檔失敗，請稍候重來一次");
+        return FULLUPDATE;
+    }
+    unlink(fpath);
+    setbtotal(currbid);
     do_petition_reply(&petitionfile);
     return FULLUPDATE;
 }

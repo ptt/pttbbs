@@ -83,6 +83,19 @@ query_file_money(const fileheader_t *pfh)
     return pfh->multi.money;
 }
 
+// The file to read post fh of board from, as bof gives it (up to date);
+// where it would be if bof cannot tell (e.g. it is gone).
+static void
+post_file_of(const char *board, const fileheader_t *fh, char *path, size_t sz)
+{
+    AUTO_BFILE(dir, board, FN_DIR);
+    bof_post_ref_t ref = {
+        .community = board, .bbs_dir = dir, .bbs_header = fh,
+    };
+    if (bof_bbs_get_post_file(&ref, path, sz) != BOF_OK)
+        snprintf(path, sz, "boards/%c/%s/%s", board[0], board, fh->filename);
+}
+
 // What the board keeps beside a post's record when the record changed: the
 // search cache expires, and search.svc gets the score.
 void
@@ -973,14 +986,13 @@ do_crosspost(const char *brd, fileheader_t *postfile, const char *fpath)
                   currboard, brd, fh.filename, fh.title);
     }
 
-    if (!IS_ENABLED(CONFIG_LIVE_ALLPOST) || strcmp(brd, BN_ALLPOST) != 0)
-    {
-        Copy(fpath, dest_file);
-    }
-
     fh.filemode = FILE_LOCAL;
     fh.modified = now;
-    if (PostAddRecord(brd, &fh, NULL) != -1) {
+    // The same file name in brd, with the content of fpath (none in a live
+    // ALLPOST, which shows the original).
+    if (PostAddRecord(brd, &fh,
+                      (!IS_ENABLED(CONFIG_LIVE_ALLPOST) ||
+                       strcmp(brd, BN_ALLPOST) != 0) ? fpath : NULL) != -1) {
 	SHM->lastposttime[bid - 1] = now;
 	touchbpostnum(bid, 1);
     }
@@ -1054,12 +1066,13 @@ calc_post_entropy(const char *fpath, int max)
     return entropy;
 }
 
+// The money for a new post of board, from its content in fpath: the draft
+// written aside (tmp/), as the post is created through bof after its money
+// is known (entropy.svc reads the file at the path; it only logs it).
 static int
 calc_post_money(const char *userid, const char *board, const char *fpath)
 {
-    if (!fpath || !*fpath)
-        return 0;
-    if (strncmp(fpath, "boards/", 7) != 0)
+    if (!fpath || !*fpath || !board || !*board)
         return 0;
     int entropy = -1, money = -1;
 
@@ -1237,11 +1250,16 @@ do_post_article(int edflags)
 
     setutmpmode(POSTING);
 
-    /* build filename */
-    setbpath(fpath, currboard);
-    if (stampfile(fpath, &postfile) < 0) {
-        vmsg("系統錯誤: 無法寫入檔案。");
-        return FULLUPDATE;
+    /* The post is written aside, and created through bof (named then). */
+    post_draft_path(fpath, sizeof(fpath));
+    memset(&postfile, 0, sizeof(postfile));
+    {
+        int fd = OpenCreate(fpath, O_WRONLY | O_TRUNC);
+        if (fd < 0) {
+            vmsg("系統錯誤: 無法寫入檔案。");
+            return FULLUPDATE;
+        }
+        close(fd);
     }
     if (posttype != -1) {
 	AUTO_BNFILE(sample_path, bp->brdname, "postsample", posttype);
@@ -1331,30 +1349,31 @@ do_post_article(int edflags)
     STRLCPY(postfile.owner, owner);
     STRLCPY(postfile.title, save_title);
 
-    // Ptt: stamp file again to make it order
-    //      so searches bisecting the .DIR by time stamp can find it
-    //      stampfile_u is used when you don't want to clear other fields
-    STRLCPY(genbuf, fpath);
-    setbpath(fpath, currboard);
-    stampfile_u(fpath, &postfile);
+    // Named now, so the list stays in the order of time (searches bisect
+    // it by the time stamp), and before the content, which may have its
+    // address.
+    if (bof_bbs_name_post(currboard, &postfile) != BOF_OK) {
+        unlink(fpath);
+        vmsg("系統錯誤: 無法寫入檔案。");
+        return FULLUPDATE;
+    }
 
 #ifdef QUERY_ARTICLE_URL
     if (IsBoardForWeb(bp)) {
         char url[STRLEN];
         if (GetWebUrl(bp, &postfile, url, sizeof(url))) {
-            file_appendf(genbuf,
+            file_appendf(fpath,
                          STR_POST_MARK URL_DISPLAYNAME ": %s\n", url);
         }
     }
 #endif
 
-    if (PostAddRecord(currboard, &postfile, genbuf) == -1)
+    if (PostAddRecord(currboard, &postfile, fpath) == -1)
     {
-        unlink(genbuf);
+        vmsg("系統錯誤: 無法寫入檔案。");
     }
     else
     {
-        rename(genbuf, fpath);
 	setbtotal(currbid);
 
         if (LOG_CONF_POST) {
@@ -1453,6 +1472,8 @@ do_post_article(int edflags)
 	if (currbrdattr & BRD_ANONYMOUS)
             do_crosspost(BN_UNANONYMOUS, &postfile, fpath);
     }
+    // The draft: the post and its copies are in their boards now.
+    unlink(fpath);
     pressanykey();
     return FULLUPDATE;
 }
@@ -1585,7 +1606,7 @@ do_reply(/*const*/ fileheader_t * fhdr)
 	    return FULLUPDATE;
     }
 
-    setbfile(quote_file, bp->brdname, fhdr->filename);
+    post_file_of(bp->brdname, fhdr, quote_file, sizeof(quote_file));
     if (bp->brdattr & BRD_PETITION || (fhdr->filemode & FILE_PETITION))
 	do_petition_reply(fhdr);
     else
@@ -1607,7 +1628,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 {
     char            fpath[PATHLEN];
     char            genbuf[PATHLEN];
-    fileheader_t    postfile;
     boardheader_t  *bp = getbcache(currbid);
     int		    edflags = 0, is_race_condition = 0;
     char save_title[STRLEN];
@@ -1685,16 +1705,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 
     setutmpmode(REEDIT);
 
-    // TODO 由於現在檔案都是直接蓋回原檔，
-    // 在原看板目錄開已沒有很大意義。 (效率稍高一點)
-    // 可以考慮改開在 user home dir
-    // 好處是看板的檔案數不會狂成長。 (when someone crashed)
-    // sethomedir(fpath, cuser.userid);
-    // XXX 如果你的系統有定期看板清孤兒檔，那就不用放 user home。
-    setbpath(fpath, currboard);
-
-    // XXX 以現在的模式，這是個 temp file
-    stampfile(fpath, &postfile);
+    // The content is edited aside (not in the board), and saved through bof.
+    post_draft_path(fpath, sizeof(fpath));
 
     // copying takes long time, add some visual effect
     grayout(0, b_lines-2, GRAYOUT_DARK);
@@ -1935,7 +1947,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     if (!site_can_crosspost(bp, fhdr))
         return FULLUPDATE;
 
-    if (!dashf(TEMP_BFILE(currboard, fhdr->filename)))
+    // The post to copy, from the file bof gives.
+    bof_post_ref_t src = bof_ref(direct, ent, fhdr);
+    if (bof_bbs_get_post_file(&src, fname, sizeof(fname)) != BOF_OK ||
+        !dashf(fname))
     {
 	vmsg("檔案已不存在。");
 	return FULLUPDATE;
@@ -2043,17 +2058,14 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	}
 	if (crosspost_denied(currbid, fhdr->filename, xbid))
 	    return FULLUPDATE;
-	setbpath(xfpath, xboard);
-        if (stampfile(xfpath, &xfile) < 0) {
-            vmsg("系統錯誤: 無法寫入檔案");
-            return FULLUPDATE;
-        }
+	// Written aside, created through bof.
+	post_draft_path(xfpath, sizeof(xfpath));
+	memset(&xfile, 0, sizeof(xfile));
         STRLCPY(xfile.owner, cuser.userid);
 	STRLCPY(xfile.title, xtitle);
 	if (genbuf[0] == 'l') {
 	    xfile.filemode = FILE_LOCAL;
 	}
-	setbfile(fname, currboard, fhdr->filename);
 	xptr = fopen(xfpath, "w");
 	if (!xptr) {
 	    unlink(xfpath);
@@ -2106,6 +2118,14 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 	}
 
+	// Named now, as the note in ALLPOST has the name.
+	if (bof_bbs_name_post(xboard, &xfile) != BOF_OK) {
+	    unlink(xfpath);
+	    currmode = currmode0;
+	    vmsg("系統錯誤: 無法寫入檔案");
+	    return FULLUPDATE;
+	}
+
         // try to record in ALLPOST
         log_crosspost_in_allpost(xboard, &xfile);
 
@@ -2150,10 +2170,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    bp = getbcache(xbid);
 	}
 
-	/*
-	 * Cross fs有問題 else { unlink(xfpath); link(fname, xfpath); }
-	 */
-	PostAddRecord(xboard, &xfile, NULL);
+	PostAddRecord(xboard, &xfile, xfpath);
+	unlink(xfpath);
 	setbtotal(xbid);
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
 
@@ -2569,7 +2587,9 @@ cite_post(int ent GCC_UNUSED, const fileheader_t * fhdr,
     STRLCPY(title, "◇ ");
     strlcpy(title + 3, fhdr->title, TTLEN - 3);
     title[TTLEN] = '\0';
-    a_copyitem(TEMP_BFILE(currboard, fhdr->filename), title, 0, 1);
+    char path[PATHLEN];
+    post_file_of(currboard, fhdr, path, sizeof(path));
+    a_copyitem(path, title, 0, 1);
     b_man();
     return FULLUPDATE;
 }
@@ -2879,7 +2899,11 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
     {
 	// kcwu
-	off_t size = dashs(TEMP_DIRPATH(direct, fhdr->filename));
+	char path[PATHLEN];
+	bof_post_ref_t ref = bof_ref(direct, ent, fhdr);
+	if (bof_bbs_get_post_file(&ref, path, sizeof(path)) != BOF_OK)
+	    setdirpath(path, direct, fhdr->filename);
+	off_t size = dashs(path);
 	if (size > 5*1024*1024) {
 	    vmsg("檔案太大, 無法繼續推文, 請另撰文發表");
 	    return FULLUPDATE;
@@ -3682,8 +3706,10 @@ del_post(int ent, fileheader_t * fhdr, char *direct)
                 mailpath[0] = '\0';
             } else {
                 close(fd);
-                AUTO_DIRPATH(src, direct, fhdr->filename);
-                if (Copy(src, mailpath) < 0) {
+                char src[PATHLEN];
+                bof_post_ref_t ref = bof_ref(direct, ent, fhdr);
+                if (bof_bbs_get_post_file(&ref, src, sizeof(src)) != BOF_OK ||
+                    Copy(src, mailpath) < 0) {
                     unlink(mailpath);
                     mailpath[0] = '\0';
                 }
@@ -4629,9 +4655,11 @@ mask_post_content(int ent, fileheader_t * fhdr,
     if (!getdata(y, 0, "刪除文字: ", pattern, TTLEN, DOECHO) || strlen(pattern) < 2)
         return FULLUPDATE;
 
-    // try to render and build.
-    AUTO_DIRPATH(fpath, direct, fhdr->filename);
-    fp = fopen(fpath, "rt");
+    // try to render and build, from the file bof gives.
+    char fpath[PATHLEN];
+    bof_post_ref_t src = bof_ref(direct, ent, fhdr);
+    fp = bof_bbs_get_post_file(&src, fpath, sizeof(fpath)) == BOF_OK ?
+         fopen(fpath, "rt") : NULL;
     if (!fp) {
         vmsg("文章已被刪除或鎖定。");
         return FULLUPDATE;

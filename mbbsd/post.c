@@ -1,12 +1,22 @@
 #include "bbs.h"
 
-// Adds the record of a new post (its file already written) to the list of a
-// board, through bof. Every post that goes into a board does: posts,
+// A file to write the content of a new post in, aside (not in a board), to
+// give to PostAddRecord(); the caller removes it afterwards.
+void
+post_draft_path(char *buf, size_t sz)
+{
+    static int seq;
+    snprintf(buf, sz, "tmp/post.%d.%d", (int)getpid(), ++seq);
+}
+
+// Creates a new post in a board through bof, from the content the caller
+// wrote in content_path (NULL: a record without its own content, e.g. a
+// note in ALLPOST). Every post that goes into a board does: posts,
 // crossposts (and their notes in ALLPOST), petitions and posts by the
-// system.
+// system. With fhdr->filename empty, bof names the post; fhdr gets the
+// record as listed. Returns 0, or -1.
 int
-PostAddRecord(const char *board, const fileheader_t *fhdr,
-              const char *content_path)
+PostAddRecord(const char *board, fileheader_t *fhdr, const char *content_path)
 {
     // The list of the board itself, also from the digest.
     AUTO_BFILE(dir, board, FN_DIR);
@@ -15,7 +25,12 @@ PostAddRecord(const char *board, const fileheader_t *fhdr,
         .community = board, .bbs_dir = dir, .bbs_header = fhdr,
         .bbs_content_path = content_path,
     };
-    return bof_create_post(&me, &req, NULL) == BOF_OK ? 0 : -1;
+    fileheader_t created;
+    bof_post_response_t res = { .bbs_header = &created };
+    if (bof_create_post(&me, &req, &res) != BOF_OK)
+        return -1;
+    *fhdr = created;
+    return 0;
 }
 
 // Shows that the file of the post is locked by someone else (e.g. being
