@@ -1615,6 +1615,30 @@ m_forward(int ent GCC_UNUSED, fileheader_t * fhdr, const char *direct GCC_UNUSED
     return FULLUPDATE;
 }
 
+// The file of fh in direct (a directory) to forward into path: a post of
+// the board being read through bof (its backend may keep it elsewhere),
+// anything else (a mail, the digest) as it is. "" if bof cannot give it.
+static void
+forward_source(const char *direct, const fileheader_t *fh, char *path,
+               size_t sz)
+{
+    char bpath[PATHLEN], dirfile[PATHLEN];
+
+    if (currstat != RMAIL && currboard[0]) {
+        setbpath(bpath, currboard);
+        if (strcmp(direct, bpath) == 0) {
+            snprintf(dirfile, sizeof(dirfile), "%s/%s", direct, FN_DIR);
+            bof_post_ref_t ref = {
+                .community = currboard, .bbs_dir = dirfile, .bbs_header = fh,
+            };
+            if (bof_bbs_get_post_file(&ref, path, sz) != BOF_OK)
+                *path = '\0';
+            return;
+        }
+    }
+    snprintf(path, sz, "%s/%s", direct, fh->filename);
+}
+
 // Reports a forward of fh to address to the activity service. A local
 // mailbox that auto-forwards (FN_FORWARD) is reported with its forward address
 // (ACTIVITY_FWD_OWN or ACTIVITY_FWD_OTHER), so forwarding to a mailbox does
@@ -1649,13 +1673,12 @@ report_forward(const char *direct, const fileheader_t *fh,
 	    }
 	}
     }
+    forward_source(direct, fh, fpath, sizeof(fpath));
     return !activity_forward(cuser.userid, cuser.firstlogin, fromhost,
                              get_client_code(),
                              HasUserPerm(ACTIVITY_EXEMPT_PERMS), bid,
                              fh->filename, kind, rcpt, via,
-                             dasht(TEMPFORMAT(PATHLEN, "%s/%s",
-                                              direct, fh->filename)),
-                             msg, msgsz);
+                             dasht(fpath), msg, msgsz);
 }
 
 // Messages of MailSendResult errors, indexed by -result.
@@ -1872,8 +1895,9 @@ doforward(const char *direct, const fileheader_t * fh, int mode)
 	return 0;
     } else if (mode == 'F') {
 	SNPRINTF(fname, "/tmp/bbs.f%05d", (int)currpid);
-	AUTO_STR(tmp_buf, "%s/%s", direct, fh->filename);
-        if (!dashf(tmp_buf)) {
+	char tmp_buf[PATHLEN];
+	forward_source(direct, fh, tmp_buf, sizeof(tmp_buf));
+        if (!*tmp_buf || !dashf(tmp_buf)) {
             unlink(fname);
             return -1;
         }
@@ -2169,7 +2193,7 @@ mail_reply(int ent, fileheader_t * fhdr, const char *direct)
     if (currstat == RMAIL)
 	setuserfile(quote_file, fhdr->filename);
     else
-	setbfile(quote_file, currboard, fhdr->filename);
+	post_file_of(currboard, fhdr, quote_file, sizeof(quote_file));
 
     /* find the author */
     STRLCPY(quote_user, fhdr->owner);

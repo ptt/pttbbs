@@ -622,7 +622,7 @@ _iter_paste_tag(void *item, void *optarg) {
     if (TagBoard == 0)
         sethomefile(buf, cuser.userid, fhdr->filename);
     else {
-        setbfile(buf, param->bh->brdname, fhdr->filename);
+        post_file_of(param->bh->brdname, fhdr, buf, sizeof(buf));
     }
 
     if (!dashf(buf))

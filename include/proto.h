@@ -239,6 +239,7 @@ int PostAddRecord(const char *board, fileheader_t *fhdr,
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
 void post_record_changed(const char *direct, int ent, const fileheader_t *fhdr);
+void post_file_of(const char *board, const fileheader_t *fh, char *path, size_t sz);
 
 /* psb (page and service browser) */
 /* Returns non-zero if the user left for the recycle bin ('~'). */

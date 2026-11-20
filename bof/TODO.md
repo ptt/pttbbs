@@ -85,10 +85,10 @@ what BoF does only in part. See `README.md` for what BoF is.
   not through the storage virtualization yet.
 - **The UI and the files of posts**: mbbsd reads posts from the file
   `bof_bbs_get_post_file()` gives and writes new ones aside (`tmp/`),
-  created by `bof_create_post()`. Still reaching the files of a board:
-  forwarding a post by mail, the check for a crosspost whose name is
-  taken, and `delete_allpost`. Mails, the digest and the announcement
-  area are not posts of a board and keep their files.
+  created by `bof_create_post()`; forwarding, quoting in a mail, copying
+  into the announcement area and `delete_allpost` go through bof too.
+  Mails, the digest and the announcement area are not posts of a board
+  and keep their files.
 - **The rules of the BBS** (`policy.c`): mbbsd takes posting permission,
   the limits of boards and closed comments from them. Still its own: who
   may read a board in the lists (`HasBoardPerm`, for speed over thousands

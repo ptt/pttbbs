@@ -85,7 +85,7 @@ query_file_money(const fileheader_t *pfh)
 
 // The file to read post fh of board from, as bof gives it (up to date);
 // where it would be if bof cannot tell (e.g. it is gone).
-static void
+void
 post_file_of(const char *board, const fileheader_t *fh, char *path, size_t sz)
 {
     AUTO_BFILE(dir, board, FN_DIR);
@@ -838,23 +838,35 @@ deleteCrossPost(const fileheader_t *fhdr, const char *bname)
 void
 delete_allpost(const char *userid)
 {
-    fileheader_t fhdr;
-    int     fd;
+    fileheader_t recs[64];
+    bof_actor_t me = bof_me();
+    bof_post_result_t res;
 
     if(!userid) return;
 
+    // The posts of userid in ALLPOST, a page at a time through bof.
     AUTO_BDIR(bdir, BN_ALLPOST);
-    if( (fd = open(bdir, O_RDWR)) != -1)
-    {
-       while (read(fd, &fhdr, sizeof(fileheader_t)) > 0) {
-           if(strcmp(fhdr.owner, userid))
-             continue;
-           deleteCrossPost(&fhdr, BN_ALLPOST);
-           // No need to touch the file since ALLPOST is cleared weekly.
-	   unlink(TEMP_BFILE(BN_ALLPOST, fhdr.filename));
-           // No need to touch header in ALLPOST.
-       }
-       close(fd);
+    bof_get_posts_t req = {
+        .community = BN_ALLPOST, .bbs_dir = bdir, .bbs_start = 1,
+        .limit = ARRAY_SIZE(recs),
+    };
+    bof_get_posts_response_t got = { .posts = recs };
+    while (bof_get_posts(&req, &got) == BOF_OK && got.count > 0) {
+        for (int i = 0; i < got.count; i++) {
+            if (strcmp(recs[i].owner, userid))
+                continue;
+            deleteCrossPost(&recs[i], BN_ALLPOST);
+            // Only the content; the record goes when ALLPOST is cleared
+            // weekly. With CONFIG_LIVE_ALLPOST there are no files.
+            if (IS_ENABLED(CONFIG_LIVE_ALLPOST))
+                continue;
+            bof_bbs_remove_crosspost_t rm = {
+                .community = BN_ALLPOST, .bbs_dir = bdir,
+                .bbs_header = &recs[i], .bbs_content_only = 1,
+            };
+            bof_bbs_remove_crosspost(&me, &rm, &res);
+        }
+        req.bbs_start += got.count;
     }
 }
 
@@ -1671,7 +1683,12 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
 	)
 	return DONOTHING;
 
-    setdirpath(genbuf, direct, fhdr->filename);
+    // The file of the post as bof gives it ("" if it cannot).
+    {
+        bof_post_ref_t fref = bof_ref(direct, ent, fhdr);
+        if (bof_bbs_get_post_file(&fref, genbuf, sizeof(genbuf)) != BOF_OK)
+            genbuf[0] = '\0';
+    }
     // Commenters edit their comments (EditComment), where the site allows
     // it (CONFIG_COMMENT_EDIT); authors choose.
     int my_comments = IS_ENABLED(CONFIG_COMMENT_EDIT) &&
@@ -1694,7 +1711,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
             return FULLUPDATE;
     }
 
-    if (!dashf(genbuf)) {
+    if (!genbuf[0] || !dashf(genbuf)) {
         vmsg("此檔已損毀，無法編輯。您可以試著刪除它。");
         return FULLUPDATE;
     }
@@ -3899,7 +3916,8 @@ lock_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (ans[0] != 'y')
 	    return FULLUPDATE;
 
-        AUTO_BFILE(fn1, currboard, fhdr->filename);
+        char fn1[PATHLEN];
+        post_file_of(currboard, fhdr, fn1, sizeof(fn1));
 
 	for (i = 0; i < MAX_BMs; i++) {
             int uid = bp->moderators[i].unum;
