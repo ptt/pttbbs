@@ -200,9 +200,10 @@ set_board(void)
         bh = *bp;
 
     if (!does_board_have_bm(&bh)) {
-	if (bh.moderator_notes[0])
+	if (bh.moderator_notes[0]) {
 	    SNPRINTF(currBM, "板主:%s", bh.moderator_notes);
-	else
+	    mbs_safe_trim(currBM);
+	} else
 	    strcpy(currBM, "徵求中");
     } else {
 	/* calculate with other title information */
@@ -214,6 +215,8 @@ set_board(void)
 	    SNPRINTF(currBM, "板主:%s/%s", bm_buf, bh.moderator_notes);
 	else
 	    SNPRINTF(currBM, "板主:%s", bm_buf);
+	// currBM may cut the last multibyte character in half.
+	mbs_safe_trim(currBM);
 	l += stream_width(bh.desc);
 	l += 8 + stream_width(currboard); /* trailing stuff */
 	l += stream_width(bh.brdname);
@@ -231,8 +234,10 @@ set_board(void)
 
 	if(l < 0 && ((l += stream_width(currBM)) > 7))
 	{
-	    currBM[l] = 0;
-	    currBM[l-1] = currBM[l-2] = '.';
+	    // Cut by display columns without splitting a multibyte character.
+	    int off = stream_col_offset(l - 2, currBM, NULL);
+	    currBM[off] = 0;
+	    strlcat(currBM, "..", sizeof(currBM));
 	}
     }
 
