@@ -59,6 +59,7 @@ typedef enum bof_error_t {
     BOF_ERR_COULDNT_CREATE_REPORT,  /* couldnt_create_report */
     BOF_ERR_BBS_ALREADY_REPORTED,   /* bbs_already_reported: by them, open */
     BOF_ERR_COULDNT_RESOLVE_REPORT, /* couldnt_resolve_report */
+    BOF_ERR_RATE_LIMITED,           /* rate_limit_error */
     BOF_ERR_MAX
 } bof_error_t;
 
@@ -622,6 +623,11 @@ typedef struct bof_report_t {
     char bbs_community[16];        /* the board */
 } bof_report_t;
 
+/* At most this many reports by a person on a board in this many seconds
+ * (rate_limit_error). */
+#define BOF_REPORT_RATE_MAX     (5)
+#define BOF_REPORT_RATE_WINDOW  (60 * 60)
+
 /* Lemmy's CreatePostReport (no comment) and CreateCommentReport (with
  * bbs_floor and what the comment said). One open report per person per
  * post or comment (bbs_already_reported). out (if not NULL) gets it. */
@@ -637,9 +643,12 @@ bof_error_t bof_create_report(const bof_actor_t *actor,
                               const bof_create_report_t *req,
                               bof_report_t *out);
 
-/* Lemmy's ListReports: the reports of a board, newest first. */
+/* Lemmy's ListReports: the reports of a board, newest first; or, with
+ * no community, those against the rules of the site on all boards, for
+ * the site's admins (Lemmy shows every report to admins; these are the
+ * ones for them). */
 typedef struct bof_list_reports_t {
-    const char *community;
+    const char *community;         /* NULL: the site's */
     int unresolved_only;
     int limit;                     /* room in reports */
 } bof_list_reports_t;

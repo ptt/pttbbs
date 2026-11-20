@@ -28,6 +28,7 @@ static const char *const bof_error_names[BOF_ERR_MAX] = {
     [BOF_ERR_COULDNT_CREATE_REPORT] = "couldnt_create_report",
     [BOF_ERR_BBS_ALREADY_REPORTED] = "bbs_already_reported",
     [BOF_ERR_COULDNT_RESOLVE_REPORT] = "couldnt_resolve_report",
+    [BOF_ERR_RATE_LIMITED] = "rate_limit_error",
 };
 
 const char *

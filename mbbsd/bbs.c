@@ -4778,6 +4778,9 @@ report_post(int ent, fileheader_t *fhdr, const char *direct)
     case BOF_ERR_BBS_ALREADY_REPORTED:
         vmsg("您已檢舉過，板主尚未處理。");
         break;
+    case BOF_ERR_RATE_LIMITED:
+        vmsg("檢舉太頻繁，請稍後再試。");
+        break;
     case BOF_ERR_COULDNT_FIND_POST:
         vmsg("文章已不存在。");
         break;
@@ -4916,6 +4919,14 @@ Read(void)
 		*board_note_time=0;
 	    else if (mr != READ_NEXT)
 		pressanykey();
+	}
+	// Moderators are told of open reports once they enter the board.
+	if (IS_ENABLED(CONFIG_REPORT_CONTENT) &&
+	    currbid != bnote_lastbid && CBRD_IS_BM()) {
+	    int nreports = board_open_reports(currboard);
+	    if (nreports > 0)
+		vmsgf("本看板有 %d 件未處理的檢舉，可在看板設定 (i) 處理。",
+		      nreports);
 	}
 	bnote_lastbid = currbid;
 	i_read(READING, currdirect, readtitle, readdoent, read_comms,

@@ -2882,6 +2882,7 @@ psb_pick_comment(const char *board, const char *direct, int ent,
 typedef struct {
     const char *board;
     int all;            // also the resolved ones
+    int site;           // those against the site rules on all boards
     int show_creator;   // who reported, for the site's admins only
     bof_report_t reports[PVRQ_MAX];
 } pvrq_ctx;
@@ -2889,8 +2890,8 @@ typedef struct {
 static int
 pvrq_load(pvrq_ctx *cx) {
     bof_list_reports_t req = {
-        .community = cx->board, .unresolved_only = !cx->all,
-        .limit = PVRQ_MAX,
+        .community = cx->site ? NULL : cx->board,
+        .unresolved_only = !cx->all, .limit = PVRQ_MAX,
     };
     bof_list_reports_response_t res = { .reports = cx->reports };
     return bof_list_reports(&req, &res) == BOF_OK ? res.count : 0;
@@ -2899,7 +2900,8 @@ pvrq_load(pvrq_ctx *cx) {
 static int
 pvrq_header(PSB_CTX *ctx) {
     pvrq_ctx *cx = (pvrq_ctx *)ctx->cmd.priv;
-    vs_draw_hdr2("檢舉處理", cx->all ? "全部檢舉" : "未處理檢舉");
+    vs_draw_hdr2(cx->site ? "檢舉處理 (全站站規)" : "檢舉處理",
+                 cx->all ? "全部檢舉" : "未處理檢舉");
     move(1, 0);
     vbar(ANSI_REVERSE "  編號 狀態   對象       理由 / 標題");
     return 0;
@@ -2915,7 +2917,8 @@ pvrq_renderer(int i, PSB_CTX *ctx) {
         snprintf(target, sizeof(target), "推文 #%d", r->bbs_floor);
     else
         strlcpy(target, "文章", sizeof(target));
-    snprintf(line, sizeof(line), "%s%s / %s%s%s",
+    snprintf(line, sizeof(line), "%s%s%s%s / %s%s%s",
+             cx->site ? r->bbs_community : "", cx->site ? " " : "",
              r->bbs_site_rule ? "[站規] " : "", r->reason,
              r->original_post_name, cx->show_creator ? " " : "",
              cx->show_creator ? r->creator : "");
@@ -2932,22 +2935,24 @@ pvrq_cmd_view(cmd_ctx_t *ctx) {
     const bof_report_t *r = &cx->reports[ctx->curr];
     char path[PATHLEN];
 
+    const char *board = r->bbs_community[0] ? r->bbs_community : cx->board;
+
     ctx->redraw = true;
-    setbfile(path, cx->board, r->bbs_post_file);
+    setbfile(path, board, r->bbs_post_file);
     if (!dashf(path)) {
         vmsg("文章已不存在 (可能已被刪除)。");
         return 0;
     }
     if (r->type == BOF_REPORT_COMMENT) {
         clear();
-        vs_hdr2("檢舉推文", cx->board);
+        vs_hdr2("檢舉推文", board);
         mvprints(2, 0, "文章: %s", r->original_post_name);
         mvprints(3, 0, "推文 #%d (檢舉時的內容):", r->bbs_floor);
         mvouts(4, 0, r->original_comment_text);
         mvprints(6, 0, "理由: %s", r->reason);
         if (vmsg("按 v 看全文，其他鍵返回") != 'v')
             return 0;
-    } else if (!bof_report_matches_post(TEMP_BDIR(cx->board), r)) {
+    } else if (!bof_report_matches_post(TEMP_BDIR(board), r)) {
         vmsg("注意: 文章在檢舉後已被修改 (修改前的內容在文章修改記錄)。");
     }
     more(path, YEA);
@@ -2958,9 +2963,10 @@ static int
 pvrq_cmd_resolve(cmd_ctx_t *ctx) {
     pvrq_ctx *cx = (pvrq_ctx *)ctx->priv;
     bof_report_t *r = &cx->reports[ctx->curr];
-    bof_actor_t me = mbbsd_actor(cx->board, false);
+    const char *board = r->bbs_community[0] ? r->bbs_community : cx->board;
+    bof_actor_t me = mbbsd_actor(board, false);
     bof_resolve_report_t req = {
-        .community = cx->board, .report_id = r->id, .resolved = !r->resolved,
+        .community = board, .report_id = r->id, .resolved = !r->resolved,
     };
 
     ctx->redraw = true;
@@ -2980,10 +2986,24 @@ pvrq_cmd_all(cmd_ctx_t *ctx) {
     return 0;
 }
 
+static int
+pvrq_cmd_site(cmd_ctx_t *ctx) {
+    pvrq_ctx *cx = (pvrq_ctx *)ctx->priv;
+
+    if (!cx->show_creator)
+        return 0;
+    cx->site = !cx->site;
+    ctx->total = pvrq_load(cx);
+    ctx->curr = 0;
+    ctx->redraw = true;
+    return 0;
+}
+
 static const cmd_t pvrq_cmds[] = {
     { KEY_ENTER, "檢視", "檢視被檢舉的文章或推文", pvrq_cmd_view, 0, CMD_PRIO_MAX, true },
     { 'r', "處理", "標記為已處理 / 重新開啟", pvrq_cmd_resolve, 0, CMD_PRIO_HIGH, true },
     { 'a', "全部", "切換顯示全部或未處理", pvrq_cmd_all, 0, CMD_PRIO_HIGH },
+    { 's', "全站", "切換本板或全站違反站規的檢舉", pvrq_cmd_site, PERM_SYSOP | PERM_POLICE, CMD_PRIO_LOW },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 

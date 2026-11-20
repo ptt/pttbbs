@@ -8,13 +8,22 @@
  * The reports of a board are records of a fixed size (bof_report_t) in
  * FN_REPORTS of the board directory, in the order made; a report's ID is
  * its position. New ones are appended and resolving one rewrites it in
- * place, both under the lock of the file.
+ * place, both under the lock of the file. Reports against the rules of
+ * the site are also listed (by board and ID) in FN_SITE_REPORTS, for the
+ * site's admins.
  */
 
 #include "../bof_int.h"
 #include "bof_fs.h"
 
 _Static_assert(sizeof(bof_report_t) == 592, "the size of a report on disk");
+
+// An entry of the site's list of reports.
+typedef struct {
+    char community[16];
+    int32_t id;
+    int32_t published;
+} site_report_t;
 
 static void
 reports_path(const char *community, char *path)
@@ -104,15 +113,24 @@ bof_fs_create_report(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         return BOF_ERR_COULDNT_CREATE_REPORT;
     }
     n = (int32_t)(st.st_size / sizeof(r));
-    // One open report per person per post or comment.
+    // One open report per person per post or comment, and only so many
+    // in a while.
+    int recent = 0;
     for (int32_t id = 1; id <= n; id++) {
-        if (read_report(fd, id, &old) && !old.resolved &&
-            old.type == r.type && old.bbs_floor == r.bbs_floor &&
-            strcmp(old.bbs_post_file, r.bbs_post_file) == 0 &&
-            strcasecmp(old.creator, r.creator) == 0) {
+        if (!read_report(fd, id, &old) || strcasecmp(old.creator, r.creator))
+            continue;
+        if (!old.resolved && old.type == r.type &&
+            old.bbs_floor == r.bbs_floor &&
+            strcmp(old.bbs_post_file, r.bbs_post_file) == 0) {
             close_reports(fd);
             return BOF_ERR_BBS_ALREADY_REPORTED;
         }
+        if (r.published - old.published < BOF_REPORT_RATE_WINDOW)
+            recent++;
+    }
+    if (recent >= BOF_REPORT_RATE_MAX) {
+        close_reports(fd);
+        return BOF_ERR_RATE_LIMITED;
     }
     r.id = n + 1;
     if (pwrite(fd, &r, sizeof(r), (off_t)n * sizeof(r)) !=
@@ -122,8 +140,57 @@ bof_fs_create_report(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     }
     close_reports(fd);
 
+    if (r.bbs_site_rule) {
+        site_report_t e = { .id = r.id, .published = r.published };
+        strlcpy(e.community, r.bbs_community, sizeof(e.community));
+        if ((fd = OpenCreate(FN_SITE_REPORTS, O_WRONLY | O_APPEND)) >= 0) {
+            flock(fd, LOCK_EX);
+            if (write(fd, &e, sizeof(e)) != (ssize_t)sizeof(e))
+                ;  // the report is still on its board
+            flock(fd, LOCK_UN);
+            close(fd);
+        }
+    }
     if (out)
         *out = r;
+    return BOF_OK;
+}
+
+// The site's reports, newest first (see bof_list_reports()).
+static bof_error_t
+list_site_reports(const bof_list_reports_t *req,
+                  bof_list_reports_response_t *out)
+{
+    site_report_t e;
+    bof_report_t r;
+    struct stat st;
+    int fd, bfd;
+
+    if ((fd = open(FN_SITE_REPORTS, O_RDONLY)) < 0)
+        return BOF_OK;
+    flock(fd, LOCK_SH);
+    if (fstat(fd, &st) == 0) {
+        for (off_t i = st.st_size / sizeof(e); i > 0; i--) {
+            if (pread(fd, &e, sizeof(e), (i - 1) * sizeof(e)) !=
+                (ssize_t)sizeof(e))
+                continue;
+            e.community[sizeof(e.community) - 1] = '\0';
+            if ((bfd = open_reports(e.community, O_RDONLY)) < 0)
+                continue;
+            int ok = read_report(bfd, e.id, &r) && r.id == e.id;
+            close_reports(bfd);
+            if (!ok)
+                continue;
+            if (!r.resolved)
+                out->bbs_unresolved++;
+            if ((req->unresolved_only && r.resolved) ||
+                out->count >= req->limit)
+                continue;
+            out->reports[out->count++] = r;
+        }
+    }
+    flock(fd, LOCK_UN);
+    close(fd);
     return BOF_OK;
 }
 
@@ -137,8 +204,10 @@ bof_fs_list_reports(void *ctx GCC_UNUSED, const bof_list_reports_t *req,
 
     out->count = 0;
     out->bbs_unresolved = 0;
-    if (!req->community || !out->reports || req->limit <= 0)
+    if (!out->reports || req->limit <= 0)
         return BOF_ERR_INVALID_BODY_FIELD;
+    if (!req->community)
+        return list_site_reports(req, out);
     if ((fd = open_reports(req->community, O_RDONLY)) < 0)
         return BOF_OK;  // none yet
     if (fstat(fd, &st) == 0) {

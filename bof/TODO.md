@@ -40,6 +40,10 @@ what BoF does only in part. See `README.md` for what BoF is.
   time capsule at each edit; post.svc keeps revisions per comment.
 
 ### Reports
+- **A menu for admins**: the site's reports of all boards are reached
+  from the queue of a board (`s`), not from an admin menu.
+- **Alerts** to moderators online when a report comes; they are told
+  when they enter the board.
 - **Private message reports** (`CreatePrivateMessageReport`): mail.
 
 ### Others

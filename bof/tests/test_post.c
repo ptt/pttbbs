@@ -944,6 +944,44 @@ test_remove_post_modlog(void)
 }
 
 static void
+test_report_limits(void)
+{
+    fileheader_t recs[64];
+    bof_actor_t pest = { .name = "pest" };
+    bof_report_t r, list[16];
+    char fn[32];
+    int n;
+
+    mkdir("etc", 0755);
+    // A few posts reported against the site rules by one person.
+    for (int i = 0; i < BOF_REPORT_RATE_MAX + 1; i++) {
+        snprintf(fn, sizeof(fn), "M.17000002%02d.A.%03d", i, i);
+        make_post(fn, "victim", "post", 0);
+    }
+    n = read_dir(recs, 64);
+    for (int i = 0; i < BOF_REPORT_RATE_MAX; i++) {
+        bof_create_report_t req = {
+            .post = ref(recs, n - BOF_REPORT_RATE_MAX + i),
+            .reason = "site", .bbs_site_rule = 1,
+        };
+        EXPECT_OK(bof_create_report(&pest, &req, &r));
+        EXPECT_STR(r.bbs_community, BOARD);
+    }
+    bof_create_report_t more = {
+        .post = ref(recs, n - BOF_REPORT_RATE_MAX - 1), .reason = "again",
+    };
+    EXPECT_INT(bof_create_report(&pest, &more, &r), BOF_ERR_RATE_LIMITED);
+
+    // The site's list has them, with their boards.
+    bof_list_reports_t lreq = { .community = NULL, .limit = 16 };
+    bof_list_reports_response_t lres = { .reports = list };
+    EXPECT_OK(bof_list_reports(&lreq, &lres));
+    EXPECT(lres.count >= BOF_REPORT_RATE_MAX);
+    EXPECT_STR(list[0].bbs_community, BOARD);
+    EXPECT_INT(list[0].bbs_site_rule, 1);
+}
+
+static void
 test_tombstone_titles(void)
 {
     fileheader_t fh;
@@ -993,6 +1031,7 @@ main(void)
     RUN(test_edit_comment);
     RUN(test_reports);
     RUN(test_remove_post_modlog);
+    RUN(test_report_limits);
     RUN(test_tombstone_titles);
     cleanup();
     return bof_test_report();
