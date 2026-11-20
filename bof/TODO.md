@@ -40,9 +40,12 @@ what BoF does only in part. See `README.md` for what BoF is.
 - **RemoveComment with `removed: false`**: same reason.
 
 ### Comments
-- **Comment IDs**: comments in files are numbered by floor; post.svc keys
-  them by (post ID, floor). Multi-line comments (post.svc) are one line
-  in files.
+- **IDs in files**: post and comment IDs (`bof_post_id_t`,
+  `bof_comment_id()`) are post.svc's; the files keep none (a record has no
+  room), so the files backend gives `bbs_storage_not_supported` for them
+  and a Lemmy gateway needs post.svc as the backend. In files, comments
+  are numbered by floor, as post.svc keys them by (post ID, floor).
+  Multi-line comments (post.svc) are one line in files.
 - **Edit history of a comment**: `bof_get_comment_revisions()` gives the
   revisions where the backend keeps them per comment (post.svc); in
   files, the whole post is kept in the time capsule at each edit, so the

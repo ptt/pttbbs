@@ -383,3 +383,34 @@ bof_bbs_get_post_file(const bof_post_ref_t *post, char *path, size_t sz)
         return BOF_ERR_INVALID_BODY_FIELD;
     return BOF_OK;
 }
+
+/* ------------------------------------------------------------------------
+ * IDs
+ * ------------------------------------------------------------------------ */
+
+bof_error_t
+bof_get_post_id(const bof_post_ref_t *post, bof_post_id_t *id)
+{
+    if (!post || !id)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    *id = 0;
+    return READ(get_post_id, post, id);
+}
+
+bof_error_t
+bof_get_post_key(bof_post_id_t id, bof_post_key_t *key)
+{
+    if (id <= 0 || !key)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    memset(key, 0, sizeof(*key));
+    return READ(get_post_key, id, key);
+}
+
+bof_error_t
+bof_bbs_find_post(const bof_post_key_t *key, bof_found_post_t *out)
+{
+    if (!key || !key->community[0] || !key->bbs_post_file[0] || !out ||
+        !out->bbs_header)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    return READ(find_post, key, out);
+}

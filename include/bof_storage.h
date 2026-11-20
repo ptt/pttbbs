@@ -131,6 +131,13 @@ typedef struct bof_storage_ops_t {
     int (*post_version_matches)(void *ctx, const bof_post_ref_t *post,
                                 const bof_post_version_t *ver);
     bof_error_t (*refresh_post)(void *ctx, const bof_post_ref_t *post);
+    /* IDs (Lemmy's post.id), where the backend keeps them. */
+    bof_error_t (*get_post_id)(void *ctx, const bof_post_ref_t *post,
+                               bof_post_id_t *id);
+    bof_error_t (*get_post_key)(void *ctx, bof_post_id_t id,
+                                bof_post_key_t *key);
+    bof_error_t (*find_post)(void *ctx, const bof_post_key_t *key,
+                             bof_found_post_t *out);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

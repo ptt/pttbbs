@@ -1241,6 +1241,50 @@ test_comments_after_origin(void)
                   "copied") != NULL);
 }
 
+static void
+test_ids(void)
+{
+    fileheader_t recs[64], fh;
+    bof_post_id_t id = 1;
+    bof_post_key_t key;
+    int n = read_dir(recs, 64);
+
+    // Comment IDs are the post and the floor, as post.svc makes them.
+    bof_post_id_t p;
+    int floor;
+    EXPECT(bof_comment_id(123, 4) == ((int64_t)123 << 16 | 4));
+    EXPECT_INT(bof_comment_id_split(bof_comment_id(123, 4), &p, &floor), 1);
+    EXPECT_INT(p, 123);
+    EXPECT_INT(floor, 4);
+    EXPECT(bof_comment_id(0, 1) == 0);
+    EXPECT(bof_comment_id(1, BOF_FLOOR_MAX + 1) == 0);
+    EXPECT_INT(bof_comment_id_split(5, &p, &floor), 0);
+
+    // The files keep no IDs.
+    bof_post_ref_t r = ref(recs, 2);
+    EXPECT_INT(bof_get_post_id(&r, &id), BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    EXPECT_INT(id, 0);
+    EXPECT_INT(bof_get_post_key(1, &key), BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+
+    // A post found by its board and file.
+    bof_found_post_t found = { .bbs_header = &fh };
+    memset(&key, 0, sizeof(key));
+    strlcpy(key.community, BOARD, sizeof(key.community));
+    strlcpy(key.bbs_post_file, recs[n - 1].filename,
+            sizeof(key.bbs_post_file));
+    EXPECT_OK(bof_bbs_find_post(&key, &found));
+    EXPECT_INT(found.bbs_index, n);
+    EXPECT_STR(fh.filename, recs[n - 1].filename);
+    EXPECT_STR(found.bbs_dir, DIRPATH);
+    strlcpy(key.bbs_post_file, "M.1.A.000", sizeof(key.bbs_post_file));
+    EXPECT_INT(bof_bbs_find_post(&key, &found), BOF_ERR_COULDNT_FIND_POST);
+    strlcpy(key.community, "NoSuchBoard", sizeof(key.community));
+    EXPECT_INT(bof_bbs_find_post(&key, &found),
+               BOF_ERR_COULDNT_FIND_COMMUNITY);
+    strlcpy(key.community, "../x", sizeof(key.community));
+    EXPECT_INT(bof_bbs_find_post(&key, &found), BOF_ERR_INVALID_BODY_FIELD);
+}
+
 int
 main(void)
 {
@@ -1267,6 +1311,7 @@ main(void)
     RUN(test_tombstone_titles);
     RUN(test_quiet_edit_and_purge);
     RUN(test_comments_after_origin);
+    RUN(test_ids);
     cleanup();
     return bof_test_report();
 }

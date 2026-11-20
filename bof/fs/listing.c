@@ -97,3 +97,35 @@ bof_fs_get_post(void *ctx GCC_UNUSED, const bof_get_post_t *req,
     }
     return BOF_OK;
 }
+
+bof_error_t
+bof_fs_find_post(void *ctx GCC_UNUSED, const bof_post_key_t *key,
+                 bof_found_post_t *out)
+{
+    int i, fd = -1;
+
+    if (!is_valid_brdname(key->community) || strchr(key->bbs_post_file, '/'))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    setbfile(out->bbs_dir, key->community, FN_DIR);
+    if (!dashf(out->bbs_dir))
+        return BOF_ERR_COULDNT_FIND_COMMUNITY;
+
+    // By its AID (search_dir_by_filename()); else one by one (names that
+    // are not M. or G., e.g. locked posts).
+    if ((i = search_dir_by_filename(out->bbs_dir, key->bbs_post_file,
+                                    out->bbs_header)) > 0) {
+        out->bbs_index = i;
+        return BOF_OK;
+    }
+    for (i = 1; get_fileheader_keep(out->bbs_dir, out->bbs_header, i, &fd) > 0;
+         i++) {
+        if (strcmp(out->bbs_header->filename, key->bbs_post_file) == 0) {
+            close(fd);
+            out->bbs_index = i;
+            return BOF_OK;
+        }
+    }
+    if (fd != -1)
+        close(fd);
+    return BOF_ERR_COULDNT_FIND_POST;
+}

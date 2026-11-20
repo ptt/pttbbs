@@ -49,4 +49,8 @@ const bof_storage_ops_t bof_storage_files = {
     .list_reports = bof_fs_list_reports,
     .post_version_matches = bof_fs_post_version_matches,
     .refresh_post = bof_fs_refresh_post,
+    // A record of the files has no room for an ID.
+    .get_post_id = NULL,
+    .get_post_key = NULL,
+    .find_post = bof_fs_find_post,
 };

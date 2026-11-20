@@ -69,8 +69,31 @@ mock_get_posts(void *ctx, const bof_get_posts_t *req GCC_UNUSED,
     return BOF_OK;
 }
 
+// IDs as a database keeps them: post 42 is Test/M.42.A.000.
+static bof_error_t
+mock_get_post_id(void *ctx, const bof_post_ref_t *post GCC_UNUSED,
+                 bof_post_id_t *id)
+{
+    called(ctx, "get_post_id");
+    *id = 42;
+    return BOF_OK;
+}
+
+static bof_error_t
+mock_get_post_key(void *ctx, bof_post_id_t id, bof_post_key_t *key)
+{
+    called(ctx, "get_post_key");
+    if (id != 42)
+        return BOF_ERR_COULDNT_FIND_POST;
+    strlcpy(key->community, "Test", sizeof(key->community));
+    strlcpy(key->bbs_post_file, "M.42.A.000", sizeof(key->bbs_post_file));
+    return BOF_OK;
+}
+
 static const bof_storage_ops_t full_ops = {
     .name = "full",
+    .get_post_id = mock_get_post_id,
+    .get_post_key = mock_get_post_key,
     .delete_post = mock_delete_post,
     .remove_post = mock_remove_post,
     .write_modlog = mock_write_modlog,
@@ -156,6 +179,27 @@ test_not_supported(void)
 }
 
 static void
+test_ids(void)
+{
+    mock_t a = { .name = "a" };
+    fileheader_t fh = { .filename = "M.42.A.000" };
+    bof_post_ref_t ref = { .community = "Test", .bbs_header = &fh };
+    bof_post_id_t id = 0;
+    bof_post_key_t key;
+
+    bof_storage_reset();
+    bof_storage_set(&full_ops, &a);
+    EXPECT_OK(bof_get_post_id(&ref, &id));
+    EXPECT_INT(id, 42);
+    EXPECT_OK(bof_get_post_key(42, &key));
+    EXPECT_STR(key.community, "Test");
+    EXPECT_STR(key.bbs_post_file, "M.42.A.000");
+    EXPECT_INT(bof_get_post_key(7, &key), BOF_ERR_COULDNT_FIND_POST);
+    EXPECT_INT(bof_get_post_key(0, &key), BOF_ERR_INVALID_BODY_FIELD);
+    EXPECT_STR(a.calls, "get_post_id get_post_key get_post_key ");
+}
+
+static void
 test_files_by_default(void)
 {
     bof_comment_response_t res;
@@ -206,6 +250,7 @@ main(void)
     RUN(test_one_backend);
     RUN(test_reads);
     RUN(test_not_supported);
+    RUN(test_ids);
     RUN(test_files_by_default);
     bof_storage_reset();
     snprintf(cmd, sizeof(cmd), "rm -rf '%s'", dir);

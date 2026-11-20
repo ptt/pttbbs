@@ -115,6 +115,73 @@ typedef struct bof_post_ref_t {
     const struct fileheader_t *bbs_header;  /* the record there */
 } bof_post_ref_t;
 
+/* Lemmy's post.id: a global serial (int32, never used again), as post.svc
+ * gives its posts. The files of a board keep no such ID (a record has no
+ * room for one), so the calls with IDs need a backend that keeps posts in
+ * a database; the files backend gives
+ * bbs_storage_not_supported. */
+typedef int32_t bof_post_id_t;
+#define BOF_POST_ID_MAX 0x7fffffff
+
+/* Lemmy's comment.id: the post and the floor of the comment, as post.svc
+ * makes it (a comment is known by its post and floor, as on PTT and in
+ * Discourse); it needs no counter of its own and is never used again. */
+typedef int64_t bof_comment_id_t;
+#define BOF_FLOOR_MAX 0xffff
+
+static inline bof_comment_id_t
+bof_comment_id(bof_post_id_t post_id, int floor)
+{
+    if (post_id <= 0 || floor <= 0 || floor > BOF_FLOOR_MAX)
+        return 0;
+    return (bof_comment_id_t)post_id << 16 | (bof_comment_id_t)floor;
+}
+
+/* The post and floor of a comment ID. Returns 1, or 0 if it is not one. */
+static inline int
+bof_comment_id_split(bof_comment_id_t id, bof_post_id_t *post_id, int *floor)
+{
+    int64_t p = id >> 16;
+    int f = (int)(id & BOF_FLOOR_MAX);
+
+    if (id <= 0 || p <= 0 || p > BOF_POST_ID_MAX || f <= 0)
+        return 0;
+    *post_id = (bof_post_id_t)p;
+    *floor = f;
+    return 1;
+}
+
+/* What names a post across backends: its board and the name of its file
+ * (the time and the random part in it, as PTT's article IDs, AIDs). */
+#define BOF_COMMUNITY_NAME_MAX 16
+#define BOF_POST_FILE_MAX 32
+typedef struct bof_post_key_t {
+    char community[BOF_COMMUNITY_NAME_MAX];
+    char bbs_post_file[BOF_POST_FILE_MAX];
+} bof_post_key_t;
+
+/* The ID of a post (Lemmy's post.id). Errors: couldnt_find_post,
+ * bbs_storage_not_supported (the files backend). */
+bof_error_t bof_get_post_id(const bof_post_ref_t *post, bof_post_id_t *id);
+
+/* The post an ID names. Errors: couldnt_find_post,
+ * bbs_storage_not_supported (the files backend). */
+bof_error_t bof_get_post_key(bof_post_id_t id, bof_post_key_t *key);
+
+/* PTT: where the post named by key is now: its board's list (bbs_dir),
+ * its position there (bbs_index) and its record (into *bbs_header, room by
+ * the caller), so that a bof_post_ref_t can be made of them, e.g. from an
+ * ID (bof_get_post_key()). Errors: couldnt_find_community,
+ * couldnt_find_post. */
+typedef struct bof_found_post_t {
+    char bbs_dir[BOF_PATH_MAX];
+    int bbs_index;
+    struct fileheader_t *bbs_header;
+} bof_found_post_t;
+
+bof_error_t bof_bbs_find_post(const bof_post_key_t *key,
+                              bof_found_post_t *out);
+
 /* PTT: the version of the content of a post as read, like an ETag: its
  * first size bytes, by their hash. The file of a post is its body followed
  * by lines appended later (comments); a change of the content made from a
@@ -744,11 +811,11 @@ typedef struct bof_report_t {
     int32_t bbs_reserved;
     char creator[16];              /* who reported */
     char resolver[16];
-    char bbs_post_file[32];        /* the post's file name */
+    char bbs_post_file[BOF_POST_FILE_MAX];  /* the post's file name */
     char original_post_name[80];   /* its title */
     char original_comment_text[256];
     char reason[128];
-    char bbs_community[16];        /* the board */
+    char bbs_community[BOF_COMMUNITY_NAME_MAX]; /* the board */
 } bof_report_t;
 
 /* At most this many reports by a person on a board in this many seconds

@@ -67,6 +67,8 @@ bof_error_t bof_fs_list_reports(void *ctx, const bof_list_reports_t *req,
 int bof_fs_post_version_matches(void *ctx, const bof_post_ref_t *post,
                                 const bof_post_version_t *ver);
 bof_error_t bof_fs_refresh_post(void *ctx, const bof_post_ref_t *post);
+bof_error_t bof_fs_find_post(void *ctx, const bof_post_key_t *key,
+                             bof_found_post_t *out);
 
 #ifdef __cplusplus
 }
