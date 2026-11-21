@@ -329,13 +329,6 @@ setupnewuser(const userec_t *user)
 
     clock = time4_to_time(now);
 
-    // XXX race condition...
-    if (dosearchuser(user->userid, NULL))
-    {
-	vmsg("手腳不夠快，別人已經搶走了！");
-	exit(1);
-    }
-
     /* Lazy method : 先找尋已經清除的過期帳號 */
     if ((uid = dosearchuser("", NULL)) == 0) {
 	/* 每 1 個小時，清理 user 帳號一次 */
@@ -365,6 +358,13 @@ setupnewuser(const userec_t *user)
 	exit(1);
 
     passwd_lock();
+
+    // Checked under the lock, or two registrations could both take it.
+    if (dosearchuser(user->userid, NULL)) {
+	passwd_unlock();
+	vmsg("手腳不夠快，別人已經搶走了！");
+	exit(1);
+    }
 
     uid = dosearchuser("", NULL);
     if ((uid <= 0) || (uid > MAX_USERS)) {
@@ -870,7 +870,6 @@ new_register(void)
 	    break;
     }
 
-    // XXX 記得最後 create account 前還要再檢查一次 acc
     while (!set_user_new_passwd(18, &newuser)) {
         if (++try > 8) {
             vmsg(MSG_ERR_MAXTRIES);
@@ -892,9 +891,9 @@ new_register(void)
     }
 #endif
 
-    setupnewuser(&newuser);
-
-    if( (uid = initcuser(newuser.userid)) < 0) {
+    // Go on only as the account just made, not another of this name.
+    uid = setupnewuser(&newuser);
+    if (uid <= 0 || initcuser(newuser.userid) != uid) {
 	vmsg("無法建立帳號");
 	exit(1);
     }
