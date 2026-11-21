@@ -1503,6 +1503,21 @@ test_gateway_actor(void)
     bof_delete_post_t del = { .post = r, .deleted = 1 };
     EXPECT_INT(bof_delete_post(&me, &del, NULL), BOF_ERR_NO_POST_EDIT_ALLOWED);
     EXPECT_INT(read_dir(recs, 64), n);
+    // DeletePost is the creator's only, not a moderator's (as in Lemmy):
+    // moderators remove others' posts with RemovePost.
+    bof_person_t boss = {
+        .name = "boss", .bbs_perms = PERM_BASIC | PERM_LOGINOK | PERM_POST,
+        .admin = 1,
+    };
+    bof_actor_t mod = { .name = "boss", .bbs_person = &boss };
+    EXPECT_INT(bof_delete_post(&mod, &del, NULL), BOF_ERR_NO_POST_EDIT_ALLOWED);
+    EXPECT_INT(read_dir(recs, 64), n);
+    // Nor an account made after the post, with the name of its creator.
+    bof_person_t later = { .name = "kate", .published = 1800000000 };
+    bof_actor_t kate = { .name = "kate", .bbs_person = &later };
+    EXPECT_INT(bof_delete_post(&kate, &del, NULL),
+               BOF_ERR_NO_POST_EDIT_ALLOWED);
+    EXPECT_INT(read_dir(recs, 64), n);
 
     // CreateComment: the line is bof's, not the caller's.
     bof_create_comment_t cc = {

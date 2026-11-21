@@ -275,8 +275,25 @@ typedef enum {
     MAY_POST,       // post in it
     MAY_COMMENT,    // comment on (or vote on) post
     MAY_EDIT,       // change post as its author, or as a moderator
+    MAY_DELETE,     // delete post as its creator only (Lemmy's DeletePost)
     MAY_MODERATE,   // as a moderator of the community (or an admin)
 } may_t;
+
+// Whether p created post (Lemmy's Post::is_post_creator): the author shown
+// in the list, and not an older account of the same name, as mbbsd's
+// is_file_owner() checks (posts made before the account are not its own).
+static int
+is_post_creator(const bof_person_t *p, const fileheader_t *post)
+{
+    if (!post || strcasecmp(post->owner, p->name) != 0)
+        return 0;
+    if (p->published) {
+        time4_t ts = get_fhdr_stamp_ts(post->filename);
+        if (!ts || !time4_ge(ts, p->published))
+            return 0;
+    }
+    return 1;
+}
 
 static bof_error_t
 check_actor(const bof_actor_t *actor, const char *community, may_t may,
@@ -304,6 +321,11 @@ check_actor(const bof_actor_t *actor, const char *community, may_t may,
             (post && strcasecmp(post->owner, p->name) == 0))
             return BOF_OK;
         return BOF_ERR_NO_POST_EDIT_ALLOWED;
+    case MAY_DELETE:
+        // Moderators take others' posts down with RemovePost, which is
+        // recorded with a reason; as in Lemmy, DeletePost is not for them.
+        return is_post_creator(p, post) ? BOF_OK :
+            BOF_ERR_NO_POST_EDIT_ALLOWED;
     case MAY_MODERATE:
         return bof_bbs_may_moderate(p, &c) ? BOF_OK :
             BOF_ERR_NOT_A_MODERATOR;
@@ -406,7 +428,7 @@ bof_delete_post(const bof_actor_t *actor, const bof_delete_post_t *req,
 {
     bof_post_result_t local = { 0 };
     GATE_POST(bof_delete_post_t, post);
-    CHECK(actor, req->post.community, MAY_EDIT, req->post.bbs_header);
+    CHECK(actor, req->post.community, MAY_DELETE, req->post.bbs_header);
     return WRITE(delete_post, out ? out : &local, actor, req);
 }
 

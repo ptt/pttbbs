@@ -406,7 +406,9 @@ bof_error_t bof_bbs_get_post_body(const bof_post_ref_t *post,
                                   const char *dest_path,
                                   bof_post_version_t *ver);
 
-/* Lemmy's DeletePost: the creator deletes the post. */
+/* Lemmy's DeletePost: the creator deletes the post. For an actor with a
+ * person, only its creator may (no_post_edit_allowed otherwise, as Lemmy
+ * answers): moderators remove others' posts with bof_remove_post(). */
 typedef struct bof_delete_post_t {
     bof_post_ref_t post;
     int deleted;            /* must be 1: see bof_restore_post() */
