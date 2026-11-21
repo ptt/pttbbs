@@ -565,10 +565,12 @@ reload_bcache(void)
     }
     if (i == 10)
 	return;
-    if ((fd = open(FN_BOARD, O_RDONLY)) > 0) {
-	SHM->Bnumber =
-	    read(fd, bcache, MAX_BOARD * sizeof(boardheader_t)) /
-	    sizeof(boardheader_t);
+    if ((fd = open(FN_BOARD, O_RDONLY)) >= 0) {
+	ssize_t n = read(fd, bcache, MAX_BOARD * sizeof(boardheader_t));
+
+	// Kept on an error: -1 / sizeof() is a huge size_t.
+	if (n >= 0)
+	    SHM->Bnumber = n / sizeof(boardheader_t);
 	close(fd);
     }
     memset(SHM->lastposttime, 0, MAX_BOARD * sizeof(time4_t));
