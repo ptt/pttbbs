@@ -47,12 +47,31 @@ extern const char * const fn_mandex;
 #define _PATH_MACRO_3(_1, _2, _3, NAME, ...) NAME
 #define _PATH_MACRO_4(_1, _2, _3, _4, NAME, ...) NAME
 
+/*
+ * The TEMP_* forms put their buffer, a compound literal, in the caller's
+ * expression: one made inside ({ }) would end at its closing brace, before
+ * the caller uses the path.
+ */
+#define _TEMP_PATH_SZ  SZ_COLS(PATHLEN)
+#define _TEMP_PATH_BUF ((char[_TEMP_PATH_SZ]){0})
+
+static inline const char *_temp_path_helper(char *buf, const char *top,
+                                            const char *name)
+{
+    snprintf(buf, _TEMP_PATH_SZ, "%s/%c/%s", top, name[0], name);
+    return buf;
+}
+
+static inline const char *_temp_file_helper(char *buf, const char *top,
+                                            const char *name, const char *fname)
+{
+    snprintf(buf, _TEMP_PATH_SZ, "%s/%c/%s/%s", top, name[0], name, fname);
+    return buf;
+}
+
 /* 1. Board Directory (setbdir) */
-#define TEMP_BDIR(board) ({ \
-    const char *_b = (board); \
-    TEMPFORMAT(PATHLEN, "boards/%c/%s/%s", _b[0], _b, \
-               ((currmode & MODE_DIGEST) ? fn_mandex : FN_DIR)); \
-})
+#define TEMP_BDIR(board) \
+    TEMP_BFILE((board), ((currmode & MODE_DIGEST) ? fn_mandex : FN_DIR))
 #define AUTO_BDIR_DECL(var, board) \
     const char *_b_##var = (board); \
     AUTO_STR(var, "boards/%c/%s/%s", _b_##var[0], _b_##var, \
@@ -60,50 +79,45 @@ extern const char * const fn_mandex;
 #define AUTO_BDIR(...) _PATH_MACRO_2(__VA_ARGS__, AUTO_BDIR_DECL, TEMP_BDIR)(__VA_ARGS__)
 
 /* 2. Board File (setbfile) */
-#define TEMP_BFILE(board, fname) ({ \
-    const char *_b = (board); \
-    TEMPFORMAT(PATHLEN, "boards/%c/%s/%s", _b[0], _b, (fname)); \
-})
+#define TEMP_BFILE(board, fname) \
+    _temp_file_helper(_TEMP_PATH_BUF, "boards", (board), (fname))
 #define AUTO_BFILE_DECL(var, board, fname) \
     const char *_b_##var = (board); \
     AUTO_STR(var, "boards/%c/%s/%s", _b_##var[0], _b_##var, (fname))
 #define AUTO_BFILE(...) _PATH_MACRO_3(__VA_ARGS__, AUTO_BFILE_DECL, TEMP_BFILE)(__VA_ARGS__)
 
 /* 3. Board Path (setbpath) */
-#define TEMP_BPATH(board) ({ \
-    const char *_b = (board); \
-    TEMPFORMAT(PATHLEN, "boards/%c/%s", _b[0], _b); \
-})
+#define TEMP_BPATH(board) _temp_path_helper(_TEMP_PATH_BUF, "boards", (board))
 #define AUTO_BPATH_DECL(var, board) \
     const char *_b_##var = (board); \
     AUTO_STR(var, "boards/%c/%s", _b_##var[0], _b_##var)
 #define AUTO_BPATH(...) _PATH_MACRO_2(__VA_ARGS__, AUTO_BPATH_DECL, TEMP_BPATH)(__VA_ARGS__)
 
 /* 4. Board N-File (setbnfile) */
-#define TEMP_BNFILE(board, fname, n) ({ \
-    const char *_b = (board); \
-    TEMPFORMAT(PATHLEN, "boards/%c/%s/%s.%d", _b[0], _b, (fname), (n)); \
-})
+static inline const char *_temp_bnfile_helper(char *buf, const char *board,
+                                              const char *fname, int n)
+{
+    snprintf(buf, _TEMP_PATH_SZ, "boards/%c/%s/%s.%d",
+             board[0], board, fname, n);
+    return buf;
+}
+#define TEMP_BNFILE(board, fname, n) \
+    _temp_bnfile_helper(_TEMP_PATH_BUF, (board), (fname), (n))
 #define AUTO_BNFILE_DECL(var, board, fname, n) \
     const char *_b_##var = (board); \
     AUTO_STR(var, "boards/%c/%s/%s.%d", _b_##var[0], _b_##var, (fname), (n))
 #define AUTO_BNFILE(...) _PATH_MACRO_4(__VA_ARGS__, AUTO_BNFILE_DECL, TEMP_BNFILE)(__VA_ARGS__)
 
 /* 5. Announce Path (setapath) */
-#define TEMP_APATH(board) ({ \
-    const char *_b = (board); \
-    TEMPFORMAT(PATHLEN, "man/boards/%c/%s", _b[0], _b); \
-})
+#define TEMP_APATH(board) _temp_path_helper(_TEMP_PATH_BUF, "man/boards", (board))
 #define AUTO_APATH_DECL(var, board) \
     const char *_b_##var = (board); \
     AUTO_STR(var, "man/boards/%c/%s", _b_##var[0], _b_##var)
 #define AUTO_APATH(...) _PATH_MACRO_2(__VA_ARGS__, AUTO_APATH_DECL, TEMP_APATH)(__VA_ARGS__)
 
 /* 6. Announce File (setafile) */
-#define TEMP_AFILE(board, fname) ({ \
-    const char *_b = (board); \
-    TEMPFORMAT(PATHLEN, "man/boards/%c/%s/%s", _b[0], _b, (fname)); \
-})
+#define TEMP_AFILE(board, fname) \
+    _temp_file_helper(_TEMP_PATH_BUF, "man/boards", (board), (fname))
 #define AUTO_AFILE_DECL(var, board, fname) \
     const char *_b_##var = (board); \
     AUTO_STR(var, "man/boards/%c/%s/%s", _b_##var[0], _b_##var, (fname))
@@ -120,40 +134,29 @@ extern const char * const fn_mandex;
 #define AUTO_USERFILE(...) _PATH_MACRO_2(__VA_ARGS__, AUTO_USERFILE_DECL, TEMP_USERFILE)(__VA_ARGS__)
 
 /* 9. Home File (sethomefile) */
-#define TEMP_HOMEFILE(userid, fname) ({ \
-    const char *_u = (userid); \
-    TEMPFORMAT(PATHLEN, "home/%c/%s/%s", _u[0], _u, (fname)); \
-})
+#define TEMP_HOMEFILE(userid, fname) \
+    _temp_file_helper(_TEMP_PATH_BUF, "home", (userid), (fname))
 #define AUTO_HOMEFILE_DECL(var, userid, fname) \
     const char *_u_##var = (userid); \
     AUTO_STR(var, "home/%c/%s/%s", _u_##var[0], _u_##var, (fname))
 #define AUTO_HOMEFILE(...) _PATH_MACRO_3(__VA_ARGS__, AUTO_HOMEFILE_DECL, TEMP_HOMEFILE)(__VA_ARGS__)
 
 /* 10. Home Path (sethomepath) */
-#define TEMP_HOMEPATH(userid) ({ \
-    const char *_u = (userid); \
-    TEMPFORMAT(PATHLEN, "home/%c/%s", _u[0], _u); \
-})
+#define TEMP_HOMEPATH(userid) _temp_path_helper(_TEMP_PATH_BUF, "home", (userid))
 #define AUTO_HOMEPATH_DECL(var, userid) \
     const char *_u_##var = (userid); \
     AUTO_STR(var, "home/%c/%s", _u_##var[0], _u_##var)
 #define AUTO_HOMEPATH(...) _PATH_MACRO_2(__VA_ARGS__, AUTO_HOMEPATH_DECL, TEMP_HOMEPATH)(__VA_ARGS__)
 
 /* 11. Home Directory (sethomedir) */
-#define TEMP_HOMEDIR(userid) ({ \
-    const char *_u = (userid); \
-    TEMPFORMAT(PATHLEN, "home/%c/%s/%s", _u[0], _u, FN_DIR); \
-})
+#define TEMP_HOMEDIR(userid) TEMP_HOMEFILE((userid), FN_DIR)
 #define AUTO_HOMEDIR_DECL(var, userid) \
     const char *_u_##var = (userid); \
     AUTO_STR(var, "home/%c/%s/%s", _u_##var[0], _u_##var, FN_DIR)
 #define AUTO_HOMEDIR(...) _PATH_MACRO_2(__VA_ARGS__, AUTO_HOMEDIR_DECL, TEMP_HOMEDIR)(__VA_ARGS__)
 
 /* 12. Home Man (sethomeman) */
-#define TEMP_HOMEMAN(userid) ({ \
-    const char *_u = (userid); \
-    TEMPFORMAT(PATHLEN, "home/%c/%s/man", _u[0], _u); \
-})
+#define TEMP_HOMEMAN(userid) TEMP_HOMEFILE((userid), "man")
 #define AUTO_HOMEMAN_DECL(var, userid) \
     const char *_u_##var = (userid); \
     AUTO_STR(var, "home/%c/%s/man", _u_##var[0], _u_##var)
@@ -168,12 +171,19 @@ static inline char *autostring_init_dirpath(autostring_t *as, const char *direct
     }
     return autostring_init_format(as, "%s", fname);
 }
-#define TEMP_DIRPATH(direct, fname) ({ \
-    const char *_d = (direct); \
-    const char *_p = strrchr(_d, '/'); \
-    _p ? TEMPFORMAT(PATHLEN, "%.*s%s", (int)(_p - _d + 1), _d, (fname)) \
-       : TEMPFORMAT(PATHLEN, "%s", (fname)); \
-})
+static inline const char *_temp_dirpath_helper(char *buf, const char *direct,
+                                               const char *fname)
+{
+    const char *p = strrchr(direct, '/');
+    if (p)
+        snprintf(buf, _TEMP_PATH_SZ, "%.*s%s",
+                 (int)(p - direct + 1), direct, fname);
+    else
+        snprintf(buf, _TEMP_PATH_SZ, "%s", fname);
+    return buf;
+}
+#define TEMP_DIRPATH(direct, fname) \
+    _temp_dirpath_helper(_TEMP_PATH_BUF, (direct), (fname))
 #define AUTO_DIRPATH_DECL(var, direct, fname) \
     autostring_t _as_##var __attribute__((cleanup(autostring_cleanup))); \
     __attribute__((unused)) char *var = autostring_init_dirpath(&_as_##var, (direct), (fname)); \
