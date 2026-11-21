@@ -406,6 +406,8 @@ vkey_process_ipc(void)
         return 0;
 
     int result = 0;
+    // For the handlers (e.g. the time shown with a wmsg), once for the batch.
+    syncnow();
     for (int i = 0; i < VKEY_IPC_MAX_BATCH; i++) {
         int fd = vkey_sync_ipc();
         if (fd <= 0)

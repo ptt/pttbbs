@@ -2178,7 +2178,6 @@ t_chat(void)
 #endif
 
     // start to create connection.
-    syncnow();
     move(b_lines, 0); clrtoeol();
     outs(" 正在與聊天室連線... ");
     refresh();

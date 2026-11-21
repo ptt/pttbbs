@@ -546,7 +546,6 @@ vkey_poll_impl(int timeout)
             continue;
         }
         if (r & CIN_POLL_IPCFD) {
-            syncnow();
             /* Handlers consume the packets themselves (e.g. wmsg shown,
              * live comment queued); only a posted event that the current
              * caller asked for interrupts the wait. */

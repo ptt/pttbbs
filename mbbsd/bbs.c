@@ -132,21 +132,14 @@ bof_me(void)
 static void
 check_locked(fileheader_t *fhdr)
 {
-    boardheader_t *bp = NULL;
-
     if (currstat == RMAIL)
 	return;
     if (!currboard[0] || currbid <= 0)
-	return;
-    bp = getbcache(currbid);
-    if (!bp)
 	return;
     if (!(fhdr->filemode & FILE_SOLVED))
 	return;
     if (!(fhdr->filemode & FILE_MARKED))
 	return;
-    syncnow();
-    bp->SRexpire = time4_next(bp->SRexpire, now);
 
 #ifdef ALERT_M_PLUS_L
     {
@@ -4000,12 +3993,9 @@ change_post_mode(int ent, fileheader_t *fhdr, const char *direct,
     if (ret < 0) {
         vmsg("設定失敗，請重進看板後再試一次。");
         return FULLUPDATE;
-    } else {
-        boardheader_t *bp = getbcache(currbid);
-        if (bp)
-            bp->SRexpire = time4_next(bp->SRexpire, now);
     }
 
+    // post_record_changed() expired the search cache.
     check_locked(fhdr);
     return PART_REDRAW;
 }

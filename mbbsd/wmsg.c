@@ -1070,7 +1070,6 @@ talk_request(int sig GCC_UNUSED)
 {
     STATINC(STAT_TALKREQUEST);
     if (currutmp->msgcount) {
-        syncnow();
         move(0, 0);
         clrtoeol();
         const char *sender_name = VALID_USHM_ENTRY(currutmp->destuslot) ?
@@ -1308,7 +1307,6 @@ void
 write_request(int sig)
 {
     STATINC(STAT_WRITEREQUEST);
-    syncnow();
     check_water_init();
 
     if (HasUserFlag(UF_WMSG_OFO)) {

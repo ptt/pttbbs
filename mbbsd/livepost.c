@@ -433,8 +433,8 @@ live_run(const live_ctx_t *live, const char *fpath,
     live_catchup(&v, fpath, shown);
     bool cont = true;
 
+    // now is kept by the key hook, IPC events and vkey_poll_ex() timeouts.
     while (cont) {
-        syncnow();
         live_check_countdown(&v);
         live_draw_status(&v, can_comment);
 

@@ -12,7 +12,6 @@ char *get_restriction_reason(
 
         size_t sz_msg, char *msg) {
 
-    syncnow();
     if (numlogindays / 10 < limits_logins) {
         snprintf(msg, sz_msg,
                  STR_LOGINDAYS "未滿 %d (目前%d)",

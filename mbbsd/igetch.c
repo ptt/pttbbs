@@ -126,7 +126,6 @@ dogetch(void)
 	}
 
 	if (vkctx.ipc_fd > 0 && FD_ISSET(vkctx.ipc_fd, &readfds)) {
-	    syncnow();
 	    if (vkey_process_ipc() > 0)
 		refresh();
 	    continue;   // events are returned at the top of the loop
