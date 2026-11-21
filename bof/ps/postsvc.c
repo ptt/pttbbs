@@ -1312,5 +1312,5 @@ const bof_storage_ops_t bof_storage_postsvc = {
     .get_post_revision_file = ps_get_post_revision_file,
     .list_post_revisions = ps_list_post_revisions,
     // The recycle bin is the time capsule of the cache.
-    .list_removed_posts = bof_fs_list_removed_posts,
+    .list_archived_posts = bof_fs_list_archived_posts,
 };

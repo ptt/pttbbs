@@ -85,7 +85,7 @@ int
 brc_unread(int bid, const char *fname, time4_t modified)
 {
     brc_person();
-    return bof_post_is_unread(bid, fname, modified);
+    return bof_bbs_post_is_unread(bid, fname, modified);
 }
 
 int

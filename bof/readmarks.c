@@ -676,7 +676,7 @@ bof_bbs_post_unread_time(int bid, time4_t ftime, time4_t modified)
 }
 
 int
-bof_post_is_unread(int bid, const char *fname, time4_t modified)
+bof_bbs_post_is_unread(int bid, const char *fname, time4_t modified)
 {
     int             ftime;
 

@@ -975,7 +975,7 @@ test_reports(void)
     EXPECT_STR(list[0].original_comment_text, "rude words");
     EXPECT_STR(list[1].creator, "nina");
     EXPECT_INT(list[1].bbs_site_rule, 1);
-    EXPECT(bof_report_matches_post(DIRPATH, &list[1]));
+    EXPECT(bof_bbs_report_matches_post(DIRPATH, &list[1]));
 
     // Resolve one; it may be reported again then.
     bof_resolve_report_t rreq = {
@@ -997,7 +997,7 @@ test_reports(void)
 
     // An edited post no longer has the content reported.
     spit(BDIR "/M.1700000091.A.091", "edited\n");
-    EXPECT(!bof_report_matches_post(DIRPATH, &list[0]));
+    EXPECT(!bof_bbs_report_matches_post(DIRPATH, &list[0]));
 }
 
 static void
@@ -1112,19 +1112,19 @@ test_restore_post(void)
     // The recycle bin of bof has it last.
     {
         fileheader_t bin[4];
-        bof_bbs_list_removed_posts_t lr = {
+        bof_bbs_list_archived_posts_t lr = {
             .community = BOARD, .bbs_dir = DIRPATH, .limit = 4,
         };
-        bof_bbs_list_removed_posts_response_t lo = { .posts = bin };
-        EXPECT_OK(bof_bbs_list_removed_posts(&lr, &lo));
+        bof_bbs_list_archived_posts_response_t lo = { .posts = bin };
+        EXPECT_OK(bof_bbs_list_archived_posts(&lr, &lo));
         EXPECT(lo.bbs_total >= 1);
         lr.start = lo.bbs_total - 1;
-        EXPECT_OK(bof_bbs_list_removed_posts(&lr, &lo));
+        EXPECT_OK(bof_bbs_list_archived_posts(&lr, &lo));
         EXPECT_INT(lo.count, 1);
         EXPECT_STR(bin[0].filename, "M.1700000301.A.301");
         EXPECT_STR(bin[0].title, "keep me");
         lr.start = lo.bbs_total;
-        EXPECT_OK(bof_bbs_list_removed_posts(&lr, &lo));
+        EXPECT_OK(bof_bbs_list_archived_posts(&lr, &lo));
         EXPECT_INT(lo.count, 0);
     }
     bof_modlog_init(&log, "restore");
@@ -1416,9 +1416,10 @@ test_ids(void)
 
     // The files keep no IDs.
     bof_post_ref_t r = ref(recs, 2);
-    EXPECT_INT(bof_get_post_id(&r, &id), BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    EXPECT_INT(bof_bbs_get_post_id(&r, &id), BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
     EXPECT_INT(id, 0);
-    EXPECT_INT(bof_get_post_key(1, &key), BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    EXPECT_INT(bof_bbs_get_post_key(1, &key),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
 
     // A post found by its board and file.
     bof_found_post_t found = { .bbs_header = &fh };

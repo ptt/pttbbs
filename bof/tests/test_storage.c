@@ -189,13 +189,13 @@ test_ids(void)
 
     bof_storage_reset();
     bof_storage_set(&full_ops, &a);
-    EXPECT_OK(bof_get_post_id(&ref, &id));
+    EXPECT_OK(bof_bbs_get_post_id(&ref, &id));
     EXPECT_INT(id, 42);
-    EXPECT_OK(bof_get_post_key(42, &key));
+    EXPECT_OK(bof_bbs_get_post_key(42, &key));
     EXPECT_STR(key.community, "Test");
     EXPECT_STR(key.bbs_post_file, "M.42.A.000");
-    EXPECT_INT(bof_get_post_key(7, &key), BOF_ERR_COULDNT_FIND_POST);
-    EXPECT_INT(bof_get_post_key(0, &key), BOF_ERR_INVALID_BODY_FIELD);
+    EXPECT_INT(bof_bbs_get_post_key(7, &key), BOF_ERR_COULDNT_FIND_POST);
+    EXPECT_INT(bof_bbs_get_post_key(0, &key), BOF_ERR_INVALID_BODY_FIELD);
     EXPECT_STR(a.calls, "get_post_id get_post_key get_post_key ");
 }
 

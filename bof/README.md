@@ -104,14 +104,14 @@ if (err != BOF_OK)
 | People | `person`, `local_user`, `GetPersonDetails` | `bof_person_id_t`, `bof_actor_t`, `bof_person_t`, `bof_get_person()` |
 | Communities | `community`, `GetCommunity`, `ListCommunities` | `bof_community_t`, `bof_get_community()`, `bof_list_communities()`, `bof_bbs_community_id()` |
 | Rules | checked in each call (bans, locked posts, moderators) | `bof_bbs_can_read()` (`bof_bbs_can_read_at()` for the lists of boards), `bof_bbs_can_post()`, `bof_bbs_can_comment()`, `bof_bbs_is_moderator()`, `bof_bbs_may_moderate()` (with Discourse's category moderators: `bof_bbs_group_roles()`); checked by the API for an actor with `bbs_person` |
-| IDs | `post.id`, `comment.id` (post.svc's: a serial; the post and floor) | `bof_post_id_t`, `bof_comment_id()`, `bof_get_post_id()`, `bof_get_post_key()`, `bof_bbs_find_post()` |
+| IDs | `post.id`, `comment.id` (post.svc's: a serial; the post and floor) | `bof_post_id_t`, `bof_comment_id()`, `bof_bbs_get_post_id()`, `bof_bbs_get_post_key()`, `bof_bbs_find_post()` |
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()`; restoring from the archive is `bof_bbs_restore_post()` (as Discourse's recover), not `deleted: false` / `removed: false` |
 | Reading | `GetPosts`, `GetPost`, `MarkPostAsRead` | `bof_get_posts()`, `bof_get_post()`, `bof_mark_post_as_read()` |
 | Comments | `CreateComment` (+ `CreatePostLike` for a push or boo), `GetComments`, `EditComment`, `DeleteComment`, `RemoveComment`; Discourse's `post_revisions` | `bof_create_comment()`, `bof_get_comments()`, `bof_edit_comment()`, `bof_delete_comment()`, `bof_remove_comment()`, `bof_get_comment_revisions()` |
 | Reports | `CreatePostReport`, `CreateCommentReport`, `ListReports`, `Resolve*Report` | `bof_create_report()`, `bof_list_reports()`, `bof_resolve_report()` |
 | Modlog | `GetModlog`, `mod_*` | `bof_modlog_*()`; moderation calls take their record |
 | Bulk | Discourse's bulk delete | `bof_remove_posts()` |
-| BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()`, `bof_bbs_mask_post()`, `bof_bbs_remove_crosspost()`; the content: `bof_bbs_get_post_file()` (to read), `bof_bbs_get_post_body()` (to edit), `bof_bbs_name_post()`, `bof_bbs_format_post_header()`, `bof_bbs_format_post_origin()`, `bof_bbs_format_comment()` and `bof_bbs_comment_width()` (the line of a comment; `bof_create_comment()` makes it from the text alone); the time capsule: `bof_bbs_get_post_revisions()`, `bof_bbs_get_post_revision_file()`, `bof_bbs_list_post_revisions()`, `bof_bbs_list_removed_posts()` (Discourse's `post_revisions`) |
+| BBS only | - | `bof_bbs_set_post_modes()`, `bof_bbs_reset_post_score()`, `bof_bbs_mask_post()`, `bof_bbs_remove_crosspost()`; the content: `bof_bbs_get_post_file()` (to read), `bof_bbs_get_post_body()` (to edit), `bof_bbs_name_post()`, `bof_bbs_format_post_header()`, `bof_bbs_format_post_origin()`, `bof_bbs_format_comment()` and `bof_bbs_comment_width()` (the line of a comment; `bof_create_comment()` makes it from the text alone); the time capsule: `bof_bbs_get_post_revisions()`, `bof_bbs_get_post_revision_file()`, `bof_bbs_list_post_revisions()`, `bof_bbs_list_archived_posts()` (Discourse's `post_revisions`) |
 
 The API grows one feature at a time, as `mbbsd` moves onto it.
 
@@ -134,7 +134,7 @@ uses BoF the same way `mbbsd` does:
   one before (keeping the calls of one person together saves loading
   them again).
 - **IDs.** Lemmy's IDs are post.svc's, so a gateway needs it as the
-  backend. A post ID gives its key (`bof_get_post_key()`), the key
+  backend. A post ID gives its key (`bof_bbs_get_post_key()`), the key
   where it is now (`bof_bbs_find_post()`), which makes the
   `bof_post_ref_t` the other calls take; a comment ID is its post and
   floor (`bof_comment_id_split()`); `bof_bbs_community_id()` gives the ID

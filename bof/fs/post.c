@@ -536,9 +536,9 @@ bof_fs_list_post_revisions(void *ctx GCC_UNUSED,
 }
 
 bof_error_t
-bof_fs_list_removed_posts(void *ctx GCC_UNUSED,
-                          const bof_bbs_list_removed_posts_t *req,
-                          bof_bbs_list_removed_posts_response_t *out)
+bof_fs_list_archived_posts(void *ctx GCC_UNUSED,
+                          const bof_bbs_list_archived_posts_t *req,
+                          bof_bbs_list_archived_posts_response_t *out)
 {
     int total = timecapsule_get_max_archive_number(req->bbs_dir,
                                                    sizeof(fileheader_t));

@@ -813,7 +813,7 @@ bof_bbs_get_post_file(const bof_post_ref_t *post, char *path, size_t sz)
  * ------------------------------------------------------------------------ */
 
 bof_error_t
-bof_get_post_id(const bof_post_ref_t *post, bof_post_id_t *id)
+bof_bbs_get_post_id(const bof_post_ref_t *post, bof_post_id_t *id)
 {
     if (!post || !id)
         return BOF_ERR_INVALID_BODY_FIELD;
@@ -823,7 +823,7 @@ bof_get_post_id(const bof_post_ref_t *post, bof_post_id_t *id)
 }
 
 bof_error_t
-bof_get_post_key(bof_post_id_t id, bof_post_key_t *key)
+bof_bbs_get_post_key(bof_post_id_t id, bof_post_key_t *key)
 {
     if (id <= 0 || !key)
         return BOF_ERR_INVALID_BODY_FIELD;
@@ -890,13 +890,13 @@ bof_bbs_list_post_revisions(const bof_bbs_list_post_revisions_t *req,
 }
 
 bof_error_t
-bof_bbs_list_removed_posts(const bof_bbs_list_removed_posts_t *req,
-                           bof_bbs_list_removed_posts_response_t *out)
+bof_bbs_list_archived_posts(const bof_bbs_list_archived_posts_t *req,
+                           bof_bbs_list_archived_posts_response_t *out)
 {
     if (!req || !req->bbs_dir || req->start < 0 || req->limit <= 0 ||
         !out || !out->posts ||
         !dir_in_community(req->community, req->bbs_dir))
         return BOF_ERR_INVALID_BODY_FIELD;
     out->count = out->bbs_total = 0;
-    return READ(list_removed_posts, req, out);
+    return READ(list_archived_posts, req, out);
 }

@@ -256,7 +256,7 @@ bof_fs_resolve_report(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 }
 
 int
-bof_report_matches_post(const char *bbs_dir, const bof_report_t *r)
+bof_bbs_report_matches_post(const char *bbs_dir, const bof_report_t *r)
 {
     char path[PATHLEN];
     bof_post_version_t ver = { .size = r->bbs_size, .hash = r->bbs_hash };

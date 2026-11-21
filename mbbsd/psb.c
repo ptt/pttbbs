@@ -2472,13 +2472,13 @@ psb_recycle_bin(const char *community, const char *base, const char *title) {
     };
 
     // The records of the recycle bin: of a board through bof.
-    bof_bbs_list_removed_posts_t lreq = {
+    bof_bbs_list_archived_posts_t lreq = {
         .community = community, .bbs_dir = base, .limit = 1,
     };
     fileheader_t one;
-    bof_bbs_list_removed_posts_response_t lres = { .posts = &one };
+    bof_bbs_list_archived_posts_response_t lres = { .posts = &one };
     if (community)
-        nrecords = bof_bbs_list_removed_posts(&lreq, &lres) == BOF_OK ?
+        nrecords = bof_bbs_list_archived_posts(&lreq, &lres) == BOF_OK ?
                    lres.bbs_total : 0;
     else
         nrecords = timecapsule_get_max_archive_number(base,
@@ -2506,7 +2506,7 @@ psb_recycle_bin(const char *community, const char *base, const char *title) {
         lreq.start = viewbase;
         lreq.limit = nrecords;
         lres.posts = pvrbctx.records;
-        if (bof_bbs_list_removed_posts(&lreq, &lres) != BOF_OK ||
+        if (bof_bbs_list_archived_posts(&lreq, &lres) != BOF_OK ||
             lres.count != nrecords)
             memset(pvrbctx.records, 0, sizeof(fileheader_t) * nrecords);
     } else {
@@ -3377,7 +3377,7 @@ pvrq_cmd_view(cmd_ctx_t *ctx) {
         mvprints(6, 0, "理由: %s", r->reason);
         if (vmsg("按 v 看全文，其他鍵返回") != 'v')
             return 0;
-    } else if (!bof_report_matches_post(TEMP_BDIR(board), r)) {
+    } else if (!bof_bbs_report_matches_post(TEMP_BDIR(board), r)) {
         vmsg("注意: 文章在檢舉後已被修改 (修改前的內容在文章修改記錄)。");
     }
     more(path, YEA);

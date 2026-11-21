@@ -149,9 +149,9 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*list_post_revisions)(
         void *ctx, const bof_bbs_list_post_revisions_t *req,
         bof_bbs_list_post_revisions_response_t *out);
-    bof_error_t (*list_removed_posts)(
-        void *ctx, const bof_bbs_list_removed_posts_t *req,
-        bof_bbs_list_removed_posts_response_t *out);
+    bof_error_t (*list_archived_posts)(
+        void *ctx, const bof_bbs_list_archived_posts_t *req,
+        bof_bbs_list_archived_posts_response_t *out);
 } bof_storage_ops_t;
 
 /* The backend of the files of a classic BBS (.DIR, boards/, the time

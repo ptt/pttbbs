@@ -453,14 +453,14 @@ test_ids_and_revisions(void)
 
     // Post IDs and their keys are post.svc's.
     reply("GET_POST", "OK 42 0 " BOARD " M.700.A.AAA alice 42 1 0 0 0 0 5 9");
-    EXPECT_OK(bof_get_post_id(&post, &id));
+    EXPECT_OK(bof_bbs_get_post_id(&post, &id));
     EXPECT_INT(id, 42);
     reply("GET_POST_ID", "OK 42 0 " BOARD " M.700.A.AAA alice 42 1 0 0 0 0 5 9");
-    EXPECT_OK(bof_get_post_key(42, &key));
+    EXPECT_OK(bof_bbs_get_post_key(42, &key));
     EXPECT_STR(key.community, BOARD);
     EXPECT_STR(key.bbs_post_file, "M.700.A.AAA");
     reply("GET_POST_ID", "ERR post not found");
-    EXPECT_INT(bof_get_post_key(43, &key), BOF_ERR_COULDNT_FIND_POST);
+    EXPECT_INT(bof_bbs_get_post_key(43, &key), BOF_ERR_COULDNT_FIND_POST);
     // So are those of communities.
     reply("GET_COMMUNITY", "OK 40\nEncoding: utf-8\nID: 7\nName: " BOARD);
     EXPECT_OK(bof_bbs_community_id(BOARD, &cid));
