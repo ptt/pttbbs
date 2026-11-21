@@ -411,7 +411,7 @@ bof_error_t bof_bbs_get_post_body(const bof_post_ref_t *post,
  * answers): moderators remove others' posts with bof_remove_post(). */
 typedef struct bof_delete_post_t {
     bof_post_ref_t post;
-    int deleted;            /* must be 1: see bof_restore_post() */
+    int deleted;            /* must be 1: see bof_bbs_restore_post() */
     /* PTT: keep a record (with bbs_title) in the list instead of dropping
      * it, as boards with many readers do. */
     int bbs_keep_record;
@@ -421,7 +421,7 @@ typedef struct bof_delete_post_t {
 /* Lemmy's RemovePost: a moderator removes the post, for a reason. */
 typedef struct bof_remove_post_t {
     bof_post_ref_t post;
-    int removed;            /* must be 1: see bof_restore_post() */
+    int removed;            /* must be 1: see bof_bbs_restore_post() */
     const char *reason;     /* also appended to the archived post */
     int bbs_keep_record;    /* as in bof_delete_post_t */
     const char *bbs_title;  /* NULL or "": the default for removed posts */
@@ -650,8 +650,7 @@ int bof_bbs_format_post_header(char *buf, size_t sz, const char *author,
  * where it was posted from. Returns the length, or -1 if it does not fit. */
 int bof_bbs_format_post_origin(char *buf, size_t sz, const char *from);
 
-/* Lemmy's DeletePost with deleted: false and RemovePost with removed:
- * false: puts a deleted or removed post back from the archive (the time
+/* PTT: puts a deleted or removed post back from the archive (the time
  * capsule; its recycle bin lists the archived records) into its list, in
  * place of its record if only its file was gone, or else in the order of
  * time (a tombstone it left stays).
@@ -659,18 +658,26 @@ int bof_bbs_format_post_origin(char *buf, size_t sz, const char *from);
  * of its deletion, and now of who restored it); its marks and money are
  * not kept. Errors: couldnt_find_post (not in the archive anymore),
  * couldnt_update_post (it is in the list already, or cannot be written).
- * Copies in other boards (ALLPOST) are not restored. */
-typedef struct bof_restore_post_t {
+ * Copies in other boards (ALLPOST) are not restored. For moderators.
+ *
+ * Lemmy restores a post with DeletePost (deleted: false) or RemovePost
+ * (removed: false) on the post itself, by its ID; a post taken out of the
+ * files of a board is no longer in its list and has no ID, and is given by
+ * its record in the archive instead, so this is a call of its own, as
+ * Discourse's recover (PUT /posts/{id}/recover). bof_delete_post() and
+ * bof_remove_post() take only deleted: 1 and removed: 1. Nothing in mbbsd
+ * calls it yet (see TODO.md). */
+typedef struct bof_bbs_restore_post_t {
     const char *community;
     const char *bbs_dir;
     const struct fileheader_t *bbs_archived;  /* its record in the archive */
     const char *reason;                       /* may be NULL */
     const struct bof_modlog_t *bbs_modlog;    /* see bof_lock_post_t */
-} bof_restore_post_t;
+} bof_bbs_restore_post_t;
 
-bof_error_t bof_restore_post(const bof_actor_t *actor,
-                             const bof_restore_post_t *req,
-                             bof_post_response_t *out);
+bof_error_t bof_bbs_restore_post(const bof_actor_t *actor,
+                                 const bof_bbs_restore_post_t *req,
+                                 bof_post_response_t *out);
 
 /* Lemmy's EditPost: the title, the body, and (PTT) other fields of the
  * record. */

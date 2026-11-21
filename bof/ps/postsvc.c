@@ -584,14 +584,15 @@ ps_purge_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 
 static bof_error_t
 ps_restore_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
-                const bof_restore_post_t *req, bof_post_response_t *out)
+                const bof_bbs_restore_post_t *req,
+                bof_post_response_t *out)
 {
     if (!req->community || !req->bbs_archived)
         return BOF_ERR_INVALID_BODY_FIELD;
     if (!svc_cmd(NULL, 0, "UNDELETE_POST_FILE %s %s\n", req->community,
                  req->bbs_archived->filename))
         return BOF_ERR_COULDNT_UPDATE_POST;
-    return bof_fs_restore_post(NULL, actor, req, out);
+    return bof_fs_bbs_restore_post(NULL, actor, req, out);
 }
 
 static bof_error_t

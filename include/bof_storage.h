@@ -59,7 +59,7 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*purge_posts)(void *ctx, const bof_actor_t *actor,
                                const bof_purge_posts_t *req, int *count);
     bof_error_t (*restore_post)(void *ctx, const bof_actor_t *actor,
-                                const bof_restore_post_t *req,
+                                const bof_bbs_restore_post_t *req,
                                 bof_post_response_t *out);
     bof_error_t (*lock_post)(void *ctx, const bof_actor_t *actor,
                              const bof_lock_post_t *req,

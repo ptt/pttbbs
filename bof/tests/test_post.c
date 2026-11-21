@@ -1128,11 +1128,11 @@ test_restore_post(void)
         EXPECT_INT(lo.count, 0);
     }
     bof_modlog_init(&log, "restore");
-    bof_restore_post_t rs = {
+    bof_bbs_restore_post_t rs = {
         .community = BOARD, .bbs_dir = DIRPATH, .bbs_archived = &ar,
         .reason = "mistake", .bbs_modlog = &log,
     };
-    EXPECT_OK(bof_restore_post(&mod, &rs, &pres));
+    EXPECT_OK(bof_bbs_restore_post(&mod, &rs, &pres));
     // The tombstone stays, and it is put back in the order of time.
     EXPECT_INT(read_dir(recs, 64), n + 1);
     n = read_dir(recs, 64);
@@ -1148,7 +1148,7 @@ test_restore_post(void)
     EXPECT(strstr(slurp(BDIR "/" FN_MODLOG, buf, sizeof(buf)),
                   " BM restore: mistake\n") != NULL);
     // Twice: it is there already.
-    EXPECT_INT(bof_restore_post(&mod, &rs, &pres),
+    EXPECT_INT(bof_bbs_restore_post(&mod, &rs, &pres),
                BOF_ERR_COULDNT_UPDATE_POST);
 
     // Dropped from the list: back in the order of time.
@@ -1157,7 +1157,7 @@ test_restore_post(void)
     EXPECT_OK(bof_remove_post(&mod, &rm, &res));
     EXPECT_INT(read_dir(recs, 64), n - 1);
     EXPECT(last_archived(&ar));
-    EXPECT_OK(bof_restore_post(&mod, &rs, &pres));
+    EXPECT_OK(bof_bbs_restore_post(&mod, &rs, &pres));
     EXPECT_INT(read_dir(recs, 64), n);
     for (i = 0; i < n && strcmp(recs[i].filename, "M.1700000301.A.301"); i++)
         ;

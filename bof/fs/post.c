@@ -423,8 +423,9 @@ insert_record(const char *direct, const fileheader_t *fh)
 }
 
 bof_error_t
-bof_fs_restore_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
-                    const bof_restore_post_t *req, bof_post_response_t *out)
+bof_fs_bbs_restore_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                        const bof_bbs_restore_post_t *req,
+                        bof_post_response_t *out)
 {
     const fileheader_t *ar = req->bbs_archived;
     char path[PATHLEN], revpath[PATHLEN], tmp[PATHLEN];

@@ -481,11 +481,12 @@ bof_purge_posts(const bof_actor_t *actor, const bof_purge_posts_t *req,
 }
 
 bof_error_t
-bof_restore_post(const bof_actor_t *actor, const bof_restore_post_t *req,
-                 bof_post_response_t *out)
+bof_bbs_restore_post(const bof_actor_t *actor,
+                     const bof_bbs_restore_post_t *req,
+                     bof_post_response_t *out)
 {
     bof_post_response_t local = { 0 };
-    GATE_DIR(bof_restore_post_t);
+    GATE_DIR(bof_bbs_restore_post_t);
     if (req->bbs_archived && !safe_post_file(req->bbs_archived->filename))
         return BOF_ERR_INVALID_BODY_FIELD;
     CHECK(actor, req->community, MAY_MODERATE, NULL);
