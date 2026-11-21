@@ -33,7 +33,6 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <unistd.h>
-#include <grp.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/resource.h>
@@ -2926,23 +2925,6 @@ tunnel_cb(int fd, short event GCC_UNUSED, void *arg GCC_UNUSED)
 
 ///////////////////////////////////////////////////////////////////////
 // Main
-
-// Gives up root for good, and exits if that fails so logind never goes
-// on running as root by accident. Does nothing if not started as root.
-static void
-drop_privileges(void)
-{
-    if (geteuid() != 0)
-        return;
-
-    if (setgroups(0, NULL) < 0 ||
-        setgid(BBSGID) < 0 ||
-        setuid(BBSUID) < 0)
-    {
-        perror(LOG_PREFIX "cannot drop root privileges");
-        exit(1);
-    }
-}
 
 static int
 logattempt_daemon()

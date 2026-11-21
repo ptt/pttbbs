@@ -11,8 +11,7 @@ extern "C" {
 DEFINE_string(address, "0.0.0.0:5961", "Address to listen on");
 
 void setup() {
-  setuid(BBSUID);
-  setgid(BBSGID);
+  drop_privileges();
   chdir(BBSHOME);
 
   attach_SHM();

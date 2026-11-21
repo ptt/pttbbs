@@ -14,8 +14,7 @@ static int free_slots_in_hash = 1000;
 
 int main()
 {
-    setgid(BBSGID);
-    setuid(BBSUID);
+    drop_privileges();
     chdir(BBSHOME);
     load_uhash();
     return 0;

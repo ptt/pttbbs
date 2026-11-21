@@ -133,6 +133,7 @@ char *fcrypt(const char *key, const char *salt);
 
 /* daemon.c */
 int daemonize(const char * pidfile, const char * logfile);
+void drop_privileges(void);
 
 /* file.c */
 off_t   dashs(const char *fname);

@@ -18,8 +18,7 @@
 void
 setup_program()
 {
-    setuid(BBSUID);
-    setgid(BBSGID);
+    drop_privileges();
     chdir(BBSHOME);
 
     attach_SHM();
