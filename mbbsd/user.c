@@ -342,18 +342,43 @@ user_display(const userec_t * u, int adminmode)
     }
 }
 
+// Kicks every session of user, and waits for each to save and leave the
+// utmp, as callers then change or delete the account. Mine, if one, is last.
 void
 kick_all(const char *user)
 {
-   userinfo_t *ui;
-   int num = searchuser(user, NULL), i=1;
-   while((ui = (userinfo_t *) search_ulistn(num, i)) != NULL)
-       {
-         if(ui == currutmp) i++;
-         if ((ui->pid <= 0 || kill(ui->pid, SIGHUP) == -1))
-                         purge_utmp(ui);
-         log_usies("KICK ALL", user);
-       }
+    int num = searchuser(user, NULL);
+    bool mine = false;
+    userinfo_t *ui;
+
+    // Kicked ones are gone by then (or sleep after a crash, which the search
+    // skips), so the next is the first that isn't mine.
+    for (;;) {
+	pid_t pid;
+	int n = 1;
+
+	while ((ui = search_ulistn(num, n)) && ui == currutmp) {
+	    mine = true;
+	    n++;
+	}
+	if (!ui)
+	    break;
+	pid = ui->pid;
+	// Gone since the search, maybe for someone else's login: look again.
+	if (pid <= 0 || ui->uid != num)
+	    continue;
+	log_usies("KICK ALL", user);
+	if (kill(pid, SIGHUP) == 0) {
+	    while (ui->pid == pid && ui->mode != DEBUGSLEEPING &&
+		   kill(pid, 0) == 0)
+		usleep(10000);
+	}
+	// Gone without leaving the utmp: clear its entry.
+	if (ui->pid == pid && ui->mode != DEBUGSLEEPING)
+	    purge_utmp(ui);
+    }
+    if (mine)
+	raise(SIGHUP);
 }
 
 void
