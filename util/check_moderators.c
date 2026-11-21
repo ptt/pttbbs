@@ -422,10 +422,7 @@ int main(int argc, char **argv)
 
     now = time(NULL);
 
-    if (geteuid() == 0) {
-        setgid(BBSGID);
-        setuid(BBSUID);
-    }
+    drop_privileges();
 
     const char *bbshome = opt_bbshome[0] ? opt_bbshome : BBSHOME;
     if (chdir(bbshome) != 0) {

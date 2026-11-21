@@ -796,8 +796,7 @@ int main(int argc, char *argv[])
     attach_SHM();
 
     /* Give up root privileges: no way back from here */
-    setgid(BBSGID);
-    setuid(BBSUID);
+    drop_privileges();
 
     while ( (ch = getopt(argc, argv, "i:hD")) != -1 )
 	switch( ch ){

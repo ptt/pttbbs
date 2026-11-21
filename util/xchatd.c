@@ -2952,8 +2952,7 @@ main(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 #endif
     msock = start_daemon();
 
-    setgid(BBSGID);
-    setuid(BBSUID);
+    drop_privileges();
 
     boot_time = time(0);
     log_init();

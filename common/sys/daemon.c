@@ -1,15 +1,46 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <unistd.h>
 #include <signal.h>
 
 #include "osdep.h"
 #include "cmsys.h"
 #include "config.h"
+
+// Also logs to syslog: daemons may have closed stderr already.
+static void
+drop_privileges_failed(const char *call)
+{
+    int err = errno;
+    fprintf(stderr, "cannot drop root privileges: %s: %s\n",
+	    call, strerror(err));
+    syslog(LOG_ERR, "cannot drop root privileges: %s: %s",
+	   call, strerror(err));
+    exit(1);
+}
+
+// Gives up root for good, and exits if that fails so a program never goes
+// on running as root by accident. Does nothing if not started as root.
+void
+drop_privileges(void)
+{
+    if (geteuid() != 0)
+	return;
+
+    if (setgroups(0, NULL) < 0)
+	drop_privileges_failed("setgroups");
+    if (setgid(BBSGID) < 0)
+	drop_privileges_failed("setgid");
+    if (setuid(BBSUID) < 0)
+	drop_privileges_failed("setuid");
+}
 
 int
 daemonize(const char * pidfile, const char * logfile)

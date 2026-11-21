@@ -1631,8 +1631,7 @@ shell_login(char *argv0, struct ProgramOption *option)
 
     STATINC(STAT_SHELLLOGIN);
     /* Give up root privileges: no way back from here */
-    setgid(BBSGID);
-    setuid(BBSUID);
+    drop_privileges();
     chdir(BBSHOME);
 
 #if defined(linux) && IS_ENABLED(CONFIG_DEBUG)
@@ -1714,8 +1713,7 @@ tunnel_login(char *argv0, struct ProgramOption *option)
     }
 
     /* Give up root privileges: no way back from here */
-    setgid(BBSGID);
-    setuid(BBSUID);
+    drop_privileges();
     chdir(BBSHOME);
 
     // log pid
@@ -1834,8 +1832,7 @@ daemon_login(char *argv0, struct ProgramOption *option)
     }
 
     /* Give up root privileges: no way back from here */
-    setgid(BBSGID);
-    setuid(BBSUID);
+    drop_privileges();
     chdir(BBSHOME);
 
     /* proctitle */

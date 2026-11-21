@@ -453,10 +453,7 @@ int bbstest(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 	perror("setuid(0)");
 	return 1;
     }
-    if( setuid(BBSUID) < 0 ){
-	perror("setuid(BBSUID)");
-	return 1;
-    }
+    drop_privileges();
     system(KILLALL " testmbbsd");
     execl("./testmbbsd", "testmbbsd", "-d", "-p9000", NULL);
     perror("execl()");
@@ -468,7 +465,7 @@ int Xipcrm(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 #ifdef __FreeBSD__
     char    buf[256];
     FILE    *fp;
-    setuid(BBSUID); /* drop privileges so we don't remove other users' IPC */
+    drop_privileges(); /* so we don't remove other users' IPC */
     sprintf(buf, IPCS " | " AWK " '{print $1 $2}'");
     if( !(fp = popen(buf, "r")) ){
 	perror(buf);
@@ -487,7 +484,7 @@ int Xipcrm(int argc GCC_UNUSED, char **argv GCC_UNUSED)
 #elif defined(__linux__)
     char    buf[256], *type = "ms";
     FILE    *fp;
-    setuid(BBSUID); /* drop privileges so we don't remove other users' IPC */
+    drop_privileges(); /* so we don't remove other users' IPC */
     for( ;*type != '\0';type++ ){
         sprintf(buf, IPCS " -%c | " AWK " '{print $2}'", *type);
         if( !(fp = popen(buf, "r")) ){
