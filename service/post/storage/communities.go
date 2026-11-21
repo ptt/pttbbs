@@ -32,8 +32,10 @@ var (
 // is shared by all shard engines and keeps a full copy of the tables in
 // memory.
 //
-// A soft-deleted community keeps its ID and name (so its posts can still
-// be found and purged) but its name is free to be used by a new community.
+// A community taken down (removed, when its board is deleted; Lemmy's
+// RemoveCommunity) keeps its ID and name, so its posts can still be found
+// and purged, but its name is free to be used by a new community: BBS board
+// names are reused, while Lemmy keeps the name of a removed community.
 type CommunityRegistry struct {
 	db  *sql.DB
 	dir string // where communities.db is
@@ -78,6 +80,17 @@ const communitySchema = `
 	);
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_community_active_name
 		ON community(name COLLATE NOCASE) WHERE deleted_at = 0;
+
+	-- Lemmy's mod_remove_community: who removed (or restored) a community,
+	-- and why, for the modlog.
+	CREATE TABLE IF NOT EXISTS mod_remove_community (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		mod_person_id INTEGER NOT NULL DEFAULT 0,
+		community_id INTEGER NOT NULL,
+		reason TEXT NOT NULL DEFAULT '',
+		removed INTEGER NOT NULL DEFAULT 1,
+		published INTEGER NOT NULL
+	);
 
 	CREATE TABLE IF NOT EXISTS community_moderator (
 		community_id INTEGER NOT NULL,
@@ -137,11 +150,13 @@ func (r *CommunityRegistry) load() error {
 			&c.FastCommentPause, &c.ModeratorNotes, &removed, &c.Shard, &c.Published, &c.Updated, &c.DeletedAt); err != nil {
 			return err
 		}
+		// deleted_at is when it was taken down either way; removed tells
+		// which.
 		c.Removed = removed != 0
-		c.Deleted = c.DeletedAt != 0
+		c.Deleted = c.DeletedAt != 0 && !c.Removed
 		c.Derive()
 		r.byID[c.ID] = c
-		if !c.Deleted {
+		if !c.DeletedOrRemoved() {
 			r.byName[communityKey(c.Name)] = c.ID
 		}
 	}
@@ -209,7 +224,7 @@ func (r *CommunityRegistry) Lookup(name string) (int64, bool) {
 }
 
 // ShardAssigner chooses the shard of a new community from its name and ID,
-// given the number of communities (soft-deleted ones included) already on
+// given the number of communities (taken-down ones included) already on
 // each shard.
 type ShardAssigner func(name string, id int64, communities map[int]int) int
 
@@ -224,7 +239,7 @@ func (r *CommunityRegistry) SetShardAssigner(assign ShardAssigner) {
 	r.assignShard = assign
 }
 
-// Shard returns the shard of the community id (including soft-deleted
+// Shard returns the shard of the community id (including taken-down
 // ones).
 func (r *CommunityRegistry) Shard(id int64) (int, bool) {
 	r.mu.RLock()
@@ -336,8 +351,8 @@ func (r *CommunityRegistry) Upsert(in *model.Community) (int64, error) {
 		// second community: the board (bid) already has one.
 		if in.BID != 0 {
 			for _, other := range r.byID {
-				if !other.Deleted && other.BID == in.BID {
-					return 0, fmt.Errorf("%w: board #%d is community %s (#%d); rename or delete it first",
+				if !other.DeletedOrRemoved() && other.BID == in.BID {
+					return 0, fmt.Errorf("%w: board #%d is community %s (#%d); rename or remove it first",
 						ErrCommunityExists, in.BID, other.Name, other.ID)
 				}
 			}
@@ -420,7 +435,7 @@ func (r *CommunityRegistry) Upsert(in *model.Community) (int64, error) {
 }
 
 // Name returns the name of the community with the given ID, including
-// soft-deleted ones, or "" if the ID is unknown.
+// taken-down ones, or "" if the ID is unknown.
 func (r *CommunityRegistry) Name(id int64) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -450,13 +465,13 @@ func (r *CommunityRegistry) GetByName(name string) (model.Community, bool) {
 	return model.Community{}, false
 }
 
-// Active reports whether id is a registered community that is not
-// soft-deleted.
+// Active reports whether id is a registered community that is not taken
+// down (deleted or removed).
 func (r *CommunityRegistry) Active(id int64) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	c, ok := r.byID[id]
-	return ok && !c.Deleted
+	return ok && !c.DeletedOrRemoved()
 }
 
 // Rename changes the name of the active community oldName to newName and
@@ -489,10 +504,14 @@ func (r *CommunityRegistry) Rename(oldName, newName string) (int64, error) {
 	return id, nil
 }
 
-// SoftDelete marks the active community name as deleted and returns its ID.
-// Its posts keep the ID, and the name can be registered again by a new
-// community (with a new ID).
-func (r *CommunityRegistry) SoftDelete(name string) (int64, error) {
+// RemoveCommunity takes the active community name down as the site does
+// (Lemmy's RemoveCommunity, by an admin, as mbbsd does when a board is
+// deleted), recording mod and reason as Lemmy's modlog does
+// (mod_remove_community), and returns its ID. Its posts keep the ID, and
+// the name can be registered again by a new community (with a new ID).
+// Unlike Lemmy, it cannot be restored (removed: false), as the name may
+// have been taken by then.
+func (r *CommunityRegistry) RemoveCommunity(name string, mod model.PersonID, reason string) (int64, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -502,19 +521,70 @@ func (r *CommunityRegistry) SoftDelete(name string) (int64, error) {
 		return 0, fmt.Errorf("%w: %s", ErrCommunityNotFound, name)
 	}
 	now := time.Now().Unix()
-	if _, err := r.db.Exec(`UPDATE community SET deleted_at = ?, updated = ? WHERE id = ?`, now, now, id); err != nil {
-		return 0, fmt.Errorf("delete community %s failed: %w", name, err)
+	tx, err := r.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`UPDATE community SET removed = 1, deleted_at = ?, updated = ? WHERE id = ?`, now, now, id); err != nil {
+		return 0, fmt.Errorf("remove community %s failed: %w", name, err)
+	}
+	if _, err := tx.Exec(`INSERT INTO mod_remove_community (mod_person_id, community_id, reason, removed, published) VALUES (?, ?, ?, 1, ?)`,
+		int64(mod), id, reason, now); err != nil {
+		return 0, fmt.Errorf("remove community %s failed: %w", name, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
 	}
 	delete(r.byName, key)
-	r.byID[id].Deleted = true
+	r.byID[id].Removed = true
+	r.byID[id].Deleted = false
 	r.byID[id].DeletedAt = now
 	r.byID[id].Updated = now
 	return id, nil
 }
 
-// Remove permanently removes the community id (and its moderators) from
-// the registry. The caller is responsible for removing its posts first.
-func (r *CommunityRegistry) Remove(id int64) error {
+// ModRemoveCommunity is a row of Lemmy's mod_remove_community: who removed
+// a community, when and why.
+type ModRemoveCommunity struct {
+	ID          int64
+	ModPersonID model.PersonID
+	CommunityID int64
+	Reason      string
+	Removed     bool
+	Published   int64
+}
+
+// ModRemoveCommunities returns the removals of the community id, oldest
+// first.
+func (r *CommunityRegistry) ModRemoveCommunities(id int64) ([]ModRemoveCommunity, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	rows, err := r.db.Query(`SELECT id, mod_person_id, community_id, reason, removed, published
+		FROM mod_remove_community WHERE community_id = ? ORDER BY id`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []ModRemoveCommunity
+	for rows.Next() {
+		var m ModRemoveCommunity
+		var mod int64
+		var removed int
+		if err := rows.Scan(&m.ID, &mod, &m.CommunityID, &m.Reason, &removed, &m.Published); err != nil {
+			return nil, err
+		}
+		m.ModPersonID = model.PersonID(mod)
+		m.Removed = removed != 0
+		list = append(list, m)
+	}
+	return list, rows.Err()
+}
+
+// Purge permanently removes the community id (and its moderators and its
+// modlog) from the registry (Lemmy's PurgeCommunity). The caller is
+// responsible for removing its posts first.
+func (r *CommunityRegistry) Purge(id int64) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -530,20 +600,23 @@ func (r *CommunityRegistry) Remove(id int64) error {
 	if _, err := tx.Exec(`DELETE FROM community_moderator WHERE community_id = ?`, id); err != nil {
 		return err
 	}
+	if _, err := tx.Exec(`DELETE FROM mod_remove_community WHERE community_id = ?`, id); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(`DELETE FROM community WHERE id = ?`, id); err != nil {
 		return fmt.Errorf("remove community #%d failed: %w", id, err)
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	if !c.Deleted {
+	if !c.DeletedOrRemoved() {
 		delete(r.byName, communityKey(c.Name))
 	}
 	delete(r.byID, id)
 	return nil
 }
 
-// List returns all registered communities (including soft-deleted ones)
+// List returns all registered communities (including taken-down ones)
 // ordered by ID.
 func (r *CommunityRegistry) List() []model.Community {
 	r.mu.RLock()

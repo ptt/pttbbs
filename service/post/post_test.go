@@ -1747,13 +1747,13 @@ func TestDeleteCommunity(t *testing.T) {
 	}
 	_, _ = engine.AddComment(&model.Comment{PostID: pKeep.ID, CreatorName: "c4", Content: "保留推文"})
 
-	// 3. Soft delete community "trashboard": its posts stay under its ID
-	trashID, err := engine.SoftDeleteCommunity("trashboard")
+	// 3. Remove community "trashboard": its posts stay under its ID
+	trashID, err := engine.RemoveCommunity("trashboard", 0, "")
 	if err != nil || trashID == 0 {
-		t.Fatalf("SoftDeleteCommunity failed: id=%d, err=%v", trashID, err)
+		t.Fatalf("RemoveCommunity failed: id=%d, err=%v", trashID, err)
 	}
 	if kept, err := engine.GetPost(p1.ID); err != nil || kept.CommunityID != trashID || kept.Community != "trashboard" {
-		t.Fatalf("expected p1 to be kept under #%d after soft delete, got %+v, err=%v", trashID, kept, err)
+		t.Fatalf("expected p1 to be kept under #%d after removal, got %+v, err=%v", trashID, kept, err)
 	}
 	if list, _ := engine.ListPosts("trashboard", 10, 0); len(list) != 0 {
 		t.Fatalf("expected no posts listed for the deleted name, got %d", len(list))
@@ -2862,11 +2862,18 @@ func TestServerCommunityCommands(t *testing.T) {
 		t.Fatalf("MOVE_COMMUNITY to an engine that does not exist: %s", resp)
 	}
 
-	if resp, _ := ipc("DELETE_COMMUNITY newboard"); resp != fmt.Sprintf("OK %d", oldID) {
-		t.Fatalf("DELETE_COMMUNITY: %s", resp)
+	if resp, _ := ipc("REMOVE_COMMUNITY newboard 4294968296 board closed"); resp != fmt.Sprintf("OK %d", oldID) {
+		t.Fatalf("REMOVE_COMMUNITY: %s", resp)
 	}
-	if resp, _ := ipc("DELETE_COMMUNITY NewBoard"); resp != "OK 0" {
-		t.Fatalf("DELETE_COMMUNITY of a deleted board: %s", resp)
+	if c, ok := st.Communities().Get(oldID); !ok || !c.Removed || c.Deleted {
+		t.Fatalf("removed community: %+v", c)
+	}
+	if log, err := st.Communities().ModRemoveCommunities(oldID); err != nil || len(log) != 1 ||
+		log[0].ModPersonID != 4294968296 || log[0].Reason != "board closed" {
+		t.Fatalf("mod_remove_community: %+v, %v", log, err)
+	}
+	if resp, _ := ipc("REMOVE_COMMUNITY NewBoard"); resp != "OK 0" {
+		t.Fatalf("REMOVE_COMMUNITY of a removed board: %s", resp)
 	}
 	resp, body := ipc("LIST_COMMUNITIES")
 	if first := strings.Split(strings.SplitN(body, "\n", 2)[0], "\t"); resp != "OK 2" || len(first) != 8 ||

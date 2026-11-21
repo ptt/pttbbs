@@ -82,9 +82,20 @@ func TestCommunityRegistry(t *testing.T) {
 		t.Fatalf("Rename case: %d %v name=%q", got, err, reg.Name(id))
 	}
 
-	// Soft delete frees the name; the old ID keeps its name.
-	if got, err := reg.SoftDelete("TEST"); err != nil || got != other {
-		t.Fatalf("SoftDelete = %d %v, want %d", got, err, other)
+	// Removing frees the name; the old ID keeps its name, and the modlog
+	// keeps who removed it and why.
+	if got, err := reg.RemoveCommunity("TEST", 1000, "closed"); err != nil || got != other {
+		t.Fatalf("RemoveCommunity = %d %v, want %d", got, err, other)
+	}
+	if c, ok := reg.Get(other); !ok || !c.Removed || c.Deleted || c.DeletedAt == 0 {
+		t.Fatalf("removed #%d = %+v", other, c)
+	}
+	if log, err := reg.ModRemoveCommunities(other); err != nil || len(log) != 1 ||
+		log[0].ModPersonID != 1000 || log[0].Reason != "closed" || !log[0].Removed {
+		t.Fatalf("ModRemoveCommunities = %+v, %v", log, err)
+	}
+	if _, err := reg.RemoveCommunity("TEST", 0, ""); !errors.Is(err, ErrCommunityNotFound) {
+		t.Fatalf("RemoveCommunity of a removed name: err = %v, want ErrCommunityNotFound", err)
 	}
 	if _, ok := reg.Lookup("Test"); ok {
 		t.Fatalf("Lookup of a deleted name succeeded")
@@ -107,17 +118,20 @@ func TestCommunityRegistry(t *testing.T) {
 	if got, _ := reg.Lookup("test"); got != newer {
 		t.Fatalf("after reopen Lookup(test) = %d, want %d", got, newer)
 	}
-	if c, ok := reg.Get(other); !ok || !c.Deleted || c.Name != "Test" {
+	if c, ok := reg.Get(other); !ok || !c.Removed || c.Deleted || c.Name != "Test" {
 		t.Fatalf("after reopen #%d = %+v", other, c)
 	}
 	if list := reg.List(); len(list) != 3 || list[0].ID != id || list[0].Name != "SysOp" {
 		t.Fatalf("List = %+v", list)
 	}
-	if err := reg.Remove(other); err != nil {
+	if err := reg.Purge(other); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := reg.Get(other); ok {
-		t.Fatalf("#%d still registered after Remove", other)
+		t.Fatalf("#%d still registered after Purge", other)
+	}
+	if log, _ := reg.ModRemoveCommunities(other); len(log) != 0 {
+		t.Fatalf("modlog of a purged community: %+v", log)
 	}
 }
 
@@ -179,13 +193,13 @@ func TestRenameCommunity(t *testing.T) {
 	}
 }
 
-func TestSoftDeleteKeepsBoardFiles(t *testing.T) {
+func TestRemoveCommunityKeepsBoardFiles(t *testing.T) {
 	e, _ := openTestEngine(t)
 
 	old := mustCreatePost(t, e, "Board", "M.1.A.001", "old board")
-	oldID, err := e.SoftDeleteCommunity("board")
+	oldID, err := e.RemoveCommunity("board", 0, "")
 	if err != nil || oldID != old.CommunityID {
-		t.Fatalf("SoftDeleteCommunity = %d %v", oldID, err)
+		t.Fatalf("RemoveCommunity = %d %v", oldID, err)
 	}
 	// The name may now belong to another board: the old posts must not
 	// touch its files.
@@ -362,8 +376,8 @@ func TestShardedCommunityRouting(t *testing.T) {
 		t.Fatalf("pinned post after rename: %+v, err=%v", got, err)
 	}
 
-	// Soft delete, re-create and purge by ID.
-	oldID, err := s.SoftDeleteCommunity(posts[2].Community)
+	// Remove, re-create and purge by ID.
+	oldID, err := s.RemoveCommunity(posts[2].Community, 0, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -536,14 +550,14 @@ func TestCommunityUpsert(t *testing.T) {
 		t.Fatalf("upsert of the same board: %v", err)
 	}
 
-	// Upserting a deleted name registers a new community.
-	if _, err := reg.SoftDelete("Test"); err != nil {
+	// Upserting a removed name registers a new community.
+	if _, err := reg.RemoveCommunity("Test", 0, ""); err != nil {
 		t.Fatal(err)
 	}
 	if id3, _ := reg.Upsert(&model.Community{Name: "Test"}); id3 == id {
-		t.Fatalf("upsert of a deleted name reused #%d", id)
+		t.Fatalf("upsert of a removed name reused #%d", id)
 	}
-	if err := reg.Remove(id); err != nil {
+	if err := reg.Purge(id); err != nil {
 		t.Fatal(err)
 	}
 }

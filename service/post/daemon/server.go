@@ -311,7 +311,7 @@ func (s *Server) decodeText(text string) string {
 }
 
 // resolveCommunityRef resolves an active community name, or #<id> for any
-// registered community (including soft-deleted ones), to its ID.
+// registered community (including taken-down ones), to its ID.
 func (s *Server) resolveCommunityRef(ref string) (int64, error) {
 	reg := s.storage.Communities()
 	if strings.HasPrefix(ref, "#") {
@@ -1517,16 +1517,27 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("OK %d\n", rev)))
 		}
 
-	case "DELETE_COMMUNITY":
-		// DELETE_COMMUNITY <community>
-		// Soft delete: the posts are kept under the ID of the community
-		// (until PURGE_COMMUNITY), and the name is free for a new board.
+	case "REMOVE_COMMUNITY":
+		// REMOVE_COMMUNITY <community> [<mod_person_id> [<reason>]]
+		// Lemmy's RemoveCommunity: the site takes the community down (mbbsd
+		// does when a board is deleted), by mod (0: the system) for reason
+		// (may be Big5), recorded as Lemmy's mod_remove_community. The
+		// posts are kept under the ID of the community (until
+		// PURGE_COMMUNITY), and the name is free for a new board.
 		// Replies OK <id>, or OK 0 if post.svc does not know the community.
 		if len(parts) < 2 || parts[1] == "" {
-			conn.Write([]byte("ERR invalid arguments for DELETE_COMMUNITY\n"))
+			conn.Write([]byte("ERR invalid arguments for REMOVE_COMMUNITY\n"))
 			return
 		}
-		id, err := s.storage.SoftDeleteCommunity(parts[1])
+		var mod model.PersonID
+		if len(parts) >= 3 {
+			mod = model.ParsePersonID(parts[2])
+		}
+		reason := ""
+		if len(parts) >= 4 {
+			reason = s.decodeText(strings.Join(parts[3:], " "))
+		}
+		id, err := s.storage.RemoveCommunity(parts[1], mod, reason)
 		if err != nil && !errors.Is(err, storage.ErrCommunityNotFound) {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1536,7 +1547,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 	case "PURGE_COMMUNITY":
 		// PURGE_COMMUNITY <community>|#<id>
 		// Removes all posts, comments, votes and cache of the community
-		// (which may be soft-deleted when given by ID) and unregisters it.
+		// (which may be taken down when given by ID) and unregisters it.
 		// Replies OK <id> <posts> <comments>.
 		if len(parts) < 2 || parts[1] == "" {
 			conn.Write([]byte("ERR invalid arguments for PURGE_COMMUNITY\n"))

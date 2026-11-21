@@ -41,9 +41,10 @@ type Storage interface {
 	ClearCommunity(community string) (int, int, error)
 	// RenameCommunity changes the name of a community and returns its ID.
 	RenameCommunity(oldName, newName string) (int64, error)
-	// SoftDeleteCommunity marks a community as deleted (keeping its posts
-	// under its ID) and returns its ID; the name becomes free.
-	SoftDeleteCommunity(name string) (int64, error)
+	// RemoveCommunity takes a community down as the site does (Lemmy's
+	// RemoveCommunity, by mod for reason), keeping its posts under its ID,
+	// and returns its ID; the name becomes free.
+	RemoveCommunity(name string, mod model.PersonID, reason string) (int64, error)
 	// PurgeCommunity removes all posts of the community id and unregisters it.
 	PurgeCommunity(id int64) (int, int, error)
 	// MergeCommunity moves the posts of community from to community to,

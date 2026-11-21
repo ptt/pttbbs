@@ -1330,7 +1330,7 @@ func (e *Engine) ClearCommunity(community string) (postsDeleted int, commentsDel
 }
 
 // PurgeCommunity completely removes all posts, comments, votes, history, and
-// cache of the community id (which may be soft-deleted), and then removes it
+// cache of the community id (which may be taken down), and then removes it
 // from the registry.
 func (e *Engine) PurgeCommunity(id int64) (postsDeleted int, commentsDeleted int, err error) {
 	if _, ok := e.reg.Get(id); !ok {
@@ -1340,7 +1340,7 @@ func (e *Engine) PurgeCommunity(id int64) (postsDeleted int, commentsDeleted int
 	if err != nil {
 		return postsDeleted, commentsDeleted, err
 	}
-	return postsDeleted, commentsDeleted, e.reg.Remove(id)
+	return postsDeleted, commentsDeleted, e.reg.Purge(id)
 }
 
 // RenameCommunity changes the name of a community and returns its ID.
@@ -1350,11 +1350,11 @@ func (e *Engine) RenameCommunity(oldName, newName string) (int64, error) {
 	return e.reg.Rename(oldName, newName)
 }
 
-// SoftDeleteCommunity marks a community as deleted and returns its ID. Its
-// posts are kept (and can be purged with PurgeCommunity), and the name can
-// be used by a new community.
-func (e *Engine) SoftDeleteCommunity(name string) (int64, error) {
-	return e.reg.SoftDelete(name)
+// RemoveCommunity takes a community down as the site does (Lemmy's
+// RemoveCommunity) and returns its ID. Its posts are kept (and can be purged
+// with PurgeCommunity), and the name can be used by a new community.
+func (e *Engine) RemoveCommunity(name string, mod model.PersonID, reason string) (int64, error) {
+	return e.reg.RemoveCommunity(name, mod, reason)
 }
 
 func (e *Engine) clearCommunity(community int64) (postsDeleted int, commentsDeleted int, err error) {

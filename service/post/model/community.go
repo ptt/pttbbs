@@ -39,9 +39,9 @@ type Community struct {
 	Description string `json:"description"` // longer description (not in .BRD yet)
 	Published   int64  `json:"published"`   // when post.svc first saw it
 	Updated     int64  `json:"updated,omitempty"`
-	Removed     bool   `json:"removed"` // taken down by the site (not used yet)
-	Deleted     bool   `json:"deleted"` // the board was deleted (soft delete)
-	DeletedAt   int64  `json:"deleted_at,omitempty"`
+	Removed     bool   `json:"removed"`              // taken down by the site (Lemmy's RemoveCommunity): the board was deleted in mbbsd
+	Deleted     bool   `json:"deleted"`              // deleted by its top moderator (Lemmy's DeleteCommunity; not done on PTT yet)
+	DeletedAt   int64  `json:"deleted_at,omitempty"` // when it was deleted or removed; its name is free from then on
 
 	// Derived from Flags (Lemmy names where Lemmy has the concept).
 	NSFW   bool `json:"nsfw"`   // BRD_OVER18
@@ -91,6 +91,13 @@ func (c *Community) Derive() {
 	c.CommentsDisabled = has(BrdNoComments)
 	c.DownvotesDisabled = has(BrdNoDownvote)
 	c.RepliesDisabled = has(BrdNoReply)
+}
+
+// DeletedOrRemoved reports whether it has been taken down at all. Its posts
+// stay under its ID (until it is purged), and its name may be used by a new
+// community.
+func (c *Community) DeletedOrRemoved() bool {
+	return c.Deleted || c.Removed
 }
 
 // rfc822Value keeps a header value on one line.

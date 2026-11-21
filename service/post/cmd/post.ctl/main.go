@@ -1263,23 +1263,30 @@ func main() {
 			fmt.Println("    The previous .DIR is kept as .DIR.bak-<time>.")
 		}
 
-	case "delete-community":
+	case "remove-community":
+		// Lemmy's RemoveCommunity, by the system (mod 0), as mbbsd does
+		// when a board is deleted.
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl delete-community <community>")
+			log.Fatalf("Usage: post.ctl remove-community <community> [reason]")
 		}
 		comm := args[1]
-		resp, _, err := sendCmd(fmt.Sprintf("DELETE_COMMUNITY %s\n", comm), nil)
+		reason := strings.Join(args[2:], " ")
+		cmdLine := fmt.Sprintf("REMOVE_COMMUNITY %s", comm)
+		if reason != "" {
+			cmdLine += " 0 " + reason
+		}
+		resp, _, err := sendCmd(cmdLine+"\n", nil)
 		if err != nil {
-			log.Fatalf("delete-community failed: %v", err)
+			log.Fatalf("remove-community failed: %v", err)
 		}
 		parts := strings.Fields(resp)
 		if len(parts) < 2 || parts[0] != "OK" {
-			log.Fatalf("delete-community failed: %s", resp)
+			log.Fatalf("remove-community failed: %s", resp)
 		}
 		if parts[1] == "0" {
-			fmt.Printf("Community '%s' is unknown to post.svc; nothing deleted.\n", comm)
+			fmt.Printf("Community '%s' is unknown to post.svc; nothing removed.\n", comm)
 		} else {
-			fmt.Printf("Community '%s' (#%s) deleted; its posts are kept until 'post.ctl purge-community #%s'.\n", comm, parts[1], parts[1])
+			fmt.Printf("Community '%s' (#%s) removed; its posts are kept until 'post.ctl purge-community #%s'.\n", comm, parts[1], parts[1])
 		}
 
 	case "purge-community":
@@ -1577,7 +1584,7 @@ Usage:
   post.ctl rename-community <old> <new>
   post.ctl merge-community <from> <to>
   post.ctl move-community <community> <engine> (move to another engine)
-  post.ctl delete-community <community>       (soft delete; posts are kept)
+  post.ctl remove-community <community> [reason] (posts are kept)
   post.ctl purge-community <community>|#<id>  (removes all posts)
   post.ctl vote <post> <user> [1|-1|0] [person_id] [ip] [ctime]
   post.ctl votes <post>

@@ -412,8 +412,8 @@ func (s *ShardedEngine) RenameCommunity(oldName, newName string) (int64, error) 
 	return s.reg.Rename(oldName, newName)
 }
 
-func (s *ShardedEngine) SoftDeleteCommunity(name string) (int64, error) {
-	return s.reg.SoftDelete(name)
+func (s *ShardedEngine) RemoveCommunity(name string, mod model.PersonID, reason string) (int64, error) {
+	return s.reg.RemoveCommunity(name, mod, reason)
 }
 
 func (s *ShardedEngine) PurgeCommunity(id int64) (int, int, error) {

@@ -270,7 +270,7 @@ func (s *Service) url(kind string, id int64) string {
 // community returns the community id if it may be served.
 func (s *Service) community(id int64) (model.Community, bool) {
 	c, ok := s.Storage.Communities().Get(id)
-	if !ok || c.Deleted || c.Hidden || c.Level != 0 {
+	if !ok || c.DeletedOrRemoved() || c.Hidden || c.Level != 0 {
 		return model.Community{}, false
 	}
 	return c, true
