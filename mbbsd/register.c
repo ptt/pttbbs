@@ -341,9 +341,6 @@ setupnewuser(const userec_t *user)
 
 	    fprintf(stdout, "尋找新帳號中, 請稍待片刻...\n\r");
 
-	    if ((fd = OpenCreate(FN_PASSWD, O_RDWR)) == -1)
-		return -1;
-
 	    /* 不曉得為什麼要從 2 開始... Ptt:因為SYSOP在1 */
 	    for (uid = 2; uid <= MAX_USERS; uid++) {
 		passwd_sync_query(uid, &utmp);
