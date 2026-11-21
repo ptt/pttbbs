@@ -188,15 +188,15 @@ test_create_post(void)
 
     // post.svc fails: nothing in the list.
     forget();
-    reply("POST", "ERR down");
+    reply("CREATE_POST", "ERR down");
     EXPECT_INT(bof_create_post(&alice, &req, NULL),
                BOF_ERR_COULDNT_CREATE_POST);
     EXPECT_INT(read_dir(recs, 4), 0);
 
     forget();
-    reply("POST", "OK 1");
+    reply("CREATE_POST", "OK 1");
     EXPECT_OK(bof_create_post(&alice, &req, NULL));
-    EXPECT(received("POST " BOARD " M.100.A.AAA alice 42 "));
+    EXPECT(received("CREATE_POST " BOARD " M.100.A.AAA alice 42 "));
     EXPECT_INT(read_dir(recs, 4), 1);
     EXPECT_STR(recs[0].filename, "M.100.A.AAA");
 
@@ -226,9 +226,10 @@ test_comments(void)
     bof_comment_response_t res = { .bbs_header = &updated };
 
     forget();
-    reply("COMMENT", "OK 3 1700000000 1 NEW 99");
+    reply("CREATE_COMMENT", "OK 3 1700000000 1 NEW 99");
     EXPECT_OK(bof_create_comment(&alice, &req, &res));
-    EXPECT(received("COMMENT " BOARD " M.200.A.AAA alice 42 127.0.0.1 "));
+    EXPECT(received("CREATE_COMMENT " BOARD
+                    " M.200.A.AAA alice 42 127.0.0.1 "));
     EXPECT_INT(res.bbs_floor, 3);
     EXPECT_INT(res.bbs_merged, 0);
     EXPECT_INT(updated.comments, 1);
@@ -238,7 +239,7 @@ test_comments(void)
 
     // Merged into the previous one: no new comment.
     fh = updated;
-    reply("COMMENT", "OK 3 1700000001 1 MERGED 99");
+    reply("CREATE_COMMENT", "OK 3 1700000001 1 MERGED 99");
     EXPECT_OK(bof_create_comment(&alice, &req, &res));
     EXPECT_INT(res.bbs_merged, 1);
     EXPECT_INT(updated.comments, 1);
@@ -246,7 +247,7 @@ test_comments(void)
 
     // post.svc fails: the record stays.
     fh = updated;
-    reply("COMMENT", "ERR down");
+    reply("CREATE_COMMENT", "ERR down");
     EXPECT_INT(bof_create_comment(&alice, &req, &res),
                BOF_ERR_COULDNT_CREATE_COMMENT);
     read_dir(recs, 8);
@@ -268,22 +269,23 @@ test_votes(void)
     bof_post_like_response_t res = { .bbs_header = &updated };
 
     forget();
-    reply("VOTE_FILE", "OK 1 0");
+    reply("CREATE_POST_LIKE_FILE", "OK 1 0");
     EXPECT_OK(bof_create_post_like(&alice, &req, &res));
-    EXPECT(received("VOTE_FILE " BOARD " M.300.A.AAA alice 42 1 127.0.0.1 "));
+    EXPECT(received("CREATE_POST_LIKE_FILE " BOARD
+                    " M.300.A.AAA alice 42 1 127.0.0.1 "));
     EXPECT_INT(res.bbs_score_delta, 1);
     EXPECT_INT(updated.score, 1);
 
     // The same vote again changes nothing.
     fh = updated;
-    reply("VOTE_FILE", "OK 0 0");
+    reply("CREATE_POST_LIKE_FILE", "OK 0 0");
     EXPECT_OK(bof_create_post_like(&alice, &req, &res));
     EXPECT_INT(res.bbs_score_delta, 0);
     read_dir(recs, 8);
     EXPECT_INT(recs[n - 1].score, 1);
 
     // Changed to a boo: one up less, one down more.
-    reply("VOTE_FILE", "OK -1 1");
+    reply("CREATE_POST_LIKE_FILE", "OK -1 1");
     req.score = -1;
     EXPECT_OK(bof_create_post_like(&alice, &req, &res));
     EXPECT_INT(res.bbs_score_delta, -2);
@@ -336,7 +338,7 @@ test_comment_lines_and_revisions(void)
     bof_get_comments_response_t res = { .comments = cs };
 
     // A comment of several lines keeps them.
-    reply("COMMENTS_FILE",
+    reply("GET_COMMENTS_FILE",
           "OK 1\n1\tbob\t1700000000\t-\t1\t-\t9\tline one\tline two");
     EXPECT_OK(bof_get_comments(&req, &res));
     EXPECT_INT(res.count, 1);
@@ -348,12 +350,12 @@ test_comment_lines_and_revisions(void)
         .post = req.post, .bbs_floor = 1, .limit = 4,
     };
     bof_get_comment_revisions_response_t rres = { .revisions = revs };
-    reply("COMMENT_HISTORY_FILE",
+    reply("GET_COMMENT_REVISIONS_FILE",
           "OK 2\n1\t1700000000\tbob\tedit\t-\told\tlines\n"
           "2\t1700000100\tboss\tdelete\tspam\tbad");
     forget();
     EXPECT_OK(bof_get_comment_revisions(&rreq, &rres));
-    EXPECT(received("COMMENT_HISTORY_FILE " BOARD " M.600.A.AAA 1"));
+    EXPECT(received("GET_COMMENT_REVISIONS_FILE " BOARD " M.600.A.AAA 1"));
     EXPECT_INT(rres.count, 2);
     EXPECT_INT(revs[0].number, 1);
     EXPECT_STR(revs[0].content, "old\nlines");
@@ -384,15 +386,58 @@ test_purge(void)
         .community = BOARD, .bbs_dir = DIRPATH, .bbs_selected = select_500,
         .reason = "expire",
     };
-    // post.svc keeps it as deleted; the cache drops it.
+    // post.svc keeps it as removed by the system; the cache drops it.
     forget();
-    reply("DELETE_POST_FILE", "OK");
+    reply("REMOVE_POST_FILE", "OK");
     EXPECT_OK(bof_purge_posts(&sys, &req, &count));
     EXPECT_INT(count, 1);
-    EXPECT(received("DELETE_POST_FILE " BOARD " M.500.A.AAA system 0 expire"));
-    EXPECT(!received("DELETE_POST_FILE " BOARD " M.501"));
+    EXPECT(received("REMOVE_POST_FILE " BOARD " M.500.A.AAA system 0 expire"));
+    EXPECT(!received("REMOVE_POST_FILE " BOARD " M.501"));
     EXPECT_INT(read_dir(recs, 16), n - 1);
     EXPECT(access(BDIR "/M.500.A.AAA", F_OK) != 0);
+}
+
+// DeletePost and RemovePost go to post.svc as such: deleted by the
+// creator without a reason, or removed by a moderator with one.
+static void
+test_delete_and_remove(void)
+{
+    fileheader_t recs[16];
+    bof_actor_t mod = { .name = "boss", .bbs_local_user = 7 };
+    bof_post_result_t res;
+    int n;
+
+    make_post("M.510.A.AAA");
+    make_post("M.511.A.AAA");
+    n = read_dir(recs, 16);
+    reply("DELETE_POST_FILE", "OK 1");
+    reply("REMOVE_POST_FILE", "OK 1");
+
+    forget();
+    bof_delete_post_t del = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = n - 1,
+            .bbs_header = &recs[n - 2],
+        },
+        .deleted = 1,
+    };
+    EXPECT_OK(bof_delete_post(&alice, &del, &res));
+    EXPECT(received("DELETE_POST_FILE " BOARD " M.510.A.AAA alice 42"));
+    EXPECT(!received("DELETE_POST_FILE " BOARD " M.510.A.AAA alice 42 "));
+    EXPECT(!received("REMOVE_POST_FILE"));
+
+    forget();
+    n = read_dir(recs, 16);
+    bof_remove_post_t rm = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = n,
+            .bbs_header = &recs[n - 1],
+        },
+        .removed = 1, .reason = "spam",
+    };
+    EXPECT_OK(bof_remove_post(&mod, &rm, &res));
+    EXPECT(received("REMOVE_POST_FILE " BOARD " M.511.A.AAA boss 7 spam"));
+    EXPECT(!received("DELETE_POST_FILE"));
 }
 
 static void
@@ -423,10 +468,11 @@ test_create_named_and_from_body(void)
         .body = "line one",
     };
     forget();
-    reply("POST", "OK 2");
+    reply("CREATE_POST", "OK 2");
     EXPECT_OK(bof_create_post(&alice, &req, &res));
     EXPECT(strncmp(got.filename, "M.", 2) == 0);
-    snprintf(buf, sizeof(buf), "POST " BOARD " %s alice 42 ", got.filename);
+    snprintf(buf, sizeof(buf), "CREATE_POST " BOARD " %s alice 42 ",
+             got.filename);
     EXPECT(received(buf));
     snprintf(path, sizeof(path), BDIR "/%s", got.filename);
     fp = fopen(path, "r");
@@ -452,14 +498,15 @@ test_ids_and_revisions(void)
     int revs = 0;
 
     // Post IDs and their keys are post.svc's.
-    reply("GET_POST", "OK 42 0 " BOARD " M.700.A.AAA alice 42 1 0 0 0 0 5 9");
+    reply("GET_POST_FILE",
+          "OK 42 0 " BOARD " M.700.A.AAA alice 42 1 0 0 0 0 5 9");
     EXPECT_OK(bof_bbs_get_post_id(&post, &id));
     EXPECT_INT(id, 42);
-    reply("GET_POST_ID", "OK 42 0 " BOARD " M.700.A.AAA alice 42 1 0 0 0 0 5 9");
+    reply("GET_POST", "OK 42 0 " BOARD " M.700.A.AAA alice 42 1 0 0 0 0 5 9");
     EXPECT_OK(bof_bbs_get_post_key(42, &key));
     EXPECT_STR(key.community, BOARD);
     EXPECT_STR(key.bbs_post_file, "M.700.A.AAA");
-    reply("GET_POST_ID", "ERR post not found");
+    reply("GET_POST", "ERR post not found");
     EXPECT_INT(bof_bbs_get_post_key(43, &key), BOF_ERR_COULDNT_FIND_POST);
     // So are those of communities.
     reply("GET_COMMUNITY", "OK 40\nEncoding: utf-8\nID: 7\nName: " BOARD);
@@ -467,13 +514,13 @@ test_ids_and_revisions(void)
     EXPECT_INT(cid, 7);
 
     // The versions post.svc keeps, oldest first; one fetched by its rev.
-    reply("POST_HISTORY_FILE",
+    reply("GET_POST_REVISIONS_FILE",
           "OK 2\n3\t1700000000\talice\told title\n5\t1700000100\tbob");
     EXPECT_OK(bof_bbs_get_post_revisions(&post, &revs));
     EXPECT_INT(revs, 2);
     forget();
     EXPECT_OK(bof_bbs_get_post_revision_file(&post, 2, path, sizeof(path)));
-    EXPECT(received("POST_HISTORY_FILE " BOARD " M.700.A.AAA 5 "));
+    EXPECT(received("GET_POST_REVISIONS_FILE " BOARD " M.700.A.AAA 5 "));
     EXPECT_INT(bof_bbs_get_post_revision_file(&post, 3, path, sizeof(path)),
                BOF_ERR_COULDNT_FIND_POST);
     // Who saved them and when.
@@ -492,7 +539,7 @@ test_ids_and_revisions(void)
     EXPECT_INT(lres.count, 1);
     EXPECT_STR(info[0].editor, "bob");
     // None there: the time capsule of the files (none either).
-    reply("POST_HISTORY_FILE", "OK 0");
+    reply("GET_POST_REVISIONS_FILE", "OK 0");
     EXPECT_OK(bof_bbs_get_post_revisions(&post, &revs));
     EXPECT_INT(revs, 0);
 }
@@ -526,7 +573,7 @@ test_cache_failure_pages_and_addresses(void)
         .body = "text",
     };
     memset(&got, 0, sizeof(got));
-    reply("POST", "OK 3");
+    reply("CREATE_POST", "OK 3");
     EXPECT_OK(bof_create_post(&alice, &req, &res));
     EXPECT(strncmp(got.filename, "M.", 2) == 0);
     EXPECT_STR(got.title, "cached later");
@@ -539,12 +586,12 @@ test_cache_failure_pages_and_addresses(void)
         .page = 3, .limit = 2,
     };
     bof_get_comments_response_t gres = { .comments = cs };
-    reply("COMMENTS_FILE",
+    reply("GET_COMMENTS_FILE",
           "OK 2\n5\tbob\t1700000000\t1.2.3.4\t1\t-\t9\tfive\n"
           "6\tbob\t1700000000\t1.2.3.4\t1\t-\t10\tsix");
     forget();
     EXPECT_OK(bof_get_comments(&get, &gres));
-    EXPECT(received("COMMENTS_FILE " BOARD " M.700.A.AAA 5 2 -"));
+    EXPECT(received("GET_COMMENTS_FILE " BOARD " M.700.A.AAA 5 2 -"));
     EXPECT_INT(gres.count, 2);
     EXPECT_INT(cs[0].bbs_floor, 5);
     // The address is private on a board that does not show it.
@@ -553,7 +600,7 @@ test_cache_failure_pages_and_addresses(void)
     get.bbs_creator = "bob";
     forget();
     EXPECT_OK(bof_get_comments(&get, &gres));
-    EXPECT(received("COMMENTS_FILE " BOARD " M.700.A.AAA 1 4 bob"));
+    EXPECT(received("GET_COMMENTS_FILE " BOARD " M.700.A.AAA 1 4 bob"));
     EXPECT_INT(gres.count, 0);  // the first two of bob are skipped
     // Shown where the board shows it.
     bcache[0].brdattr |= BRD_COMMENT_SHOWIP;
@@ -590,6 +637,7 @@ main(void)
     RUN(test_votes);
     RUN(test_body_and_refresh);
     RUN(test_purge);
+    RUN(test_delete_and_remove);
     RUN(test_comment_lines_and_revisions);
     RUN(test_reports_stay_in_files);
     RUN(test_create_named_and_from_body);

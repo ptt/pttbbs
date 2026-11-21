@@ -2626,7 +2626,19 @@ func (e *Engine) UpdatePostTitleByCommunityFile(community, postFile, newTitle, e
 	return e.UpdatePostTitle(p.ID, newTitle, editorName, editorID)
 }
 
+// DeletePost takes the post down on behalf of deleterName / deleterID: as
+// deleted if that is its creator, else as removed (model.Deletion.Delete).
 func (e *Engine) DeletePost(postID uint64, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
+	return e.takeDownPost(postID, deleterName, deleterID, reason, false)
+}
+
+// RemovePost takes the post down as removed by the moderator modName /
+// modID for reason (Lemmy's RemovePost), even if that is its creator.
+func (e *Engine) RemovePost(postID uint64, modName string, modID model.PersonID, reason string) (uint32, error) {
+	return e.takeDownPost(postID, modName, modID, reason, true)
+}
+
+func (e *Engine) takeDownPost(postID uint64, deleterName string, deleterID model.PersonID, reason string, remove bool) (uint32, error) {
 	p, err := e.GetPost(postID)
 	if err != nil {
 		return 0, err
@@ -2685,7 +2697,11 @@ func (e *Engine) DeletePost(postID uint64, deleterName string, deleterID model.P
 	}
 
 	// 3. Update post state
-	p.Deletion.Delete(p.CreatorName, p.CreatorID, deleterName, deleterID, reason, now)
+	if remove {
+		p.Deletion.Remove(deleterName, deleterID, reason, now)
+	} else {
+		p.Deletion.Delete(p.CreatorName, p.CreatorID, deleterName, deleterID, reason, now)
+	}
 	p.Modified = now
 	postKey := model.EncodePostKey(p.ID)
 	postVal := model.EncodeRFC822Post(p)
@@ -2838,7 +2854,19 @@ func (e *Engine) UpdateCommentByCommunityFile(community, postFile string, seq ui
 	return e.UpdateComment(p.ID, seq, newContent, editorName, editorID)
 }
 
+// DeleteComment takes the comment down on behalf of deleterName /
+// deleterID: as deleted if that is its creator, else as removed.
 func (e *Engine) DeleteComment(postID uint64, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
+	return e.takeDownComment(postID, seq, deleterName, deleterID, reason, false)
+}
+
+// RemoveComment takes the comment down as removed by the moderator modName
+// / modID for reason (Lemmy's RemoveComment), even if that is its creator.
+func (e *Engine) RemoveComment(postID uint64, seq uint32, modName string, modID model.PersonID, reason string) (uint32, error) {
+	return e.takeDownComment(postID, seq, modName, modID, reason, true)
+}
+
+func (e *Engine) takeDownComment(postID uint64, seq uint32, deleterName string, deleterID model.PersonID, reason string, remove bool) (uint32, error) {
 	cKey := model.EncodeCommentKey(postID, seq)
 	val, closer, err := e.commentsDB.Get(cKey)
 	if err != nil {
@@ -2898,7 +2926,11 @@ func (e *Engine) DeleteComment(postID uint64, seq uint32, deleterName string, de
 	}
 
 	// 3. Update current comment state
-	currentComment.Deletion.Delete(currentComment.CreatorName, currentComment.CreatorID, deleterName, deleterID, reason, now)
+	if remove {
+		currentComment.Deletion.Remove(deleterName, deleterID, reason, now)
+	} else {
+		currentComment.Deletion.Delete(currentComment.CreatorName, currentComment.CreatorID, deleterName, deleterID, reason, now)
+	}
 	newVal := model.EncodeRFC822Comment(currentComment)
 	if err := e.commentsDB.Set(cKey, newVal, pebble.NoSync); err != nil {
 		return 0, fmt.Errorf("delete comment failed: %w", err)

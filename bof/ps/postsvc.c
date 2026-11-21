@@ -16,8 +16,8 @@
  * RENDER_FILE where it matters). Reports and the modlog, which post.svc
  * does not keep, stay in the files.
  *
- * Posts are named by board and file name, as post.svc keys them
- * (POST_FILE, DELETE_POST_FILE, ...). Persons are sent by name and by
+ * Posts are named by board and file name, as post.svc keys them (the
+ * *_FILE commands, e.g. REMOVE_POST_FILE). Persons are sent by name and by
  * their account (bof_actor_t.bbs_local_user).
  */
 
@@ -335,7 +335,7 @@ ps_create_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     money = (fh->filemode & (FILE_ANONYMOUS | FILE_PETITION)) ?
         0 : fh->multi.money;
     snprintf(hdr, sizeof(hdr),
-             "POST %s %s %s %" PRIu64 " %d %d %ld 0 %zu %zu\n",
+             "CREATE_POST %s %s %s %" PRIu64 " %d %d %ld 0 %zu %zu\n",
              req->community, fh->filename, author, author_uid, fh->filemode,
              money, (long)time4(NULL), strlen(title), strlen(body));
     ok = svc_ok(svc_call(hdr, title, strlen(title), body, strlen(body)),
@@ -388,7 +388,7 @@ ps_create_post_like(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 
     if (!valid(post))
         return BOF_ERR_INVALID_BODY_FIELD;
-    if (!svc_cmd(resp, sizeof(resp), "VOTE_FILE %s %s %s %" PRIu64
+    if (!svc_cmd(resp, sizeof(resp), "CREATE_POST_LIKE_FILE %s %s %s %" PRIu64
                  " %d %s %ld\n", post->community, post->bbs_header->filename,
                  who(actor), uid(actor), req->score, from(actor),
                  (long)time4(NULL)))
@@ -432,7 +432,7 @@ ps_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
             free(body);
             return BOF_ERR_COULDNT_UPDATE_POST;
         }
-        snprintf(hdr, sizeof(hdr), "UPDATE_POST_FILE %s %s %s %" PRIu64
+        snprintf(hdr, sizeof(hdr), "EDIT_POST_FILE %s %s %s %" PRIu64
                  " %lld %zu %zu\n", post->community, fh->filename, who(actor),
                  uid(actor), (long long)expected, strlen(title), strlen(body));
         svc_ok(svc_call(hdr, title, strlen(title), body, strlen(body)), resp,
@@ -463,7 +463,7 @@ ps_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 
         if (!title)
             return BOF_ERR_COULDNT_UPDATE_POST;
-        snprintf(hdr, sizeof(hdr), "UPDATE_POST_TITLE_FILE %s %s %s %" PRIu64
+        snprintf(hdr, sizeof(hdr), "EDIT_POST_TITLE_FILE %s %s %s %" PRIu64
                  " %zu\n", post->community, fh->filename, who(actor),
                  uid(actor), strlen(title));
         ok = svc_ok(svc_call(hdr, title, strlen(title), NULL, 0), NULL, 0);
@@ -488,24 +488,30 @@ ps_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     return BOF_OK;
 }
 
-// What deleting and removing share: post.svc keeps it as deleted (or
-// removed, with a reason); the cache archives the article and drops (or
-// keeps a tombstone of) the record.
+// What deleting and removing share: post.svc keeps it as deleted by its
+// creator (DELETE_POST_FILE, without a reason: reason is NULL) or as
+// removed, with a reason (REMOVE_POST_FILE); the cache archives the
+// article and drops (or keeps a tombstone of) the record.
 static bof_error_t
 drop_post(const bof_actor_t *actor, const bof_post_ref_t *post,
           const char *reason)
 {
-    char *why;
+    char *why = NULL;
     int ok;
 
     if (!valid(post))
         return BOF_ERR_INVALID_BODY_FIELD;
     // The article as it is, to be archived from the cache.
     render_post(post);
-    why = to_svc(reason ? reason : "");
-    ok = why && svc_cmd(NULL, 0, "DELETE_POST_FILE %s %s %s %" PRIu64 " %s\n",
-                        post->community, post->bbs_header->filename,
-                        who(actor), uid(actor), why);
+    if (!reason)
+        ok = svc_cmd(NULL, 0, "DELETE_POST_FILE %s %s %s %" PRIu64 "\n",
+                     post->community, post->bbs_header->filename,
+                     who(actor), uid(actor));
+    else
+        ok = (why = to_svc(reason)) &&
+             svc_cmd(NULL, 0, "REMOVE_POST_FILE %s %s %s %" PRIu64 " %s\n",
+                     post->community, post->bbs_header->filename,
+                     who(actor), uid(actor), why);
     free(why);
     return ok ? BOF_OK : BOF_ERR_COULDNT_UPDATE_POST;
 }
@@ -522,7 +528,8 @@ static bof_error_t
 ps_remove_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                const bof_remove_post_t *req, bof_post_result_t *out)
 {
-    bof_error_t err = drop_post(actor, &req->post, req->reason);
+    bof_error_t err = drop_post(actor, &req->post,
+                                req->reason ? req->reason : "");
     return err != BOF_OK ? err : bof_fs_remove_post(NULL, actor, req, out);
 }
 
@@ -545,7 +552,7 @@ ps_remove_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
             .community = req->community, .bbs_dir = req->bbs_dir,
             .bbs_index = index, .bbs_header = &fh,
         };
-        drop_post(actor, &post, req->reason);
+        drop_post(actor, &post, req->reason ? req->reason : "");
     }
     close(fd);
     return bof_fs_remove_posts(NULL, actor, req, count);
@@ -573,7 +580,7 @@ ps_purge_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         if (!fh.filename[0] || fh.owner[0] == '-' ||
             !req->bbs_selected(&fh, index, req->bbs_ctx))
             continue;
-        svc_cmd(NULL, 0, "DELETE_POST_FILE %s %.*s %s %" PRIu64 " %s\n",
+        svc_cmd(NULL, 0, "REMOVE_POST_FILE %s %.*s %s %" PRIu64 " %s\n",
                 req->community, (int)sizeof(fh.filename), fh.filename,
                 who(actor), uid(actor), why);
     }
@@ -589,7 +596,7 @@ ps_restore_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 {
     if (!req->community || !req->bbs_archived)
         return BOF_ERR_INVALID_BODY_FIELD;
-    if (!svc_cmd(NULL, 0, "UNDELETE_POST_FILE %s %s\n", req->community,
+    if (!svc_cmd(NULL, 0, "RECOVER_POST_FILE %s %s\n", req->community,
                  req->bbs_archived->filename))
         return BOF_ERR_COULDNT_UPDATE_POST;
     return bof_fs_bbs_restore_post(NULL, actor, req, out);
@@ -654,7 +661,7 @@ ps_reset_post_score(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 
     if (!valid(post))
         return BOF_ERR_INVALID_BODY_FIELD;
-    if (!svc_cmd(NULL, 0, "RESET_VOTES_FILE %s %s\n", post->community,
+    if (!svc_cmd(NULL, 0, "RESET_POST_SCORE_FILE %s %s\n", post->community,
                  post->bbs_header->filename))
         return BOF_ERR_COULDNT_UPDATE_POST;
     return bof_fs_bbs_reset_post_score(NULL, actor, req, out);
@@ -710,7 +717,7 @@ ps_mask_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         free(body);
         return BOF_ERR_UNKNOWN;
     }
-    snprintf(hdr, sizeof(hdr), "UPDATE_POST_FILE %s %s %s %" PRIu64
+    snprintf(hdr, sizeof(hdr), "EDIT_POST_FILE %s %s %s %" PRIu64
              " %lld %zu %zu\n", post->community, post->bbs_header->filename,
              who(actor), uid(actor), (long long)modified, strlen(title),
              strlen(body));
@@ -738,7 +745,7 @@ ps_remove_crosspost(void *ctx GCC_UNUSED, const bof_actor_t *actor,
             .community = req->community, .bbs_dir = req->bbs_dir,
             .bbs_header = req->bbs_header,
         };
-        drop_post(actor, &post, req->reason);
+        drop_post(actor, &post, req->reason ? req->reason : "");
     }
     return bof_fs_bbs_remove_crosspost(NULL, actor, req, out);
 }
@@ -777,9 +784,11 @@ ps_create_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     if (!(msg = comment_to_svc(req->bbs_text ? req->bbs_text :
                                req->content)))
         return BOF_ERR_UNKNOWN;
-    // post.svc keeps votes apart (VOTE_FILE): the type is how it is shown.
+    // post.svc keeps votes apart (CREATE_POST_LIKE_FILE): the type is how
+    // it is shown.
     legtype = req->bbs_vote > 0 ? 1 : req->bbs_vote < 0 ? 2 : 3;
-    snprintf(hdr, sizeof(hdr), "COMMENT %s %s %s %" PRIu64 " %s %ld %zu %d\n",
+    snprintf(hdr, sizeof(hdr),
+             "CREATE_COMMENT %s %s %s %" PRIu64 " %s %ld %zu %d\n",
              post->community, post->bbs_header->filename, who(actor),
              uid(actor), from(actor), (long)time4(NULL), strlen(msg),
              legtype);
@@ -841,7 +850,7 @@ ps_edit_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         return BOF_ERR_INVALID_BODY_FIELD;
     if (!(msg = comment_to_svc(req->content)))
         return BOF_ERR_UNKNOWN;
-    snprintf(hdr, sizeof(hdr), "UPDATE_COMMENT_FILE %s %s %d %s %" PRIu64
+    snprintf(hdr, sizeof(hdr), "EDIT_COMMENT_FILE %s %s %d %s %" PRIu64
              " %zu\n", post->community, post->bbs_header->filename,
              req->bbs_floor, who(actor), uid(actor), strlen(msg));
     ok = svc_ok(svc_call(hdr, msg, strlen(msg), NULL, 0), NULL, 0);
@@ -851,15 +860,24 @@ ps_edit_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     return comment_changed(post, out);
 }
 
+// Deletes a comment as its creator (DELETE_COMMENT_FILE; reason is NULL)
+// or removes it for reason (REMOVE_COMMENT_FILE).
 static bof_error_t
 delete_comment(const bof_actor_t *actor, const bof_post_ref_t *post,
                int floor, const char *reason, bof_comment_response_t *out)
 {
-    char *why = to_svc(reason ? reason : "");
-    int ok = why && svc_cmd(NULL, 0, "DELETE_COMMENT_FILE %s %s %d %s %"
-                            PRIu64 " %s\n", post->community,
-                            post->bbs_header->filename, floor, who(actor),
-                            uid(actor), why);
+    char *why = NULL;
+    int ok;
+
+    if (!reason)
+        ok = svc_cmd(NULL, 0, "DELETE_COMMENT_FILE %s %s %d %s %" PRIu64 "\n",
+                     post->community, post->bbs_header->filename, floor,
+                     who(actor), uid(actor));
+    else
+        ok = (why = to_svc(reason)) &&
+             svc_cmd(NULL, 0, "REMOVE_COMMENT_FILE %s %s %d %s %" PRIu64
+                     " %s\n", post->community, post->bbs_header->filename,
+                     floor, who(actor), uid(actor), why);
     free(why);
     if (!ok)
         return BOF_ERR_COULDNT_FIND_COMMENT;
@@ -873,7 +891,7 @@ ps_delete_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 {
     if (!valid(&req->post) || req->bbs_floor <= 0)
         return BOF_ERR_INVALID_BODY_FIELD;
-    // Taking a comment back is not supported yet (UNDELETE_COMMENT_FILE).
+    // Taking a comment back is not supported yet (RECOVER_COMMENT_FILE).
     if (!req->deleted)
         return BOF_ERR_BBS_STORAGE_NOT_SUPPORTED;
     return delete_comment(actor, &req->post, req->bbs_floor, NULL, out);
@@ -907,7 +925,8 @@ ps_remove_comment(void *ctx, const bof_actor_t *actor,
     }
     if (floor <= 0)
         return BOF_ERR_COULDNT_FIND_COMMENT;
-    return delete_comment(actor, &req->post, floor, req->reason, out);
+    return delete_comment(actor, &req->post, floor,
+                          req->reason ? req->reason : "", out);
 }
 
 // --------------------------------------------------------------------------
@@ -987,7 +1006,7 @@ ps_get_comments(void *ctx GCC_UNUSED, const bof_get_comments_t *req,
             start = (req->page - 1) * req->limit + 1;
         }
     }
-    snprintf(cmd, sizeof(cmd), "COMMENTS_FILE %s %s %d %d %s\n",
+    snprintf(cmd, sizeof(cmd), "GET_COMMENTS_FILE %s %s %d %d %s\n",
              post->community, post->bbs_header->filename, start, limit,
              by_creator ? req->bbs_creator : "-");
     if (!(r = svc_call(cmd, NULL, 0, NULL, 0)))
@@ -1042,7 +1061,7 @@ ps_get_comments(void *ctx GCC_UNUSED, const bof_get_comments_t *req,
     return BOF_OK;
 }
 
-// COMMENT_HISTORY_FILE: "OK <n>", then a line per revision, oldest first:
+// GET_COMMENT_REVISIONS_FILE: "OK <n>", then a line per revision, oldest first:
 // <rev> <edited_at> <editor> [<edit|delete> <reason or ->] <lines...>,
 // separated by tabs.
 static bof_error_t
@@ -1056,7 +1075,7 @@ ps_get_comment_revisions(void *ctx GCC_UNUSED,
     out->count = 0;
     if (!post->community || !post->bbs_header)
         return BOF_ERR_INVALID_BODY_FIELD;
-    snprintf(cmd, sizeof(cmd), "COMMENT_HISTORY_FILE %s %s %d\n",
+    snprintf(cmd, sizeof(cmd), "GET_COMMENT_REVISIONS_FILE %s %s %d\n",
              post->community, post->bbs_header->filename, req->bbs_floor);
     if (!(r = svc_call(cmd, NULL, 0, NULL, 0)))
         return BOF_ERR_COULDNT_FIND_COMMENT;
@@ -1111,8 +1130,8 @@ ps_get_post_id(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
     if (!post->community || !post->bbs_header ||
         !post->bbs_header->filename[0])
         return BOF_ERR_INVALID_BODY_FIELD;
-    // GET_POST <community> <file>: OK <id> ... (and the post, not needed).
-    if (!svc_cmd(resp, sizeof(resp), "GET_POST %s %s\n", post->community,
+    // GET_POST_FILE <community> <file>: OK <id> ... (and the post, not needed).
+    if (!svc_cmd(resp, sizeof(resp), "GET_POST_FILE %s %s\n", post->community,
                  post->bbs_header->filename) ||
         sscanf(resp, "OK %llu", &v) != 1 || !v || v > INT32_MAX)
         return BOF_ERR_COULDNT_FIND_POST;
@@ -1126,8 +1145,8 @@ ps_get_post_key(void *ctx GCC_UNUSED, bof_post_id_t id, bof_post_key_t *key)
     char resp[256], community[BOF_COMMUNITY_NAME_MAX];
     char file[BOF_POST_FILE_MAX];
 
-    // GET_POST_ID <id>: OK <id> <parent> <community> <file> ...
-    if (!svc_cmd(resp, sizeof(resp), "GET_POST_ID %lld\n", (long long)id) ||
+    // GET_POST <id>: OK <id> <parent> <community> <file> ...
+    if (!svc_cmd(resp, sizeof(resp), "GET_POST %lld\n", (long long)id) ||
         sscanf(resp, "OK %*u %*u %15s %31s", community, file) != 2)
         return BOF_ERR_COULDNT_FIND_POST;
     strlcpy(key->community, community, sizeof(key->community));
@@ -1157,7 +1176,7 @@ ps_get_community_id(void *ctx GCC_UNUSED, const char *name,
 }
 
 // --------------------------------------------------------------------------
-// The versions of posts: post.svc keeps them (POST_HISTORY_FILE); posts
+// The versions of posts: post.svc keeps them (GET_POST_REVISIONS_FILE); posts
 // from before it, in the time capsule of the files.
 
 // The versions post.svc keeps of post, oldest first: their revision
@@ -1172,7 +1191,7 @@ svc_revisions(const bof_post_ref_t *post, int *revs,
     int count = 0, n = 0;
 
     if (!post->community || snprintf(cmd, sizeof(cmd),
-                                     "POST_HISTORY_FILE %s %s\n",
+                                     "GET_POST_REVISIONS_FILE %s %s\n",
                                      post->community,
                                      post->bbs_header->filename) >=
         (int)sizeof(cmd))
@@ -1242,7 +1261,7 @@ ps_get_post_revision_file(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
         return BOF_ERR_COULDNT_FIND_POST;
     // Fetched into a file of the process, valid until the next call.
     snprintf(path, sz, BBSHOME "/tmp/bof_rev.%d", (int)getpid());
-    if (!svc_cmd(NULL, 0, "POST_HISTORY_FILE %s %s %d %s\n",
+    if (!svc_cmd(NULL, 0, "GET_POST_REVISIONS_FILE %s %s %d %s\n",
                  post->community, post->bbs_header->filename,
                  revs[rev - 1], path))
         return BOF_ERR_COULDNT_FIND_POST;

@@ -409,12 +409,12 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("Expected PONG, got %q", resp)
 	}
 
-	// 2. Create Post via IPC (Protocol A: POST)
+	// 2. Create Post via IPC (Protocol A: CREATE_POST)
 	conn2, _ := net.Dial("unix", sockPath)
 	defer conn2.Close()
 	titleB := []byte("[閒聊] 新世代 post.svc 上線")
 	contentB := []byte("全站 Reddit 化與 Pebble+SQLite 混合儲存測試。\n")
-	hdr := fmt.Sprintf("POST c_chat M.1727800000.A.002 hungte 12345678 0 0 0 0 %d %d\n", len(titleB), len(contentB))
+	hdr := fmt.Sprintf("CREATE_POST c_chat M.1727800000.A.002 hungte 12345678 0 0 0 0 %d %d\n", len(titleB), len(contentB))
 	conn2.Write([]byte(hdr))
 	conn2.Write(titleB)
 	conn2.Write(contentB)
@@ -435,7 +435,7 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("Expected UTF-8 title, got: %q", p1.Title)
 	}
 
-	// 3. Test create_post_file (Protocol A: POST_FILE)
+	// 3. Test create_post_file (Protocol A: CREATE_POST_FILE)
 	boardDir := filepath.Join(tmpDir, "bbshome", "boards", "g", "gossiping")
 	os.MkdirAll(boardDir, 0755)
 	filePath := filepath.Join(boardDir, "M.1727800000.A.003")
@@ -444,7 +444,7 @@ func TestServerIPC(t *testing.T) {
 	conn3, _ := net.Dial("unix", sockPath)
 	defer conn3.Close()
 	title3B := []byte("[爆卦] 檔案直入 post.svc 測試")
-	hdr3 := fmt.Sprintf("POST_FILE gossiping M.1727800000.A.003 hungte 888999 0 0 0 %d\n", len(title3B))
+	hdr3 := fmt.Sprintf("CREATE_POST_FILE gossiping M.1727800000.A.003 hungte 888999 0 0 0 %d\n", len(title3B))
 	conn3.Write([]byte(hdr3))
 	conn3.Write(title3B)
 
@@ -464,11 +464,11 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("Expected UTF-8 title, got: %q", p2.Title)
 	}
 
-	// 4. Test add_comment (Protocol A: COMMENT)
+	// 4. Test add_comment (Protocol A: CREATE_COMMENT)
 	conn4, _ := net.Dial("unix", sockPath)
 	defer conn4.Close()
 	commentB := []byte("這是純推文，完全不帶 vote 資訊")
-	hdr4 := fmt.Sprintf("COMMENT gossiping M.1727800000.A.003 piaip 777111 140.112.1.1 0 %d\n", len(commentB))
+	hdr4 := fmt.Sprintf("CREATE_COMMENT gossiping M.1727800000.A.003 piaip 777111 140.112.1.1 0 %d\n", len(commentB))
 	conn4.Write([]byte(hdr4))
 	conn4.Write(commentB)
 
@@ -480,7 +480,7 @@ func TestServerIPC(t *testing.T) {
 	t.Logf("add_comment via IPC succeeded: %s", strings.TrimSpace(cResp))
 	firstCommentID := p2.ID<<16 | 1 // post ID and floor
 	if f := strings.Fields(cResp); len(f) != 6 || f[4] != "NEW" || f[5] != fmt.Sprint(firstCommentID) {
-		t.Fatalf("COMMENT reply should end with NEW <comment_id>: %s", cResp)
+		t.Fatalf("CREATE_COMMENT reply should end with NEW <comment_id>: %s", cResp)
 	}
 	{
 		gc, _ := net.Dial("unix", sockPath)
@@ -509,83 +509,83 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("Expected CreatorID 777111, got: %d", comments[0].CreatorID)
 	}
 
-	// 5. Test vote_post (Protocol A: VOTE_FILE and VOTE by ID with IP and timestamp)
+	// 5. Test vote_post (Protocol A: CREATE_POST_LIKE_FILE and CREATE_POST_LIKE by ID with IP and timestamp)
 	conn5, _ := net.Dial("unix", sockPath)
 	defer conn5.Close()
-	conn5.Write([]byte("VOTE_FILE gossiping M.1727800000.A.003 voter_user 999123 1 1.2.3.4 1792778695\n"))
+	conn5.Write([]byte("CREATE_POST_LIKE_FILE gossiping M.1727800000.A.003 voter_user 999123 1 1.2.3.4 1792778695\n"))
 
 	r5 := bufio.NewReader(conn5)
 	vResp, _ := r5.ReadString('\n')
 	if !strings.HasPrefix(vResp, "OK") {
 		t.Fatalf("vote_post by file failed: %s", vResp)
 	}
-	t.Logf("VOTE_FILE via IPC succeeded: %s", strings.TrimSpace(vResp))
+	t.Logf("CREATE_POST_LIKE_FILE via IPC succeeded: %s", strings.TrimSpace(vResp))
 
 	conn5b, _ := net.Dial("unix", sockPath)
 	defer conn5b.Close()
-	conn5b.Write([]byte("VOTE gossiping 2 voter_user2 999124 -1 5.6.7.8 1792778696\n"))
+	conn5b.Write([]byte("CREATE_POST_LIKE gossiping 2 voter_user2 999124 -1 5.6.7.8 1792778696\n"))
 	r5b := bufio.NewReader(conn5b)
 	vResp2, _ := r5b.ReadString('\n')
 	if !strings.HasPrefix(vResp2, "OK") {
-		t.Fatalf("VOTE by ID failed: %s", vResp2)
+		t.Fatalf("CREATE_POST_LIKE by ID failed: %s", vResp2)
 	}
-	t.Logf("VOTE by ID via IPC succeeded: %s", strings.TrimSpace(vResp2))
+	t.Logf("CREATE_POST_LIKE by ID via IPC succeeded: %s", strings.TrimSpace(vResp2))
 
-	// Verify VOTES_FILE
+	// Verify LIST_POST_LIKES_FILE
 	conn5c, _ := net.Dial("unix", sockPath)
 	defer conn5c.Close()
-	conn5c.Write([]byte("VOTES_FILE gossiping M.1727800000.A.003\n"))
+	conn5c.Write([]byte("LIST_POST_LIKES_FILE gossiping M.1727800000.A.003\n"))
 	r5c := bufio.NewReader(conn5c)
 	status5c, _ := r5c.ReadString('\n')
 	if !strings.HasPrefix(status5c, "OK 2") {
-		t.Fatalf("VOTES_FILE failed: %s", status5c)
+		t.Fatalf("LIST_POST_LIKES_FILE failed: %s", status5c)
 	}
 	line1, _ := r5c.ReadString('\n')
 	line2, _ := r5c.ReadString('\n')
 	if !strings.Contains(line1, "voter_user") && !strings.Contains(line2, "voter_user") {
-		t.Fatalf("VOTES_FILE output missing voter_user: %s %s", line1, line2)
+		t.Fatalf("LIST_POST_LIKES_FILE output missing voter_user: %s %s", line1, line2)
 	}
 	if !strings.Contains(line1, "1.2.3.4") && !strings.Contains(line2, "1.2.3.4") {
-		t.Fatalf("VOTES_FILE output missing IP: %s %s", line1, line2)
+		t.Fatalf("LIST_POST_LIKES_FILE output missing IP: %s %s", line1, line2)
 	}
 
-	// Verify RESET_VOTES_FILE
+	// Verify RESET_POST_SCORE_FILE
 	connReset, _ := net.Dial("unix", sockPath)
 	defer connReset.Close()
-	connReset.Write([]byte("RESET_VOTES_FILE gossiping M.1727800000.A.003\n"))
+	connReset.Write([]byte("RESET_POST_SCORE_FILE gossiping M.1727800000.A.003\n"))
 	rReset := bufio.NewReader(connReset)
 	statusReset, _ := rReset.ReadString('\n')
 	if !strings.HasPrefix(statusReset, "OK") {
-		t.Fatalf("RESET_VOTES_FILE failed: %s", statusReset)
+		t.Fatalf("RESET_POST_SCORE_FILE failed: %s", statusReset)
 	}
 
 	connAfterReset, _ := net.Dial("unix", sockPath)
 	defer connAfterReset.Close()
-	connAfterReset.Write([]byte("VOTES_FILE gossiping M.1727800000.A.003\n"))
+	connAfterReset.Write([]byte("LIST_POST_LIKES_FILE gossiping M.1727800000.A.003\n"))
 	rAfterReset := bufio.NewReader(connAfterReset)
 	statusAfterReset, _ := rAfterReset.ReadString('\n')
 	if !strings.HasPrefix(statusAfterReset, "OK 0") {
-		t.Fatalf("VOTES_FILE after reset expected OK 0, got: %s", statusAfterReset)
+		t.Fatalf("LIST_POST_LIKES_FILE after reset expected OK 0, got: %s", statusAfterReset)
 	}
 
-	// 6. Test LIST community posts (LIST <community> [count [start]])
+	// 6. Test GET_POSTS community posts (GET_POSTS <community> [count [start]])
 	conn6, _ := net.Dial("unix", sockPath)
 	defer conn6.Close()
-	conn6.Write([]byte("LIST gossiping 10 0\n"))
+	conn6.Write([]byte("GET_POSTS gossiping 10 0\n"))
 	r6 := bufio.NewReader(conn6)
 	listResp, _ := r6.ReadString('\n')
 	if !strings.HasPrefix(listResp, "OK 1") {
-		t.Fatalf("LIST gossiping failed: %s", listResp)
+		t.Fatalf("GET_POSTS gossiping failed: %s", listResp)
 	}
 	itemLine, _ := r6.ReadString('\n')
 	cols := strings.Split(strings.TrimRight(itemLine, "\r\n"), "\t")
 	if len(cols) < 10 {
-		t.Fatalf("Expected at least 10 columns in LIST output, got: %v", cols)
+		t.Fatalf("Expected at least 10 columns in GET_POSTS output, got: %v", cols)
 	}
 	if cols[1] != "M.1727800000.A.003" || cols[2] != "hungte" || cols[9] != "[爆卦] 檔案直入 post.svc 測試" {
-		t.Fatalf("LIST columns mismatch: %v", cols)
+		t.Fatalf("GET_POSTS columns mismatch: %v", cols)
 	}
-	t.Logf("LIST via IPC succeeded: %s -> %s", strings.TrimSpace(listResp), strings.TrimSpace(itemLine))
+	t.Logf("GET_POSTS via IPC succeeded: %s -> %s", strings.TrimSpace(listResp), strings.TrimSpace(itemLine))
 
 	// 7. Test RENDER by ID to stdout (RENDER <post_id> -)
 	conn7, _ := net.Dial("unix", sockPath)
@@ -646,29 +646,29 @@ func TestServerIPC(t *testing.T) {
 	}
 	t.Logf("RENDER_FILE to disk file succeeded: %s (%d bytes)", renderedFileOutPath, len(rfBytes))
 
-	// 10. Test UPDATE_POST and POST_HISTORY (history.pebble)
+	// 10. Test EDIT_POST and GET_POST_REVISIONS (history.pebble)
 	conn10, _ := net.Dial("unix", sockPath)
 	defer conn10.Close()
 	newTitleB := []byte("[閒聊] 新世代 post.svc 上線 (已修改)")
 	newContentB := []byte("修改後的新內文。\n")
-	hdr10 := fmt.Sprintf("UPDATE_POST 1 sysop 0 %d %d\n", len(newTitleB), len(newContentB))
+	hdr10 := fmt.Sprintf("EDIT_POST 1 sysop 0 %d %d\n", len(newTitleB), len(newContentB))
 	conn10.Write([]byte(hdr10))
 	conn10.Write(newTitleB)
 	conn10.Write(newContentB)
 	r10 := bufio.NewReader(conn10)
 	editResp, _ := r10.ReadString('\n')
 	if !strings.HasPrefix(editResp, "OK 1") {
-		t.Fatalf("UPDATE_POST failed: %s", editResp)
+		t.Fatalf("EDIT_POST failed: %s", editResp)
 	}
 
 	// Query post history list
 	conn11, _ := net.Dial("unix", sockPath)
 	defer conn11.Close()
-	conn11.Write([]byte("POST_HISTORY 1 0\n"))
+	conn11.Write([]byte("GET_POST_REVISIONS 1 0\n"))
 	r11 := bufio.NewReader(conn11)
 	histListResp, _ := r11.ReadString('\n')
 	if !strings.HasPrefix(histListResp, "OK 1") {
-		t.Fatalf("POST_HISTORY list failed: %s", histListResp)
+		t.Fatalf("GET_POST_REVISIONS list failed: %s", histListResp)
 	}
 	histLine, _ := r11.ReadString('\n')
 	if !strings.Contains(histLine, "[閒聊] 新世代 post.svc 上線") {
@@ -678,59 +678,59 @@ func TestServerIPC(t *testing.T) {
 	// Query specific revision 1
 	conn12, _ := net.Dial("unix", sockPath)
 	defer conn12.Close()
-	conn12.Write([]byte("POST_HISTORY 1 1\n"))
+	conn12.Write([]byte("GET_POST_REVISIONS 1 1\n"))
 	r12 := bufio.NewReader(conn12)
 	rev1Resp, _ := r12.ReadString('\n')
 	if !strings.HasPrefix(rev1Resp, "OK 1 1") {
-		t.Fatalf("POST_HISTORY rev 1 failed: %s", rev1Resp)
+		t.Fatalf("GET_POST_REVISIONS rev 1 failed: %s", rev1Resp)
 	}
 	rev1Payload, _ := io.ReadAll(r12)
 	if !strings.Contains(string(rev1Payload), "全站 Reddit 化與 Pebble+SQLite 混合儲存測試。") {
 		t.Fatalf("History revision 1 content missing original text: %s", string(rev1Payload))
 	}
-	t.Logf("UPDATE_POST and POST_HISTORY verified: %s", strings.TrimSpace(histLine))
+	t.Logf("EDIT_POST and GET_POST_REVISIONS verified: %s", strings.TrimSpace(histLine))
 
-	// 10b. Test POST_HISTORY_FILE with target file path
+	// 10b. Test GET_POST_REVISIONS_FILE with target file path
 	targetHistPath := filepath.Join(tmpDir, "post_rev1_out.txt")
 	connHistFile, _ := net.Dial("unix", sockPath)
-	connHistFile.Write([]byte(fmt.Sprintf("POST_HISTORY_FILE c_chat M.1727800000.A.002 1 %s\n", targetHistPath)))
+	connHistFile.Write([]byte(fmt.Sprintf("GET_POST_REVISIONS_FILE c_chat M.1727800000.A.002 1 %s\n", targetHistPath)))
 	rHistFile := bufio.NewReader(connHistFile)
 	respHistFile, _ := rHistFile.ReadString('\n')
 	connHistFile.Close()
 	if !strings.HasPrefix(respHistFile, "OK 1 1") {
-		t.Fatalf("POST_HISTORY_FILE with target failed: %s", respHistFile)
+		t.Fatalf("GET_POST_REVISIONS_FILE with target failed: %s", respHistFile)
 	}
 	contentOnDisk, err := os.ReadFile(targetHistPath)
 	if err != nil || !strings.Contains(big5uao.Decode(contentOnDisk), "全站 Reddit 化與 Pebble+SQLite 混合儲存測試。") {
-		t.Fatalf("POST_HISTORY_FILE on disk verification failed: %s, err: %v", string(contentOnDisk), err)
+		t.Fatalf("GET_POST_REVISIONS_FILE on disk verification failed: %s, err: %v", string(contentOnDisk), err)
 	}
 
-	// 11. Test UPDATE_COMMENT and COMMENT_HISTORY (history.pebble)
+	// 11. Test EDIT_COMMENT and GET_COMMENT_REVISIONS (history.pebble)
 	conn13, _ := net.Dial("unix", sockPath)
 	defer conn13.Close()
 	newCommentB := []byte("修改後的推文內容")
-	hdr13 := fmt.Sprintf("UPDATE_COMMENT %d sysop 0 %d\n", firstCommentID, len(newCommentB))
+	hdr13 := fmt.Sprintf("EDIT_COMMENT %d sysop 0 %d\n", firstCommentID, len(newCommentB))
 	conn13.Write([]byte(hdr13))
 	conn13.Write(newCommentB)
 	r13 := bufio.NewReader(conn13)
 	editCResp, _ := r13.ReadString('\n')
 	if !strings.HasPrefix(editCResp, "OK 1") {
-		t.Fatalf("UPDATE_COMMENT failed: %s", editCResp)
+		t.Fatalf("EDIT_COMMENT failed: %s", editCResp)
 	}
 
 	conn14, _ := net.Dial("unix", sockPath)
 	defer conn14.Close()
-	conn14.Write([]byte(fmt.Sprintf("COMMENT_HISTORY %d 1\n", firstCommentID)))
+	conn14.Write([]byte(fmt.Sprintf("GET_COMMENT_REVISIONS %d 1\n", firstCommentID)))
 	r14 := bufio.NewReader(conn14)
 	cHistResp, _ := r14.ReadString('\n')
 	if !strings.HasPrefix(cHistResp, "OK 2 1 1") {
-		t.Fatalf("COMMENT_HISTORY rev 1 failed: %s", cHistResp)
+		t.Fatalf("GET_COMMENT_REVISIONS rev 1 failed: %s", cHistResp)
 	}
 	cHistPayload, _ := io.ReadAll(r14)
 	if !strings.Contains(string(cHistPayload), "這是純推文，完全不帶 vote 資訊") {
 		t.Fatalf("Comment history missing original text: %s", string(cHistPayload))
 	}
-	t.Logf("UPDATE_COMMENT and COMMENT_HISTORY verified: %s", string(cHistPayload))
+	t.Logf("EDIT_COMMENT and GET_COMMENT_REVISIONS verified: %s", string(cHistPayload))
 
 	// Posts are locked by ID or by their name in .DIR (Lemmy's LockPost).
 	for _, tc := range []struct{ cmd, want string }{
@@ -770,12 +770,14 @@ func TestServerIPC(t *testing.T) {
 		}
 	}
 
-	// Comments are deleted and restored by their comment ID.
+	// Comments are removed and recovered by their comment ID; only their
+	// creators delete them (Lemmy's DeleteComment).
 	for _, tc := range []struct{ cmd, want string }{
-		{fmt.Sprintf("DELETE_COMMENT %d sysop 0 spam", firstCommentID), "OK"},
-		{fmt.Sprintf("UNDELETE_COMMENT %d", firstCommentID), "OK"},
-		{"DELETE_COMMENT 999 sysop 0 spam", "ERR"},
-		{"UNDELETE_COMMENT x", "ERR"},
+		{fmt.Sprintf("DELETE_COMMENT %d sysop 0", firstCommentID), "ERR no_comment_edit_allowed"},
+		{fmt.Sprintf("REMOVE_COMMENT %d sysop 0 spam", firstCommentID), "OK"},
+		{fmt.Sprintf("RECOVER_COMMENT %d", firstCommentID), "OK"},
+		{"REMOVE_COMMENT 999 sysop 0 spam", "ERR"},
+		{"RECOVER_COMMENT x", "ERR"},
 	} {
 		c, _ := net.Dial("unix", sockPath)
 		c.Write([]byte(tc.cmd + "\n"))
@@ -796,30 +798,30 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("CROSSPOST failed: %s", cpResp)
 	}
 
-	// 16. CROSSPOSTS query via IPC
+	// 16. GET_CROSSPOSTS query via IPC
 	conn16, _ := net.Dial("unix", sockPath)
 	defer conn16.Close()
-	conn16.Write([]byte("CROSSPOSTS gossiping M.1727800000.A.003\n"))
+	conn16.Write([]byte("GET_CROSSPOSTS gossiping M.1727800000.A.003\n"))
 	r16 := bufio.NewReader(conn16)
 	cpListHdr, _ := r16.ReadString('\n')
 	if !strings.HasPrefix(cpListHdr, "OK 1") {
-		t.Fatalf("CROSSPOSTS query failed: %s", cpListHdr)
+		t.Fatalf("GET_CROSSPOSTS query failed: %s", cpListHdr)
 	}
 	cpListBody, _ := io.ReadAll(r16)
 	if !strings.Contains(string(cpListBody), "test\tM.1727800000.A.999\toperator1") {
-		t.Fatalf("CROSSPOSTS list missing record: %s", string(cpListBody))
+		t.Fatalf("GET_CROSSPOSTS list missing record: %s", string(cpListBody))
 	}
 
-	// 17. ORIGIN query via IPC
+	// 17. GET_CROSSPOST_PARENT query via IPC
 	conn17, _ := net.Dial("unix", sockPath)
 	defer conn17.Close()
-	conn17.Write([]byte("ORIGIN test M.1727800000.A.999\n"))
+	conn17.Write([]byte("GET_CROSSPOST_PARENT test M.1727800000.A.999\n"))
 	r17 := bufio.NewReader(conn17)
 	originResp, _ := r17.ReadString('\n')
 	if !strings.HasPrefix(originResp, "OK gossiping\tM.1727800000.A.003") {
-		t.Fatalf("ORIGIN query failed: %s", originResp)
+		t.Fatalf("GET_CROSSPOST_PARENT query failed: %s", originResp)
 	}
-	t.Logf("CROSSPOST, CROSSPOSTS, and ORIGIN IPC verified: %s", strings.TrimSpace(originResp))
+	t.Logf("CROSSPOST, GET_CROSSPOSTS, and GET_CROSSPOST_PARENT IPC verified: %s", strings.TrimSpace(originResp))
 
 	// 18. FETCH_POST_FILE via IPC
 	pulledTarget := filepath.Join(tmpDir, "pulled_post.txt")
@@ -843,24 +845,24 @@ func TestServerIPC(t *testing.T) {
 	}
 	t.Logf("FETCH_POST_FILE verified: %d bytes pulled, modified=%d", len(pulledBytes), origModified)
 
-	// 19. UPDATE_POST_FILE with no change returns OK 0 NO_CHANGE
+	// 19. EDIT_POST_FILE with no change returns OK 0 NO_CHANGE
 	conn19, _ := net.Dial("unix", sockPath)
 	defer conn19.Close()
 	noChangeContent := string(big5uao.Decode(pulledBytes))
-	noChangeHdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 sysop 0 %d 0 %d\n%s", origModified, len(noChangeContent), noChangeContent)
+	noChangeHdr := fmt.Sprintf("EDIT_POST_FILE gossiping M.1727800000.A.003 sysop 0 %d 0 %d\n%s", origModified, len(noChangeContent), noChangeContent)
 	conn19.Write([]byte(noChangeHdr))
 	r19 := bufio.NewReader(conn19)
 	noChangeResp, _ := r19.ReadString('\n')
 	if !strings.HasPrefix(noChangeResp, "OK 0") {
 		t.Fatalf("Expected OK 0 for no change, got: %s", noChangeResp)
 	}
-	t.Logf("UPDATE_POST_FILE no-change verified: %s", strings.TrimSpace(noChangeResp))
+	t.Logf("EDIT_POST_FILE no-change verified: %s", strings.TrimSpace(noChangeResp))
 
 	// 20. OCC Test: First edit updates post and bumps modified timestamp
 	conn20a, _ := net.Dial("unix", sockPath)
 	defer conn20a.Close()
 	editedContent1 := string(big5uao.Decode(pulledBytes)) + "\n這是第一個編輯者追加的內容\n"
-	edit1Hdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 bob 0 %d 0 %d\n%s", origModified, len(editedContent1), editedContent1)
+	edit1Hdr := fmt.Sprintf("EDIT_POST_FILE gossiping M.1727800000.A.003 bob 0 %d 0 %d\n%s", origModified, len(editedContent1), editedContent1)
 	conn20a.Write([]byte(edit1Hdr))
 	r20a := bufio.NewReader(conn20a)
 	edit1Resp, _ := r20a.ReadString('\n')
@@ -878,7 +880,7 @@ func TestServerIPC(t *testing.T) {
 	conn20b, _ := net.Dial("unix", sockPath)
 	defer conn20b.Close()
 	editedContent2 := string(big5uao.Decode(pulledBytes)) + "\n這是衝突的第二個編輯者內容\n"
-	edit2Hdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 alice 0 %d 0 %d\n%s", origModified, len(editedContent2), editedContent2)
+	edit2Hdr := fmt.Sprintf("EDIT_POST_FILE gossiping M.1727800000.A.003 alice 0 %d 0 %d\n%s", origModified, len(editedContent2), editedContent2)
 	conn20b.Write([]byte(edit2Hdr))
 	r20b := bufio.NewReader(conn20b)
 	conflictResp, _ := r20b.ReadString('\n')
@@ -891,7 +893,7 @@ func TestServerIPC(t *testing.T) {
 	// Retrying with latest modified timestamp must succeed (force overwrite)
 	conn20c, _ := net.Dial("unix", sockPath)
 	defer conn20c.Close()
-	retryHdr := fmt.Sprintf("UPDATE_POST_FILE gossiping M.1727800000.A.003 alice 0 %d 0 %d\n%s", newModified, len(editedContent2), editedContent2)
+	retryHdr := fmt.Sprintf("EDIT_POST_FILE gossiping M.1727800000.A.003 alice 0 %d 0 %d\n%s", newModified, len(editedContent2), editedContent2)
 	conn20c.Write([]byte(retryHdr))
 	r20c := bufio.NewReader(conn20c)
 	retryResp, _ := r20c.ReadString('\n')
@@ -900,14 +902,14 @@ func TestServerIPC(t *testing.T) {
 	}
 	t.Logf("OCC Overwrite retry verified: %s", strings.TrimSpace(retryResp))
 
-	// 21. DELETE_COMMENT_FILE via IPC
+	// 21. REMOVE_COMMENT_FILE via IPC
 	conn21, _ := net.Dial("unix", sockPath)
 	defer conn21.Close()
-	conn21.Write([]byte("DELETE_COMMENT_FILE gossiping M.1727800000.A.003 1 sysop 0 違規廣告\n"))
+	conn21.Write([]byte("REMOVE_COMMENT_FILE gossiping M.1727800000.A.003 1 sysop 0 違規廣告\n"))
 	r21 := bufio.NewReader(conn21)
 	delCommentResp, _ := r21.ReadString('\n')
 	if !strings.HasPrefix(delCommentResp, "OK ") {
-		t.Fatalf("DELETE_COMMENT_FILE failed: %s", delCommentResp)
+		t.Fatalf("REMOVE_COMMENT_FILE failed: %s", delCommentResp)
 	}
 
 	// 22. RENDER_FILE to check deleted comment notice
@@ -924,127 +926,135 @@ func TestServerIPC(t *testing.T) {
 	if !strings.Contains(decodedDelComment, "違規廣告") {
 		t.Fatalf("RENDER_FILE missing deleted comment reason: %s", decodedDelComment)
 	}
-	t.Logf("DELETE_COMMENT_FILE and tombstone render verified: %s", decodedDelComment)
+	t.Logf("REMOVE_COMMENT_FILE and tombstone render verified: %s", decodedDelComment)
 
-	// 23. UNDELETE_COMMENT_FILE via IPC
+	// 23. RECOVER_COMMENT_FILE via IPC
 	conn23, _ := net.Dial("unix", sockPath)
 	defer conn23.Close()
-	conn23.Write([]byte("UNDELETE_COMMENT_FILE gossiping M.1727800000.A.003 1\n"))
+	conn23.Write([]byte("RECOVER_COMMENT_FILE gossiping M.1727800000.A.003 1\n"))
 	r23 := bufio.NewReader(conn23)
 	undelCommentResp, _ := r23.ReadString('\n')
 	if strings.TrimSpace(undelCommentResp) != "OK" {
-		t.Fatalf("UNDELETE_COMMENT_FILE failed: %s", undelCommentResp)
+		t.Fatalf("RECOVER_COMMENT_FILE failed: %s", undelCommentResp)
 	}
 
-	// 24. DELETE_POST_FILE via IPC
+	// 24. DELETE_POST_FILE is the creator's only; REMOVE_POST_FILE is for
+	// moderators (Lemmy's DeletePost and RemovePost).
+	connNotMine, _ := net.Dial("unix", sockPath)
+	connNotMine.Write([]byte("DELETE_POST_FILE gossiping M.1727800000.A.003 sysop 0\n"))
+	notMine, _ := bufio.NewReader(connNotMine).ReadString('\n')
+	connNotMine.Close()
+	if notMine != "ERR no_post_edit_allowed\n" {
+		t.Fatalf("DELETE_POST_FILE by another person: %q", notMine)
+	}
 	conn24, _ := net.Dial("unix", sockPath)
 	defer conn24.Close()
-	conn24.Write([]byte("DELETE_POST_FILE gossiping M.1727800000.A.003 sysop 0 板規刪除\n"))
+	conn24.Write([]byte("REMOVE_POST_FILE gossiping M.1727800000.A.003 sysop 0 板規刪除\n"))
 	r24 := bufio.NewReader(conn24)
 	delPostResp, _ := r24.ReadString('\n')
 	if !strings.HasPrefix(delPostResp, "OK ") {
-		t.Fatalf("DELETE_POST_FILE failed: %s", delPostResp)
+		t.Fatalf("REMOVE_POST_FILE failed: %s", delPostResp)
 	}
 
-	// 25. LIST should not include deleted post
+	// 25. GET_POSTS should not include deleted post
 	conn25, _ := net.Dial("unix", sockPath)
 	defer conn25.Close()
-	conn25.Write([]byte("LIST gossiping 10 0\n"))
+	conn25.Write([]byte("GET_POSTS gossiping 10 0\n"))
 	r25 := bufio.NewReader(conn25)
 	listHdr25, _ := r25.ReadString('\n')
 	listBody25, _ := io.ReadAll(r25)
 	if strings.Contains(string(listBody25), "M.1727800000.A.003") {
-		t.Fatalf("LIST should not contain deleted post: %s\n%s", listHdr25, string(listBody25))
+		t.Fatalf("GET_POSTS should not contain deleted post: %s\n%s", listHdr25, string(listBody25))
 	}
 
-	// 26. LIST gossiping 10 0 deleted should include deleted post
+	// 26. GET_POSTS gossiping 10 0 deleted should include deleted post
 	conn26, _ := net.Dial("unix", sockPath)
 	defer conn26.Close()
-	conn26.Write([]byte("LIST gossiping 10 0 deleted\n"))
+	conn26.Write([]byte("GET_POSTS gossiping 10 0 deleted\n"))
 	r26 := bufio.NewReader(conn26)
 	listHdr26, _ := r26.ReadString('\n')
 	listBody26, _ := io.ReadAll(r26)
 	if !strings.Contains(string(listBody26), "M.1727800000.A.003") {
-		t.Fatalf("LIST deleted should contain deleted post: %s\n%s", listHdr26, string(listBody26))
+		t.Fatalf("GET_POSTS deleted should contain deleted post: %s\n%s", listHdr26, string(listBody26))
 	}
-	t.Logf("LIST deleted verified: %s\n%s", listHdr26, string(listBody26))
+	t.Logf("GET_POSTS deleted verified: %s\n%s", listHdr26, string(listBody26))
 
-	// 27. UNDELETE_POST_FILE via IPC
+	// 27. RECOVER_POST_FILE via IPC
 	conn27, _ := net.Dial("unix", sockPath)
 	defer conn27.Close()
-	conn27.Write([]byte("UNDELETE_POST_FILE gossiping M.1727800000.A.003\n"))
+	conn27.Write([]byte("RECOVER_POST_FILE gossiping M.1727800000.A.003\n"))
 	r27 := bufio.NewReader(conn27)
 	undelPostResp, _ := r27.ReadString('\n')
 	if strings.TrimSpace(undelPostResp) != "OK" {
-		t.Fatalf("UNDELETE_POST_FILE failed: %s", undelPostResp)
+		t.Fatalf("RECOVER_POST_FILE failed: %s", undelPostResp)
 	}
 
-	// 28. LIST should now contain undeleted post again
+	// 28. GET_POSTS should now contain undeleted post again
 	conn28, _ := net.Dial("unix", sockPath)
 	defer conn28.Close()
-	conn28.Write([]byte("LIST gossiping 10 0\n"))
+	conn28.Write([]byte("GET_POSTS gossiping 10 0\n"))
 	r28 := bufio.NewReader(conn28)
 	r28.ReadString('\n')
 	listBody28, _ := io.ReadAll(r28)
 	if !strings.Contains(string(listBody28), "M.1727800000.A.003") {
-		t.Fatalf("LIST should contain restored post: %s", string(listBody28))
+		t.Fatalf("GET_POSTS should contain restored post: %s", string(listBody28))
 	}
-	t.Logf("UNDELETE_POST_FILE and LIST restore verified: %s", string(listBody28))
+	t.Logf("RECOVER_POST_FILE and GET_POSTS restore verified: %s", string(listBody28))
 
-	// 29. UPDATE_POST_TITLE_FILE via IPC
+	// 29. EDIT_POST_TITLE_FILE via IPC
 	conn29, _ := net.Dial("unix", sockPath)
 	defer conn29.Close()
 	newTitleB = []byte("[爆卦] 標題修改測試成功")
-	hdr29 := fmt.Sprintf("UPDATE_POST_TITLE_FILE gossiping M.1727800000.A.003 sysop 0 %d\n", len(newTitleB))
+	hdr29 := fmt.Sprintf("EDIT_POST_TITLE_FILE gossiping M.1727800000.A.003 sysop 0 %d\n", len(newTitleB))
 	conn29.Write([]byte(hdr29))
 	conn29.Write(newTitleB)
 	r29 := bufio.NewReader(conn29)
 	upTitleResp, _ := r29.ReadString('\n')
 	if !strings.HasPrefix(upTitleResp, "OK ") {
-		t.Fatalf("UPDATE_POST_TITLE_FILE failed: %s", upTitleResp)
+		t.Fatalf("EDIT_POST_TITLE_FILE failed: %s", upTitleResp)
 	}
-	t.Logf("UPDATE_POST_TITLE_FILE verified: %s", strings.TrimSpace(upTitleResp))
+	t.Logf("EDIT_POST_TITLE_FILE verified: %s", strings.TrimSpace(upTitleResp))
 
-	// 30. COMMENTS_FILE query via IPC
+	// 30. GET_COMMENTS_FILE query via IPC
 	conn30, _ := net.Dial("unix", sockPath)
 	defer conn30.Close()
-	conn30.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 10\n"))
+	conn30.Write([]byte("GET_COMMENTS_FILE gossiping M.1727800000.A.003 1 10\n"))
 	r30 := bufio.NewReader(conn30)
 	cmtsHdr, _ := r30.ReadString('\n')
 	if !strings.HasPrefix(cmtsHdr, "OK ") {
-		t.Fatalf("COMMENTS_FILE failed: %s", cmtsHdr)
+		t.Fatalf("GET_COMMENTS_FILE failed: %s", cmtsHdr)
 	}
 	cmtsBody, _ := io.ReadAll(r30)
 	if !strings.Contains(string(cmtsBody), "piaip") {
-		t.Fatalf("COMMENTS_FILE list missing piaip: %s", string(cmtsBody))
+		t.Fatalf("GET_COMMENTS_FILE list missing piaip: %s", string(cmtsBody))
 	}
-	t.Logf("COMMENTS_FILE verified: %s\n%s", strings.TrimSpace(cmtsHdr), string(cmtsBody))
+	t.Logf("GET_COMMENTS_FILE verified: %s\n%s", strings.TrimSpace(cmtsHdr), string(cmtsBody))
 
-	// 30b. COMMENTS_FILE query filtered by author
+	// 30b. GET_COMMENTS_FILE query filtered by author
 	conn30b, _ := net.Dial("unix", sockPath)
 	defer conn30b.Close()
-	conn30b.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 10 piaip -\n"))
+	conn30b.Write([]byte("GET_COMMENTS_FILE gossiping M.1727800000.A.003 1 10 piaip -\n"))
 	r30b := bufio.NewReader(conn30b)
 	cmtsHdrB, _ := r30b.ReadString('\n')
 	if !strings.HasPrefix(cmtsHdrB, "OK 1 1") {
-		t.Fatalf("COMMENTS_FILE filtered by author failed: %s", cmtsHdrB)
+		t.Fatalf("GET_COMMENTS_FILE filtered by author failed: %s", cmtsHdrB)
 	}
 
-	// 30c. COMMENTS_FILE query filtered by non-existent author
+	// 30c. GET_COMMENTS_FILE query filtered by non-existent author
 	conn30c, _ := net.Dial("unix", sockPath)
 	defer conn30c.Close()
-	conn30c.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 10 non_existent_user -\n"))
+	conn30c.Write([]byte("GET_COMMENTS_FILE gossiping M.1727800000.A.003 1 10 non_existent_user -\n"))
 	r30c := bufio.NewReader(conn30c)
 	cmtsHdrC, _ := r30c.ReadString('\n')
 	if !strings.HasPrefix(cmtsHdrC, "OK 0 0") {
-		t.Fatalf("COMMENTS_FILE filtered by non-existent author failed: %s", cmtsHdrC)
+		t.Fatalf("GET_COMMENTS_FILE filtered by non-existent author failed: %s", cmtsHdrC)
 	}
 
-	// 30d. Multiline comment and COMMENTS_FILE single-line TSV escaping test
+	// 30d. Multiline comment and GET_COMMENTS_FILE single-line TSV escaping test
 	conn30d, _ := net.Dial("unix", sockPath)
 	defer conn30d.Close()
 	multilineB := []byte("第一行留言\n第二行留言\n第三行留言")
-	hdr30d := fmt.Sprintf("COMMENT gossiping M.1727800000.A.003 hungte 12345 127.0.0.1 0 %d 1\n", len(multilineB))
+	hdr30d := fmt.Sprintf("CREATE_COMMENT gossiping M.1727800000.A.003 hungte 12345 127.0.0.1 0 %d 1\n", len(multilineB))
 	conn30d.Write([]byte(hdr30d))
 	conn30d.Write(multilineB)
 	r30d := bufio.NewReader(conn30d)
@@ -1055,11 +1065,11 @@ func TestServerIPC(t *testing.T) {
 
 	conn30e, _ := net.Dial("unix", sockPath)
 	defer conn30e.Close()
-	conn30e.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 2 1 hungte -\n"))
+	conn30e.Write([]byte("GET_COMMENTS_FILE gossiping M.1727800000.A.003 2 1 hungte -\n"))
 	r30e := bufio.NewReader(conn30e)
 	cmtsHdrE, _ := r30e.ReadString('\n')
 	if !strings.HasPrefix(cmtsHdrE, "OK 1 1") {
-		t.Fatalf("COMMENTS_FILE multiline query header failed: %s", cmtsHdrE)
+		t.Fatalf("GET_COMMENTS_FILE multiline query header failed: %s", cmtsHdrE)
 	}
 	cmtsBodyE, _ := io.ReadAll(r30e)
 	bodyStr := strings.TrimRight(string(cmtsBodyE), "\n")
@@ -1071,31 +1081,31 @@ func TestServerIPC(t *testing.T) {
 		t.Fatalf("Expected escaped newlines in TSV, got: %s", tsvLines[0])
 	}
 
-	// 30f. Test UPDATE_COMMENT_FILE with multiline and verify COMMENTS_FILE returns \r
+	// 30f. Test EDIT_COMMENT_FILE with multiline and verify GET_COMMENTS_FILE returns \r
 	conn30f, _ := net.Dial("unix", sockPath)
 	defer conn30f.Close()
 	multilineUpdateB := []byte("修改第一行\n修改第二行\n修改第三行")
-	hdr30f := fmt.Sprintf("UPDATE_COMMENT_FILE gossiping M.1727800000.A.003 1 piaip 0 %d\n", len(multilineUpdateB))
+	hdr30f := fmt.Sprintf("EDIT_COMMENT_FILE gossiping M.1727800000.A.003 1 piaip 0 %d\n", len(multilineUpdateB))
 	conn30f.Write([]byte(hdr30f))
 	conn30f.Write(multilineUpdateB)
 	r30f := bufio.NewReader(conn30f)
 	upRespF, _ := r30f.ReadString('\n')
 	if !strings.HasPrefix(upRespF, "OK") {
-		t.Fatalf("UPDATE_COMMENT_FILE with multiline failed: %s", upRespF)
+		t.Fatalf("EDIT_COMMENT_FILE with multiline failed: %s", upRespF)
 	}
 
 	conn30g, _ := net.Dial("unix", sockPath)
 	defer conn30g.Close()
-	conn30g.Write([]byte("COMMENTS_FILE gossiping M.1727800000.A.003 1 1 piaip -\n"))
+	conn30g.Write([]byte("GET_COMMENTS_FILE gossiping M.1727800000.A.003 1 1 piaip -\n"))
 	r30g := bufio.NewReader(conn30g)
 	cmtsHdrG, _ := r30g.ReadString('\n')
 	if !strings.HasPrefix(cmtsHdrG, "OK 1 1") {
-		t.Fatalf("COMMENTS_FILE after multiline update failed: %s", cmtsHdrG)
+		t.Fatalf("GET_COMMENTS_FILE after multiline update failed: %s", cmtsHdrG)
 	}
 	cmtsBodyG, _ := io.ReadAll(r30g)
 	bodyStrG := strings.TrimRight(string(cmtsBodyG), "\n")
 	if !strings.Contains(bodyStrG, "修改第一行	修改第二行	修改第三行") {
-		t.Fatalf("Expected \\r multiline in COMMENTS_FILE after update, got: %s", bodyStrG)
+		t.Fatalf("Expected \\r multiline in GET_COMMENTS_FILE after update, got: %s", bodyStrG)
 	}
 
 	// 31. COMMENT_COUNT_FILE query via IPC
@@ -1110,16 +1120,16 @@ func TestServerIPC(t *testing.T) {
 	}
 	t.Logf("COMMENT_COUNT_FILE verified: %s", strings.TrimSpace(cmtCountResp))
 
-	// 32. POST with money, then SET_META_FILE as mbbsd changes filemode/money
+	// 32. CREATE_POST with money, then SET_META_FILE as mbbsd changes filemode/money
 	connMeta1, _ := net.Dial("unix", sockPath)
 	defer connMeta1.Close()
 	metaTitle, metaBody := "money post", "body"
-	fmt.Fprintf(connMeta1, "POST gossiping M.1727800099.A.099 hungte 528280978408 0 123 0 0 %d %d\n%s%s", len(metaTitle), len(metaBody), metaTitle, metaBody)
+	fmt.Fprintf(connMeta1, "CREATE_POST gossiping M.1727800099.A.099 hungte 528280978408 0 123 0 0 %d %d\n%s%s", len(metaTitle), len(metaBody), metaTitle, metaBody)
 	if resp, _ := bufio.NewReader(connMeta1).ReadString('\n'); !strings.HasPrefix(resp, "OK") {
-		t.Fatalf("POST with money failed: %s", resp)
+		t.Fatalf("CREATE_POST with money failed: %s", resp)
 	}
 	if p, err := st.GetPostByCommunityFile("gossiping", "M.1727800099.A.099"); err != nil || p.Money != 123 || p.CreatorID != model.MakePersonID(1000, 123) {
-		t.Fatalf("POST with money: post=%+v err=%v", p, err)
+		t.Fatalf("CREATE_POST with money: post=%+v err=%v", p, err)
 	}
 	connMeta2, _ := net.Dial("unix", sockPath)
 	defer connMeta2.Close()
@@ -1137,7 +1147,7 @@ func TestServerIPC(t *testing.T) {
 	if resp, _ := bufio.NewReader(connMeta3).ReadString('\n'); !strings.HasPrefix(resp, "ERR") {
 		t.Fatalf("SET_META_FILE of an unknown post: %s", resp)
 	}
-	t.Logf("POST money and SET_META_FILE verified")
+	t.Logf("CREATE_POST money and SET_META_FILE verified")
 }
 
 func TestFilterEncodingBig5(t *testing.T) {
@@ -2248,14 +2258,14 @@ func TestUTF8CommentSubmissionAndLegacyRender(t *testing.T) {
 		t.Fatal(err)
 	}
 	commentUTF8 := []byte("這是由 UTF-8 mbbsd 發送的繁體推文第一則")
-	hdr := fmt.Sprintf("COMMENT SYSOP M.1700000001.A.001 testuser 12345 127.0.0.1 0 %d 1\n", len(commentUTF8))
+	hdr := fmt.Sprintf("CREATE_COMMENT SYSOP M.1700000001.A.001 testuser 12345 127.0.0.1 0 %d 1\n", len(commentUTF8))
 	conn.Write([]byte(hdr))
 	conn.Write(commentUTF8)
 	r := bufio.NewReader(conn)
 	resp, _ := r.ReadString('\n')
 	conn.Close()
 	if !strings.HasPrefix(resp, "OK") {
-		t.Fatalf("COMMENT failed: %s", resp)
+		t.Fatalf("CREATE_COMMENT failed: %s", resp)
 	}
 
 	// 3. Verify comment in Pebble storage is clean UTF-8 (NO MOJIBAKE)
@@ -2622,7 +2632,7 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 		t.Fatalf("dial failed: %v", err)
 	}
 	msg1 := []byte("IPC第一行")
-	hdr1 := fmt.Sprintf("COMMENT test M.1700000000.A.001 userC 2001 3.3.3.3 %d %d 1\n", baseTime+500, len(msg1))
+	hdr1 := fmt.Sprintf("CREATE_COMMENT test M.1700000000.A.001 userC 2001 3.3.3.3 %d %d 1\n", baseTime+500, len(msg1))
 	conn1.Write([]byte(hdr1))
 	conn1.Write(msg1)
 	r1 := bufio.NewReader(conn1)
@@ -2639,7 +2649,7 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 		t.Fatalf("dial failed: %v", err)
 	}
 	msg2 := []byte("IPC第二行")
-	hdr2 := fmt.Sprintf("COMMENT test M.1700000000.A.001 userC 2001 3.3.3.3 %d %d 1\n", baseTime+550, len(msg2))
+	hdr2 := fmt.Sprintf("CREATE_COMMENT test M.1700000000.A.001 userC 2001 3.3.3.3 %d %d 1\n", baseTime+550, len(msg2))
 	conn2.Write([]byte(hdr2))
 	conn2.Write(msg2)
 	r2 := bufio.NewReader(conn2)
@@ -2656,7 +2666,7 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 		t.Fatalf("dial failed: %v", err)
 	}
 	msg3 := []byte("IPC第三行插話")
-	hdr3 := fmt.Sprintf("COMMENT test M.1700000000.A.001 userD 2002 4.4.4.4 %d %d 1\n", baseTime+560, len(msg3))
+	hdr3 := fmt.Sprintf("CREATE_COMMENT test M.1700000000.A.001 userD 2002 4.4.4.4 %d %d 1\n", baseTime+560, len(msg3))
 	conn3.Write([]byte(hdr3))
 	conn3.Write(msg3)
 	r3 := bufio.NewReader(conn3)
@@ -2845,15 +2855,15 @@ func TestServerCommunityCommands(t *testing.T) {
 	if resp, _ := ipc("RENAME_COMMUNITY NewBoard other"); !strings.HasPrefix(resp, "ERR") {
 		t.Fatalf("RENAME_COMMUNITY to a taken name: %s", resp)
 	}
-	if resp, _ := ipc("LIST NewBoard"); !strings.HasPrefix(resp, "OK 2 2") {
-		t.Fatalf("LIST after rename: %s", resp)
+	if resp, _ := ipc("GET_POSTS NewBoard"); !strings.HasPrefix(resp, "OK 2 2") {
+		t.Fatalf("GET_POSTS after rename: %s", resp)
 	}
 
 	if resp, _ := ipc("MERGE_COMMUNITY NewBoard Other"); resp != "OK 1 1" {
 		t.Fatalf("MERGE_COMMUNITY: %s", resp)
 	}
-	if resp, _ := ipc("LIST Other"); !strings.HasPrefix(resp, "OK 2 2") {
-		t.Fatalf("LIST after merge: %s", resp)
+	if resp, _ := ipc("GET_POSTS Other"); !strings.HasPrefix(resp, "OK 2 2") {
+		t.Fatalf("GET_POSTS after merge: %s", resp)
 	}
 	if resp, _ := ipc("MOVE_COMMUNITY Other 0"); resp != "OK 0" {
 		t.Fatalf("MOVE_COMMUNITY to the only engine: %s", resp)

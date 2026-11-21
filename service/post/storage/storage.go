@@ -73,12 +73,18 @@ type Storage interface {
 	UpdatePostTitleByCommunityFile(community, postFile, newTitle, editorName string, editorID model.PersonID) (uint32, error)
 	DeletePost(postID uint64, deleterName string, deleterID model.PersonID, reason string) (uint32, error)
 	DeletePostByCommunityFile(community, postFile, deleterName string, deleterID model.PersonID, reason string) (uint32, error)
+	// RemovePost takes a post down as removed by a moderator (Lemmy's
+	// RemovePost), even if the moderator created it.
+	RemovePost(postID uint64, modName string, modID model.PersonID, reason string) (uint32, error)
 	UndeletePost(postID uint64) error
 	UndeletePostByCommunityFile(community, postFile string) error
 	UpdateComment(postID uint64, seq uint32, newContent, editorName string, editorID model.PersonID) (uint32, error)
 	UpdateCommentByCommunityFile(community, postFile string, seq uint32, newContent, editorName string, editorID model.PersonID) (uint32, error)
 	DeleteComment(postID uint64, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error)
 	DeleteCommentByCommunityFile(community, postFile string, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error)
+	// RemoveComment takes a comment down as removed by a moderator (Lemmy's
+	// RemoveComment), even if the moderator created it.
+	RemoveComment(postID uint64, seq uint32, modName string, modID model.PersonID, reason string) (uint32, error)
 	UndeleteComment(postID uint64, seq uint32) error
 	UndeleteCommentByCommunityFile(community, postFile string, seq uint32) error
 	GetPostHistory(postID uint64, rev uint32) (*model.PostRevision, error)

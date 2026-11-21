@@ -168,7 +168,7 @@ func resolveToCommunityFile(target *postTarget) error {
 	if target.isFile {
 		return nil
 	}
-	pResp, _, err := sendCmd(fmt.Sprintf("GET_POST_ID %d\n", target.postID), nil)
+	pResp, _, err := sendCmd(fmt.Sprintf("GET_POST %d\n", target.postID), nil)
 	if err != nil || !strings.HasPrefix(pResp, "OK") {
 		return fmt.Errorf("post %d not found", target.postID)
 	}
@@ -250,7 +250,7 @@ func main() {
 			uid = val
 		}
 		titleB := []byte(args[4])
-		header := fmt.Sprintf("POST_FILE %s %s %s %d 0 0 %d %d\n", args[1], args[2], args[3], uid, time.Now().Unix(), len(titleB))
+		header := fmt.Sprintf("CREATE_POST_FILE %s %s %s %d 0 0 %d %d\n", args[1], args[2], args[3], uid, time.Now().Unix(), len(titleB))
 		resp, _, err := sendCmd(header, titleB)
 		if err != nil {
 			log.Fatalf("add-file failed: %v", err)
@@ -263,7 +263,7 @@ func main() {
 		}
 		titleB := []byte(args[3])
 		contentB := []byte(args[4])
-		header := fmt.Sprintf("POST %s - %s 0 0 %d 0 %d %d\n", args[1], args[2], time.Now().Unix(), len(titleB), len(contentB))
+		header := fmt.Sprintf("CREATE_POST %s - %s 0 0 %d 0 %d %d\n", args[1], args[2], time.Now().Unix(), len(titleB), len(contentB))
 		payload := append(titleB, contentB...)
 		resp, _, err := sendCmd(header, payload)
 		if err != nil {
@@ -302,7 +302,7 @@ func main() {
 		if err := resolveToCommunityFile(&target); err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		header := fmt.Sprintf("COMMENT %s %s %s %d %s %d %d %d\n", target.community, target.postFile, author, uid, ip, time.Now().Unix(), len(contentB), legType)
+		header := fmt.Sprintf("CREATE_COMMENT %s %s %s %d %s %d %d %d\n", target.community, target.postFile, author, uid, ip, time.Now().Unix(), len(contentB), legType)
 		resp, _, err := sendCmd(header, contentB)
 		if err != nil {
 			log.Fatalf("comment failed: %v", err)
@@ -381,18 +381,18 @@ func main() {
 				if ip == "" {
 					ip = "-"
 				}
-				header = fmt.Sprintf("VOTE_FILE %s %s %s %d %d %s %d\n", target.community, target.postFile, user, uid, voteVal, ip, ctime)
+				header = fmt.Sprintf("CREATE_POST_LIKE_FILE %s %s %s %d %d %s %d\n", target.community, target.postFile, user, uid, voteVal, ip, ctime)
 			} else {
-				header = fmt.Sprintf("VOTE_FILE %s %s %s %d %d\n", target.community, target.postFile, user, uid, voteVal)
+				header = fmt.Sprintf("CREATE_POST_LIKE_FILE %s %s %s %d %d\n", target.community, target.postFile, user, uid, voteVal)
 			}
 		} else {
 			if ip != "" || ctime != 0 {
 				if ip == "" {
 					ip = "-"
 				}
-				header = fmt.Sprintf("VOTE %d %s %d %d %s %d\n", target.postID, user, uid, voteVal, ip, ctime)
+				header = fmt.Sprintf("CREATE_POST_LIKE %d %s %d %d %s %d\n", target.postID, user, uid, voteVal, ip, ctime)
 			} else {
-				header = fmt.Sprintf("VOTE %d %s %d %d\n", target.postID, user, uid, voteVal)
+				header = fmt.Sprintf("CREATE_POST_LIKE %d %s %d %d\n", target.postID, user, uid, voteVal)
 			}
 		}
 		resp, _, err := sendCmd(header, nil)
@@ -411,9 +411,9 @@ func main() {
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("VOTES_FILE %s %s\n", target.community, target.postFile)
+			header = fmt.Sprintf("LIST_POST_LIKES_FILE %s %s\n", target.community, target.postFile)
 		} else {
-			header = fmt.Sprintf("VOTES %d\n", target.postID)
+			header = fmt.Sprintf("LIST_POST_LIKES %d\n", target.postID)
 		}
 		conn, err := connectDaemon()
 		if err != nil {
@@ -474,9 +474,9 @@ func main() {
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("GET_POST %s %s\n", target.community, target.postFile)
+			header = fmt.Sprintf("GET_POST_FILE %s %s\n", target.community, target.postFile)
 		} else {
-			header = fmt.Sprintf("GET_POST_ID %d\n", target.postID)
+			header = fmt.Sprintf("GET_POST %d\n", target.postID)
 		}
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
@@ -496,7 +496,7 @@ func main() {
 		if len(args) >= 3 {
 			days, _ = strconv.Atoi(args[2])
 		}
-		header := fmt.Sprintf("PURGE_COMMENTS %s %d\n", author, days)
+		header := fmt.Sprintf("PURGE_PERSON_COMMENTS %s %d\n", author, days)
 		resp, _, err := sendCmd(header, nil)
 		if err != nil {
 			log.Fatalf("purge-comments failed: %v", err)
@@ -512,7 +512,7 @@ func main() {
 		if len(args) >= 3 {
 			days, _ = strconv.Atoi(args[2])
 		}
-		header := fmt.Sprintf("PURGE_POSTS %s %d\n", author, days)
+		header := fmt.Sprintf("PURGE_PERSON_POSTS %s %d\n", author, days)
 		resp, _, err := sendCmd(header, nil)
 		if err != nil {
 			log.Fatalf("purge-posts failed: %v", err)
@@ -540,7 +540,7 @@ func main() {
 		if len(args) >= 5 {
 			filterMode = args[4]
 		}
-		header := fmt.Sprintf("LIST %s %d %d %s\n", comm, count, start, filterMode)
+		header := fmt.Sprintf("GET_POSTS %s %d %d %s\n", comm, count, start, filterMode)
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
 			log.Fatalf("List failed: %v", err)
@@ -910,9 +910,9 @@ func main() {
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("UPDATE_POST_FILE %s %s %s 0 0 %d %d\n", target.community, target.postFile, editor, len(titleB), len(contentB))
+			header = fmt.Sprintf("EDIT_POST_FILE %s %s %s 0 0 %d %d\n", target.community, target.postFile, editor, len(titleB), len(contentB))
 		} else {
-			header = fmt.Sprintf("UPDATE_POST %d %s 0 %d %d\n", target.postID, editor, len(titleB), len(contentB))
+			header = fmt.Sprintf("EDIT_POST %d %s 0 %d %d\n", target.postID, editor, len(titleB), len(contentB))
 		}
 		resp, _, err := sendCmd(header, append(titleB, contentB...))
 		if err != nil {
@@ -939,9 +939,9 @@ func main() {
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("UPDATE_POST_TITLE_FILE %s %s %s 0 %d\n", target.community, target.postFile, editor, len(titleB))
+			header = fmt.Sprintf("EDIT_POST_TITLE_FILE %s %s %s 0 %d\n", target.community, target.postFile, editor, len(titleB))
 		} else {
-			header = fmt.Sprintf("UPDATE_POST_TITLE %d %s 0 %d\n", target.postID, editor, len(titleB))
+			header = fmt.Sprintf("EDIT_POST_TITLE %d %s 0 %d\n", target.postID, editor, len(titleB))
 		}
 		resp, _, err := sendCmd(header, titleB)
 		if err != nil {
@@ -972,9 +972,9 @@ func main() {
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("COMMENTS_FILE %s %s %d %d\n", target.community, target.postFile, start, limit)
+			header = fmt.Sprintf("GET_COMMENTS_FILE %s %s %d %d\n", target.community, target.postFile, start, limit)
 		} else {
-			header = fmt.Sprintf("COMMENTS %d %d %d\n", target.postID, start, limit)
+			header = fmt.Sprintf("GET_COMMENTS %d %d %d\n", target.postID, start, limit)
 		}
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
@@ -1003,7 +1003,7 @@ func main() {
 		if err := resolveToCommunityFile(&target); err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		header := fmt.Sprintf("UPDATE_COMMENT_FILE %s %s %s %s 0 %d\n", target.community, target.postFile, seq, editor, len(contentB))
+		header := fmt.Sprintf("EDIT_COMMENT_FILE %s %s %s %s 0 %d\n", target.community, target.postFile, seq, editor, len(contentB))
 		resp, _, err := sendCmd(header, contentB)
 		if err != nil {
 			log.Fatalf("update-comment failed: %v", err)
@@ -1025,9 +1025,9 @@ func main() {
 		}
 		var header string
 		if target.isFile {
-			header = fmt.Sprintf("POST_HISTORY_FILE %s %s %d\n", target.community, target.postFile, rev)
+			header = fmt.Sprintf("GET_POST_REVISIONS_FILE %s %s %d\n", target.community, target.postFile, rev)
 		} else {
-			header = fmt.Sprintf("POST_HISTORY %d %d\n", target.postID, rev)
+			header = fmt.Sprintf("GET_POST_REVISIONS %d %d\n", target.postID, rev)
 		}
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
@@ -1055,7 +1055,7 @@ func main() {
 		if err := resolveToCommunityFile(&target); err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		header := fmt.Sprintf("COMMENT_HISTORY_FILE %s %s %s %d\n", target.community, target.postFile, seq, rev)
+		header := fmt.Sprintf("GET_COMMENT_REVISIONS_FILE %s %s %s %d\n", target.community, target.postFile, seq, rev)
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
 			log.Fatalf("comment-history failed: %v", err)
@@ -1106,7 +1106,7 @@ func main() {
 		if err := resolveToCommunityFile(&target); err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		cmd := fmt.Sprintf("CROSSPOSTS %s %s\n", target.community, target.postFile)
+		cmd := fmt.Sprintf("GET_CROSSPOSTS %s %s\n", target.community, target.postFile)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
 			log.Fatalf("get crossposts failed: %v", err)
@@ -1141,7 +1141,7 @@ func main() {
 		if err := resolveToCommunityFile(&target); err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		cmd := fmt.Sprintf("ORIGIN %s %s\n", target.community, target.postFile)
+		cmd := fmt.Sprintf("GET_CROSSPOST_PARENT %s %s\n", target.community, target.postFile)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
 			log.Fatalf("get origin failed: %v", err)
@@ -1445,18 +1445,20 @@ func main() {
 		}
 		fmt.Print(resp)
 
-	case "delete", "delete-file", "delete-post", "delete-post-file":
+	case "remove", "remove-post":
+		// Lemmy's RemovePost, as the site's operator (or mod): post.svc
+		// keeps the post as removed, with the reason.
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl delete <post> [deleter] [reason]\n  <post>: <post_id> or <post_file>@<community>")
+			log.Fatalf("Usage: post.ctl remove <post> [mod] [reason]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
-		deleter := "sysop"
+		mod := "sysop"
 		if len(args) > nextIdx {
-			deleter = args[nextIdx]
+			mod = args[nextIdx]
 		}
 		reason := ""
 		if len(args) > nextIdx+1 {
@@ -1464,19 +1466,20 @@ func main() {
 		}
 		var cmd string
 		if target.isFile {
-			cmd = fmt.Sprintf("DELETE_POST_FILE %s %s %s 0 %s\n", target.community, target.postFile, deleter, reason)
+			cmd = fmt.Sprintf("REMOVE_POST_FILE %s %s %s 0 %s\n", target.community, target.postFile, mod, reason)
 		} else {
-			cmd = fmt.Sprintf("DELETE_POST %d %s 0 %s\n", target.postID, deleter, reason)
+			cmd = fmt.Sprintf("REMOVE_POST %d %s 0 %s\n", target.postID, mod, reason)
 		}
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("delete failed: %v", err)
+			log.Fatalf("remove failed: %v", err)
 		}
 		fmt.Print(resp)
 
-	case "undelete", "undelete-file", "undelete-post", "undelete-post-file":
+	case "recover", "recover-post":
+		// Puts a deleted or removed post back (Discourse's recover).
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl undelete <post>\n  <post>: <post_id> or <post_file>@<community>")
+			log.Fatalf("Usage: post.ctl recover <post>\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, _, err := parsePostArg(args, 1)
 		if err != nil {
@@ -1484,19 +1487,20 @@ func main() {
 		}
 		var cmd string
 		if target.isFile {
-			cmd = fmt.Sprintf("UNDELETE_POST_FILE %s %s\n", target.community, target.postFile)
+			cmd = fmt.Sprintf("RECOVER_POST_FILE %s %s\n", target.community, target.postFile)
 		} else {
-			cmd = fmt.Sprintf("UNDELETE_POST %d\n", target.postID)
+			cmd = fmt.Sprintf("RECOVER_POST %d\n", target.postID)
 		}
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("undelete failed: %v", err)
+			log.Fatalf("recover failed: %v", err)
 		}
 		fmt.Print(resp)
 
-	case "delete-comment", "delete-comment-file":
+	case "remove-comment":
+		// Lemmy's RemoveComment, as the site's operator (or mod).
 		if len(args) < 3 {
-			log.Fatalf("Usage: post.ctl delete-comment <post> <seq> [deleter] [reason]\n  <post>: <post_id> or <post_file>@<community>")
+			log.Fatalf("Usage: post.ctl remove-comment <post> <seq> [mod] [reason]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
@@ -1504,12 +1508,12 @@ func main() {
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: post.ctl delete-comment <post> <seq> [deleter] [reason]")
+			log.Fatalf("Usage: post.ctl remove-comment <post> <seq> [mod] [reason]")
 		}
 		seq := args[nextIdx]
-		deleter := "sysop"
+		mod := "sysop"
 		if len(args) > nextIdx+1 {
-			deleter = args[nextIdx+1]
+			mod = args[nextIdx+1]
 		}
 		reason := ""
 		if len(args) > nextIdx+2 {
@@ -1518,16 +1522,16 @@ func main() {
 		if err := resolveToCommunityFile(&target); err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		cmd := fmt.Sprintf("DELETE_COMMENT_FILE %s %s %s %s 0 %s\n", target.community, target.postFile, seq, deleter, reason)
+		cmd := fmt.Sprintf("REMOVE_COMMENT_FILE %s %s %s %s 0 %s\n", target.community, target.postFile, seq, mod, reason)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("delete-comment failed: %v", err)
+			log.Fatalf("remove-comment failed: %v", err)
 		}
 		fmt.Print(resp)
 
-	case "undelete-comment", "undelete-comment-file":
+	case "recover-comment":
 		if len(args) < 3 {
-			log.Fatalf("Usage: post.ctl undelete-comment <post> <seq>\n  <post>: <post_id> or <post_file>@<community>")
+			log.Fatalf("Usage: post.ctl recover-comment <post> <seq>\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
@@ -1535,16 +1539,16 @@ func main() {
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: post.ctl undelete-comment <post> <seq>")
+			log.Fatalf("Usage: post.ctl recover-comment <post> <seq>")
 		}
 		seq := args[nextIdx]
 		if err := resolveToCommunityFile(&target); err != nil {
 			log.Fatalf("Error: %v", err)
 		}
-		cmd := fmt.Sprintf("UNDELETE_COMMENT_FILE %s %s %s\n", target.community, target.postFile, seq)
+		cmd := fmt.Sprintf("RECOVER_COMMENT_FILE %s %s %s\n", target.community, target.postFile, seq)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("undelete-comment failed: %v", err)
+			log.Fatalf("recover-comment failed: %v", err)
 		}
 		fmt.Print(resp)
 
@@ -1575,8 +1579,8 @@ Usage:
   post.ctl fetch <post> <output_path>
   post.ctl update <post> <title> <content> [editor]
   post.ctl update-title <post> <title> [editor]
-  post.ctl delete <post> [deleter] [reason]
-  post.ctl undelete <post>
+  post.ctl remove <post> [mod] [reason]     (Lemmy's RemovePost)
+  post.ctl recover <post>                   (puts a deleted or removed post back)
   post.ctl purge <post>
   post.ctl communities
   post.ctl community <community>|#<id>
@@ -1592,8 +1596,8 @@ Usage:
   post.ctl get-comment <comment_id>
   post.ctl api <method> [json]               (Lemmy API: GetPosts, GetPost, GetComments, GetComment, LockPost)
   post.ctl comment <post> <author> <content> [ip] [person_id]
-  post.ctl delete-comment <post> <seq> [deleter] [reason]
-  post.ctl undelete-comment <post> <seq>
+  post.ctl remove-comment <post> <seq> [mod] [reason]
+  post.ctl recover-comment <post> <seq>
   post.ctl update-comment <post> <seq> <content> [editor]
   post.ctl history <post> [rev]
   post.ctl comment-history <post> <seq> [rev]

@@ -524,6 +524,10 @@ func (s *ShardedEngine) DeletePost(postID uint64, deleterName string, deleterID 
 	return s.GetEngineByPostID(postID).DeletePost(postID, deleterName, deleterID, reason)
 }
 
+func (s *ShardedEngine) RemovePost(postID uint64, modName string, modID model.PersonID, reason string) (uint32, error) {
+	return s.GetEngineByPostID(postID).RemovePost(postID, modName, modID, reason)
+}
+
 func (s *ShardedEngine) DeletePostByCommunityFile(community, postFile, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
 	return s.GetEngineByCommunity(community).DeletePostByCommunityFile(community, postFile, deleterName, deleterID, reason)
 }
@@ -546,6 +550,10 @@ func (s *ShardedEngine) UpdateCommentByCommunityFile(community, postFile string,
 
 func (s *ShardedEngine) DeleteComment(postID uint64, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {
 	return s.GetEngineByPostID(postID).DeleteComment(postID, seq, deleterName, deleterID, reason)
+}
+
+func (s *ShardedEngine) RemoveComment(postID uint64, seq uint32, modName string, modID model.PersonID, reason string) (uint32, error) {
+	return s.GetEngineByPostID(postID).RemoveComment(postID, seq, modName, modID, reason)
 }
 
 func (s *ShardedEngine) DeleteCommentByCommunityFile(community, postFile string, seq uint32, deleterName string, deleterID model.PersonID, reason string) (uint32, error) {

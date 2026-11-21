@@ -23,20 +23,31 @@ func (d *Deletion) DeletedOrRemoved() bool {
 	return d.Deleted || d.Removed
 }
 
+// IsCreator reports whether byName / byID is the creator creatorName /
+// creatorID (by ID when both are known, else by name).
+func IsCreator(creatorName string, creatorID PersonID, byName string, byID PersonID) bool {
+	if byID != 0 && creatorID != 0 {
+		return byID == creatorID
+	}
+	return byName == creatorName
+}
+
 // Delete takes it down at time at, on behalf of byName / byID: as deleted
 // if that is its creator, and as removed (for reason) otherwise.
 func (d *Deletion) Delete(creatorName string, creatorID PersonID, byName string, byID PersonID, reason string, at int64) {
-	self := byName == creatorName
-	if byID != 0 && creatorID != 0 {
-		self = byID == creatorID
+	if IsCreator(creatorName, creatorID, byName, byID) {
+		*d = Deletion{DeletedAt: at, Deleted: true}
+		return
 	}
-	*d = Deletion{DeletedAt: at}
-	if self {
-		d.Deleted = true
-	} else {
-		d.Removed = true
-		d.ModPersonName, d.ModPersonID, d.Reason = HeaderValue(byName), byID, HeaderValue(reason)
-	}
+	d.Remove(byName, byID, reason, at)
+}
+
+// Remove takes it down at time at as removed by a moderator (or the
+// system) byName / byID, for reason, even if that is its creator (Lemmy's
+// RemovePost and RemoveComment).
+func (d *Deletion) Remove(byName string, byID PersonID, reason string, at int64) {
+	*d = Deletion{DeletedAt: at, Removed: true}
+	d.ModPersonName, d.ModPersonID, d.Reason = HeaderValue(byName), byID, HeaderValue(reason)
 }
 
 // Restore undoes Delete.
