@@ -615,8 +615,6 @@ typedef struct {
     // Set while getting values for the modlog, which must not
     // include the personal parts (e.g. the user's own login count).
     bool for_log;
-    // Some settings were saved.
-    bool saved;
     // Reason of the change, if the setter asked for one.
     char reason[MODLOG_REASON_LEN];
     // The change is also recorded in BN_POLICELOG, see modlog_police().
@@ -1403,7 +1401,6 @@ bconfig_commit(bconfig_ctx_t *cx)
     modify_boardheader(cx->bp, currbid);
     log_usies("SetBoard", cx->bp->brdname);
     cx->touched = 0;
-    cx->saved = true;
 }
 
 static int
@@ -1723,17 +1720,10 @@ b_config(void)
 
     psb_main(&ctx);
 
-    // Changes are saved as they are made, see bconfig_commit().
     if (cx.touched) {
         assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
         modify_boardheader(bp, currbid);
         log_usies("SetBoard", bp->brdname);
-        cx.saved = true;
-    }
-    if (cx.saved) {
-        vmsg("已儲存新設定");
-    } else if (!cx.readonly) {
-        vmsg("未改變任何設定");
     }
 
     return FULLUPDATE;
