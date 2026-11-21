@@ -880,7 +880,8 @@ setforward(void) {
 
     setuserfile(buf, FN_FORWARD);
     if ((fp = fopen(buf, "r"))) {
-	fscanf(fp, "%" toSTR(sizeof(ip)) "s", ip);
+	_Static_assert(sizeof(ip) == 50, "the width below is sizeof(ip) - 1");
+	fscanf(fp, "%49s", ip);
 	fclose(fp);
 
     }
