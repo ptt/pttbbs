@@ -725,6 +725,10 @@ client_cb(int fd, short event, void *arg)
         fprintf(stderr, "fd %d: read error: %s\n", fd, strerror(errno));
         goto close_conn;
     }
+    if (nread == 0) {
+        fprintf(stderr, "fd %d: closed before a full request\n", fd);
+        goto close_conn;
+    }
     conn->len += nread;
 
     if (conn->len < sizeof(regmaildb_req_header))
