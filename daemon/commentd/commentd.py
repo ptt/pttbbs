@@ -9,7 +9,7 @@ import os
 from gevent import monkey; monkey.patch_all()
 import gevent
 import gevent.server
-import leveldb
+import plyvel
 
 # Ref: ../../include/pttstruct.h
 IDLEN = 12
@@ -123,17 +123,17 @@ def open_database(db_path):
 
         def get(self, key):
             try:
-                return self.db.Get(key)
+                return self.db.get(key)
             except KeyError:
                 return None
 
         def set(self, key, value):
-            self.db.Put(key, value)
+            self.db.put(key, value)
 
         def RangeIter(self, **args):
-            return self.db.RangeIter(*args)
+            return self.db.iterator(*args)
 
-    g_db = LevelDBWrapper(leveldb.LevelDB(db_path))
+    g_db = LevelDBWrapper(plyvel.DB(db_path, create_if_missing=True))
     return g_db
 
 def handle_request(socket, _):
