@@ -8,9 +8,9 @@ import (
 // PersonID identifies a user (a Lemmy person) for real: user_t in
 // include/pttstruct.h ({ int unum; time4_t firstlogin; }) as one 64-bit
 // integer with the same bits as user_t in (little-endian) memory, i.e.
-// firstlogin << 32 | unum (person_id_pack() in include/cmbbs.h). unum is the
-// slot of the account in .PASSWDS, and firstlogin tells apart the accounts
-// that have used the same slot. 0 (user_t { 0, 0 }) means unknown (e.g.
+// firstlogin << 32 | unum. unum is the slot of the account in .PASSWDS, and
+// firstlogin tells apart the accounts that have used the same slot. 0
+// (user_t { 0, 0 }) means unknown (e.g.
 // system posts, or legacy records whose author cannot be resolved any more).
 // firstlogin 0 with a usernum is the author of a legacy anonymous post whose
 // account cannot be told any more: only the slot (fileheader_t.multi) is

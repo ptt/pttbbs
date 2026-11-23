@@ -119,7 +119,7 @@ const (
 	LegacyTypeArrow        uint8 = 3 // PTT1 箭頭 (→)
 )
 
-// MaxCommentLines defines the maximum number of lines allowed per comment (consistent with COMMENT_LINES in mbbsd)
+// MaxCommentLines defines the maximum number of lines allowed per comment.
 const MaxCommentLines = 5
 
 // CountCommentLines returns the number of non-empty content lines in a comment
