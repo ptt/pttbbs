@@ -2920,3 +2920,106 @@ func TestServerCommunityCommands(t *testing.T) {
 		t.Fatalf("LIST_COMMUNITIES after purge: %s", resp)
 	}
 }
+
+// The communities follow .BRD as BoF writes it: EDIT_COMMUNITY mirrors the
+// slot BoF wrote, and SyncBoards (when post.svc starts) all of it, without
+// rewriting what did not change.
+func TestServerSyncBoards(t *testing.T) {
+	tmpDir := t.TempDir()
+	bbsHome := filepath.Join(tmpDir, "bbshome")
+	if err := os.MkdirAll(bbsHome, 0755); err != nil {
+		t.Fatal(err)
+	}
+	st, err := storage.OpenEngine(storage.Config{
+		DataDir:     filepath.Join(tmpDir, "data"),
+		CacheDir:    filepath.Join(tmpDir, "cache"),
+		CacheSizeMB: 16,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	record := func(name, desc string, attr uint32) []byte {
+		b := make([]byte, importer.BoardHeaderSize)
+		copy(b[0:13], name)
+		copy(b[20:62], desc)
+		binary.LittleEndian.PutUint32(b[104:], attr)
+		return b
+	}
+	brd := filepath.Join(bbsHome, ".BRD")
+	write := func(recs ...[]byte) {
+		t.Helper()
+		var data []byte
+		for _, r := range recs {
+			data = append(data, r...)
+		}
+		if err := os.WriteFile(brd, data, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// What was written while post.svc was down: mirrored when it starts.
+	write(record("Alpha", "first", 0), make([]byte, importer.BoardHeaderSize),
+		record("Link", "a link", model.BrdSymbolic))
+	sockPath := filepath.Join(tmpDir, "post.sock")
+	srv := daemon.NewServer(daemon.ServerConfig{
+		BBSHome: bbsHome, UnixSocket: sockPath, SyncBoardsAtStart: true,
+	}, st)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+	ipc := func(cmd string) string {
+		t.Helper()
+		conn, err := net.Dial("unix", sockPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Close()
+		conn.Write([]byte(cmd + "\n"))
+		line, _ := bufio.NewReader(conn).ReadString('\n')
+		return strings.TrimSpace(line)
+	}
+	c, ok := st.Communities().GetByName("Alpha")
+	if !ok || c.Title != "first" || c.BID != 1 {
+		t.Fatalf("Alpha after start: %+v", c)
+	}
+	if _, ok := st.Communities().GetByName("Link"); ok {
+		t.Fatalf("a link became a community")
+	}
+
+	// Nothing changed: nothing is rewritten.
+	updated := c.Updated
+	time.Sleep(1100 * time.Millisecond)
+	if _, err := srv.SyncBoards(); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := st.Communities().GetByName("Alpha"); c.Updated != updated {
+		t.Fatalf("an unchanged board was rewritten: updated %d -> %d", updated, c.Updated)
+	}
+
+	// The slot BoF tells of is mirrored, and that slot only.
+	write(record("Alpha", "changed", 0), record("Beta", "second", 0))
+	if resp := ipc("EDIT_COMMUNITY 1"); resp != fmt.Sprintf("OK %d", c.ID) {
+		t.Fatalf("EDIT_COMMUNITY 1: %s", resp)
+	}
+	if c, _ := st.Communities().GetByName("Alpha"); c.Title != "changed" {
+		t.Fatalf("Alpha not mirrored by EDIT_COMMUNITY: %+v", c)
+	}
+	if _, ok := st.Communities().GetByName("Beta"); ok {
+		t.Fatalf("EDIT_COMMUNITY mirrored another slot")
+	}
+	if resp := ipc("EDIT_COMMUNITY 2"); !strings.HasPrefix(resp, "OK ") || resp == "OK 0" {
+		t.Fatalf("EDIT_COMMUNITY 2: %s", resp)
+	}
+	if c, ok := st.Communities().GetByName("Beta"); !ok || c.BID != 2 {
+		t.Fatalf("Beta not mirrored: %+v", c)
+	}
+	if resp := ipc("EDIT_COMMUNITY 9"); resp != "OK 0" {
+		t.Fatalf("EDIT_COMMUNITY of no slot: %s", resp)
+	}
+	if resp := ipc("EDIT_COMMUNITY x"); !strings.HasPrefix(resp, "ERR") {
+		t.Fatalf("EDIT_COMMUNITY x: %s", resp)
+	}
+}

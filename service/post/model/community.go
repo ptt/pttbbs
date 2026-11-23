@@ -105,7 +105,7 @@ func rfc822Value(s string) string {
 	return strings.NewReplacer("\r", " ", "\n", " ").Replace(s)
 }
 
-// EncodeRFC822Community encodes the fields that mbbsd mirrors (and the
+// EncodeRFC822Community encodes the fields mirrored from .BRD (and the
 // ones post.svc owns) as RFC 822 headers, one "Moderator: <person_id>
 // <name>" per moderator, followed by the description as the body. It is
 // the payload of UPSERT_COMMUNITY and of the reply of GET_COMMUNITY.

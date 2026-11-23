@@ -34,6 +34,9 @@ type ServerConfig struct {
 	Users importer.UserResolver
 	// SiteURL makes the ActivityPub IDs in the Lemmy API (see package lemmy).
 	SiteURL string
+	// SyncBoardsAtStart mirrors all of $BBSHOME/.BRD when the server
+	// starts, for what changed while it was down (see SyncBoards).
+	SyncBoardsAtStart bool
 }
 
 func (c ServerConfig) IsBig5() bool {
@@ -104,6 +107,11 @@ func (s *Server) Start() error {
 		s.acceptLoop(lnUnix, s.handleIPC)
 	}()
 	log.Printf("[post.svc] Modern IPC socket listening on %s", s.cfg.UnixSocket)
+	if s.cfg.SyncBoardsAtStart {
+		if _, err := s.SyncBoards(); err != nil && !os.IsNotExist(err) {
+			log.Printf("[post.svc] Cannot mirror .BRD: %v", err)
+		}
+	}
 	return nil
 }
 
@@ -1655,12 +1663,35 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %d\n", len(payload))))
 		conn.Write(payload)
 
+	case "EDIT_COMMUNITY":
+		// EDIT_COMMUNITY <bid>
+		// Lemmy's EditCommunity (and CreateCommunity), as BoF sends it once
+		// it has written slot <bid> of .BRD: post.svc mirrors that slot
+		// (its fields are read from .BRD, the source of truth). Replies
+		// OK <id>, or OK 0 for an empty slot or a link.
+		bid, err := strconv.Atoi(strings.TrimSpace(strings.Join(parts[1:], " ")))
+		if len(parts) < 2 || err != nil || bid < 1 {
+			conn.Write([]byte("ERR invalid arguments for EDIT_COMMUNITY\n"))
+			return
+		}
+		id, err := importer.ImportBoardHeader(s.storage, importer.ImportBoardsOptions{
+			BBSHome: s.cfg.BBSHome,
+			IsBig5:  s.cfg.IsBig5(),
+			Users:   s.users,
+		}, bid)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", id)))
+
 	case "UPSERT_COMMUNITY":
 		// UPSERT_COMMUNITY <community> <bytes>\n<RFC 822 community>
 		// Mirrors a board header (see model.EncodeRFC822Community): sets
 		// the fields of the community (registering it if needed) and
 		// replaces its moderators, whose names are looked up if they are
 		// still the same accounts. Text in Big5 is converted to UTF-8.
+		// BoF sends EDIT_COMMUNITY instead; this is for tools.
 		// Replies OK <id>.
 		if len(parts) < 3 || parts[1] == "" {
 			conn.Write([]byte("ERR invalid arguments for UPSERT_COMMUNITY\n"))

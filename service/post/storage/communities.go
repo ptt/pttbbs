@@ -28,9 +28,9 @@ var (
 )
 
 // CommunityRegistry keeps the communities (model.Community) and their
-// moderators, mirrored from .BRD by mbbsd, and maps their names to IDs. It
-// is shared by all shard engines and keeps a full copy of the tables in
-// memory.
+// moderators, mirrored from .BRD (see daemon.Server.SyncBoards), and maps
+// their names to IDs. It is shared by all shard engines and keeps a full
+// copy of the tables in memory.
 //
 // A community taken down (removed, when its board is deleted; Lemmy's
 // RemoveCommunity) keeps its ID and name, so its posts can still be found
@@ -405,6 +405,12 @@ func (r *CommunityRegistry) Upsert(in *model.Community) (int64, error) {
 	}
 	model.SortModerators(updated.Moderators)
 
+	// Nothing to write if the board header has not changed: all of .BRD is
+	// mirrored again whenever it is written (see daemon.Server.SyncBoards).
+	if sameMirror(c, &updated) {
+		return c.ID, nil
+	}
+
 	tx, err := r.db.Begin()
 	if err != nil {
 		return 0, err
@@ -432,6 +438,26 @@ func (r *CommunityRegistry) Upsert(in *model.Community) (int64, error) {
 	}
 	*c = updated
 	return c.ID, nil
+}
+
+// sameMirror reports whether a and b have the same fields that Upsert
+// mirrors from the board header.
+func sameMirror(a, b *model.Community) bool {
+	if a.Title != b.Title || a.Description != b.Description || a.Category != b.Category ||
+		a.Flags != b.Flags || a.BID != b.BID || a.GroupBID != b.GroupBID || a.Group != b.Group ||
+		a.Level != b.Level || a.PostLimitLogins != b.PostLimitLogins ||
+		a.PostLimitBadpost != b.PostLimitBadpost || a.PetitionLimitLogins != b.PetitionLimitLogins ||
+		a.PetitionLimitBadpost != b.PetitionLimitBadpost || a.FastCommentPause != b.FastCommentPause ||
+		a.ModeratorNotes != b.ModeratorNotes || len(a.Moderators) != len(b.Moderators) {
+		return false
+	}
+	for i := range a.Moderators {
+		if a.Moderators[i].PersonID != b.Moderators[i].PersonID ||
+			a.Moderators[i].PersonName != b.Moderators[i].PersonName {
+			return false
+		}
+	}
+	return true
 }
 
 // Name returns the name of the community with the given ID, including

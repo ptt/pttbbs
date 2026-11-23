@@ -259,6 +259,8 @@ func main() {
 		ImportWorkers:  svcConf.ImportWorkers,
 		SiteURL:        svcConf.SiteURL,
 		Users:          users,
+		// The communities follow .BRD: what changed while post.svc was down.
+		SyncBoardsAtStart: true,
 	}, st)
 
 	if err := srv.Start(); err != nil {

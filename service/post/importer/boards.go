@@ -3,6 +3,7 @@ package importer
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -206,6 +207,47 @@ func ImportBoards(st storage.Storage, opts ImportBoardsOptions) (*ImportBoardsSt
 		stats.Upserted++
 	}
 	return stats, nil
+}
+
+// readBoardHeaderAt reads record bid (1-based) of .BRD; nil if there is
+// none.
+func readBoardHeaderAt(f *os.File, bid int) (*BoardHeader, error) {
+	buf := make([]byte, BoardHeaderSize)
+	n, err := f.ReadAt(buf, int64(bid-1)*BoardHeaderSize)
+	if n < BoardHeaderSize {
+		if err == nil || err == io.EOF {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ParseBoardHeader(buf, bid)
+}
+
+// ImportBoardHeader mirrors record bid of $BBSHOME/.BRD (as mbbsd has just
+// written it, through BoF) into the community registry, and returns the ID
+// of its community; 0 for an empty slot or a link, which are not
+// communities.
+func ImportBoardHeader(st storage.Storage, opts ImportBoardsOptions, bid int) (int64, error) {
+	if bid < 1 {
+		return 0, fmt.Errorf("invalid board slot %d", bid)
+	}
+	f, err := os.Open(filepath.Join(opts.BBSHome, ".BRD"))
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	bh, err := readBoardHeaderAt(f, bid)
+	if err != nil || bh == nil || !bh.IsCommunity() {
+		return 0, err
+	}
+	c := bh.Community(nil, opts.Users, opts.IsBig5)
+	// The name of its group, from the slot of the group.
+	if bh.GID >= 1 {
+		if gh, err := readBoardHeaderAt(f, int(bh.GID)); err == nil && gh != nil {
+			c.Group = gh.Name
+		}
+	}
+	return st.Communities().Upsert(c)
 }
 
 // importCommunity mirrors the record of board in $BBSHOME/.BRD into the
