@@ -2533,7 +2533,7 @@ typedef struct {
 
 static int
 pvcd_header(PSB_CTX *ctx GCC_UNUSED) {
-    vs_draw_hdr2("推文管理", "刪除推文");
+    vs_draw_hdr2("推文管理", "移除推文");
     move(1, 0);
     vbar(ANSI_REVERSE "  編 號 | 作  者     | 內  容");
     return 0;
@@ -2597,7 +2597,7 @@ pvcd_cmd_delete(cmd_ctx_t *ctx) {
         // bof also puts it in the modlog.
         if (CommentsDeleteFromTextFile(cx->cmctx, ctx->curr, reason,
                                        &log) != 0)
-            vmsg("刪除失敗。可能原文已被修改。");
+            vmsg("移除失敗。可能原文已被修改。");
     }
     return 0;
 }
@@ -2625,7 +2625,7 @@ pvcd_cmd_acl(cmd_ctx_t *ctx) {
 }
 
 static const cmd_t pvcd_cmds[] = {
-    { 'd', "刪除", "刪除選取的推文並記錄原因", pvcd_cmd_delete, 0, CMD_PRIO_MAX, true },
+    { 'd', "移除", "移除選取的推文並記錄原因", pvcd_cmd_delete, 0, CMD_PRIO_MAX, true },
     { KEY_DEL, NULL, NULL, pvcd_cmd_delete, 0, CMD_PRIO_NONE, true },
     { 'U', "快速禁言", "設定該推文作者的看板禁言權限", pvcd_cmd_acl, 0, CMD_PRIO_HIGH, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
@@ -2634,15 +2634,15 @@ static const cmd_t pvcd_cmds[] = {
 static int
 pvcd_welcome() {
     clear();
-    vs_hdr2("刪除推文", "警告");
+    vs_hdr2("移除推文", "警告");
     move(2, 0);
     // This must be a outs because we have '%' inside.
     outs(ANSI_COLOR(1;31)
-"  這是刪除推文的界面。\n\n" ANSI_RESET
-"  提醒您: (1) 刪推文界面顯示的內容是來自於獨立的資料庫，所以不會有\n"
+"  這是移除推文的界面。\n\n" ANSI_RESET
+"  提醒您: (1) 移除推文界面顯示的內容是來自於獨立的資料庫，所以不會有\n"
 "              原作者修文假造推文內容的問題。但也因此，若原推文被修改\n"
-"              使得內容不同時(或是假推文)則此界面就無法刪除。\n\n"
-"          (2) 刪推文會從檔案前面開始找看起來作者跟內文相同的第一筆。\n"
+"              使得內容不同時(或是假推文)則此界面就無法移除。\n\n"
+"          (2) 移除推文會從檔案前面開始找看起來作者跟內文相同的第一筆。\n"
 "              目前沒辦法100%確認找到正確的位置，但起碼內文是相同的。\n\n"
         "");
     pressanykey();
