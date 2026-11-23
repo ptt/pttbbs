@@ -1561,14 +1561,19 @@ static int add_board_record(const boardheader_t *board)
     int bid;
     if (!group_exists(board->gid))
 	return ADD_BOARD_GROUP_GONE;
-    if ((bid = free_board_slot()) > 0) {
+    // Take a new slot while .BRD has room, and reuse the slot of a deleted
+    // board only when it is full: things keyed by the bid elsewhere (users'
+    // favorites, the bid a backend knew a board by) may still refer to the
+    // deleted board.
+    if (SHM->Bnumber < MAX_BOARD) {
+	if (create_board_header(0, board) != 0)
+	    return -1;
+    } else if ((bid = free_board_slot()) > 0) {
 	assert(0<=bid-1 && bid-1<MAX_BOARD);
 	if (create_board_header(bid, board) != 0)
 	    return -1;
         sort_bcache();
-    } else if (SHM->Bnumber >= MAX_BOARD) {
-	return -1;
-    } else if (create_board_header(0, board) != 0) {
+    } else {
 	return -1;
     }
     return 0;
