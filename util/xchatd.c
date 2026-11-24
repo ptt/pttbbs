@@ -255,42 +255,6 @@ log_close()
 }
 
 
-#if IS_ENABLED(CONFIG_DEBUG)
-static void
-debug_user()
-{
-    register ChatUser *user;
-    int i;
-    char buf[80];
-
-    i = 0;
-    for (user = mainuser; user; user = user->unext)
-    {
-	SNPRINTF(buf, "%d) %s %s", ++i, user->userid, user->chatid);
-	logit("DEBUG_U", buf);
-    }
-}
-
-
-static void
-debug_room()
-{
-    register ChatRoom *room;
-    int i;
-    char buf[80];
-
-    i = 0;
-    room = &mainroom;
-
-    do
-    {
-	SNPRINTF(buf, "%d) %s %d", ++i, room->name, room->occupants);
-	logit("DEBUG_R", buf);
-    } while (room = room->next);
-}
-#endif                          /* DEBUG */
-
-
 /* ----------------------------------------------------- */
 /* string routines                                       */
 /* ----------------------------------------------------- */
