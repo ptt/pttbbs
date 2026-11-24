@@ -3,6 +3,7 @@ package importer
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -829,50 +830,39 @@ func TestLegacyManFilemodeFlags(t *testing.T) {
 	}
 }
 
-func TestCommentMergeFiveLinesLimit(t *testing.T) {
-	article := `作者: op (operator) 看板: TestBoard
-標題: 超過五行合併測試
-時間: Fri Nov 25 18:00:00 2016
-
-本文
---
-※ 發信站: 批踢踢實業坊
-推 userA: 第1行                                                  11/25 18:01
-→ userA: 第2行                                                  11/25 18:01
-→ userA: 第3行                                                  11/25 18:01
-→ userA: 第4行                                                  11/25 18:01
-→ userA: 第5行 (上限)                                           11/25 18:01
-→ userA: 第6行 (不可併入前則，新起一則)                         11/25 18:01
-→ userA: 第7行 (併入第6行)                                      11/25 18:01
-`
+func TestCommentMergeLinesLimit(t *testing.T) {
+	// Lines of one author within 3 minutes merge up to MaxCommentLines; the
+	// next starts a new comment, which the one after merges into.
+	var b strings.Builder
+	b.WriteString("作者: op (operator) 看板: TestBoard\n標題: 合併上限測試\n時間: Fri Nov 25 18:00:00 2016\n\n本文\n--\n※ 發信站: 批踢踢實業坊\n")
+	var first []string
+	for i := 1; i <= model.MaxCommentLines+2; i++ {
+		tag := "→"
+		if i == 1 {
+			tag = "推"
+		}
+		text := fmt.Sprintf("第%d行", i)
+		if i <= model.MaxCommentLines {
+			first = append(first, text)
+		}
+		fmt.Fprintf(&b, "%s userA: %-50s 11/25 18:01\n", tag, text)
+	}
 	baseTime := time.Date(2016, 11, 25, 18, 0, 0, 0, time.Local).Unix()
-	parsed, err := ParseArticleText([]byte(article), "op", baseTime, "TestBoard", "M.1480068000.A.005", false)
+	parsed, err := ParseArticleText([]byte(b.String()), "op", baseTime, "TestBoard", "M.1480068000.A.005", false)
 	if err != nil {
 		t.Fatalf("ParseArticleText failed: %v", err)
 	}
-
 	if len(parsed.Comments) != 2 {
 		for i, c := range parsed.Comments {
 			t.Logf("[%d] author=%s content=%q", i, c.CreatorName, c.Content)
 		}
-		t.Fatalf("Expected 2 comments due to 5-line limit, got %d", len(parsed.Comments))
+		t.Fatalf("Expected 2 comments due to the %d-line limit, got %d", model.MaxCommentLines, len(parsed.Comments))
 	}
-
-	c0 := parsed.Comments[0]
-	expected0 := "第1行\n第2行\n第3行\n第4行\n第5行 (上限)"
-	if c0.Content != expected0 {
-		t.Errorf("c0 content mismatch: got %q, expected %q", c0.Content, expected0)
+	if got, want := parsed.Comments[0].Content, strings.Join(first, "\n"); got != want {
+		t.Errorf("c0 content mismatch: got %q, expected %q", got, want)
 	}
-	if model.CountCommentLines(c0.Content) != 5 {
-		t.Errorf("c0 line count should be 5, got %d", model.CountCommentLines(c0.Content))
-	}
-
-	c1 := parsed.Comments[1]
-	expected1 := "第6行 (不可併入前則，新起一則)\n第7行 (併入第6行)"
-	if c1.Content != expected1 {
-		t.Errorf("c1 content mismatch: got %q, expected %q", c1.Content, expected1)
-	}
-	if model.CountCommentLines(c1.Content) != 2 {
-		t.Errorf("c1 line count should be 2, got %d", model.CountCommentLines(c1.Content))
+	want1 := fmt.Sprintf("第%d行\n第%d行", model.MaxCommentLines+1, model.MaxCommentLines+2)
+	if got := parsed.Comments[1].Content; got != want1 {
+		t.Errorf("c1 content mismatch: got %q, expected %q", got, want1)
 	}
 }

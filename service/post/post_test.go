@@ -2526,29 +2526,33 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 		t.Fatalf("c7 expected 4 lines, got %d", model.CountCommentLines(c7.Content))
 	}
 
-	// 8. userA: Add 1 line to c6 -> 4 + 1 = 5 lines <= 5 lines (hits cap) -> should merge
+	// 8. userA: Add lines up to the cap (MaxCommentLines) -> should merge
+	var fill []string
+	for i := 5; i <= model.MaxCommentLines; i++ {
+		fill = append(fill, fmt.Sprintf("第%d行", i))
+	}
 	c8, err := engine.AddComment(&model.Comment{
 		PostID:      post.ID,
 		CreatorName: "userA",
 		CreatorID:   1001,
 		IP:          "1.1.1.1",
-		Content:     "第五行 (達上限)",
+		Content:     strings.Join(fill, "\n"),
 		CreatedAt:   baseTime + 470,
 	})
 	if err != nil || !c8.IsMerged || c8.Sequence != 4 {
 		t.Fatalf("c8 merge failed: err=%v, merged=%v, seq=%d", err, c8.IsMerged, c8.Sequence)
 	}
-	if model.CountCommentLines(c8.Content) != 5 {
-		t.Fatalf("c8 expected 5 lines, got %d", model.CountCommentLines(c8.Content))
+	if model.CountCommentLines(c8.Content) != model.MaxCommentLines {
+		t.Fatalf("c8 expected %d lines, got %d", model.MaxCommentLines, model.CountCommentLines(c8.Content))
 	}
 
-	// 9. userA: Add 1 line within 180s -> 5 + 1 = 6 > 5 lines -> should NOT merge into seq 4! Must create seq 5
+	// 9. userA: Add 1 line within 180s -> over MaxCommentLines -> should NOT merge into seq 4! Must create seq 5
 	c9, err := engine.AddComment(&model.Comment{
 		PostID:      post.ID,
 		CreatorName: "userA",
 		CreatorID:   1001,
 		IP:          "1.1.1.1",
-		Content:     "第六行 (超過五行新起一則)",
+		Content:     "第六行 (超過上限新起一則)",
 		CreatedAt:   baseTime + 480,
 	})
 	if err != nil || c9.IsMerged || c9.Sequence != 5 {
@@ -2582,10 +2586,10 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 	if comments[2].Content != "我又來了" || comments[2].Sequence != 3 {
 		t.Fatalf("Floor 3 mismatch: %v", comments[2])
 	}
-	if comments[3].Content != "超時新留言\n第二行\n第三行\n第四行\n第五行 (達上限)" || comments[3].Sequence != 4 {
+	if comments[3].Content != "超時新留言\n第二行\n第三行\n第四行\n"+strings.Join(fill, "\n") || comments[3].Sequence != 4 {
 		t.Fatalf("Floor 4 mismatch: %v", comments[3])
 	}
-	if comments[4].Content != "第六行 (超過五行新起一則)\n第七行 (併入第六行之新樓層)" || comments[4].Sequence != 5 {
+	if comments[4].Content != "第六行 (超過上限新起一則)\n第七行 (併入第六行之新樓層)" || comments[4].Sequence != 5 {
 		t.Fatalf("Floor 5 mismatch: %v", comments[4])
 	}
 

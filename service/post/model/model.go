@@ -119,8 +119,14 @@ const (
 	LegacyTypeArrow        uint8 = 3 // PTT1 箭頭 (→)
 )
 
-// MaxCommentLines defines the maximum number of lines allowed per comment.
-const MaxCommentLines = 5
+// MaxCommentLines is the most lines a comment (a floor) has, including the
+// comments merged into it (same author within 3 minutes). PTT-specific:
+// Lemmy, Reddit and Discourse limit a comment by characters (10,000 or more)
+// and merge nothing. 15 keeps a floor within two thirds of a screen (and
+// within what bof and mbbsd hold: BOF_COMMENT_CONTENT_LEN, v_multiline_text)
+// while one floor still takes 99.8% of the runs of comments of 2+ lines on
+// C_Chat and Marginalman.
+const MaxCommentLines = 15
 
 // CountCommentLines returns the number of non-empty content lines in a comment
 func CountCommentLines(content string) int {
