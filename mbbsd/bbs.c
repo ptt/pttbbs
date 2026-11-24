@@ -1736,7 +1736,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         return FULLUPDATE;
     }
     if (my_comments) {
-        int ans = vans("編輯: [1] 文章內文 [2] 我的推文 [q] 取消: ");
+        int ans = vans("編輯: [1] 文章內文 [2] 我的留言 [q] 取消: ");
         if (ans == '2') {
             if (psb_comment_editor(currboard, direct, ent, fhdr,
                                    comment_lines))
@@ -5056,10 +5056,10 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     snprintf(prompt, sizeof(prompt), "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字%s%s:",
              IS_ENABLED(CONFIG_SUSPICIOUS_MARK) ? " [S]標記待證" : "",
 #ifdef USE_COMMENTD
-             " [V]推文管理");
+             " [V]留言管理");
 #else
              IS_ENABLED(CONFIG_COMMENT_MODERATION) ?
-             " [V]推文管理" : "");
+             " [V]留言管理" : "");
 #endif
 
     if (currstat == RMAIL)

@@ -1335,7 +1335,7 @@ static const BConfigItem bconfig_items[] = {
     { 'd', "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
     { 'r', "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NO_COMMENTS, PERM_BM, NULL, bcfg_set_norecommend },
 #if IS_ENABLED(CONFIG_COMMENT_EDIT)
-    { 'u', "修改或刪除自己的推文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_COMMENT_READONLY, PERM_BM, NULL, bcfg_set_comment_readonly },
+    { 'u', "修改或刪除自己的留言", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_COMMENT_READONLY, PERM_BM, NULL, bcfg_set_comment_readonly },
 #endif
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_no_downvote, bcfg_set_no_downvote },

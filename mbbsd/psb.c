@@ -2802,8 +2802,8 @@ pvcm_changed(pvcm_ctx *cx, cmd_ctx_t *ctx, const fileheader_t *updated)
 static int
 pvcm_header(PSB_CTX *ctx) {
     pvcm_ctx *cx = (pvcm_ctx *)ctx->cmd.priv;
-    vs_draw_hdr2(cx->mine ? "我的推文" : "推文管理",
-                 cx->mine ? "修改推文" : "移除推文");
+    vs_draw_hdr2(cx->mine ? "我的留言" : "留言管理",
+                 cx->mine ? "修改留言" : "移除留言");
     move(1, 0);
     vbar(ANSI_REVERSE "  樓 層 | 作  者     | 內  容");
     return 0;
@@ -2836,7 +2836,7 @@ pvcm_allowed(const char *board, const fileheader_t *fh)
     // Read-only for everyone, moderators too: they remove comments in
     // the comment management (Ctrl-E, V), not here.
     if (bp && (bp->brdattr & BRD_COMMENT_READONLY)) {
-        vmsg("本看板禁止修改或刪除推文。");
+        vmsg("本看板禁止修改或刪除留言。");
         return false;
     }
     if (CBRD_IS_BM())
@@ -2853,13 +2853,13 @@ pvcm_allowed(const char *board, const fileheader_t *fh)
         vmsg("抱歉, 禁止推薦");
         break;
     case BOF_BBS_RULE_ONLY_OPS_COMMENT:
-        vmsg("本板推文限定管理人員使用。");
+        vmsg("本板留言限定管理人員使用。");
         break;
     case BOF_BBS_RULE_DELETED:
         vmsg("本文已刪除");
         break;
     default:
-        vmsg("您目前無法在此看板推文。");
+        vmsg("您目前無法在此看板留言。");
         break;
     }
     return false;
@@ -2874,11 +2874,11 @@ pvcm_cmd_edit(cmd_ctx_t *ctx) {
 
     ctx->redraw = true;
     if (c->removed) {
-        vmsg("已移除的推文無法修改。");
+        vmsg("已移除的留言無法修改。");
         return 0;
     }
     if (strcasecmp(c->creator, cuser.userid) != 0) {
-        vmsg("只有原作者可以修改推文。");
+        vmsg("只有原作者可以修改留言。");
         return 0;
     }
     if (!pvcm_allowed(cx->board, cx->fh))
@@ -2898,16 +2898,16 @@ pvcm_cmd_edit(cmd_ctx_t *ctx) {
     }
     if (cx->multiline || lines > 1) {
         if (lines > 16 || width > STRLEN - 3) {
-            vmsg("這則推文太長，無法在這裡修改。");
+            vmsg("這則留言太長，無法在這裡修改。");
             return 0;
         }
         strlcpy(msg, c->content, sizeof(msg));
         if (v_multiline_text(msg, sizeof(msg),
                              lines > PVCM_EDIT_LINES ? lines : PVCM_EDIT_LINES,
                              width,
-                             "請編輯推文內容: (可多行，按 TAB 加行，"
+                             "請編輯留言內容: (可多行，按 TAB 加行，"
                              "Backspace 刪空行，Ctrl-C 取消)",
-                             " 修改推文 ", NULL, VMULTI_NO_SCROLL) <= 0)
+                             " 修改留言 ", NULL, VMULTI_NO_SCROLL) <= 0)
             return 0;
     } else {
         // Within the room of the old content, so the line keeps its shape.
@@ -2915,7 +2915,7 @@ pvcm_cmd_edit(cmd_ctx_t *ctx) {
         if (len > (int)sizeof(msg))
             len = sizeof(msg);
         if (len < 2) {
-            vmsg("這則推文沒有可以修改的空間。");
+            vmsg("這則留言沒有可以修改的空間。");
             return 0;
         }
         if (!getdata_str(b_lines - 1, 0, "新內容: ", msg, len, DOECHO,
@@ -2938,18 +2938,18 @@ pvcm_cmd_edit(cmd_ctx_t *ctx) {
     switch (bof_edit_comment(&me, &req, &res)) {
     case BOF_OK:
         pvcm_changed(cx, ctx, &updated);
-        vmsg("推文已修改。");
+        vmsg("留言已修改。");
         break;
     case BOF_ERR_COULDNT_UPDATE_POST:
         pvcm_changed(cx, ctx, NULL);
-        vmsg("推文已修改，但文章列表未能更新。");
+        vmsg("留言已修改，但文章列表未能更新。");
         break;
     case BOF_ERR_COULDNT_UPDATE_COMMENT:
     case BOF_ERR_COULDNT_FIND_COMMENT:
-        vmsg("推文已被修改或移除，請重新進入。");
+        vmsg("留言已被修改或移除，請重新進入。");
         break;
     default:
-        vmsg("修改推文失敗。");
+        vmsg("修改留言失敗。");
         break;
     }
     return 0;
@@ -2965,10 +2965,10 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
     if (c->removed || !pvcm_allowed(cx->board, cx->fh))
         return 0;
     if (strcasecmp(c->creator, cuser.userid) != 0) {
-        vmsg("只能刪除自己的推文。");
+        vmsg("只能刪除自己的留言。");
         return 0;
     }
-    if (vans("確定要刪除此推文嗎？[y/N] ") != 'y')
+    if (vans("確定要刪除此留言嗎？[y/N] ") != 'y')
         return 0;
     bof_actor_t me = mbbsd_actor(cx->board, false);
     bof_delete_comment_t req = {
@@ -2980,17 +2980,17 @@ pvcm_cmd_delete(cmd_ctx_t *ctx) {
     switch (bof_delete_comment(&me, &req, &res)) {
     case BOF_OK:
         pvcm_changed(cx, ctx, &updated);
-        vmsg("推文已刪除。");
+        vmsg("留言已刪除。");
         break;
     case BOF_ERR_COULDNT_UPDATE_POST:
         pvcm_changed(cx, ctx, NULL);
-        vmsg("推文已刪除。");
+        vmsg("留言已刪除。");
         break;
     case BOF_ERR_BBS_STORAGE_NOT_SUPPORTED:
-        vmsg("目前的系統不支援刪除自己的推文。");
+        vmsg("目前的系統不支援刪除自己的留言。");
         break;
     default:
-        vmsg("刪除推文失敗。");
+        vmsg("刪除留言失敗。");
         break;
     }
     return 0;
@@ -3007,16 +3007,16 @@ pvcm_cmd_remove(cmd_ctx_t *ctx) {
     if (c->removed || !CBRD_IS_BM())
         return 0;
     psb_comment_line(msg, sizeof(msg), c->content);
-    int y = modlog_form(cx->board, "移除推文");
+    int y = modlog_form(cx->board, "移除留言");
     mvprints(y, 0, "%-12.12s %s", c->creator, msg);
     // The reason is also put in the post.
     if ((y = modlog_ask_reason(cx->board, y + 2, reason, sizeof(reason))) < 0)
         return 0;
     bof_modlog_t log;
-    bof_modlog_init(&log, "移除推文 (%s)", c->creator);
+    bof_modlog_init(&log, "移除留言 (%s)", c->creator);
     bof_modlog_add_post(&log, cx->fh);
     // What was removed, for the audit record.
-    bof_modlog_add_audit(&log, "推文", "%s", msg);
+    bof_modlog_add_audit(&log, "留言", "%s", msg);
     y = modlog_preview(y, cx->board, reason, &log) + 1;
     getdata(y, 0, "確定要移除嗎？ (y/N) ", ans, sizeof(ans), LCECHO);
     if (ans[0] != 'y')
@@ -3034,7 +3034,7 @@ pvcm_cmd_remove(cmd_ctx_t *ctx) {
     switch (bof_remove_comment(&me, &req, &res)) {
     case BOF_OK:
         pvcm_changed(cx, ctx, &updated);
-        vmsg("推文已移除。");
+        vmsg("留言已移除。");
         break;
     case BOF_ERR_COULDNT_FIND_COMMENT:
         vmsg("移除失敗。可能原文已被修改。");
@@ -3088,12 +3088,12 @@ pvcm_cmd_history(cmd_ctx_t *ctx) {
     bof_get_comment_revisions_response_t res = { .revisions = revs };
     bof_error_t err = bof_get_comment_revisions(&req, &res);
     if (err == BOF_ERR_BBS_STORAGE_NOT_SUPPORTED) {
-        vmsg("本站推文沒有另外保存修訂歷史。");
+        vmsg("本站留言沒有另外保存修訂歷史。");
     } else if (err != BOF_OK || res.count <= 0) {
-        vmsg("此推文沒有修訂歷史。");
+        vmsg("此留言沒有修訂歷史。");
     } else if ((buf = malloc(cap))) {
-        len = snprintf(buf, cap, ANSI_COLOR(1;36) "【推文修訂歷史】" ANSI_RESET
-                       " %s 推文 #%d (%s)\n\n", cx->board, c->bbs_floor,
+        len = snprintf(buf, cap, ANSI_COLOR(1;36) "【留言修訂歷史】" ANSI_RESET
+                       " %s 留言 #%d (%s)\n\n", cx->board, c->bbs_floor,
                        c->creator);
         // Newest first.
         for (n = res.count - 1; n >= 0; n--) {
@@ -3130,19 +3130,19 @@ pvcm_cmd_history(cmd_ctx_t *ctx) {
 }
 
 static const cmd_t pvcm_user_cmds[] = {
-    { KEY_ENTER, "修改", "修改推文內容", pvcm_cmd_edit, 0, CMD_PRIO_MAX, true },
+    { KEY_ENTER, "修改", "修改留言內容", pvcm_cmd_edit, 0, CMD_PRIO_MAX, true },
     { 'e', NULL, NULL, pvcm_cmd_edit, 0, CMD_PRIO_NONE, true },
     { 'E', NULL, NULL, pvcm_cmd_edit, 0, CMD_PRIO_NONE, true },
-    { 'd', "刪除", "刪除推文", pvcm_cmd_delete, 0, CMD_PRIO_HIGH, true },
+    { 'd', "刪除", "刪除留言", pvcm_cmd_delete, 0, CMD_PRIO_HIGH, true },
     { KEY_DEL, NULL, NULL, pvcm_cmd_delete, 0, CMD_PRIO_NONE, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
 static const cmd_t pvcm_mod_cmds[] = {
-    { 'd', "移除", "移除選取的推文並記錄原因", pvcm_cmd_remove, 0, CMD_PRIO_MAX, true },
+    { 'd', "移除", "移除選取的留言並記錄原因", pvcm_cmd_remove, 0, CMD_PRIO_MAX, true },
     { KEY_DEL, NULL, NULL, pvcm_cmd_remove, 0, CMD_PRIO_NONE, true },
-    { 'U', "快速禁言", "設定該推文作者的看板禁言權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
-    { '~', "歷史", "檢視推文修訂歷史", pvcm_cmd_history, 0, CMD_PRIO_HIGH, true },
+    { 'U', "快速禁言", "設定該留言作者的看板禁言權限", pvcm_cmd_acl, 0, CMD_PRIO_HIGH, true },
+    { '~', "歷史", "檢視留言修訂歷史", pvcm_cmd_history, 0, CMD_PRIO_HIGH, true },
     { 'h', NULL, NULL, pvcm_cmd_history, 0, CMD_PRIO_NONE, true },
     { 'H', NULL, NULL, pvcm_cmd_history, 0, CMD_PRIO_NONE, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
@@ -3151,13 +3151,13 @@ static const cmd_t pvcm_mod_cmds[] = {
 static void
 pvcm_welcome() {
     clear();
-    vs_hdr2("推文管理", "說明");
+    vs_hdr2("留言管理", "說明");
     move(2, 0);
     outs(ANSI_COLOR(1;33)
-"  這是移除違規推文的界面。\n\n" ANSI_RESET
-"  提醒您: (1) 移除的推文會留下移除的註記與原因，並記在看板的管理記錄。\n\n"
-"          (2) 推文只存在文章檔案中的看板，原作者修改文章時可能改到推文\n"
-"              的樣子；推文另外保存的看板則沒有這個問題。\n\n"
+"  這是移除違規留言的界面。\n\n" ANSI_RESET
+"  提醒您: (1) 移除的留言會留下移除的註記與原因，並記在看板的管理記錄。\n\n"
+"          (2) 留言只存在文章檔案中的看板，原作者修改文章時可能改到留言\n"
+"              的樣子；留言另外保存的看板則沒有這個問題。\n\n"
         "");
     pressanykey();
 }
@@ -3183,7 +3183,7 @@ pvcm_main(const char *board, const char *direct, int ent, fileheader_t *fh,
             .curr = 0,
             .total = pvcm_load(cx),
             .priv = (void *)cx,
-            .caption = mine ? "我的推文" : "推文管理",
+            .caption = mine ? "我的留言" : "留言管理",
         },
         .header_lines = 2,
         .footer_lines = 2,
@@ -3197,7 +3197,7 @@ pvcm_main(const char *board, const char *direct, int ent, fileheader_t *fh,
             pvcm_welcome();
         psb_main(&ctx);
     } else {
-        vmsg(mine ? "您在此文章沒有推文。" : "此文章沒有推文。");
+        vmsg(mine ? "您在此文章沒有留言。" : "此文章沒有留言。");
     }
     changed = cx->changed;
     free(cx->comments);
