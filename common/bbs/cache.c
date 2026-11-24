@@ -687,7 +687,7 @@ getbottomtotal(int bid)
  * Checks the pinned posts of board bid (bh->bottom) against its .DIR: drops
  * those gone and updates the positions; fills out_recs (if not NULL) with
  * their records. A changed header is written by save (mbbsd: through BoF,
- * which also tells post.svc: common/ cannot use bof), or only kept in the
+ * which also tells nest.svc: common/ cannot use bof), or only kept in the
  * board cache if save is NULL or fails: the slots are hints that are checked
  * again here each time. Returns how many are pinned.
  */

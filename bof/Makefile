@@ -10,10 +10,10 @@ FILES_SRCS:=	files/comment.c files/content.c files/crosspost.c \
 		files/record.c files/timecap.c
 FS_SRCS:=	fs/backend.c fs/comment.c fs/community.c fs/content.c \
 		fs/crosspost.c fs/listing.c fs/modlog.c fs/post.c fs/report.c
-# The post.svc backend (bof_storage_postsvc); the default backend stays
+# The nest.svc backend (bof_storage_nest); the default backend stays
 # the files one unless pttbbs.conf says otherwise.
-PS_SRCS:=	ps/postsvc.c
-SRCS:=	$(CORE_SRCS) $(FILES_SRCS) $(FS_SRCS) $(PS_SRCS)
+NEST_SRCS:=	nest/nest.c
+SRCS:=	$(CORE_SRCS) $(FILES_SRCS) $(FS_SRCS) $(NEST_SRCS)
 LIB:=	libbof.a
 # For programs other than the BBS (gateways): BoF, a way to open it, and
 # the globals of the BBS (SHM, ...), as util has them.
@@ -22,7 +22,7 @@ OBJS:=	$(SRCS:.c=.o)
 
 TESTS:=	tests/test_bof tests/test_post tests/test_modlog tests/test_readmarks \
 		tests/test_storage tests/test_people tests/test_gateway \
-		tests/test_postsvc tests/test_community
+		tests/test_nest tests/test_community
 TEST_LDFLAGS:=	-L. -L$(SRCROOT)/common/bbs -L$(SRCROOT)/common/sys \
 		-L$(SRCROOT)/common/osdep
 TEST_LDLIBS:=	-lbof -lcmbbs -lcmsys -losdep $(LDLIBS)

@@ -1,4 +1,4 @@
-SUBDIRS:=	friend ipc mail post search stat utmp
+SUBDIRS:=	friend ipc mail nest search stat utmp
 
 .PHONY: all clean install test $(SUBDIRS)
 

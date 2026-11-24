@@ -65,7 +65,7 @@ int in_spam(const fileheader_t *fh) {
 static int remove_spam, remove_days, remove_deleted, remove_modified_days;
 
 // The board whose list (.DIR) it is, if any: its posts go only through BoF
-// (with post.svc the files are just its cache). "" for other lists.
+// (with nest.svc the files are just its cache). "" for other lists.
 static char board[BRDNAME_SIZE];
 
 // Whether the file of a post is gone. With a backend that keeps the posts
@@ -225,7 +225,7 @@ prune_files(const char *index_path, const remove_set_t *set)
 void die_usage(const char *myname) {
     printf("usage: %s [-options] PATH_TO_FN_DIR\n"
            " -s: remove spam (also patterns in etc/redir_spam)\n"
-           " -e: check existence (with post.svc: of the post in post.svc)\n"
+           " -e: check existence (with nest.svc: of the post in nest.svc)\n"
            " -d days: remove posts > days\n"
            " -m days: remove posts not modified for days\n"
            " -v: verbose\n"
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
 
     if (num_remove > 0 && board[0]) {
         // Lemmy's PurgePost, as expire does: BoF rewrites the list under
-        // its lock (and tells post.svc).
+        // its lock (and tells nest.svc).
         bof_actor_t sys = { .name = "system" };
         bof_purge_posts_t req = {
             .community = board, .bbs_dir = index_path,

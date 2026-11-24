@@ -92,7 +92,7 @@
 #define FN_SAFEDEL	".deleted"
 #endif // FN_SAFEDEL
 // Titles of safe-deleted posts: deleted by the author, or removed by
-// moderators (like Lemmy). service/post/importer knows them too.
+// moderators (like Lemmy). service/nest/importer knows them too.
 #ifndef STR_SAFEDEL_TITLE
 #define STR_SAFEDEL_TITLE   "(本文已被刪除)"
 #endif

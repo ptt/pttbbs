@@ -246,7 +246,7 @@ static inline char *conv_same_storage(const char *src, char *dst, size_t sz) {
 #  define storage_to_mb_n(src, slen, dst, dlen) conv_same_storage((src), (dst), (dlen))
 #endif
 
-/* Strings exchanged with services (post.svc, etc) are always UTF-8. */
+/* Strings exchanged with services (nest.svc, etc) are always UTF-8. */
 #if MB_IS_BIG5
 #  define MB_TO_SERVICE(src, dst, sz) big5_to_utf8((src), (dst), (sz))
 #  define SERVICE_TO_MB(src, dst, sz) utf8_to_big5((src), (dst), (sz))

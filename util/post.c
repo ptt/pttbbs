@@ -31,7 +31,7 @@ void keeplog(FILE *fin, char *board, char *title, char *owner) {
         .community = board, .bbs_dir = genbuf, .bbs_header = &fhdr,
     };
     if (bof_create_post(&sys, &req, NULL) != BOF_OK) {
-	// Not a post: the file written for it goes (e.g. post.svc failed).
+	// Not a post: the file written for it goes (e.g. nest.svc failed).
 	fprintf(stderr, "failed to post to %s\n", board);
 	unlink(fpath);
 	return;

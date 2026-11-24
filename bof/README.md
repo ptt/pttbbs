@@ -40,7 +40,7 @@ flowchart LR
     end
     subgraph STORE["Storage backends"]
         files["BBS files (.DIR, boards/, time capsule)"]
-        svc["services (post.svc, ...)"]
+        svc["services (nest.svc, ...)"]
     end
     mbbsd --> api
     web --> api
@@ -71,8 +71,8 @@ flowchart LR
 - **One backend at a time, one API.** Below the API, the storage
   virtualization ([`include/bof_storage.h`](../include/bof_storage.h))
   calls one backend: the files of a classic BBS (`bof/fs/`), or a service
-  such as `post.svc` (Pebble and SQLite; `bof/ps/`, where post.svc is). A
-  backend may be made of others: post.svc's keeps posts in post.svc and
+  such as `nest.svc` (Pebble and SQLite; `bof/nest/`, where nest.svc is). A
+  backend may be made of others: nest.svc's keeps posts in nest.svc and
   the files of the boards as its cache, by calling the files backend
   itself ([`include/bof_fs.h`](../include/bof_fs.h)), so the two stay in
   step in one place rather than by a fan-out of writes. What the backend
@@ -104,7 +104,7 @@ if (err != BOF_OK)
 | People | `person`, `local_user`, `GetPersonDetails` | `bof_person_id_t`, `bof_actor_t`, `bof_person_t`, `bof_get_person()` |
 | Communities | `community`, `GetCommunity`, `ListCommunities`, `CreateCommunity`, `EditCommunity`, `RemoveCommunity` | `bof_community_t`, `bof_get_community()`, `bof_list_communities()`, `bof_bbs_community_id()`, `bof_create_community()` and `bof_edit_community()` (with the whole board header, `boardheader_t`), `bof_remove_community()`; renaming, merging and rebuilding boards: `bof_bbs_rename_community()` (as Discourse renames a category), `bof_bbs_merge_communities()` (as Discourse moves topics), `bof_bbs_rebuild_community()` |
 | Rules | checked in each call (bans, locked posts, moderators) | `bof_bbs_can_read()` (`bof_bbs_can_read_at()` for the lists of boards), `bof_bbs_can_post()`, `bof_bbs_can_comment()`, `bof_bbs_is_moderator()`, `bof_bbs_may_moderate()` (with Discourse's category moderators: `bof_bbs_group_roles()`); checked by the API for an actor with `bbs_person` |
-| IDs | `post.id`, `comment.id` (post.svc's: a serial; the post and floor) | `bof_post_id_t`, `bof_comment_id()`, `bof_bbs_get_post_id()`, `bof_bbs_get_post_key()`, `bof_bbs_find_post()` |
+| IDs | `post.id`, `comment.id` (nest.svc's: a serial; the post and floor) | `bof_post_id_t`, `bof_comment_id()`, `bof_bbs_get_post_id()`, `bof_bbs_get_post_key()`, `bof_bbs_find_post()` |
 | Posts | `CreatePost`, `EditPost`, `DeletePost`, `RemovePost`, `LockPost`, `FeaturePost` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()`; restoring from the archive is `bof_bbs_restore_post()` (as Discourse's recover), not `deleted: false` / `removed: false` |
 | Reading | `GetPosts`, `GetPost`, `MarkPostAsRead` | `bof_get_posts()`, `bof_get_post()`, `bof_mark_post_as_read()` |
 | Comments | `CreateComment` (+ `CreatePostLike` for a push or boo), `GetComments`, `EditComment`, `DeleteComment`, `RemoveComment`; Discourse's `post_revisions` | `bof_create_comment()`, `bof_get_comments()`, `bof_edit_comment()`, `bof_delete_comment()`, `bof_remove_comment()`, `bof_get_comment_revisions()` |
@@ -133,7 +133,7 @@ uses BoF the same way `mbbsd` does:
   person with `bof_bbs_read_marks_switch()`, which saves those of the
   one before (keeping the calls of one person together saves loading
   them again).
-- **IDs.** Lemmy's IDs are post.svc's, so a gateway needs it as the
+- **IDs.** Lemmy's IDs are nest.svc's, so a gateway needs it as the
   backend. A post ID gives its key (`bof_bbs_get_post_key()`), the key
   where it is now (`bof_bbs_find_post()`), which makes the
   `bof_post_ref_t` the other calls take; a comment ID is its post and
@@ -165,7 +165,7 @@ uses BoF the same way `mbbsd` does:
 | `GET /post/list`, `/post` | `bof_get_posts()`, `bof_get_post()`, `bof_bbs_get_post_file()` |
 | `POST /post`, `PUT /post`, `/post/delete`, `/post/remove`, `/post/lock`, `/post/feature` | `bof_create_post()`, `bof_edit_post()`, `bof_delete_post()`, `bof_remove_post()`, `bof_lock_post()`, `bof_feature_post()` |
 | `GET /comment/list`, `POST /comment`, `PUT /comment`, `/comment/delete`, `/comment/remove` | `bof_get_comments()`, `bof_create_comment()`, `bof_edit_comment()`, `bof_delete_comment()`, `bof_remove_comment()` |
-| `POST /post/like` | `bof_create_post_like()` (post.svc) |
+| `POST /post/like` | `bof_create_post_like()` (nest.svc) |
 | `/post/report`, `/comment/report`, `/report/list`, `/*/report/resolve` | `bof_create_report()`, `bof_list_reports()`, `bof_resolve_report()` |
 | `POST /post/mark_as_read` | `bof_mark_post_as_read()` (one person per process) |
 
@@ -181,8 +181,8 @@ keeping the BBS working exactly as before:
 4. **Listings** -- the post list and read records *(done)*.
 5. **Storage virtualization** -- the files backend behind it *(done)*;
    `pttbbs.conf` picks the default backend (`BOF_DEFAULT_STORAGE`). The
-   `post.svc` backend (`bof/ps/`) is there, off unless a site turns
-   post.svc on (`CONFIG_POST_SVC`): post.svc is the database, and the files of the boards are
+   `nest.svc` backend (`bof/nest/`) is there, off unless a site turns
+   nest.svc on (`CONFIG_NEST_SVC`): nest.svc is the database, and the files of the boards are
    its cache, which BoF reads directly.
 6. **Communities** -- boards and moderators: read *(done)*; the board
    headers (`.BRD`) written through BoF, and removing, renaming, merging and
@@ -223,7 +223,7 @@ The sources are in three parts:
 | `bof/` | The core: the API, its checks and the backend in use (`storage.c`), communities and persons (`people.c`), the rules of the BBS (`policy.c`), the records of the modlog (`modlog.c`), the read records (`readmarks.c`), error names (`bof.c`), opening for gateways (`gateway.c`) | [`include/bof.h`](../include/bof.h), [`include/bof_storage.h`](../include/bof_storage.h), [`include/bof_gateway.h`](../include/bof_gateway.h) |
 | `bof/files/` | The files of a BBS, as primitives with no actor or rules: records of lists, the content of posts, the line of a comment, aggregate boards, the time capsule | [`include/bof_files.h`](../include/bof_files.h) |
 | `bof/fs/` | The files backend (`bof_storage_files`): the calls of the API done with the files | [`include/bof_fs.h`](../include/bof_fs.h) |
-| `bof/ps/` | The post.svc backend (`bof_storage_postsvc`): post.svc, with the files backend as its cache; not the default | [`include/bof_storage.h`](../include/bof_storage.h) |
+| `bof/nest/` | The nest.svc backend (`bof_storage_nest`): nest.svc, with the files backend as its cache; not the default | [`include/bof_storage.h`](../include/bof_storage.h) |
 
 BoF sources are plain ASCII C (Big5 texts are macros in
 `include/common.h`); they use the shared headers in `include/` and the

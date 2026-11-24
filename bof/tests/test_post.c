@@ -1403,7 +1403,7 @@ test_ids(void)
     bof_post_key_t key;
     int n = read_dir(recs, 64);
 
-    // Comment IDs are the post and the floor, as post.svc makes them.
+    // Comment IDs are the post and the floor, as nest.svc makes them.
     bof_post_id_t p;
     int floor;
     EXPECT(bof_comment_id(123, 4) == ((int64_t)123 << 16 | 4));

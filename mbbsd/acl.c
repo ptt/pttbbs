@@ -628,7 +628,7 @@ mbbsd_user_actor(void)
 {
     user_t me = { .unum = usernum, .firstlogin = cuser.firstlogin };
     bof_actor_t actor = { .name = cuser.userid, .from = fromhost };
-    // The account, packed as post.svc keys it.
+    // The account, packed as nest.svc keys it.
     _Static_assert(sizeof(me) == sizeof(actor.bbs_local_user), "user_t");
     if (usernum > 0)
         memcpy(&actor.bbs_local_user, &me, sizeof(me));

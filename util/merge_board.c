@@ -95,11 +95,11 @@ int main(int argc, char **argv) {
     
     fclose(fout);
     printf("Done\n");
-    // Written directly, not through BoF (bof_edit_community): post.svc
+    // Written directly, not through BoF (bof_edit_community): nest.svc
     // mirrors .BRD, so it has to import the boards again.
     if (BOF_FILES_ARE_CACHE)
-        printf("post.svc (CONFIG_POST_SVC): if %s becomes .BRD, run "
-               "`post.ctl import-boards` afterwards.\n", argv[1]);
+        printf("nest.svc (CONFIG_NEST_SVC): if %s becomes .BRD, run "
+               "`nest.ctl import-boards` afterwards.\n", argv[1]);
     
     return 0;
 }

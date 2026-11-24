@@ -43,7 +43,7 @@ comment_wait(int tries_left, void *ctx GCC_UNUSED)
     doupdate();
 }
 
-// With post.svc, the cache shows comments in its own form (a block
+// With nest.svc, the cache shows comments in its own form (a block
 // "|user|text|from time|No" with "| more" lines), not as the line of the
 // BBS. Gets the lines it appended to path for the comment of the user
 // (from before to after), as readers of the file see them, if they are one

@@ -792,13 +792,13 @@
 #define GUEST_URL ""
 #endif
 
-/* CONFIG_POST_SVC: post.svc keeps the posts, comments and votes, and the
+/* CONFIG_NEST_SVC: nest.svc keeps the posts, comments and votes, and the
  * files of the boards are its cache: BoF uses its backend
- * (bof_storage_postsvc) unless pttbbs.conf names another. Everything goes
- * through BoF, which tells post.svc of the board headers it writes (.BRD).
+ * (bof_storage_nest) unless pttbbs.conf names another. Everything goes
+ * through BoF, which tells nest.svc of the board headers it writes (.BRD).
  * Off by default: the files are all there is. */
-#if IS_ENABLED(CONFIG_POST_SVC) && !defined(BOF_DEFAULT_STORAGE)
-#define BOF_DEFAULT_STORAGE bof_storage_postsvc
+#if IS_ENABLED(CONFIG_NEST_SVC) && !defined(BOF_DEFAULT_STORAGE)
+#define BOF_DEFAULT_STORAGE bof_storage_nest
 #endif
 
 /* The records of posts read (bof/readmarks.c): the effective size of the
@@ -818,7 +818,7 @@
 #endif
 
 /* BOF_DEFAULT_STORAGE: the storage backend of BoF when none is set: the
- * files backend unless pttbbs.conf (or CONFIG_POST_SVC above) names
+ * files backend unless pttbbs.conf (or CONFIG_NEST_SVC above) names
  * another. */
 #ifndef BOF_DEFAULT_STORAGE
 #define BOF_DEFAULT_STORAGE bof_storage_files
@@ -826,7 +826,7 @@
 #endif
 
 /* BOF_FILES_ARE_CACHE: 1 when the files of the boards (.DIR, articles) are
- * only the cache of another backend (post.svc), so nothing but BoF may
+ * only the cache of another backend (nest.svc), so nothing but BoF may
  * write them: tools that rebuild or prune them refuse, or go through BoF.
  * A pttbbs.conf that names bof_storage_files itself should also define
  * BOF_DEFAULT_STORAGE_IS_FILES. */
@@ -837,11 +837,11 @@
 #endif
 
 /* USE_COMMENTD keeps a copy of each comment in commentd, which is never
- * told of edits, deletes or removes of comments. post.svc keeps the
+ * told of edits, deletes or removes of comments. nest.svc keeps the
  * comments itself (with where they came from, and their history), so the
  * two do not go together. */
-#if IS_ENABLED(CONFIG_POST_SVC) && defined(USE_COMMENTD)
-#error "USE_COMMENTD does not work with CONFIG_POST_SVC (post.svc keeps the comments); undefine it in pttbbs.conf"
+#if IS_ENABLED(CONFIG_NEST_SVC) && defined(USE_COMMENTD)
+#error "USE_COMMENTD does not work with CONFIG_NEST_SVC (nest.svc keeps the comments); undefine it in pttbbs.conf"
 #endif
 
 #if defined(DEBUG) && !defined(CONFIG_DEBUG)

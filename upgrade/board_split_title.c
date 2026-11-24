@@ -182,9 +182,9 @@ main(int argc, char **argv)
            total_records, count_migrated, count_already_ok, count_empty);
 
     // .BRD is written here directly, not through BoF (bof_edit_community):
-    // post.svc, which mirrors it, has to import the boards again.
+    // nest.svc, which mirrors it, has to import the boards again.
     if (BOF_FILES_ARE_CACHE && !opt_dry_run && count_migrated > 0)
-        printf("post.svc (CONFIG_POST_SVC): run `post.ctl import-boards` "
+        printf("nest.svc (CONFIG_NEST_SVC): run `nest.ctl import-boards` "
                "now.\n");
 
     return 0;

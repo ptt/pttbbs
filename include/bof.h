@@ -14,7 +14,7 @@
  *
  * The API is in-process C (no IPC), as a telnet UI calls it for every key
  * press. Behind it, a site's data may live in the files of a classic PTT BBS
- * (.DIR, boards/, the time capsule) or in services such as post.svc.
+ * (.DIR, boards/, the time capsule) or in services such as nest.svc.
  *
  * See bof/README.md.
  */
@@ -131,7 +131,7 @@ typedef struct bof_actor_t {
     const char *bbs_role;
     int bbs_hidden_in_audit;
     /* The BBS account (Lemmy's local_user): its usernum and firstlogin,
-     * packed as post.svc takes them; 0 for the system or unknown. */
+     * packed as nest.svc takes them; 0 for the system or unknown. */
     uint64_t bbs_local_user;
     /* The person, for bof to check the rules (bof_bbs_can_*()) itself, as
      * Lemmy does for each call; NULL: the caller has checked them (mbbsd,
@@ -143,7 +143,7 @@ typedef struct bof_actor_t {
  * Communities
  * ------------------------------------------------------------------------ */
 
-/* Lemmy's community.id: as post.svc gives it (boards are known by their
+/* Lemmy's community.id: as nest.svc gives it (boards are known by their
  * names, and their places in the board cache are taken again by new
  * boards); none in the files backend. */
 typedef int32_t bof_community_id_t;
@@ -214,7 +214,7 @@ struct boardheader_t;
 
 /* Lemmy's EditCommunity: PTT gives the whole board header (boardheader_t,
  * as the caller made it) of slot bbs_id (1-based) of .BRD, and bof writes
- * it into .BRD and the board cache, and tells the backend (post.svc mirrors
+ * it into .BRD and the board cache, and tells the backend (nest.svc mirrors
  * the slot). The caller keeps what else goes with it (sorting the board
  * cache, ...). The slot may also hold what is not a community: a link to a
  * board, or no board (no name), when a board or link is deleted. The
@@ -444,7 +444,7 @@ typedef struct bof_post_ref_t {
     const struct fileheader_t *bbs_header;  /* the record there */
 } bof_post_ref_t;
 
-/* Lemmy's post.id: a global serial (int32, never used again), as post.svc
+/* Lemmy's post.id: a global serial (int32, never used again), as nest.svc
  * gives its posts. The files of a board keep no such ID (a record has no
  * room for one), so the calls with IDs need a backend that keeps posts in
  * a database; the files backend gives
@@ -452,7 +452,7 @@ typedef struct bof_post_ref_t {
 typedef int32_t bof_post_id_t;
 #define BOF_POST_ID_MAX 0x7fffffff
 
-/* Lemmy's comment.id: the post and the floor of the comment, as post.svc
+/* Lemmy's comment.id: the post and the floor of the comment, as nest.svc
  * makes it (a comment is known by its post and floor, as on PTT and in
  * Discourse); it needs no counter of its own and is never used again. */
 typedef int64_t bof_comment_id_t;
@@ -686,7 +686,7 @@ bof_error_t bof_create_post_like(const bof_actor_t *actor,
                                  bof_post_like_response_t *out);
 
 /* Lemmy's ListPostLikes: who voted on a post and how, page by page, where
- * the backend keeps votes apart from comments (post.svc); the files backend
+ * the backend keeps votes apart from comments (nest.svc); the files backend
  * gives bbs_storage_not_supported. Unlike Lemmy, which shows them only to
  * moderators and admins, anyone who may read the board sees them, as
  * anyone sees the pushes and boos of a post on PTT; where a vote came from
@@ -1026,7 +1026,7 @@ bof_error_t bof_create_comment(const bof_actor_t *actor,
 /* A comment as found in the file of a post (Lemmy's CommentView, in
  * part). Comments in files have no IDs: they are numbered by their floor,
  * the order among the comments of the post (counting removed ones, whose
- * lines note it), as post.svc keys them by (post, floor). */
+ * lines note it), as nest.svc keys them by (post, floor). */
 #define BOF_COMMENT_CONTENT_LEN (1024)
 
 typedef struct bof_comment_t {
@@ -1035,7 +1035,7 @@ typedef struct bof_comment_t {
     int removed;             /* only a note of its removal is left */
     char creator[16];        /* BBS userid */
     /* Without the padding. One line in files; backends that keep comments
-     * apart (post.svc) may give several, separated by '\n'. */
+     * apart (nest.svc) may give several, separated by '\n'. */
     char content[BOF_COMMENT_CONTENT_LEN];
     char bbs_tail[64];       /* what follows: where from and when */
     int bbs_width;           /* the room for the content in the line */
@@ -1097,9 +1097,9 @@ bof_error_t bof_edit_comment(const bof_actor_t *actor,
                              bof_comment_response_t *out);
 
 /* Lemmy's DeleteComment, by its creator. Posts in files cannot take a
- * comment back the way post.svc does (it keeps the comment to restore,
+ * comment back the way nest.svc does (it keeps the comment to restore,
  * deleted: false, and its history), so this backend gives
- * bbs_storage_not_supported; the UI offers it for post.svc. */
+ * bbs_storage_not_supported; the UI offers it for nest.svc. */
 typedef struct bof_delete_comment_t {
     bof_post_ref_t post;
     int bbs_floor;

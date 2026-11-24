@@ -21,11 +21,11 @@ what BoF does only in part. See `README.md` for what BoF is.
 
 ### Votes
 - **CreatePostLike** without a comment: `bof_create_post_like` is in the
-  API for backends that keep votes apart (post.svc); the files backend
+  API for backends that keep votes apart (nest.svc); the files backend
   does not have it, as on PTT a vote is always a comment (push or boo).
 - **CreateCommentLike**: votes on comments do not exist.
 - **ListPostLikes / ListCommentLikes** (who voted): needs votes kept by
-  person, as post.svc does.
+  person, as nest.svc does.
 
 ### Restoring
 - **No UI to restore posts**: `bof_bbs_restore_post` is in the API (and
@@ -35,19 +35,19 @@ what BoF does only in part. See `README.md` for what BoF is.
   in ALLPOST are not restored either.
 - **DeleteComment** (by its creator): gives `bbs_storage_not_supported`
   for posts in files, as a comment taken out of a file can be neither
-  restored nor keep its history; works once comments live in post.svc.
+  restored nor keep its history; works once comments live in nest.svc.
   The UI is there.
 - **RemoveComment with `removed: false`**: same reason.
 
 ### Comments
 - **IDs in files**: post and comment IDs (`bof_post_id_t`,
-  `bof_comment_id()`) are post.svc's; the files keep none (a record has no
+  `bof_comment_id()`) are nest.svc's; the files keep none (a record has no
   room), so the files backend gives `bbs_storage_not_supported` for them
-  and a Lemmy gateway needs post.svc as the backend. In files, comments
-  are numbered by floor, as post.svc keys them by (post ID, floor).
-  Multi-line comments (post.svc) are one line in files.
+  and a Lemmy gateway needs nest.svc as the backend. In files, comments
+  are numbered by floor, as nest.svc keys them by (post ID, floor).
+  Multi-line comments (nest.svc) are one line in files.
 - **Edit history of a comment**: `bof_get_comment_revisions()` gives the
-  revisions where the backend keeps them per comment (post.svc); in
+  revisions where the backend keeps them per comment (nest.svc); in
   files, the whole post is kept in the time capsule at each edit, so the
   files backend gives `bbs_storage_not_supported`.
 
@@ -79,11 +79,11 @@ what BoF does only in part. See `README.md` for what BoF is.
   Reddit list such feeds without copies.
 - `readmarks.c` is from PTT BBS and only under the GPL version 2; rewrite
   it to have all of BoF under both licenses.
-- **The post.svc backend** (`bof_storage_postsvc`, `bof/ps/`): done, with
-  the files of the boards as its cache (post.svc writes the articles; the
-  backend updates `.DIR` with the files backend, `include/bof_fs.h`). Still to do: tests against a running post.svc, and
+- **The nest.svc backend** (`bof_storage_nest`, `bof/nest/`): done, with
+  the files of the boards as its cache (nest.svc writes the articles; the
+  backend updates `.DIR` with the files backend, `include/bof_fs.h`). Still to do: tests against a running nest.svc, and
   a tool to bring the cache in step again from what it logs
-  (`BOF_STORAGE_LOG`; post.svc has `sync-dir`).
+  (`BOF_STORAGE_LOG`; nest.svc has `sync-dir`).
 - **The read records** (`readmarks.c`) are kept by BoF for the person in
   session (a gateway switches it, `bof_bbs_read_marks_switch()`), in the
   files of their homes, not through the storage virtualization yet

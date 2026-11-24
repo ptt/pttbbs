@@ -100,7 +100,7 @@ static void print_usage(const char *progname)
     printf("                            4. Not NUL-terminated              -> rename to '.deleted'\n");
     printf("                            5. 'non-exist' or 'non-xist'       -> rename to '.deleted'\n");
     printf("                            *  All trailing bytes in filename are zeroed out\n");
-    printf("                            With post.svc, the .DIR of boards (its cache) are not repaired\n");
+    printf("                            With nest.svc, the .DIR of boards (its cache) are not repaired\n");
     printf("      --boards            Scan only boards/ directory\n");
     printf("      --mail, --home      Scan only home/ (mailboxes) directory\n");
     printf("      --man, --announce   Scan only man/ and man/boards/ directory\n");
@@ -454,14 +454,14 @@ static void scan_dir_file(const char *dir_path, section_stats_t *stats)
         }
     }
 
-    /* With post.svc (BOF_FILES_ARE_CACHE) the lists of the boards are only
+    /* With nest.svc (BOF_FILES_ARE_CACHE) the lists of the boards are only
      * its cache, keyed by the file names: renaming them here would part
-     * them from post.svc. Inspected only; fix them in post.svc instead. */
+     * them from nest.svc. Inspected only; fix them in nest.svc instead. */
     int saved_repair = opt_repair;
     char board[BRDNAME_SIZE];
     if (BOF_FILES_ARE_CACHE && opt_repair && bfile_to_brdname(dir_path, board, sizeof(board))) {
         if (!opt_quiet)
-            fprintf(stderr, "[WARN] %s: not repaired: with post.svc the "
+            fprintf(stderr, "[WARN] %s: not repaired: with nest.svc the "
                     "lists of boards change only through BoF\n", dir_path);
         opt_repair = 0;
     }

@@ -5,13 +5,13 @@
  * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0-only
  *
  *   mbbsd -> bof API (bof.h) -> storage virtualization -> storage backends
- *                                                          (files, post.svc)
+ *                                                          (files, nest.svc)
  *
  * One backend keeps everything (bof_storage_set()): every call of the bof
  * API goes to it, after the API has checked the actor and the request. An
  * operation the backend does not have (NULL) gives
- * bbs_storage_not_supported. A backend may be made of others: post.svc's
- * keeps posts in post.svc and the files of the boards as its cache, by
+ * bbs_storage_not_supported. A backend may be made of others: nest.svc's
+ * keeps posts in nest.svc and the files of the boards as its cache, by
  * calling the files backend itself, so the two stay in step in one place.
  * There is no fan-out of writes to several backends: copies kept apart
  * (e.g. a search index) follow the one backend, by its log or a resync.
@@ -33,7 +33,7 @@ extern "C" {
 #endif
 
 /* Where a backend made of others logs what it could not keep in step
- * (e.g. the cache of post.svc's), to be synchronized again. */
+ * (e.g. the cache of nest.svc's), to be synchronized again. */
 #define BOF_STORAGE_LOG "log/bof_storage.log"
 
 /* The operations of a backend; ctx is what it was set with. They
@@ -182,14 +182,14 @@ typedef struct bof_storage_ops_t {
  * BOF_DEFAULT_STORAGE as another backend. */
 extern const bof_storage_ops_t bof_storage_files;
 
-/* The backend of post.svc (bof/ps/): post.svc keeps the posts and
+/* The backend of nest.svc (bof/nest/): nest.svc keeps the posts and
  * comments, and the files of the board are a cache of it, written with the
  * files backend (bof_fs.h), so that reading needs no IPC. */
-extern const bof_storage_ops_t bof_storage_postsvc;
+extern const bof_storage_ops_t bof_storage_nest;
 
-/* Where the post.svc backend finds post.svc (a unix socket); NULL: its
+/* Where the nest.svc backend finds nest.svc (a unix socket); NULL: its
  * usual place in BBSHOME/run. For tests. */
-void bof_postsvc_set_socket(const char *path);
+void bof_nest_set_socket(const char *path);
 
 /* Sets the backend, with the context its operations get; NULL: the
  * default one (BOF_DEFAULT_STORAGE, or the files backend) again, when

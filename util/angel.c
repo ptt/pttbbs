@@ -242,7 +242,7 @@ int main(int argc, char *argv[]){
             .community = target, .bbs_dir = output_dir, .bbs_header = &fhdr,
         };
         if (bof_create_post(&sys, &req, NULL) != BOF_OK) {
-            // Not a post (e.g. post.svc failed): the file goes.
+            // Not a post (e.g. nest.svc failed): the file goes.
             unlink(output_path);
             die("Failed to post to: %s\n", target);
         }

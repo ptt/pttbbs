@@ -53,7 +53,7 @@ static int post_result_file(const char *bname, const char *title, const char *fi
         .community = bname, .bbs_dir = dirfn, .bbs_header = &fhdr,
     };
     if (bof_create_post(&sys, &req, NULL) != BOF_OK) {
-        // Not a post (e.g. post.svc failed): the file written for it goes.
+        // Not a post (e.g. nest.svc failed): the file written for it goes.
         unlink(fname);
         return -1;
     }

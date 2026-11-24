@@ -75,7 +75,7 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
             .community = board, .bbs_dir = genbuf, .bbs_header = &fhdr,
         };
         if (bof_create_post(&sys, &req, NULL) != BOF_OK) {
-            // Not a post (e.g. post.svc failed): the log goes back where it
+            // Not a post (e.g. nest.svc failed): the log goes back where it
             // was, rather than left in the board.
             fprintf(stderr, "keeplog: failed to post %s to %s\n", fpath,
                     board);
