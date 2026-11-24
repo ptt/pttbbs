@@ -60,7 +60,7 @@ func OpenStorage(sc *config.ServiceConfig) (Storage, error) {
 	}
 
 	if len(sc.Engines) <= 1 {
-		dataDir := sc.BBSHome + "/db"
+		dataDir := config.DataDir(sc.BBSHome)
 		cacheDir := "boards"
 		if len(sc.Engines) == 1 {
 			if sc.Engines[0].DataDir != "" {

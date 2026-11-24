@@ -47,6 +47,16 @@ func (c *ServiceConfig) IsBig5() bool {
 	return enc == "" || enc == "big5" || enc == "big5-uao" || enc == "uao"
 }
 
+// DataDir returns where post.svc keeps its databases by default (its Pebble
+// DBs, SQLite and the community registry): $BBSHOME/db/post.db, as every
+// service keeps its own in $BBSHOME/db/<service>.db.
+func DataDir(bbshome string) string {
+	if bbshome == "" {
+		bbshome = "/home/bbs"
+	}
+	return filepath.Join(bbshome, "db", "post.db")
+}
+
 // DefaultConfig returns standard default configuration for single-engine mode
 func DefaultConfig(bbshome string) *ServiceConfig {
 	if bbshome == "" {
@@ -64,7 +74,7 @@ func DefaultConfig(bbshome string) *ServiceConfig {
 		Engines: []EngineLocation{
 			{
 				Index:    0,
-				DataDir:  filepath.Join(bbshome, "db"),
+				DataDir:  DataDir(bbshome),
 				CacheDir: "boards",
 			},
 		},

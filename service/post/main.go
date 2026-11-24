@@ -26,7 +26,7 @@ import (
 var (
 	flagConfig         = flag.String("config", "", "Path to post.svc.conf (default: $BBSHOME/etc/post.svc.conf)")
 	flagBBSHome        = flag.String("bbshome", "", "Path to BBSHOME (default detected or /home/bbs)")
-	flagDataDir        = flag.String("datadir", "", "Path to store Pebble and SQLite databases (default $BBSHOME/db)")
+	flagDataDir        = flag.String("datadir", "", "Path to store Pebble and SQLite databases (default $BBSHOME/db/post.db)")
 	flagCacheDir       = flag.String("cachedir", "", "Path to store materialized Cache files (default $BBSHOME/cache)")
 	flagUnixSocket     = flag.String("socket", "", "Path for modern UNIX domain socket IPC (default $BBSHOME/run/post.svc.sock)")
 	flagLogPath        = flag.String("log", "", "Path to log file (default: $BBSHOME/log/post.svc.log)")

@@ -14,7 +14,7 @@ func TestDefaultConfig(t *testing.T) {
 	if len(cfg.Engines) != 1 {
 		t.Fatalf("expected 1 default engine, got %d", len(cfg.Engines))
 	}
-	if cfg.Engines[0].DataDir != "/v/bbshome/db" {
+	if cfg.Engines[0].DataDir != "/v/bbshome/db/post.db" {
 		t.Errorf("expected default DataDir /v/bbshome/db, got %s", cfg.Engines[0].DataDir)
 	}
 	if cfg.Engines[0].CacheDir != "boards" {

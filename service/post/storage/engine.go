@@ -21,6 +21,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"pttbbs/big5uao"
+	"pttbbs/post/config"
 	"pttbbs/post/model"
 )
 
@@ -84,7 +85,7 @@ func OpenEngine(cfg Config) (*Engine, error) {
 		cfg.BBSHome = "/home/bbs"
 	}
 	if cfg.DataDir == "" {
-		cfg.DataDir = "/home/bbs/db"
+		cfg.DataDir = config.DataDir(cfg.BBSHome)
 	}
 	if cfg.CacheDir == "" {
 		cfg.CacheDir = "boards"
