@@ -116,7 +116,13 @@ DATETIME := $(shell date '+%Y%m%d%H%M')
 
 all: $(PROG)
 
-$(PROG): testsz $(OBJS) $(SRCROOT)/util/newvers.sh
+# The libraries it links, so that it is linked again when one changes.
+LIB_DEPS := $(SRCROOT)/bof/libbof.a \
+	    $(SRCROOT)/common/bbs/libcmbbs.a \
+	    $(SRCROOT)/common/sys/libcmsys.a \
+	    $(SRCROOT)/common/osdep/libosdep.a
+
+$(PROG): testsz $(OBJS) $(SRCROOT)/util/newvers.sh $(LIB_DEPS)
 	sh $(SRCROOT)/util/newvers.sh
 	@printf "\033[0;1;32m"
 	@[ -z "$(DEBUG)" ] || printf "\033[31m+DEBUG \033[32m"

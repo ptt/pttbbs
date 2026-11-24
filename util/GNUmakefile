@@ -60,6 +60,15 @@ LDLIBS := $(SRCROOT)/bof/libbof.a \
 	  $(SRCROOT)/common/osdep/libosdep.a \
 	  $(LDLIBS)
 
+# The libraries the programs link, so that they are linked again when one
+# changes (e.g. bof).
+LIB_DEPS := $(SRCROOT)/bof/libbof.a \
+	    $(SRCROOT)/common/bbs/libcmbbs.a \
+	    $(SRCROOT)/common/sys/libcmsys.a \
+	    $(SRCROOT)/common/osdep/libosdep.a
+
+$(COMPILED_PROGS): $(LIB_DEPS)
+
 .PHONY: all clean install bbsctl installbbsctl
 
 all: $(BBSBASE) $(PROGS)
