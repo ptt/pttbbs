@@ -93,6 +93,7 @@ int reassign_badpost(const char *userid);
 
 /* bbs */
 int is_file_owner(const fileheader_t *, const userec_t*);
+int board_lists_comments(int bid);
 int is_file_owner_id(const fileheader_t *fhdr, const char *userid);
 int get_post_author_uid(const fileheader_t *fhdr);
 void delete_allpost(const char *userid);

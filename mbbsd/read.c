@@ -1429,11 +1429,8 @@ static int
 read_cmd_search_comment(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    // With ratings (CONFIG_RATING), boards that do not rate posts list
-    // (and so search) the number of comments.
-    const boardheader_t *bp = IS_ENABLED(CONFIG_RATING) && currbid > 0 ?
-                              getbcache(currbid) : NULL;
-    read_apply_mode(cx, ctx, select_read(cx, bp && !(bp->brdattr & BRD_SCORE) ?
+    // As the list shows them: the score or the number of comments.
+    read_apply_mode(cx, ctx, select_read(cx, board_lists_comments(currbid) ?
                                          RS_COMMENTS : RS_SCORE));
     return 0;
 }

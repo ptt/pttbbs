@@ -26,6 +26,22 @@ static int bnote_lastbid = -1; // 決定是否要顯示進板畫面的 cache
 //  BRC info for 'new comments available') uses RECTYPE_GOOD.
 
 
+// Whether the posts of board bid are listed (and searched) by their
+// number of comments rather than their score: with ratings
+// (CONFIG_RATING, always on with nest.svc), on boards that do not rate
+// posts (BRD_SCORE). Without ratings (the files backend), the score of
+// the pushes and boos of comments, as PTT always did.
+int
+board_lists_comments(int bid)
+{
+    const boardheader_t *bp;
+
+    if (!IS_ENABLED(CONFIG_RATING))
+        return 0;
+    bp = bid > 0 ? getbcache(bid) : NULL;
+    return bp && !(bp->brdattr & BRD_SCORE);
+}
+
 /**
  * Test if the fhdr looks like really belong to user
  */
@@ -632,11 +648,8 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     isonline = query_online(ent->owner);
 
-    // With ratings (CONFIG_RATING), boards that rate posts (BRD_SCORE) show
-    // their score, and others the number of comments; else the score.
-    const boardheader_t *rbp = IS_ENABLED(CONFIG_RATING) && currbid > 0 ?
-                               getbcache(currbid) : NULL;
-    int by_comments = rbp && !(rbp->brdattr & BRD_SCORE);
+    // The score, or the number of comments (board_lists_comments()).
+    int by_comments = board_lists_comments(currbid);
     if (title_type == SUBJECT_LOCKED)
         STRLCPY(recom, "0m--");
     else if (ent->filemode & FILE_SUSPICIOUS)
@@ -2969,8 +2982,9 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
 
 #if IS_ENABLED(CONFIG_RATING)
-    // With ratings (CONFIG_RATING), a comment only comments (an arrow):
-    // pushes and boos are the ratings of '%' (vote_post()).
+    // With ratings (CONFIG_RATING, always on with nest.svc), a comment only
+    // comments (no vote: RECTYPE_ARROW): pushes and boos are the ratings
+    // of '%' (vote_post()). nest.svc shows it as a plain comment.
     type = RECTYPE_ARROW;
 #else
     type = RECTYPE_GOOD;
@@ -3097,7 +3111,11 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     // The room left in the line of the comment (bof makes the line).
     maxlength = bof_bbs_comment_width(myid, logIP);
-    if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
+    if (IS_ENABLED(CONFIG_NEST_SVC)) {
+	// nest.svc keeps a comment as what was typed, without a type (no
+	// push, boo or arrow): the article shows it in its own format.
+	sprintf(buf, "%s: ", myid);
+    } else if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
 	sprintf(buf, "%s %s:", "→", myid);
     } else {
 	sprintf(buf, "%s%s%s %s: ",

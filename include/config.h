@@ -801,6 +801,15 @@
 #define BOF_DEFAULT_STORAGE bof_storage_nest
 #endif
 
+/* CONFIG_RATING is always on with CONFIG_NEST_SVC: nest.svc keeps votes
+ * apart from comments (Lemmy's CreatePostLike), so a comment only comments
+ * and posts are rated with '%' on boards that rate posts (BRD_SCORE); the
+ * others list the number of comments. */
+#if IS_ENABLED(CONFIG_NEST_SVC)
+#undef CONFIG_RATING
+#define CONFIG_RATING 1
+#endif
+
 /* The records of posts read (bof/readmarks.c): the effective size of the
  * file of a person and the posts kept per board; pttbbs.conf may set both.
  * BRC_MAXSIZE must not exceed 64KB. */
