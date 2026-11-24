@@ -486,18 +486,12 @@ bof_fs_edit_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     int matched;
     bof_error_t err;
 
+    // bof_edit_comment() has checked the input (one line of plain text
+    // that fits) and that the actor is the creator.
     if (!post->bbs_dir || !fh || !fh->filename[0] || req->bbs_floor <= 0 ||
         !req->bbs_creator || !req->bbs_old_content || !req->content ||
-        !actor || !actor->name ||
-        strlen(req->content) >= sizeof(((bof_comment_t *)0)->content))
+        !actor || !actor->name)
         return BOF_ERR_INVALID_BODY_FIELD;
-    // No control codes: the content is one line of plain text.
-    for (const char *p = req->content; *p; p++)
-        if ((unsigned char)*p < ' ' || *p == 0x7f)
-            return BOF_ERR_INVALID_BODY_FIELD;
-    // Only by its creator, as Lemmy's EditComment.
-    if (strcasecmp(actor->name, req->bbs_creator) != 0)
-        return BOF_ERR_NO_COMMENT_EDIT_ALLOWED;
 
     setdirpath(path, post->bbs_dir, fh->filename);
     x.from = comments_offset_of(path);

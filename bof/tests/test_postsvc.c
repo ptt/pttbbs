@@ -8,6 +8,7 @@
 
 #include "bbs.h"
 #include "bof_test.h"
+#include "bof_files.h"
 #include <poll.h>
 #include <pthread.h>
 #include <sys/socket.h>
@@ -30,6 +31,9 @@ static int ngot;
 static char replies[32][2][256];    // command -> response
 static int nreplies;
 static int listen_fd = -1;
+// What post.svc does besides answering (e.g. writing files), if set; it
+// may change the response.
+static void (*effect)(const char *req, char *resp, size_t sz);
 
 static void
 reply(const char *cmd, const char *resp)
@@ -95,6 +99,8 @@ serve(void *arg GCC_UNUSED)
         for (int i = 0; i < nreplies; i++)
             if (strcmp(replies[i][0], cmd) == 0)
                 snprintf(resp, sizeof(resp), "%s\n", replies[i][1]);
+        if (effect)
+            effect(buf, resp, sizeof(resp));
         pthread_mutex_unlock(&lock);
         if (write(fd, resp, strlen(resp)) < 0)
             perror("write");
@@ -669,6 +675,473 @@ test_cache_failure_pages_and_addresses(void)
     bcache = NULL;
 }
 
+/* ------------------------------------------------------------------------
+ * What post.svc does to the files of the board
+ * ------------------------------------------------------------------------ */
+
+static void
+spit(const char *path, const char *text)
+{
+    FILE *fp = fopen(path, "w");
+
+    if (fp) {
+        fputs(text, fp);
+        fclose(fp);
+    }
+}
+
+// The content of path ("" if none), in a static buffer.
+static const char *
+slurp(const char *path)
+{
+    static char buf[4096];
+    FILE *fp = fopen(path, "r");
+    size_t n = fp ? fread(buf, 1, sizeof(buf) - 1, fp) : 0;
+
+    if (fp)
+        fclose(fp);
+    buf[n] = '\0';
+    return buf;
+}
+
+// As post.svc: it writes a note over the article of a post it takes down,
+// the article again when it takes one back, and the body into the target
+// of FETCH_POST_FILE (none for "-"). recover_fails: RECOVER_POST_FILE
+// fails; fail_file: commands on that file fail.
+static int recover_fails;
+static const char *fail_file;
+
+static void
+like_post_svc(const char *req, char *resp, size_t sz)
+{
+    char cmd[64] = "", board[64] = "", file[64] = "", target[256] = "";
+    char path[PATHLEN];
+
+    sscanf(req, "%63s %63s %63s %255s", cmd, board, file, target);
+    snprintf(path, sizeof(path), "boards/%c/%s/%s", board[0], board, file);
+    if (file[0] == 'L')
+        path[strlen(path) - strlen(file)] = 'X';
+    if (fail_file && strcmp(file, fail_file) == 0) {
+        snprintf(resp, sz, "ERR failed\n");
+        return;
+    }
+    if (!strcmp(cmd, "DELETE_POST_FILE") || !strcmp(cmd, "REMOVE_POST_FILE")) {
+        if (strncmp(resp, "OK", 2) == 0 && access(path, F_OK) == 0)
+            spit(path, "[deleted]\n");
+    } else if (!strcmp(cmd, "RECOVER_POST_FILE")) {
+        if (recover_fails)
+            snprintf(resp, sz, "ERR post not found\n");
+        else
+            spit(path, "rendered by post.svc\n");
+    } else if (!strcmp(cmd, "FETCH_POST_FILE") && strcmp(target, "-") != 0) {
+        spit(target, "body line\nsecret here\n");
+    }
+}
+
+static void
+test_version_only(void)
+{
+    fileheader_t fh = make_post("M.410.A.AAA");
+    bof_post_ref_t post = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_header = &fh,
+    };
+    bof_post_version_t ver = { .hash = 1700000500 };
+
+    effect = like_post_svc;
+    forget();
+    reply("FETCH_POST_FILE", "OK 1700000500 5\nhello");
+    EXPECT_INT(bof_bbs_post_version_matches(&post, &ver), 1);
+    EXPECT(received("FETCH_POST_FILE " BOARD " M.410.A.AAA - "));
+    EXPECT(!received("FETCH_POST_FILE " BOARD " M.410.A.AAA /dev/null"));
+    effect = NULL;
+}
+
+static int
+find_record(const char *filename, fileheader_t *out)
+{
+    fileheader_t recs[64];
+    int n = read_dir(recs, 64);
+
+    for (int i = 0; i < n; i++)
+        if (strcmp(recs[i].filename, filename) == 0) {
+            if (out)
+                *out = recs[i];
+            return i + 1;
+        }
+    return 0;
+}
+
+// The recycle bin keeps the article, not the note post.svc writes over it;
+// restoring puts the record back, with the article post.svc writes.
+static void
+test_recycle_bin_and_restore(void)
+{
+    bof_actor_t mod = { .name = "boss", .bbs_local_user = 7 };
+    fileheader_t fh, kept;
+    bof_post_result_t res;
+    int i;
+
+    effect = like_post_svc;
+    reply("DELETE_POST_FILE", "OK 1");
+    reply("REMOVE_POST_FILE", "OK 1");
+    make_post("M.520.A.AAA");
+    i = find_record("M.520.A.AAA", &fh);
+
+    // post.svc fails: all stays.
+    fail_file = "M.520.A.AAA";
+    bof_delete_post_t del = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = i,
+            .bbs_header = &fh,
+        },
+        .deleted = 1,
+    };
+    EXPECT_INT(bof_delete_post(&alice, &del, &res),
+               BOF_ERR_COULDNT_UPDATE_POST);
+    EXPECT_STR(slurp(BDIR "/M.520.A.AAA"), "the content of M.520.A.AAA\n");
+    EXPECT(find_record("M.520.A.AAA", NULL) > 0);
+    fail_file = NULL;
+
+    EXPECT_OK(bof_delete_post(&alice, &del, &res));
+    EXPECT(find_record("M.520.A.AAA", NULL) == 0);
+    EXPECT(res.bbs_archived_path[0] != '\0');
+    EXPECT(strstr(slurp(res.bbs_archived_path),
+                  "the content of M.520.A.AAA") != NULL);
+    EXPECT(strstr(slurp(res.bbs_archived_path), "[deleted]") == NULL);
+    char keep[PATHLEN];
+    snprintf(keep, sizeof(keep), BDIR "/M.520.A.AAA.keep%d", (int)getpid());
+    EXPECT(access(keep, F_OK) != 0);
+
+    // post.svc does not take it back: neither does the cache.
+    bof_bbs_restore_post_t rs = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_archived = &fh,
+    };
+    bof_post_response_t pres = { .bbs_header = &kept };
+    spit(BDIR "/M.520.A.AAA", "[deleted]\n");     // rendered again since
+    recover_fails = 1;
+    forget();
+    EXPECT_INT(bof_bbs_restore_post(&mod, &rs, &pres),
+               BOF_ERR_COULDNT_UPDATE_POST);
+    EXPECT(received("RECOVER_POST_FILE " BOARD " M.520.A.AAA"));
+    EXPECT(find_record("M.520.A.AAA", NULL) == 0);
+    EXPECT_STR(slurp(BDIR "/M.520.A.AAA"), "[deleted]\n");
+    recover_fails = 0;
+    reply("RECOVER_POST_FILE", "OK");
+
+    // Taken back: the record, and the article as post.svc writes it.
+    EXPECT_OK(bof_bbs_restore_post(&mod, &rs, &pres));
+    EXPECT_STR(kept.filename, "M.520.A.AAA");
+    EXPECT(find_record("M.520.A.AAA", NULL) > 0);
+    EXPECT_STR(slurp(BDIR "/M.520.A.AAA"), "rendered by post.svc\n");
+    // Restored already.
+    EXPECT_INT(bof_bbs_restore_post(&mod, &rs, &pres),
+               BOF_ERR_COULDNT_UPDATE_POST);
+
+    // Removed by a moderator: the same.
+    i = find_record("M.520.A.AAA", &fh);
+    bof_remove_post_t rm = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = i,
+            .bbs_header = &fh,
+        },
+        .removed = 1, .reason = "spam",
+    };
+    EXPECT_OK(bof_remove_post(&mod, &rm, &res));
+    EXPECT(strstr(slurp(res.bbs_archived_path), "rendered by post.svc"));
+    effect = NULL;
+}
+
+static int
+select_53x(const fileheader_t *fh, int index GCC_UNUSED, void *ctx)
+{
+    (*(int *)ctx)++;
+    return strncmp(fh->filename, "M.53", 4) == 0;
+}
+
+static int removed_53x;
+
+static void
+count_removed(const fileheader_t *fh GCC_UNUSED, void *ctx)
+{
+    if (ctx)
+        removed_53x++;
+}
+
+// Those post.svc does not take down stay in the cache.
+static void
+test_remove_posts(void)
+{
+    int calls = 0, count = 0;
+
+    effect = like_post_svc;
+    reply("REMOVE_POST_FILE", "OK 1");
+    make_post("M.530.A.AAA");
+    make_post("M.531.A.AAA");
+    fail_file = "M.531.A.AAA";
+    bof_remove_posts_t req = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_selected = select_53x,
+        .bbs_removed = count_removed, .bbs_ctx = &calls, .reason = "x",
+    };
+    removed_53x = 0;
+    EXPECT_OK(bof_remove_posts(&alice, &req, &count));
+    EXPECT_INT(count, 1);
+    EXPECT_INT(removed_53x, 1);
+    EXPECT(calls > 0);
+    EXPECT(find_record("M.530.A.AAA", NULL) == 0);
+    EXPECT(find_record("M.531.A.AAA", NULL) > 0);
+    EXPECT_STR(slurp(BDIR "/M.531.A.AAA"), "the content of M.531.A.AAA\n");
+    fail_file = NULL;
+    effect = NULL;
+}
+
+// Comments: the size of the article for live readers; edits as checked by
+// the files backend; removing one without its floor; how they are read.
+static void
+test_comment_checks(void)
+{
+    fileheader_t fh = make_post("M.540.A.AAA"), updated;
+    int i = find_record("M.540.A.AAA", NULL);
+    bof_post_ref_t post = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = i,
+        .bbs_header = &fh,
+    };
+    bof_comment_response_t res = { .bbs_header = &updated };
+    bof_create_comment_t cr = {
+        .post = post, .content = "hi", .bbs_text = "hi", .bbs_vote = 1,
+    };
+
+    reply("CREATE_COMMENT", "OK 1 1700000000 0 NEW 5");
+    EXPECT_OK(bof_create_comment(&alice, &cr, &res));
+    EXPECT_INT(res.bbs_file_size, strlen("the content of M.540.A.AAA\n"));
+    EXPECT_INT(updated.score, 0);   // votes are apart (rating)
+
+    reply("GET_COMMENTS_FILE",
+          "OK 1 1\n1\talice\t1700000000\t-\t1\t\t5\told");
+    reply("EDIT_COMMENT_FILE", "OK 1");
+    reply("RENDER_FILE", "OK");
+    bof_edit_comment_t ed = {
+        .post = post, .bbs_floor = 1, .bbs_creator = "alice",
+        .bbs_old_content = "old", .content = "new",
+    };
+    forget();
+    EXPECT_OK(bof_edit_comment(&alice, &ed, &res));
+    EXPECT(received("EDIT_COMMENT_FILE " BOARD " M.540.A.AAA 1 alice 42 3"));
+    // It said something else meanwhile.
+    ed.bbs_old_content = "older";
+    forget();
+    EXPECT_INT(bof_edit_comment(&alice, &ed, &res),
+               BOF_ERR_COULDNT_UPDATE_COMMENT);
+    EXPECT(!received("EDIT_COMMENT_FILE"));
+    // Someone else's.
+    ed.bbs_old_content = "old";
+    ed.bbs_creator = "bob";
+    EXPECT_INT(bof_edit_comment(&alice, &ed, &res),
+               BOF_ERR_NO_COMMENT_EDIT_ALLOWED);
+    bof_actor_t bob = { .name = "bob" };
+    EXPECT_INT(bof_edit_comment(&bob, &ed, &res),
+               BOF_ERR_COULDNT_UPDATE_COMMENT);
+    // Not one line of plain text.
+    ed.bbs_creator = "alice";
+    ed.content = "a\ttab";
+    EXPECT_INT(bof_edit_comment(&alice, &ed, &res),
+               BOF_ERR_INVALID_BODY_FIELD);
+    ed.content = "two\nlines";
+    EXPECT_INT(bof_edit_comment(&alice, &ed, &res),
+               BOF_ERR_INVALID_BODY_FIELD);
+
+    // Without its floor: a line of a comment merged of several.
+    reply("GET_COMMENTS_FILE",
+          "OK 2 2\n1\talice\t1700000000\t-\t1\t\t5\tfirst\n"
+          "2\talice\t1700000000\t-\t1\t\t6\tsecond\tthird");
+    reply("REMOVE_COMMENT_FILE", "OK 1");
+    bof_actor_t mod = { .name = "boss", .bbs_local_user = 7 };
+    bof_remove_comment_t rm = {
+        .post = post, .bbs_author = "alice", .bbs_content = "third",
+        .reason = "spam",
+    };
+    forget();
+    EXPECT_OK(bof_remove_comment(&mod, &rm, &res));
+    EXPECT(received("GET_COMMENTS_FILE " BOARD " M.540.A.AAA 1 256 alice"));
+    EXPECT(received("REMOVE_COMMENT_FILE " BOARD " M.540.A.AAA 2 boss 7 spam"));
+    rm.bbs_content = "fourth";
+    EXPECT_INT(bof_remove_comment(&mod, &rm, &res),
+               BOF_ERR_COULDNT_FIND_COMMENT);
+
+    // Removed ones say nothing (as in the files); an edited one has the
+    // mark; the room is that of the longest line.
+    bof_comment_t cs[4];
+    bof_get_comments_t get = { .post = post, .limit = 4 };
+    bof_get_comments_response_t gres = { .comments = cs };
+    reply("GET_COMMENTS_FILE",
+          "OK 2 2\n1\tbob\t1700000000\t-\t-1\tspam\t5\tbad words\n"
+          "2\talice\t1700000000/1700000100\t-\t3\t\t6\tab\tabcd");
+    EXPECT_OK(bof_get_comments(&get, &gres));
+    EXPECT_INT(gres.count, 2);
+    EXPECT_INT(cs[0].removed, 1);
+    EXPECT_STR(cs[0].creator, "bob");
+    EXPECT_STR(cs[0].content, "");
+    EXPECT_INT(cs[1].bbs_edited, 1);
+    EXPECT(cs[1].bbs_tail[0] == BOF_COMMENT_EDITED_MARK);
+    EXPECT_INT(cs[1].bbs_width, 4);
+}
+
+// A locked post is kept in X.: nothing is written to L.
+static void
+test_locked_file(void)
+{
+    fileheader_t fh;
+    bof_post_ref_t post = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_header = &fh,
+    };
+    char path[PATHLEN];
+
+    memset(&fh, 0, sizeof(fh));
+    strlcpy(fh.filename, "L.800.A.AAA", sizeof(fh.filename));
+    reply("RENDER_FILE", "OK");
+    forget();
+    EXPECT_OK(bof_bbs_get_post_file(&post, path, sizeof(path)));
+    EXPECT(received("RENDER_FILE " BOARD " L.800.A.AAA " BDIR
+                    "/X.800.A.AAA modern"));
+    spit(BDIR "/X.800.A.AAA", "locked\n");
+    forget();
+    EXPECT_OK(bof_bbs_get_post_file(&post, path, sizeof(path)));
+    EXPECT(!received("RENDER_FILE"));
+    EXPECT(access(BDIR "/L.800.A.AAA", F_OK) != 0);
+}
+
+// Modes go to post.svc first: if it does not take them, the cache stays.
+static void
+test_modes_first(void)
+{
+    fileheader_t fh = make_post("M.550.A.AAA"), updated, rec;
+    int i = find_record("M.550.A.AAA", NULL);
+    bof_post_response_t res = { .bbs_header = &updated };
+    bof_actor_t mod = { .name = "boss", .bbs_local_user = 7 };
+    bof_feature_post_t req = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = i,
+            .bbs_header = &fh,
+        },
+        .featured = 1,
+    };
+    char want[128];
+
+    reply("SET_META_FILE", "ERR down");
+    EXPECT_INT(bof_feature_post(&mod, &req, &res),
+               BOF_ERR_COULDNT_UPDATE_POST);
+    find_record("M.550.A.AAA", &rec);
+    EXPECT_INT(rec.filemode & FILE_BOTTOM, 0);
+    reply("SET_META_FILE", "OK");
+    forget();
+    EXPECT_OK(bof_feature_post(&mod, &req, &res));
+    snprintf(want, sizeof(want), "SET_META_FILE " BOARD " M.550.A.AAA %d ",
+             FILE_BOTTOM | FILE_MARKED);
+    EXPECT(received(want));
+    find_record("M.550.A.AAA", &rec);
+    EXPECT(rec.filemode & FILE_BOTTOM);
+    EXPECT(updated.filemode & FILE_BOTTOM);
+
+    // The money of an edit, too.
+    int32_t money = 30;
+    bof_edit_post_t ed = { .post = req.post, .bbs_money = &money };
+    ed.post.bbs_header = &rec;
+    reply("SET_META_FILE", "ERR down");
+    EXPECT_INT(bof_edit_post(&mod, &ed, &res), BOF_ERR_COULDNT_UPDATE_POST);
+    find_record("M.550.A.AAA", &rec);
+    EXPECT_INT(rec.multi.money, 0);
+    reply("SET_META_FILE", "OK");
+    EXPECT_OK(bof_edit_post(&mod, &ed, &res));
+    find_record("M.550.A.AAA", &rec);
+    EXPECT_INT(rec.multi.money, 30);
+}
+
+// The versions from before post.svc (the time capsule) come first.
+static void
+test_merged_revisions(void)
+{
+    fileheader_t fh = make_post("M.560.A.AAA");
+    bof_post_ref_t post = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = 1,
+        .bbs_header = &fh,
+    };
+    bof_bbs_post_revision_t info[4];
+    bof_bbs_list_post_revisions_t lreq = { .post = post, .limit = 4 };
+    bof_bbs_list_post_revisions_response_t lres = { .revisions = info };
+    char path[PATHLEN];
+    int revs = 0;
+
+    // A version from before post.svc.
+    timecapsule_archive_new_revision(BDIR "/M.560.A.AAA", &fh, sizeof(fh),
+                                     NULL, 0);
+    reply("GET_POST_REVISIONS_FILE",
+          "OK 2\n3\t1700000000\talice\n5\t1700000100\tbob");
+    EXPECT_OK(bof_bbs_get_post_revisions(&post, &revs));
+    EXPECT_INT(revs, 3);
+    EXPECT_OK(bof_bbs_get_post_revision_file(&post, 1, path, sizeof(path)));
+    EXPECT(strstr(slurp(path), "the content of M.560.A.AAA") != NULL);
+    forget();
+    EXPECT_OK(bof_bbs_get_post_revision_file(&post, 3, path, sizeof(path)));
+    EXPECT(received("GET_POST_REVISIONS_FILE " BOARD " M.560.A.AAA 5 "));
+    EXPECT_INT(bof_bbs_get_post_revision_file(&post, 4, path, sizeof(path)),
+               BOF_ERR_COULDNT_FIND_POST);
+    EXPECT_OK(bof_bbs_list_post_revisions(&lreq, &lres));
+    EXPECT_INT(lres.bbs_total, 3);
+    EXPECT_INT(lres.count, 3);
+    EXPECT_INT(info[0].number, 1);
+    EXPECT_INT(info[1].number, 2);
+    EXPECT_STR(info[1].editor, "alice");
+    EXPECT_INT(info[2].number, 3);
+    EXPECT_STR(info[2].editor, "bob");
+    lreq.start = 2;
+    EXPECT_OK(bof_bbs_list_post_revisions(&lreq, &lres));
+    EXPECT_INT(lres.count, 1);
+    EXPECT_INT(info[0].number, 3);
+}
+
+// The note of a reset score and masking go into the body post.svc keeps;
+// masking covers the comments too.
+static void
+test_reset_and_mask(void)
+{
+    fileheader_t fh = make_post("M.570.A.AAA"), updated, rec;
+    int i = find_record("M.570.A.AAA", NULL);
+    bof_post_ref_t post = {
+        .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = i,
+        .bbs_header = &fh,
+    };
+    bof_post_response_t res = { .bbs_header = &updated };
+    bof_actor_t mod = { .name = "boss", .bbs_local_user = 7 };
+
+    effect = like_post_svc;
+    reply("RESET_POST_SCORE_FILE", "OK");
+    reply("FETCH_POST_FILE", "OK 1700000500 5\nhello");
+    reply("EDIT_POST_FILE", "OK 2 1700000600");
+    reply("RENDER_FILE", "OK");
+    reply("EDIT_COMMENT_FILE", "OK 1");
+    bof_bbs_reset_post_score_t rs = { .post = post };
+    forget();
+    EXPECT_OK(bof_bbs_reset_post_score(&mod, &rs, &res));
+    EXPECT(received("RESET_POST_SCORE_FILE " BOARD " M.570.A.AAA"));
+    EXPECT(received("EDIT_POST_FILE " BOARD " M.570.A.AAA boss 7 1700000500 "));
+    EXPECT_INT(updated.score, 0);
+    // The cache does not get the note (post.svc writes the article).
+    EXPECT_STR(slurp(BDIR "/M.570.A.AAA"), "the content of M.570.A.AAA\n");
+
+    reply("GET_COMMENTS_FILE",
+          "OK 2 2\n1\tbob\t1700000000\t-\t1\t\t5\tclean\n"
+          "2\tbob\t1700000000\t-\t3\t\t6\tok\ta secret");
+    bof_bbs_mask_post_t mk = { .post = post, .pattern = "secret" };
+    forget();
+    EXPECT_OK(bof_bbs_mask_post(&mod, &mk, &res));
+    EXPECT(received("EDIT_POST_FILE " BOARD " M.570.A.AAA boss 7 1700000500 "));
+    EXPECT(received("EDIT_COMMENT_FILE " BOARD " M.570.A.AAA 2 boss 7 "));
+    EXPECT(!received("EDIT_COMMENT_FILE " BOARD " M.570.A.AAA 1 "));
+    mk.pattern = "nowhere";
+    EXPECT_INT(bof_bbs_mask_post(&mod, &mk, &res), BOF_ERR_NOT_FOUND);
+    find_record("M.570.A.AAA", &rec);
+    effect = NULL;
+}
+
 static int
 dir_exists(const char *path)
 {
@@ -800,6 +1273,14 @@ main(void)
     RUN(test_ids_and_revisions);
     RUN(test_cache_failure_pages_and_addresses);
     RUN(test_communities);
+    RUN(test_version_only);
+    RUN(test_recycle_bin_and_restore);
+    RUN(test_remove_posts);
+    RUN(test_comment_checks);
+    RUN(test_locked_file);
+    RUN(test_modes_first);
+    RUN(test_merged_revisions);
+    RUN(test_reset_and_mask);
 
     bof_storage_reset();
     snprintf(cmd, sizeof(cmd), "rm -rf '%s'", dir);

@@ -125,6 +125,21 @@ to_svc(const char *s)
     return out;
 }
 
+// The comment of what was typed (or the line for the file), without the
+// line break, for post.svc, to free().
+static char *
+comment_to_svc(const char *text)
+{
+    char buf[ANSILINELEN * 4];
+    size_t n;
+
+    strlcpy(buf, text ? text : "", sizeof(buf));
+    n = strlen(buf);
+    while (n > 0 && (buf[n - 1] == '\n' || buf[n - 1] == '\r'))
+        buf[--n] = '\0';
+    return to_svc(buf);
+}
+
 // The content of a file converted for post.svc, to free().
 static char *
 file_to_svc(const char *path)
@@ -169,10 +184,19 @@ from(const bof_actor_t *actor)
     return actor && actor->from && *actor->from ? actor->from : "-";
 }
 
+// The file of a post in the board. A locked post (L. in its record) is
+// kept in X.: post.svc writes it there (BoardFilePath), as the files
+// backend renames it (bof_fs_lock_post()). post.svc itself takes either
+// name of the post.
 static void
 post_path(char *path, const bof_post_ref_t *post)
 {
-    setdirpath(path, post->bbs_dir, post->bbs_header->filename);
+    char name[sizeof(post->bbs_header->filename)];
+
+    strlcpy(name, post->bbs_header->filename, sizeof(name));
+    if (name[0] == 'L' && name[1] == '.')
+        name[0] = 'X';
+    setdirpath(path, post->bbs_dir, name);
 }
 
 static int
@@ -215,14 +239,57 @@ fetch_body(const bof_post_ref_t *post, const char *path, int32_t *modified)
     return 1;
 }
 
-// Sends the filemode and money of a record (SET_META_FILE).
-static void
+// Sends the file at path as the new body of a post (EDIT_POST_FILE), if
+// it is still at the version modified; 1 if OK.
+static int
+send_body(const bof_actor_t *actor, const bof_post_ref_t *post,
+          const char *path, int32_t modified)
+{
+    char hdr[512], *title = to_svc(post->bbs_header->title);
+    char *body = file_to_svc(path);
+    int ok;
+
+    if (!title || !body) {
+        free(title);
+        free(body);
+        return 0;
+    }
+    snprintf(hdr, sizeof(hdr), "EDIT_POST_FILE %s %s %s %" PRIu64
+             " %lld %zu %zu\n", post->community, post->bbs_header->filename,
+             who(actor), uid(actor), (long long)modified, strlen(title),
+             strlen(body));
+    ok = svc_ok(svc_call(hdr, title, strlen(title), body, strlen(body)),
+                NULL, 0);
+    free(title);
+    free(body);
+    return ok;
+}
+
+// Sends the filemode and money of a record (SET_META_FILE); 1 if OK.
+static int
 set_meta(const char *community, const fileheader_t *fh)
 {
     int money = (fh->filemode & (FILE_ANONYMOUS | FILE_PETITION)) ?
         0 : fh->multi.money;
-    svc_cmd(NULL, 0, "SET_META_FILE %s %.*s %d %d\n", community,
-            (int)sizeof(fh->filename), fh->filename, fh->filemode, money);
+    return svc_cmd(NULL, 0, "SET_META_FILE %s %.*s %d %d\n", community,
+                   (int)sizeof(fh->filename), fh->filename, fh->filemode,
+                   money);
+}
+
+// The record of a post as the cache has it now (at its index, if it is
+// still there), or else as given.
+static fileheader_t
+current_record(const bof_post_ref_t *post)
+{
+    fileheader_t fh = *post->bbs_header;
+
+    if (post->bbs_index > 0 && post->bbs_dir) {
+        fileheader_t cur;
+        if (get_fileheader(post->bbs_dir, &cur, post->bbs_index) > 0 &&
+            strcmp(cur.filename, fh.filename) == 0)
+            fh = cur;
+    }
+    return fh;
 }
 
 // Logs a failure to update the cache: post.svc has the change, and
@@ -469,12 +536,24 @@ ps_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     const char *name = req->name && *req->name ? req->name : fh->title;
     char path[PATHLEN], resp[128], hdr[512];
     int32_t modified = req->bbs_modified;
+    fileheader_t updated;
+    bof_post_response_t res = { .bbs_header = &updated };
+    bof_edit_post_t rec;
     bof_error_t err;
 
     if (!valid(post))
         return BOF_ERR_INVALID_BODY_FIELD;
     if (out)
         out->bbs_body_saved = 0;
+    // The money goes to post.svc first (SET_META_FILE carries the money
+    // and the filemode; the owner and date are kept in the cache only):
+    // if post.svc does not take it, nothing is changed.
+    if (req->bbs_money) {
+        fileheader_t m = current_record(post);
+        m.multi.money = *req->bbs_money;
+        if (!set_meta(post->community, &m))
+            return BOF_ERR_COULDNT_UPDATE_POST;
+    }
 
     if (req->bbs_body_path) {
         char *title = to_svc(name), *body = file_to_svc(req->bbs_body_path);
@@ -486,7 +565,7 @@ ps_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         if (!title || !body) {
             free(title);
             free(body);
-            return BOF_ERR_COULDNT_UPDATE_POST;
+            goto failed;
         }
         snprintf(hdr, sizeof(hdr), "EDIT_POST_FILE %s %s %s %" PRIu64
                  " %lld %zu %zu\n", post->community, fh->filename, who(actor),
@@ -502,7 +581,7 @@ ps_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         } else {
             // Changed since the version (ERR CONFLICT), or failed: the
             // file of the edit stays, as with the files backend.
-            return BOF_ERR_COULDNT_UPDATE_POST;
+            goto failed;
         }
         unlink(req->bbs_body_path);
         if (out)
@@ -518,47 +597,64 @@ ps_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         int ok;
 
         if (!title)
-            return BOF_ERR_COULDNT_UPDATE_POST;
+            goto failed;
         snprintf(hdr, sizeof(hdr), "EDIT_POST_TITLE_FILE %s %s %s %" PRIu64
                  " %zu\n", post->community, fh->filename, who(actor),
                  uid(actor), strlen(title));
         ok = svc_ok(svc_call(hdr, title, strlen(title), NULL, 0), NULL, 0);
         free(title);
         if (!ok)
-            return BOF_ERR_COULDNT_UPDATE_POST;
+            goto failed;
     }
 
-    // The record in the cache, then its money and marks in post.svc.
-    fileheader_t updated;
-    bof_post_response_t res = { .bbs_header = &updated };
-    bof_edit_post_t rec = *req;
+    // The record in the cache.
+    rec = *req;
     rec.bbs_body_path = NULL;
     rec.bbs_modified = modified;
     err = bof_fs_edit_post(NULL, actor, &rec, &res);
-    if (err != BOF_OK)
+    if (err != BOF_OK) {
+        if (req->bbs_money || (out && out->bbs_body_saved))
+            cache_failed("edit_post", post->community, fh->filename, err);
         return out && out->bbs_body_saved ? BOF_ERR_COULDNT_UPDATE_POST : err;
-    if (req->bbs_money || req->bbs_owner)
-        set_meta(post->community, &updated);
+    }
     if (out && out->bbs_header)
         *out->bbs_header = updated;
     return BOF_OK;
+
+failed:
+    // post.svc has taken the money already: so does the cache.
+    if (req->bbs_money) {
+        memset(&rec, 0, sizeof(rec));
+        rec.post = req->post;
+        rec.bbs_money = req->bbs_money;
+        if ((err = bof_fs_edit_post(NULL, actor, &rec, &res)) != BOF_OK)
+            cache_failed("edit_post", post->community, fh->filename, err);
+    }
+    return BOF_ERR_COULDNT_UPDATE_POST;
 }
 
 // What deleting and removing share: post.svc keeps it as deleted by its
 // creator (DELETE_POST_FILE, without a reason: reason is NULL) or as
-// removed, with a reason (REMOVE_POST_FILE); the cache archives the
-// article and drops (or keeps a tombstone of) the record.
+// removed, with a reason (REMOVE_POST_FILE). post.svc writes a note of
+// that over the article at once, so the article is kept aside first and
+// put back after, for the cache to archive it (the recycle bin, the time
+// capsule) as the files backend does. If post.svc fails, the article
+// stays as it was.
 static bof_error_t
 drop_post(const bof_actor_t *actor, const bof_post_ref_t *post,
           const char *reason)
 {
+    char path[PATHLEN], keep[PATHLEN];
     char *why = NULL;
-    int ok;
+    int ok, kept;
 
     if (!valid(post))
         return BOF_ERR_INVALID_BODY_FIELD;
-    // The article as it is, to be archived from the cache.
-    render_post(post);
+    post_path(path, post);
+    if (!dashf(path))
+        render_post(post);
+    snprintf(keep, sizeof(keep), "%s.keep%d", path, (int)getpid());
+    kept = dashf(path) && Copy(path, keep) == 0;
     if (!reason)
         ok = svc_cmd(NULL, 0, "DELETE_POST_FILE %s %s %s %" PRIu64 "\n",
                      post->community, post->bbs_header->filename,
@@ -569,6 +665,8 @@ drop_post(const bof_actor_t *actor, const bof_post_ref_t *post,
                      post->community, post->bbs_header->filename,
                      who(actor), uid(actor), why);
     free(why);
+    if (kept && (!ok || Rename(keep, path) != 0))
+        unlink(keep);
     return ok ? BOF_OK : BOF_ERR_COULDNT_UPDATE_POST;
 }
 
@@ -576,26 +674,90 @@ static bof_error_t
 ps_delete_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                const bof_delete_post_t *req, bof_post_result_t *out)
 {
-    bof_error_t err = drop_post(actor, &req->post, NULL);
-    return err != BOF_OK ? err : bof_fs_delete_post(NULL, actor, req, out);
+    bof_error_t err;
+
+    if (!req->deleted)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if ((err = drop_post(actor, &req->post, NULL)) != BOF_OK)
+        return err;
+    // post.svc has taken it down (the result); the cache follows.
+    if ((err = bof_fs_delete_post(NULL, actor, req, out)) != BOF_OK)
+        cache_failed("delete_post", req->post.community,
+                     req->post.bbs_header->filename, err);
+    return BOF_OK;
 }
 
 static bof_error_t
 ps_remove_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                const bof_remove_post_t *req, bof_post_result_t *out)
 {
-    bof_error_t err = drop_post(actor, &req->post,
-                                req->reason ? req->reason : "");
-    return err != BOF_OK ? err : bof_fs_remove_post(NULL, actor, req, out);
+    bof_error_t err;
+
+    if (!req->removed)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if ((err = drop_post(actor, &req->post,
+                         req->reason ? req->reason : "")) != BOF_OK)
+        return err;
+    if ((err = bof_fs_remove_post(NULL, actor, req, out)) != BOF_OK)
+        cache_failed("remove_post", req->post.community,
+                     req->post.bbs_header->filename, err);
+    return BOF_OK;
+}
+
+// The posts post.svc did not take down, which the cache keeps: the
+// selection of the caller, without them.
+typedef struct {
+    int (*selected)(const fileheader_t *fh, int index, void *ctx);
+    void (*removed)(const fileheader_t *fh, void *ctx);
+    void *ctx;
+    char (*failed)[FNLEN];
+    int nfailed;
+} kept_posts_t;
+
+static int
+select_dropped(const fileheader_t *fh, int index, void *vctx)
+{
+    const kept_posts_t *k = vctx;
+
+    for (int i = 0; i < k->nfailed; i++)
+        if (strncmp(fh->filename, k->failed[i], FNLEN) == 0)
+            return 0;
+    return k->selected(fh, index, k->ctx);
+}
+
+static void
+removed_dropped(const fileheader_t *fh, void *vctx)
+{
+    const kept_posts_t *k = vctx;
+
+    k->removed(fh, k->ctx);
+}
+
+// Notes that post.svc did not take fh down.
+static void
+keep_post(kept_posts_t *k, const fileheader_t *fh)
+{
+    char (*more)[FNLEN] = realloc(k->failed,
+                                  (k->nfailed + 1) * sizeof(*k->failed));
+    if (!more)
+        return;
+    k->failed = more;
+    strlcpy(k->failed[k->nfailed++], fh->filename, FNLEN);
 }
 
 static bof_error_t
 ps_remove_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                 const bof_remove_posts_t *req, int *count)
 {
+    kept_posts_t k = {
+        req->bbs_selected, req->bbs_removed, req->bbs_ctx, NULL, 0,
+    };
+    bof_remove_posts_t rec = *req;
     fileheader_t fh;
+    bof_error_t err;
     int fd, index;
 
+    *count = 0;
     if (!req->bbs_dir || !req->bbs_selected || !req->community)
         return BOF_ERR_INVALID_BODY_FIELD;
     if ((fd = open(req->bbs_dir, O_RDONLY)) < 0)
@@ -608,15 +770,29 @@ ps_remove_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
             .community = req->community, .bbs_dir = req->bbs_dir,
             .bbs_index = index, .bbs_header = &fh,
         };
-        drop_post(actor, &post, req->reason ? req->reason : "");
+        if (drop_post(actor, &post, req->reason ? req->reason : "") !=
+            BOF_OK) {
+            cache_failed("remove_posts", req->community, fh.filename,
+                         BOF_ERR_COULDNT_UPDATE_POST);
+            keep_post(&k, &fh);
+        }
     }
     close(fd);
-    return bof_fs_remove_posts(NULL, actor, req, count);
+    // Only those post.svc took down leave the cache.
+    rec.bbs_selected = select_dropped;
+    rec.bbs_ctx = &k;
+    rec.bbs_removed = req->bbs_removed ? removed_dropped : NULL;
+    err = bof_fs_remove_posts(NULL, actor, &rec, count);
+    free(k.failed);
+    return err;
 }
 
-// Expired posts (PurgePost): post.svc keeps them as deleted, as before
+// Expired posts (PurgePost): post.svc keeps them as removed, as before
 // (post.ctl purges them for good), rather than dropping them at once;
-// the cache drops them as the files backend does.
+// the cache drops them as the files backend does. They are not archived,
+// so what post.svc writes over the article does not matter. Expiring is
+// durable, as it always was: a post post.svc did not take is logged, and
+// dropped from the cache all the same (sync-dir brings it back).
 static bof_error_t
 ps_purge_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                const bof_purge_posts_t *req, int *count)
@@ -636,26 +812,71 @@ ps_purge_posts(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         if (!fh.filename[0] || fh.owner[0] == '-' ||
             !req->bbs_selected(&fh, index, req->bbs_ctx))
             continue;
-        svc_cmd(NULL, 0, "REMOVE_POST_FILE %s %.*s %s %" PRIu64 " %s\n",
-                req->community, (int)sizeof(fh.filename), fh.filename,
-                who(actor), uid(actor), why);
+        if (!svc_cmd(NULL, 0, "REMOVE_POST_FILE %s %.*s %s %" PRIu64 " %s\n",
+                     req->community, (int)sizeof(fh.filename), fh.filename,
+                     who(actor), uid(actor), why))
+            cache_failed("purge_posts", req->community, fh.filename,
+                         BOF_ERR_COULDNT_UPDATE_POST);
     }
     free(why);
     close(fd);
     return bof_fs_purge_posts(NULL, actor, req, count);
 }
 
+// The files backend puts the archived article and its record back first;
+// then post.svc takes the post back (RECOVER_POST_FILE), which writes the
+// article again as it has it. If post.svc does not, the cache is put back
+// as it was, so that the two agree: post.svc's result is the result.
 static bof_error_t
 ps_restore_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                 const bof_bbs_restore_post_t *req,
                 bof_post_response_t *out)
 {
-    if (!req->community || !req->bbs_archived)
+    const fileheader_t *ar = req->bbs_archived;
+    char path[PATHLEN], stale[PATHLEN] = "";
+    fileheader_t before, rec;
+    bof_error_t err;
+    int had, i;
+
+    if (!req->community || !req->bbs_dir || !ar || !ar->filename[0] ||
+        ar->filename[0] == '.')
         return BOF_ERR_INVALID_BODY_FIELD;
-    if (!svc_cmd(NULL, 0, "RECOVER_POST_FILE %s %s\n", req->community,
-                 req->bbs_archived->filename))
+    setdirpath(path, req->bbs_dir, ar->filename);
+    had = search_dir_by_filename(req->bbs_dir, ar->filename, &before);
+    // Its record and its file: not deleted, or restored already.
+    if (had > 0 && dashf(path))
         return BOF_ERR_COULDNT_UPDATE_POST;
-    return bof_fs_bbs_restore_post(NULL, actor, req, out);
+    // A file without its record is the note post.svc wrote over the
+    // article when it took the post down: aside, for the archived one.
+    if (dashf(path)) {
+        snprintf(stale, sizeof(stale), "%s.stale%d", path, (int)getpid());
+        if (Rename(path, stale) != 0)
+            return BOF_ERR_COULDNT_UPDATE_POST;
+    }
+    if ((err = bof_fs_bbs_restore_post(NULL, actor, req, out)) != BOF_OK) {
+        if (*stale)
+            Rename(stale, path);
+        return err;
+    }
+    if (svc_cmd(NULL, 0, "RECOVER_POST_FILE %s %s\n", req->community,
+                ar->filename)) {
+        if (*stale)
+            unlink(stale);
+        return BOF_OK;
+    }
+    // post.svc keeps it down: so does the cache.
+    if ((i = search_dir_by_filename(req->bbs_dir, ar->filename, &rec)) > 0) {
+        if (had > 0 ? substitute_fileheader(req->bbs_dir, &rec, &before, i) :
+            delete_fileheader(req->bbs_dir, &rec, i))
+            cache_failed("restore_post", req->community, ar->filename,
+                         BOF_ERR_COULDNT_UPDATE_POST);
+    }
+    unlink(path);
+    if (*stale)
+        Rename(stale, path);
+    if (out && out->bbs_header)
+        memset(out->bbs_header, 0, sizeof(*out->bbs_header));
+    return BOF_ERR_COULDNT_UPDATE_POST;
 }
 
 static bof_error_t
@@ -673,14 +894,33 @@ ps_lock_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     return bof_fs_lock_post(NULL, actor, req, out);
 }
 
-// Changes the marks of a post in the cache, then sends them to post.svc.
-static bof_error_t
-with_meta(const bof_post_ref_t *post, bof_error_t err, fileheader_t *updated,
-          bof_post_response_t *out)
+static bof_error_t ps_get_comments(void *ctx, const bof_get_comments_t *req,
+                                   bof_get_comments_response_t *out);
+
+// Changes the modes (marks) of a post: in post.svc first (SET_META_FILE,
+// whose error is the result), then in the cache. *sent gets the record
+// as sent.
+static int
+send_modes(const bof_post_ref_t *post, uint16_t enable, uint16_t disable,
+           fileheader_t *sent)
 {
-    if (err != BOF_OK)
-        return err;
-    set_meta(post->community, updated);
+    *sent = current_record(post);
+    sent->filemode = (sent->filemode | enable) & ~disable;
+    return set_meta(post->community, sent);
+}
+
+// After send_modes(): err is what the cache did; out gets the record.
+static bof_error_t
+modes_cached(const bof_post_ref_t *post, bof_error_t err,
+             const fileheader_t *sent, const fileheader_t *updated,
+             bof_post_response_t *out)
+{
+    if (err != BOF_OK) {
+        // post.svc has them (the result); sync-dir makes the record again.
+        cache_failed("post_modes", post->community,
+                     post->bbs_header->filename, err);
+        updated = sent;
+    }
     if (out && out->bbs_header)
         *out->bbs_header = *updated;
     return BOF_OK;
@@ -690,10 +930,18 @@ static bof_error_t
 ps_feature_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                 const bof_feature_post_t *req, bof_post_response_t *out)
 {
-    fileheader_t updated;
+    const bof_post_ref_t *post = &req->post;
+    fileheader_t sent, updated;
     bof_post_response_t res = { .bbs_header = &updated };
-    return with_meta(&req->post, bof_fs_feature_post(NULL, actor, req, &res),
-                     &updated, out);
+
+    if (!valid(post) || post->bbs_index <= 0)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // As the files backend does (bof_fs_feature_post()).
+    if (!send_modes(post, req->featured ? FILE_BOTTOM | FILE_MARKED : 0,
+                    req->featured ? 0 : FILE_BOTTOM, &sent))
+        return BOF_ERR_COULDNT_UPDATE_POST;
+    return modes_cached(post, bof_fs_feature_post(NULL, actor, req, &res),
+                        &sent, &updated, out);
 }
 
 static bof_error_t
@@ -701,11 +949,47 @@ ps_set_post_modes(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                   const bof_bbs_set_post_modes_t *req,
                   bof_post_response_t *out)
 {
-    fileheader_t updated;
+    const bof_post_ref_t *post = &req->post;
+    fileheader_t sent, updated;
     bof_post_response_t res = { .bbs_header = &updated };
-    return with_meta(&req->post,
-                     bof_fs_bbs_set_post_modes(NULL, actor, req, &res),
-                     &updated, out);
+
+    if (!valid(post) || post->bbs_index <= 0 ||
+        (!req->enable && !req->disable))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if (!send_modes(post, req->enable, req->disable, &sent))
+        return BOF_ERR_COULDNT_UPDATE_POST;
+    return modes_cached(post,
+                        bof_fs_bbs_set_post_modes(NULL, actor, req, &res),
+                        &sent, &updated, out);
+}
+
+// Appends note to the body of a post in post.svc: the body as it is now,
+// with the note, as an edit (a revision) of the actor. The files backend
+// appends such notes to the file of the post, which post.svc writes
+// again on each change; in the body, the note stays (above the comments).
+static int
+note_body(const bof_actor_t *actor, const bof_post_ref_t *post,
+          const char *note)
+{
+    char tmp[PATHLEN];
+    int32_t modified;
+    int ok;
+
+    snprintf(tmp, sizeof(tmp), "%s.note%d", post->bbs_dir, (int)getpid());
+    if (!fetch_body(post, tmp, &modified)) {
+        unlink(tmp);
+        return 0;
+    }
+    file_appendf(tmp, "%s", note);
+    ok = send_body(actor, post, tmp, modified);
+    unlink(tmp);
+    return ok;
+}
+
+static void
+zero_score(fileheader_t *fh, const void *ctx GCC_UNUSED)
+{
+    fh->score = 0;
 }
 
 static bof_error_t
@@ -714,13 +998,136 @@ ps_reset_post_score(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                     bof_post_response_t *out)
 {
     const bof_post_ref_t *post = &req->post;
+    fileheader_t updated = *post->bbs_header;
+    char note[ANSILINELEN];
+    time4_t now = time4(NULL);
 
-    if (!valid(post))
+    if (!valid(post) || post->bbs_index <= 0)
         return BOF_ERR_INVALID_BODY_FIELD;
     if (!svc_cmd(NULL, 0, "RESET_POST_SCORE_FILE %s %s\n", post->community,
                  post->bbs_header->filename))
         return BOF_ERR_COULDNT_UPDATE_POST;
-    return bof_fs_bbs_reset_post_score(NULL, actor, req, out);
+    // Readers of the post see who did it, as with the files backend
+    // (bof_fs_bbs_reset_post_score()), but in the body kept by post.svc.
+    snprintf(note, sizeof(note), STR_REF_MARK STR_SCORE_RESET_NOTE,
+             actor && actor->name ? actor->name : "", Cdatelite(&now));
+    if (!note_body(actor, post, note))
+        cache_failed("reset_post_score note", post->community,
+                     post->bbs_header->filename, BOF_ERR_COULDNT_UPDATE_POST);
+    if (!render_post(post))
+        cache_failed("reset_post_score", post->community,
+                     post->bbs_header->filename, BOF_ERR_UNKNOWN);
+    if (bof_files_update_record(post->bbs_dir, post->bbs_index,
+                                post->bbs_header->filename, zero_score, NULL,
+                                &updated) != 0) {
+        cache_failed("reset_post_score", post->community,
+                     post->bbs_header->filename, BOF_ERR_COULDNT_FIND_POST);
+        updated.score = 0;
+    }
+    if (out && out->bbs_header)
+        *out->bbs_header = updated;
+    return BOF_OK;
+}
+
+// Sends the new text of the comment at floor (EDIT_COMMENT_FILE); 1 if OK.
+static int
+send_comment_text(const bof_actor_t *actor, const bof_post_ref_t *post,
+                  int floor, const char *text)
+{
+    char hdr[512], *msg = comment_to_svc(text);
+    int ok;
+
+    if (!msg)
+        return 0;
+    snprintf(hdr, sizeof(hdr), "EDIT_COMMENT_FILE %s %s %d %s %" PRIu64
+             " %zu\n", post->community, post->bbs_header->filename, floor,
+             who(actor), uid(actor), strlen(msg));
+    ok = svc_ok(svc_call(hdr, msg, strlen(msg), NULL, 0), NULL, 0);
+    free(msg);
+    return ok;
+}
+
+// Calls fn for each comment of post (of creator, if not NULL), a page at
+// a time, until fn returns nonzero. Returns that, or -1 if the comments
+// could not be read.
+static int
+each_comment(const bof_post_ref_t *post, const char *creator,
+             int (*fn)(const bof_comment_t *c, void *ctx), void *ctx)
+{
+    enum { PAGE = 256 };
+    bof_comment_t *cs = calloc(PAGE, sizeof(*cs));
+    int r = 0;
+
+    if (!cs)
+        return -1;
+    for (int page = 1; !r; page++) {
+        bof_get_comments_t get = {
+            .post = *post, .bbs_creator = creator, .page = page,
+            .limit = PAGE,
+        };
+        bof_get_comments_response_t res = { .comments = cs };
+
+        if (ps_get_comments(NULL, &get, &res) != BOF_OK) {
+            r = -1;
+            break;
+        }
+        for (int i = 0; i < res.count && !r; i++)
+            r = fn(&cs[i], ctx);
+        if (res.count < PAGE)
+            break;
+    }
+    free(cs);
+    return r;
+}
+
+// Masks the lines of comments that have the pattern, as the files backend
+// masks every line of the file (bof_fs_bbs_mask_post()): each such line
+// of a comment says STR_MASKED_LINE instead, as an edit by the moderator
+// (post.svc keeps what it said in the revisions of the comment). If dry,
+// only counts them.
+typedef struct {
+    const bof_actor_t *actor;
+    const bof_post_ref_t *post;
+    const char *pattern;
+    int dry;
+    int matched;
+} mask_ctx;
+
+static int
+mask_comment(const bof_comment_t *c, void *vctx)
+{
+    mask_ctx *m = vctx;
+    char masked[sizeof(c->content)] = "", line[sizeof(c->content)];
+    char text[sizeof(c->content)];
+    const char *p = c->content;
+    int n = 0;
+
+    if (c->removed)
+        return 0;
+    while (*p) {
+        size_t len = strcspn(p, "\n");
+
+        snprintf(line, sizeof(line), "%.*s", (int)len, p);
+        strip_control_sequence(text, line);
+        if (p != c->content)
+            strlcat(masked, "\n", sizeof(masked));
+        if (mbs_strstr(text, m->pattern)) {
+            strlcat(masked, STR_MASKED_LINE, sizeof(masked));
+            n++;
+        } else {
+            strlcat(masked, line, sizeof(masked));
+        }
+        p += len;
+        if (*p)
+            p++;
+    }
+    m->matched += n;
+    if (n && !m->dry &&
+        !send_comment_text(m->actor, m->post, c->bbs_floor, masked))
+        cache_failed("mask_post comment", m->post->community,
+                     m->post->bbs_header->filename,
+                     BOF_ERR_COULDNT_UPDATE_COMMENT);
+    return 0;
 }
 
 static bof_error_t
@@ -729,8 +1136,8 @@ ps_mask_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 {
     const bof_post_ref_t *post = &req->post;
     char src[PATHLEN], dst[PATHLEN], line[ANSILINELEN], text[ANSILINELEN];
-    char hdr[512], resp[128];
     time4_t now = time4(NULL);
+    mask_ctx m = { actor, post, req->pattern, 1, 0 };
     int32_t modified;
     int matched = 0, ok;
     FILE *in, *outf;
@@ -759,30 +1166,25 @@ ps_mask_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     fclose(in);
     fclose(outf);
     unlink(src);
-    if (!matched) {
+    // The comments too, as the files backend masks the whole file.
+    each_comment(post, NULL, mask_comment, &m);
+    if (!matched && !m.matched) {
         unlink(dst);
         return BOF_ERR_NOT_FOUND;
     }
+    // The body with the note of who did it (even if only comments had
+    // it), at the version read: if it changed meanwhile, nothing is done.
     file_appendf(dst, STR_POST_MARK STR_MASK_NOTE, who(actor),
                  Cdatelite(&now), req->reason ? req->reason : "");
-
-    char *title = to_svc(post->bbs_header->title), *body = file_to_svc(dst);
+    ok = send_body(actor, post, dst, modified);
     unlink(dst);
-    if (!title || !body) {
-        free(title);
-        free(body);
-        return BOF_ERR_UNKNOWN;
-    }
-    snprintf(hdr, sizeof(hdr), "EDIT_POST_FILE %s %s %s %" PRIu64
-             " %lld %zu %zu\n", post->community, post->bbs_header->filename,
-             who(actor), uid(actor), (long long)modified, strlen(title),
-             strlen(body));
-    ok = svc_ok(svc_call(hdr, title, strlen(title), body, strlen(body)), resp,
-                sizeof(resp));
-    free(title);
-    free(body);
     if (!ok)
         return BOF_ERR_COULDNT_UPDATE_POST;
+    if (m.matched) {
+        m.dry = 0;
+        m.matched = 0;
+        each_comment(post, NULL, mask_comment, &m);
+    }
     if (!render_post(post))
         cache_failed("mask_post", post->community,
                      post->bbs_header->filename, BOF_ERR_UNKNOWN);
@@ -808,21 +1210,6 @@ ps_remove_crosspost(void *ctx GCC_UNUSED, const bof_actor_t *actor,
 
 // --------------------------------------------------------------------------
 // Comments
-
-// The comment of what was typed (or the line for the file), without the
-// line break, for post.svc, to free().
-static char *
-comment_to_svc(const char *text)
-{
-    char buf[ANSILINELEN * 4];
-    size_t n;
-
-    strlcpy(buf, text ? text : "", sizeof(buf));
-    n = strlen(buf);
-    while (n > 0 && (buf[n - 1] == '\n' || buf[n - 1] == '\r'))
-        buf[--n] = '\0';
-    return to_svc(buf);
-}
 
 static bof_error_t
 ps_create_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
@@ -859,6 +1246,7 @@ ps_create_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     // The record in the cache: when it changed, and how many comments
     // (post.svc has written the article again itself).
     fileheader_t updated;
+    char path[PATHLEN];
     if (update_record(post, ctime > 0 ? (int32_t)ctime : time4(NULL), 0,
                       merged ? 0 : 1, &updated) != 0)
         return BOF_ERR_COULDNT_UPDATE_POST;
@@ -867,6 +1255,12 @@ ps_create_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
             *out->bbs_header = updated;
         out->bbs_floor = seq;
         out->bbs_merged = merged;
+        // The size of the article post.svc wrote, which tells live readers
+        // (mbbsd's ipc_pub) where the new comment ends.
+        post_path(path, post);
+        out->bbs_file_size = dashs(path);
+        if (out->bbs_file_size < 0)
+            out->bbs_file_size = 0;
     }
     return BOF_OK;
 }
@@ -893,25 +1287,30 @@ comment_changed(const bof_post_ref_t *post, bof_comment_response_t *out)
     return BOF_OK;
 }
 
+// What bof_edit_comment() checks for all backends (the input, and that
+// the actor is the creator it names) is not checked again here; the
+// comment at the floor must still be by that creator and say
+// bbs_old_content, as the files backend checks in the line.
 static bof_error_t
 ps_edit_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                 const bof_edit_comment_t *req, bof_comment_response_t *out)
 {
     const bof_post_ref_t *post = &req->post;
-    char hdr[512];
-    char *msg;
-    int ok;
+    bof_comment_t c;
+    bof_get_comments_t get = { .post = *post, .page = req->bbs_floor,
+                               .limit = 1 };
+    bof_get_comments_response_t res = { .comments = &c };
 
-    if (!valid(post) || req->bbs_floor <= 0 || !req->content)
+    if (!valid(post) || req->bbs_floor <= 0 || !req->content ||
+        !req->bbs_creator || !req->bbs_old_content)
         return BOF_ERR_INVALID_BODY_FIELD;
-    if (!(msg = comment_to_svc(req->content)))
-        return BOF_ERR_UNKNOWN;
-    snprintf(hdr, sizeof(hdr), "EDIT_COMMENT_FILE %s %s %d %s %" PRIu64
-             " %zu\n", post->community, post->bbs_header->filename,
-             req->bbs_floor, who(actor), uid(actor), strlen(msg));
-    ok = svc_ok(svc_call(hdr, msg, strlen(msg), NULL, 0), NULL, 0);
-    free(msg);
-    if (!ok)
+    if (ps_get_comments(NULL, &get, &res) != BOF_OK || res.count < 1 ||
+        c.bbs_floor != req->bbs_floor)
+        return BOF_ERR_COULDNT_FIND_COMMENT;
+    if (c.removed || strcasecmp(c.creator, req->bbs_creator) != 0 ||
+        strcmp(c.content, req->bbs_old_content) != 0)
+        return BOF_ERR_COULDNT_UPDATE_COMMENT;
+    if (!send_comment_text(actor, post, req->bbs_floor, req->content))
         return BOF_ERR_COULDNT_UPDATE_COMMENT;
     return comment_changed(post, out);
 }
@@ -953,11 +1352,43 @@ ps_delete_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     return delete_comment(actor, &req->post, req->bbs_floor, NULL, out);
 }
 
-static bof_error_t ps_get_comments(void *ctx, const bof_get_comments_t *req,
-                                   bof_get_comments_response_t *out);
+// Finds the comment of remove_comment without a floor: the first one by
+// the author (not removed) that says it, whole or in one of its lines, as
+// post.svc keeps the lines of a comment merged into it (the files backend
+// has a line each). Removing it removes all of its lines.
+typedef struct {
+    const char *content;
+    int floor;
+} find_ctx;
+
+static int
+find_comment(const bof_comment_t *c, void *vctx)
+{
+    find_ctx *f = vctx;
+    size_t n = strlen(f->content);
+    const char *p = c->content;
+
+    if (c->removed)
+        return 0;
+    while (*p) {
+        size_t len = strcspn(p, "\n");
+        if (len == n && strncmp(p, f->content, n) == 0) {
+            f->floor = c->bbs_floor;
+            return 1;
+        }
+        p += len;
+        if (*p)
+            p++;
+    }
+    if (strcmp(c->content, f->content) == 0) {
+        f->floor = c->bbs_floor;
+        return 1;
+    }
+    return 0;
+}
 
 static bof_error_t
-ps_remove_comment(void *ctx, const bof_actor_t *actor,
+ps_remove_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                   const bof_remove_comment_t *req,
                   bof_comment_response_t *out)
 {
@@ -965,19 +1396,12 @@ ps_remove_comment(void *ctx, const bof_actor_t *actor,
 
     if (!valid(&req->post))
         return BOF_ERR_INVALID_BODY_FIELD;
-    // Without the floor, the first comment by the author saying it.
-    if (floor <= 0 && req->bbs_author && req->bbs_content) {
-        bof_comment_t *cs = calloc(512, sizeof(*cs));
-        bof_get_comments_t get = {
-            .post = req->post, .bbs_creator = req->bbs_author, .limit = 512,
-        };
-        bof_get_comments_response_t res = { .comments = cs };
-        if (cs && ps_get_comments(ctx, &get, &res) == BOF_OK)
-            for (int i = 0; i < res.count && floor <= 0; i++)
-                if (!cs[i].removed &&
-                    strcmp(cs[i].content, req->bbs_content) == 0)
-                    floor = cs[i].bbs_floor;
-        free(cs);
+    // Without the floor: all comments by the author, page by page.
+    if (floor <= 0 && req->bbs_author && *req->bbs_author &&
+        req->bbs_content) {
+        find_ctx f = { req->bbs_content, 0 };
+        if (each_comment(&req->post, req->bbs_author, find_comment, &f) > 0)
+            floor = f.floor;
     }
     if (floor <= 0)
         return BOF_ERR_COULDNT_FIND_COMMENT;
@@ -1010,7 +1434,8 @@ ps_post_version_matches(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
 {
     int32_t modified = 0;
 
-    if (!valid(post) || !ver || !fetch_body(post, "/dev/null", &modified))
+    // Only the version: post.svc writes nothing for the target "-".
+    if (!valid(post) || !ver || !fetch_body(post, "-", &modified))
         return 0;
     return (uint64_t)(uint32_t)modified == ver->hash;
 }
@@ -1091,12 +1516,18 @@ ps_get_comments(void *ctx GCC_UNUSED, const bof_get_comments_t *req,
         bof_comment_t *c = &out->comments[out->count++];
         char text[sizeof(c->content) * 3] = "";
         time4_t t = (time4_t)atoll(f[2]);
+        const char *edited = strchr(f[2], '/');
         int type = atoi(f[4]);
 
         memset(c, 0, sizeof(*c));
         c->bbs_floor = atoi(f[0]);
         strlcpy(c->creator, f[1], sizeof(c->creator));
-        c->removed = type < 0;
+        // As the files backend gives a removed one (its note in the file):
+        // who wrote it, and nothing of what it said.
+        if (type < 0) {
+            c->removed = 1;
+            continue;
+        }
         c->bbs_vote = type == 1 ? 1 : type == 2 ? -1 : 0;
         for (int i = 7; i < nf; i++) {
             // The lines of a comment (post.svc keeps several).
@@ -1105,13 +1536,28 @@ ps_get_comments(void *ctx GCC_UNUSED, const bof_get_comments_t *req,
             strlcat(text, f[i], sizeof(text));
         }
         SERVICE_TO_MB(text, c->content, sizeof(c->content));
-        if (show_ip && strcmp(f[3], "-") != 0)
-            snprintf(c->bbs_tail, sizeof(c->bbs_tail), " %s %s", f[3],
+        // The time may be followed by the time of the last edit
+        // ("<ctime>/<modified>"), if post.svc tells it.
+        c->bbs_edited = edited && atoll(edited + 1) > 0;
+        // An edited one has the mark in place of the space before the date,
+        // as in the files.
+        if (show_ip && *f[3] && strcmp(f[3], "-") != 0)
+            snprintf(c->bbs_tail, sizeof(c->bbs_tail), " %s%c%s", f[3],
+                     c->bbs_edited ? BOF_COMMENT_EDITED_MARK : ' ',
                      Cdate_mdHM(&t));
         else
-            snprintf(c->bbs_tail, sizeof(c->bbs_tail), " %s",
+            snprintf(c->bbs_tail, sizeof(c->bbs_tail), "%c%s",
+                     c->bbs_edited ? BOF_COMMENT_EDITED_MARK : ' ',
                      Cdate_mdHM(&t));
-        c->bbs_width = (int)strlen(c->content);
+        // The room of its longest line.
+        for (const char *p = c->content; *p;) {
+            int len = (int)strcspn(p, "\n");
+            if (len > c->bbs_width)
+                c->bbs_width = len;
+            p += len;
+            if (*p)
+                p++;
+        }
     }
     free(r);
     return BOF_OK;
@@ -1232,8 +1678,9 @@ ps_get_community_id(void *ctx GCC_UNUSED, const char *name,
 }
 
 // --------------------------------------------------------------------------
-// The versions of posts: post.svc keeps them (GET_POST_REVISIONS_FILE); posts
-// from before it, in the time capsule of the files.
+// The versions of posts: post.svc keeps them (GET_POST_REVISIONS_FILE); those
+// from before it, in the time capsule of the files. Both are listed, the
+// older first, numbered on.
 
 // The versions post.svc keeps of post, oldest first: their revision
 // numbers in post.svc into revs and what is known of them into info
@@ -1292,27 +1739,40 @@ svc_revisions(const bof_post_ref_t *post, int *revs,
     return n;
 }
 
+// How many versions the time capsule keeps of post (those from before
+// post.svc, which come first).
+static int
+capsule_revisions(const bof_post_ref_t *post)
+{
+    int n = 0;
+
+    if (bof_fs_get_post_revisions(NULL, post, &n) != BOF_OK || n < 0)
+        return 0;
+    return n;
+}
+
+// The versions are those of the time capsule (from before post.svc),
+// then those of post.svc, numbered on from them.
 static bof_error_t
 ps_get_post_revisions(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
                       int *count)
 {
     int n = svc_revisions(post, NULL, NULL, 0);
 
-    if (n > 0) {
-        *count = n;
-        return BOF_OK;
-    }
-    return bof_fs_get_post_revisions(NULL, post, count);
+    *count = capsule_revisions(post) + (n > 0 ? n : 0);
+    return BOF_OK;
 }
 
 static bof_error_t
 ps_get_post_revision_file(void *ctx GCC_UNUSED, const bof_post_ref_t *post,
                           int rev, char *path, size_t sz)
 {
-    int revs[256], n = svc_revisions(post, revs, NULL, ARRAY_SIZE(revs));
+    int old = capsule_revisions(post), revs[256], n;
 
-    if (n <= 0)
+    if (rev <= old)
         return bof_fs_get_post_revision_file(NULL, post, rev, path, sz);
+    rev -= old;
+    n = svc_revisions(post, revs, NULL, ARRAY_SIZE(revs));
     if (rev > n || rev > (int)ARRAY_SIZE(revs))
         return BOF_ERR_COULDNT_FIND_POST;
     // Fetched into a file of the process, valid until the next call.
@@ -1329,18 +1789,27 @@ ps_list_post_revisions(void *ctx GCC_UNUSED,
                        const bof_bbs_list_post_revisions_t *req,
                        bof_bbs_list_post_revisions_response_t *out)
 {
-    bof_bbs_post_revision_t *all;
+    bof_bbs_post_revision_t *all = NULL;
+    int old = capsule_revisions(&req->post);
     int n = svc_revisions(&req->post, NULL, NULL, 0);
+    bof_error_t err;
 
-    if (n <= 0)
-        return bof_fs_list_post_revisions(NULL, req, out);
-    if (!(all = calloc(n, sizeof(*all))))
-        return BOF_ERR_UNKNOWN;
-    n = svc_revisions(&req->post, NULL, all, n);
-    out->bbs_total = n;
-    for (int i = req->start; i < n && out->count < req->limit; i++)
-        out->revisions[out->count++] = all[i];
-    free(all);
+    out->count = 0;
+    if (req->start < old &&
+        (err = bof_fs_list_post_revisions(NULL, req, out)) != BOF_OK)
+        return err;
+    if (n > 0 && out->count < req->limit) {
+        if (!(all = calloc(n, sizeof(*all))))
+            return BOF_ERR_UNKNOWN;
+        n = svc_revisions(&req->post, NULL, all, n);
+        for (int i = req->start > old ? req->start - old : 0;
+             i < n && out->count < req->limit; i++) {
+            all[i].number = old + i + 1;
+            out->revisions[out->count++] = all[i];
+        }
+        free(all);
+    }
+    out->bbs_total = old + (n > 0 ? n : 0);
     return BOF_OK;
 }
 
