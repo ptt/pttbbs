@@ -30,6 +30,9 @@ board_posttype_to_file: board_posttype_to_file.c
 dir_recommend_to_rating: dir_recommend_to_rating.c
 migrate_board_moderators: migrate_board_moderators.c
 migreate_board_moderators: migrate_board_moderators
+comment_readonly: comment_readonly.c
+# It writes the board headers through BoF.
+comment_readonly: LDLIBS := $(SRCROOT)/bof/libbof.a $(LDLIBS)
 
 #$(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
 #	cd $(SRCROOT)/mbbsd; $(MAKE) $(SRCROOT)/include/var.h

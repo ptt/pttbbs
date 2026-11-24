@@ -14,4 +14,10 @@ files directly, not through BoF, so:
  - After the tools that rewrite .BRD (board_split_title,
    migrate_board_moderators), run `nest.ctl import-boards`.
 
+comment_readonly keeps the comments of the boards with moderators as they
+are (BRD_COMMENT_READONLY: people may neither edit nor delete their own),
+as many moderators want when the comments move to nest.svc. Run it by hand
+once when switching (dry run unless -w); it writes .BRD through BoF, which
+tells nest.svc.
+
 See docs/nest_migration.md.
