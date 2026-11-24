@@ -1173,7 +1173,7 @@ func main() {
 
 	case "sync-dir":
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl sync-dir <board> [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]")
+			log.Fatalf("Usage: post.ctl sync-dir <board>|--all [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]")
 		}
 		comm := args[1]
 		dryRun := false
@@ -1204,49 +1204,29 @@ func main() {
 		if len(modes) > 0 {
 			modeStr = strings.Join(modes, ",")
 		}
-		resp, _, err := sendCmd(fmt.Sprintf("SYNC_DIR %s %s %s\n", comm, dryStr, modeStr), nil)
-		if err != nil {
-			log.Fatalf("sync-dir failed: %v", err)
-		}
-		parts := strings.Fields(resp)
-		if len(parts) < 8 || parts[0] != "OK" {
-			log.Fatalf("sync-dir failed: %s", resp)
-		}
-		if strings.Contains(modeStr, "rebuild") {
-			if dryRun {
-				fmt.Printf("[+] Dry-run of rebuilding .DIR of '%s' from post.svc (nothing written):\n", comm)
-			} else {
-				fmt.Printf("[+] Rebuilt .DIR of '%s' from post.svc:\n", comm)
+		// --all: every board of .BRD with posts of its own, e.g. to write
+		// the scores and numbers of comments of post.svc into the .DIR of
+		// every board after import-board --all.
+		if comm == "--all" || comm == "-all" {
+			boards, _, err := boardsToImport(bbs.BBSHome(), filepath.Join(bbs.BBSHome(), ".BRD"))
+			if err != nil {
+				log.Fatalf("sync-dir --all: read .BRD failed: %v", err)
 			}
-			fmt.Printf("    Records before:     %s (%s known by post.svc, %s dropped)\n", parts[1], parts[2], parts[4])
-			if len(parts) >= 10 {
-				fmt.Printf("    Legacy posts:       %s imported first, %s records kept as they are\n", parts[8], parts[9])
+			var failed []string
+			for i, b := range boards {
+				fmt.Printf("[%d/%d] ", i+1, len(boards))
+				if err := syncDir(b, dryRun, dryStr, modeStr); err != nil {
+					fmt.Printf("[!] %s: %v\n", b, err)
+					failed = append(failed, b)
+				}
 			}
-			fmt.Printf("    Records written:    %s (%s new)\n", parts[3], parts[5])
-			fmt.Printf("    Articles rendered:  %s (%s failed)\n", parts[7], parts[6])
-			if !dryRun {
-				fmt.Println("    The previous .DIR is kept as .DIR.bak-<time>.")
+			if len(failed) > 0 {
+				log.Fatalf("sync-dir --all: %d board(s) failed: %s", len(failed), strings.Join(failed, " "))
 			}
 			break
 		}
-		what := "score and comments"
-		if strings.Contains(modeStr, "full") {
-			what = "all fields"
-		}
-		if dryRun {
-			fmt.Printf("[+] Dry-run of syncing %s of '%s' to .DIR (nothing written):\n", what, comm)
-		} else {
-			fmt.Printf("[+] Synced %s of '%s' to .DIR:\n", what, comm)
-		}
-		fmt.Printf("    Records in .DIR:    %s\n    Known by post.svc:  %s\n    Records updated:    %s\n", parts[1], parts[2], parts[3])
-		if strings.Contains(modeStr, "prune") {
-			fmt.Printf("    Records pruned:     %s\n", parts[4])
-		}
-		if strings.Contains(modeStr, "add-missing") {
-			fmt.Printf("    Records added:      %s (%s without article file)\n", parts[5], parts[6])
-		}
-		if !dryRun && (strings.Contains(modeStr, "prune") || strings.Contains(modeStr, "add-missing")) {
-			fmt.Println("    The previous .DIR is kept as .DIR.bak-<time>.")
+		if err := syncDir(comm, dryRun, dryStr, modeStr); err != nil {
+			log.Fatalf("sync-dir failed: %v", err)
 		}
 
 	case "remove-community":
@@ -1561,7 +1541,7 @@ Usage:
   post.ctl render <post> [output] [--legacy-format]
   post.ctl render-community <community> [output_dir] [--legacy-format]
   post.ctl import-board <board>|--all [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
-  post.ctl sync-dir <board> [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]
+  post.ctl sync-dir <board>|--all [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]
   post.ctl fetch <post> <output_path>      (output under $BBSHOME; relative to it)
   post.ctl update <post> <title> <content> [editor]
   post.ctl update-title <post> <title> [editor]
@@ -1728,6 +1708,56 @@ func printCommentHistory(resp string, payload []byte, rev int) {
 				parts[2], parts[4], dateStr, string(cBytes))
 		}
 	}
+}
+
+// syncDir sends SYNC_DIR for board comm (dryStr "0" or "1", modeStr the
+// modes or "-") and prints what post.svc did.
+func syncDir(comm string, dryRun bool, dryStr, modeStr string) error {
+	resp, _, err := sendCmd(fmt.Sprintf("SYNC_DIR %s %s %s\n", comm, dryStr, modeStr), nil)
+	if err != nil {
+		return err
+	}
+	parts := strings.Fields(resp)
+	if len(parts) < 8 || parts[0] != "OK" {
+		return fmt.Errorf("%s", strings.TrimSpace(resp))
+	}
+	if strings.Contains(modeStr, "rebuild") {
+		if dryRun {
+			fmt.Printf("[+] Dry-run of rebuilding .DIR of '%s' from post.svc (nothing written):\n", comm)
+		} else {
+			fmt.Printf("[+] Rebuilt .DIR of '%s' from post.svc:\n", comm)
+		}
+		fmt.Printf("    Records before:     %s (%s known by post.svc, %s dropped)\n", parts[1], parts[2], parts[4])
+		if len(parts) >= 10 {
+			fmt.Printf("    Legacy posts:       %s imported first, %s records kept as they are\n", parts[8], parts[9])
+		}
+		fmt.Printf("    Records written:    %s (%s new)\n", parts[3], parts[5])
+		fmt.Printf("    Articles rendered:  %s (%s failed)\n", parts[7], parts[6])
+		if !dryRun {
+			fmt.Println("    The previous .DIR is kept as .DIR.bak-<time>.")
+		}
+		return nil
+	}
+	what := "score and comments"
+	if strings.Contains(modeStr, "full") {
+		what = "all fields"
+	}
+	if dryRun {
+		fmt.Printf("[+] Dry-run of syncing %s of '%s' to .DIR (nothing written):\n", what, comm)
+	} else {
+		fmt.Printf("[+] Synced %s of '%s' to .DIR:\n", what, comm)
+	}
+	fmt.Printf("    Records in .DIR:    %s\n    Known by post.svc:  %s\n    Records updated:    %s\n", parts[1], parts[2], parts[3])
+	if strings.Contains(modeStr, "prune") {
+		fmt.Printf("    Records pruned:     %s\n", parts[4])
+	}
+	if strings.Contains(modeStr, "add-missing") {
+		fmt.Printf("    Records added:      %s (%s without article file)\n", parts[5], parts[6])
+	}
+	if !dryRun && (strings.Contains(modeStr, "prune") || strings.Contains(modeStr, "add-missing")) {
+		fmt.Println("    The previous .DIR is kept as .DIR.bak-<time>.")
+	}
+	return nil
 }
 
 // -----------------------------------------------------------------------------
