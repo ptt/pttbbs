@@ -226,11 +226,10 @@ user_display(const userec_t * u, int adminmode)
 	prints("\t職業學歷: %s\n", u->career);
 	prints("\t居住地址: %s\n", u->address);
 
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-	prints("\t聯絡信箱: %s\n", u->email);
-#else
-	prints("\t電子信箱: %s\n", u->email);
-#endif
+	if (IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT))
+	    prints("\t聯絡信箱: %s\n", u->email);
+	else
+	    prints("\t電子信箱: %s\n", u->email);
     }
     prints("\t%6s幣: %d " MONEYNAME "\n", BBSMNAME, u->money);
     prints("\t是否成年: %s滿18歲\n", u->over_18 ? "已" : "未");
@@ -943,10 +942,10 @@ prompt_again:
 	goto prompt_again;
 
     case 'm':
-#if !IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-	vmsg("本站目前未開放聯絡信箱功能。");
-	return;
-#else
+	if (!IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)) {
+	    vmsg("本站目前未開放聯絡信箱功能。");
+	    return;
+	}
 	if (!adminmode) {
 	    // The contact email is a password-reset channel (/recover), so
 	    // changing it is re-authenticated like a password change.
@@ -998,7 +997,6 @@ prompt_again:
 	}
 
 	break;
-#endif
 
     case '1':
         if (!vform_run(&user_profile_form, &x, &adminmode))
@@ -1165,16 +1163,14 @@ prompt_again:
     case '2':
 	y = 19;
 	if (!adminmode) {
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-#if IS_ENABLED(CONFIG_REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD)
-	    if (!is_valid_email(cuser.email)) {
+	    if (IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT) &&
+		IS_ENABLED(CONFIG_REQUIRE_CONTACT_EMAIL_TO_CHANGE_PASSWORD) &&
+		!is_valid_email(cuser.email)) {
 		move(y, 0);
 		outs("設定聯絡信箱後才能修改密碼唷!");
 		fail++;
 		break;
 	    }
-#   endif
-#endif
             if (!getdata(y++, 0, "原密碼:", buf, PW_PLAIN_SIZE,
                          PASSECHO) ||
 		!checkuser_passwd(&x, buf)) {
@@ -1476,14 +1472,13 @@ prompt_again:
 #ifdef USE_EMAILDB
 	// If we separate email in userec_t and emaildb, there is no way for us
 	// to find out the real verified email here. Don't update it.
-#if !IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 	// We only want to update emaildb when user is known to use email
 	// verification. It's okay to keep existing entry for old userid; it
 	// will get filtered out when read. This is best-effort, and does not
 	// account for failures. We can't rollback.
-	if (strchr(x.email, '@') != NULL && (x.userlevel & PERM_LOGINOK))
+	if (!IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT) &&
+	    strchr(x.email, '@') != NULL && (x.userlevel & PERM_LOGINOK))
 	    emaildb_update_email(x.userid, x.email);
-#   endif
 #endif
 
 #ifdef USE_VERIFYDB

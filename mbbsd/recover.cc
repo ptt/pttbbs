@@ -68,11 +68,11 @@ bool AccountRecovery::LoadUser(const char *userid) {
   user.generation = u.firstlogin;
   user_ = user;
 
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-  auto email = NormalizeEmail(u.email);
-  if (email)
-    all_emails_.push_back(email.value());
-#endif
+  if (IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)) {
+    auto email = NormalizeEmail(u.email);
+    if (email)
+      all_emails_.push_back(email.value());
+  }
 
   return true;
 }
@@ -171,9 +171,8 @@ void AccountRecovery::UserErrorExit() {
 }
 
 void AccountRecovery::InputUserEmail() {
-#if !IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-  mvprints(y_, 0, "目前僅能取回使用 Email 註冊之帳號。");
-#endif
+  if (!IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT))
+    mvprints(y_, 0, "目前僅能取回使用 Email 註冊之帳號。");
   y_ += 2;
 
   // Input userid.

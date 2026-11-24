@@ -7,9 +7,7 @@
 #define	DEF_MAXP        30000
 
 #define	EXPIRE_CONF	BBSHOME "/etc/expire2.conf"
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 char    safe_delete_only = 0;
-#endif
 extern  boardheader_t *bcache;
 int     checkmode = 0;
 
@@ -123,15 +121,12 @@ void expire(life_t *brd)
     while (set.n < total && fread(&head, sizeof(head), 1, fp) == 1) {
                 if (head.owner[0] == '-' ||
                     (!*head.filename) ||
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-		    strcmp(head.filename, FN_SAFEDEL) == 0 ||
-#endif
+		    (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+		     strcmp(head.filename, FN_SAFEDEL) == 0) ||
                     0)
 		    keep = 0;
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-		else if (safe_delete_only)
+		else if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) && safe_delete_only)
 		    keep = 1;
-#endif
 		else if (head.filemode & (FILE_MARKED | FILE_BOTTOM))
 		    keep = 1;
 		else if (total - nDelete > brd->maxp)
@@ -229,17 +224,13 @@ int main(int argc, char **argv)
     /* default value */
     db.maxp = DEF_MAXP;
 
-    while( (ch = getopt(argc, argv, "M:hn"
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-"D"
-#endif
+    while( (ch = getopt(argc, argv,
+			IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) ? "M:hnD" : "M:hn"
 			)) != -1 )
 	switch( ch ){
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
 	case 'D':
 	    safe_delete_only = 1;
 	    break;
-#endif
 	case 'M':
 	    db.maxp = atoi(optarg);
 	    break;

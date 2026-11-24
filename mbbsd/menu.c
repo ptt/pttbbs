@@ -1183,7 +1183,6 @@ x_sys_updates(void)
 }
 #endif
 
-#if IS_ENABLED(CONFIG_DEBUG)
 int _debug_reportstruct()
 {
     clear();
@@ -1196,8 +1195,6 @@ int _debug_reportstruct()
     pressanykey();
     return 0;
 }
-
-#endif
 
 /* XYZ tool sub menu */
 static const menuitem_t m_xyz_hot[] = {

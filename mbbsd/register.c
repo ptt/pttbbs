@@ -133,7 +133,6 @@ bad_user_id(const char *userid)
     return 0;
 }
 
-#if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
 // Returns 1 if no account exists yet, i.e. a brand new site.
 static int
 no_user_exists(void)
@@ -144,7 +143,6 @@ no_user_exists(void)
 	    return 0;
     return 1;
 }
-#endif
 
 static char *
 isvalidname(char *rname)
@@ -230,11 +228,10 @@ compute_user_value(const userec_t * urec, time4_t clock)
     /* || (urec->userlevel & PERM_LOGINOK) */
 	)
 	return 999999;
-#if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
     /* str_sysop gets admin permissions on login (see load_current_user) */
-    if (strcasecmp(str_sysop, urec->userid) == 0)
+    if (IS_ENABLED(CONFIG_SYSOP_ACCOUNT) &&
+	strcasecmp(str_sysop, urec->userid) == 0)
 	return 999999;
-#endif
     value = time4_diff(clock, urec->lastlogin) / 60;	/* minutes */
 
 #ifdef STR_REGNEW
@@ -791,24 +788,26 @@ new_register(void)
     newuser.ua_version = ua_version;
     STRLCPY(newuser.lasthost, fromhost);
 
-#if IS_ENABLED(CONFIG_REQUIRE_VERIFY_EMAIL_AT_REGISTER)
-    email_input_t ein = {};
-    ein.email = newuser.email;
+    _Static_assert(!IS_ENABLED(CONFIG_REQUIRE_VERIFY_EMAIL_AT_REGISTER) ||
+		   !IS_ENABLED(CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL) ||
+		   IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT),
+		   "CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL requires "
+		   "CONFIG_USEREC_EMAIL_IS_CONTACT");
+    if (IS_ENABLED(CONFIG_REQUIRE_VERIFY_EMAIL_AT_REGISTER)) {
+	email_input_t ein = {};
+	ein.email = newuser.email;
 
-#if IS_ENABLED(CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL)
-#if !IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-#	    error "CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL requires CONFIG_USEREC_EMAIL_IS_CONTACT"
-#	endif
-    ein.allow_untrusted = true;
-    ein.warn_untrusted = true;
-#   endif  // CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL
+	if (IS_ENABLED(CONFIG_ALLOW_REGISTER_WITH_ONLY_CONTACT_EMAIL)) {
+	    ein.allow_untrusted = true;
+	    ein.warn_untrusted = true;
+	}
 
-    if (register_email_verification(&ein, 0) == REGISTER_OK) {
-	email_verified = ein.is_trusted;
-    } else {
-	exit(1);
+	if (register_email_verification(&ein, 0) == REGISTER_OK) {
+	    email_verified = ein.is_trusted;
+	} else {
+	    exit(1);
+	}
     }
-#endif  // CONFIG_REQUIRE_VERIFY_EMAIL_AT_REGISTER
 
 #ifdef UF_ADBANNER_USONG
     if (query_adbanner_usong_pref_changed(&newuser, 0))
@@ -832,12 +831,11 @@ new_register(void)
 
 	if (bad_user_id(passbuf))
 	    outs("無法接受這個代號，請使用英文字母，並且不要包含空格\n");
-#if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
 	// load_current_user() grants admin permissions to str_sysop, so it may
 	// only be registered to set up a new site that has no accounts yet.
-	else if (strcasecmp(passbuf, str_sysop) == 0 && !no_user_exists())
+	else if (IS_ENABLED(CONFIG_SYSOP_ACCOUNT) &&
+		 strcasecmp(passbuf, str_sysop) == 0 && !no_user_exists())
 	    outs("此代號已由系統保留，請使用別的代號\n");
-#endif
 	else if ((id = getuser(passbuf, &xuser)) &&
 		// >=: see check_and_expire_account definition
 		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0)
@@ -1109,24 +1107,24 @@ check_register(void)
     char fn[PATHLEN];
     int ret GCC_UNUSED = 0;
 
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-    // 確認一定要有聯絡信箱
-    if (!is_valid_email(cuser.email)) {
-        more("etc/ensurevalidcontactemail", NA);
-        pressanykey();
+    if (IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)) {
+        // 確認一定要有聯絡信箱
+        if (!is_valid_email(cuser.email)) {
+            more("etc/ensurevalidcontactemail", NA);
+            pressanykey();
 
-        // additional parentheses around "ret =" to please compiler
-        while ((ret = change_contact_email(0)));
+            // additional parentheses around "ret =" to please compiler
+            while ((ret = change_contact_email(0)));
 #ifdef FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN
-    } else if (last_login_time < FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN) {
-        more("etc/forceupdatecontactemail", NA);
-        pressanykey();
+        } else if (last_login_time < FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN) {
+            more("etc/forceupdatecontactemail", NA);
+            pressanykey();
 
-        // additional parentheses around "ret =" to please compiler
-        while ((ret = change_contact_email(1)));
+            // additional parentheses around "ret =" to please compiler
+            while ((ret = change_contact_email(1)));
 #endif //FORCE_UPDATE_CONTACT_EMAIL_LASTLOGIN
+        }
     }
-#endif //CONFIG_USEREC_EMAIL_IS_CONTACT
 
     // 已經通過的就不用了
     if (HasUserPerm(PERM_LOGINOK) || HasUserPerm(PERM_SYSOP))
@@ -1419,7 +1417,6 @@ disk_email(char *buf, size_t size)
     return 0;
 }
 
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
 static int notify_email_change(const char *userid, const char *email)
 {
     int ret = bsmtp("etc/emailchanged",
@@ -1439,7 +1436,6 @@ contact_email_changed(const char *tag, const char *oldemail, const char *email)
     if (is_valid_email(oldemail))
 	notify_email_change(cuser.userid, oldemail);
 }
-#endif
 
 static void
 u_email_verification()
@@ -1508,12 +1504,11 @@ u_email_verification()
 	u_exit("regfail");
 	exit(0);
     }
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
     // Tell the old contact address, as change_contact_email does, once it
     // is really replaced.
-    if (oldemail && is_valid_email(oldemail))
+    if (IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT) &&
+	oldemail && is_valid_email(oldemail))
 	notify_email_change(cuser.userid, oldemail);
-#endif
 
     register_mail_complete_and_exit();
 }
@@ -1741,8 +1736,6 @@ u_register()
 // Contact Email Functions
 ////////////////////////////////////////////////////////////////////////////
 
-#if IS_ENABLED(CONFIG_USEREC_EMAIL_IS_CONTACT)
-
 // change_contact_email
 //
 // Params:
@@ -1795,8 +1788,6 @@ change_contact_email(bool skip_same_email_check)
 
     return 0;
 }
-
-#endif
 
 ////////////////////////////////////////////////////////////////////////////
 // Regform Utilities

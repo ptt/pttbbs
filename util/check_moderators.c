@@ -250,9 +250,8 @@ static int check_user(void *ctx, int idx, userec_t *u)
 
     if (s->skip_sysop) {
         if ((u->userlevel & (PERM_SYSOP | PERM_BOARDS))
-#if IS_ENABLED(CONFIG_SYSOP_ACCOUNT)
-            || (strcasecmp(u->userid, str_sysop) == 0)
-#endif
+            || (IS_ENABLED(CONFIG_SYSOP_ACCOUNT) &&
+                strcasecmp(u->userid, str_sysop) == 0)
         ) {
             s->sysop_skipped++;
             if (s->verbose > 1)

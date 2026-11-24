@@ -551,9 +551,9 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
     ent->title[sizeof(ent->title) - 1] = 0;
     mbs_sanitize(ent->title, sizeof(ent->title));
 
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     // TODO maybe we should also check .filename because admin can't change that
-    char iscorpse = (ent->owner[0] == '-') && (ent->owner[1] == 0);
+    char iscorpse = IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+	(ent->owner[0] == '-') && (ent->owner[1] == 0);
 
     if (iscorpse) {
 #ifdef COLORIZED_SAFEDEL
@@ -571,7 +571,6 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
         oisunread = isunread = 0;
 #endif // COLORIZED_SAFEDEL
     } else
-#endif // CONFIG_SAFE_ARTICLE_DELETE
     oisunread = isunread =
 	brc_unread(currbid, ent->filename, ent->modified);
 
@@ -618,12 +617,10 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
     if (ent->filename[0] == 'L')
         title_type = SUBJECT_LOCKED;
 
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     if (iscorpse)
 	color = '0', mark = "□";
         // color = '0', mark = "╳";
     else
-#endif
     if (ent->filemode & FILE_PETITION)
 	color = '2', mark = "ˇ";
     else switch(title_type) {
@@ -1695,10 +1692,8 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     if (fhdr->filemode & FILE_PETITION)
 	return DONOTHING;
 
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-    if( fhdr->filename[0] == '.' )
+    if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) && fhdr->filename[0] == '.')
 	return DONOTHING;
-#endif
 
     // user and permission check
     // reason 1: BM may alter post restrictions to this board
@@ -2856,13 +2851,11 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 		       ANSI_COLOR(1;31),
 		       ANSI_COLOR(1;37),
 		   };
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     static const char *ctype_long[RECTYPE_SIZE] = {
 		       "值得推薦",
 		       "給它噓聲",
 		       "只加→註解",
 		   };
-#endif
     int             type, maxlength;
     boardheader_t  *bp;
     static time4_t  lastcomment = 0;
@@ -2911,12 +2904,11 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
 #endif
 
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-    if (fhdr->filename[0] == '.' || fhdr->owner[0] == '-') {
+    if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+	(fhdr->filename[0] == '.' || fhdr->owner[0] == '-')) {
 	vmsg("本文已刪除");
 	return FULLUPDATE;
     }
-#endif
 
     if ((bp->brdattr & BRD_PETITION) || (fhdr->filemode & FILE_PETITION))
     {
@@ -3003,22 +2995,18 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	// ratings of '%' (vote_post()). nest.svc shows it as a plain comment.
 	type = RECTYPE_ARROW;
     }
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
-    // no matter it is first time or not.
-    else if (is_file_owner(fhdr, &cuser))
-#else
+    // no matter it is first time or not; with CONFIG_OLD_RECOMMEND the
     // old format is one way counter, so let's relax.
-    else if (fhdr->score == 0 && is_file_owner(fhdr, &cuser))
-#endif
+    else if ((!IS_ENABLED(CONFIG_OLD_RECOMMEND) || fhdr->score == 0) &&
+	     is_file_owner(fhdr, &cuser))
     {
 	// owner recommend
 	type = RECTYPE_ARROW;
 	move(ymsg--, 0); clrtoeol();
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
-	outs("作者本人, 使用 → 加註方式\n");
-#else
-	outs("作者本人首推, 使用 → 加註方式\n");
-#endif
+	if (!IS_ENABLED(CONFIG_OLD_RECOMMEND))
+	    outs("作者本人, 使用 → 加註方式\n");
+	else
+	    outs("作者本人首推, 使用 → 加註方式\n");
 
     }
     else if (!IS_ENABLED(CONFIG_DEBUG) && !CBRD_IS_BM() &&
@@ -3029,8 +3017,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	outs("時間太近, 使用 → 加註方式\n");
     }
 
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
-    else
+    else if (!IS_ENABLED(CONFIG_OLD_RECOMMEND))
     {
 	int i;
 
@@ -3066,7 +3053,6 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
 	move(b_lines, 0); clrtoeol();
     }
-#endif
 
     // warn if article is outside post
     if (strchr(fhdr->owner, '.')  != NULL)
@@ -3346,12 +3332,11 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("抱歉, 禁止評分");
 	return FULLUPDATE;
     }
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-    if (fhdr->filename[0] == '.' || fhdr->owner[0] == '-') {
+    if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+	(fhdr->filename[0] == '.' || fhdr->owner[0] == '-')) {
 	vmsg("本文已刪除");
 	return FULLUPDATE;
     }
-#endif
     const char *mute_reason = muted_msg(currboard);
     if (mute_reason) {
 	vmsgf("無法評分: %s", mute_reason);
@@ -3487,16 +3472,14 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
         // is_home = (*direct == 'h'),
         is_man = (*direct == 'm');
 
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
     int use_safe_delete = 0;
 
-    if (is_board) {
+    if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) && is_board) {
         boardheader_t  *bp = getbcache(currbid);
         if(!(currmode & MODE_DIGEST) &&
                 bp->nuser >= SAFE_ARTICLE_DELETE_NUSER)
             use_safe_delete = 1;
     }
-#endif
 
     /* rocker.011018: 串接模式下還是不允許刪除比較好 */
     if (currmode & MODE_SELECT) {
@@ -3609,9 +3592,7 @@ del_range(int ent GCC_UNUSED, const fileheader_t *fhdr GCC_UNUSED,
                 bof_actor_t me = bof_me();
                 bof_remove_post_t req = {
                     .post = bof_ref(direct, id, fh), .removed = 1,
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
                     .bbs_keep_record = use_safe_delete,
-#endif
                 };
                 bof_post_result_t res;
                 if (bof_remove_post(&me, &req, &res) != BOF_OK) {
@@ -5105,7 +5086,6 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     return FULLUPDATE;
 }
 
-#if IS_ENABLED(CONFIG_REPORT_CONTENT)
 // Reports the post, or a comment of it, to the moderators of the board
 // (CreatePostReport, CreateCommentReport).
 static int
@@ -5179,7 +5159,6 @@ report_post(int ent, fileheader_t *fhdr, const char *direct)
     }
     return FULLUPDATE;
 }
-#endif
 
 /* ----------------------------------------------------- */
 /* 看板功能表                                            */
@@ -5219,9 +5198,7 @@ DEFINE_READ_ITEM_CMD(bbs_cmd_call_in, b_call_in)
 DEFINE_READ_ITEM_CMD(bbs_cmd_reply_post, reply_post)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_man, b_man)
 DEFINE_READ_ITEM_CMD(bbs_cmd_view_history, view_posthistory)
-#if IS_ENABLED(CONFIG_REPORT_CONTENT)
 DEFINE_READ_ITEM_CMD(bbs_cmd_report_post, report_post)
-#endif
 
 const cmd_t read_comms[] = {
     { KEY_RIGHT, "閱讀", "閱讀選取的文章", bbs_cmd_read_post, 0, CMD_PRIO_NORM, true },
@@ -5257,9 +5234,9 @@ const cmd_t read_comms[] = {
     { 'R', NULL, "查看投票結果", bbs_cmd_poll_results, 0, CMD_PRIO_NONE },
     { 'f', NULL, "參與看板樂透投注", bbs_cmd_join_gamble, PERM_LOGINOK, CMD_PRIO_NONE },
     { 'Q', NULL, "查詢文章詳細資訊", bbs_cmd_view_postinfo, 0, CMD_PRIO_NONE, true },
-#if IS_ENABLED(CONFIG_REPORT_CONTENT)
-    { Ctrl('O'), NULL, "檢舉文章或推文給板主", bbs_cmd_report_post, PERM_LOGINOK, CMD_PRIO_NONE, true },
-#endif
+    { Ctrl('O'), NULL, IS_ENABLED(CONFIG_REPORT_CONTENT) ? "檢舉文章或推文給板主" : NULL,
+      IS_ENABLED(CONFIG_REPORT_CONTENT) ? bbs_cmd_report_post : NULL,
+      PERM_LOGINOK, CMD_PRIO_NONE, true },
     { '~', NULL, "查看文章修改記錄", bbs_cmd_view_history, PERM_BM | PERM_GROUP_OP | PERM_GROUP_LEAD, CMD_PRIO_NONE, true },
     { 'C', NULL, "設定發表/連署門檻限制", bbs_cmd_limitedit, PERM_BM | PERM_BOARDS | PERM_GROUP_LEAD, CMD_PRIO_NONE, true },
     { Ctrl('G'), NULL, "管理樂透", bbs_cmd_hold_gamble, PERM_BM, CMD_PRIO_NONE },

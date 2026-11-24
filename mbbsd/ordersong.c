@@ -172,11 +172,12 @@ do_order_song(void)
     memset(&sdata, 0, sizeof(sdata));
     STRLCPY(sdata.sender, cuser.userid);
 
-#if IS_ENABLED(CONFIG_ANGEL)
-    override_receiver = angel_order_song(sdata.receiver, sizeof(sdata.receiver));
-    if (override_receiver)
-        sdata.has_override = true;
-#endif
+    if (IS_ENABLED(CONFIG_ANGEL)) {
+	override_receiver = angel_order_song(sdata.receiver,
+					     sizeof(sdata.receiver));
+	if (override_receiver)
+	    sdata.has_override = true;
+    }
 
     if (!vform_run(&order_song_form, &sdata, NULL)) {
         unlockutmpmode();
@@ -274,10 +275,8 @@ do_order_song(void)
                      cuser.userid, trans_buffer, address,
                      sender, receiver, say));
 
-#if IS_ENABLED(CONFIG_ANGEL)
-    if (override_receiver)
-        angel_log_order_song(override_receiver);
-#endif
+    if (IS_ENABLED(CONFIG_ANGEL) && override_receiver)
+	angel_log_order_song(override_receiver);
 
     if (append_fileheader(OSONGPATH "/" FN_DIR, &mail) != -1) {
 	StatIncDailySong();

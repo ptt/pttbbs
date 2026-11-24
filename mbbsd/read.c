@@ -644,8 +644,8 @@ reload_fh: GCC_UNUSED;
         /* 如果是置底文章, 則要將 ftime 設定成最大 (代表比最後一篇還要新)  */
         ftime = (time4_t)UINT32_MAX;
     } else {
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-        if (fh.filename[0] == '.' || fh.owner[0] == '-') {
+        if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+            (fh.filename[0] == '.' || fh.owner[0] == '-')) {
             /* 游標所在文章已被刪除, 跳過, 往下找下一篇文章 */
             /* Keep fd: it is the same .DIR and reused by search_read_fh(). */
             pos += step;
@@ -655,7 +655,6 @@ reload_fh: GCC_UNUSED;
             }
             goto reload_fh;
         }
-#endif
         ftime = get_fhdr_stamp_ts(fh.filename);
     }
 
@@ -687,12 +686,11 @@ reload_fh: GCC_UNUSED;
             rk = search_read_fh(cx, &fh, i, &fd);
             if (rk < 0) return pos;
             if (rk == 0) continue;
-#if IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE)
-            if (fh.filename[0] == '.' || fh.owner[0] == '-') {
+            if (IS_ENABLED(CONFIG_SAFE_ARTICLE_DELETE) &&
+                (fh.filename[0] == '.' || fh.owner[0] == '-')) {
                 /* 這篇文章已被刪除, 跳過, 試試下一篇 */
                 continue;
             }
-#endif
             if( get_fhdr_stamp_ts(fh.filename) == result ) {
                 pos = i;
                 return pos;
