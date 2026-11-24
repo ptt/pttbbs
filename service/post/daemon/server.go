@@ -52,6 +52,7 @@ type Server struct {
 	quit            chan struct{}
 	activeImportsMu sync.Mutex
 	activeImports   map[string]bool
+	importMu        sync.Mutex // serializes postByFile imports
 	users           importer.UserResolver
 }
 
@@ -143,45 +144,50 @@ func (s *Server) acceptLoop(ln net.Listener, handler func(net.Conn)) {
 // Protocol A: Header Line + Length-Prefixed Payload Handler
 // -----------------------------------------------------------------------------
 
-func extractHeaderField(raw []byte, prefixes ...[]byte) string {
-	lines := bytes.Split(raw, []byte("\n"))
-	limit := 10
-	if len(lines) < limit {
-		limit = len(lines)
+// postByFile returns the post postFile (its M., L. or X. name) of
+// community. A legacy post that post.svc does not have yet is imported
+// first, from its .DIR record and article, the way IMPORT_BOARD imports it
+// (importer.ImportPost), so that every command works on posts from before
+// the switch to post.svc.
+func (s *Server) postByFile(community, postFile string) (*model.Post, error) {
+	if community == "" || postFile == "" || postFile == "-" {
+		return nil, fmt.Errorf("post not found: %s/%s", community, postFile)
 	}
-	for i := 0; i < limit; i++ {
-		line := bytes.TrimSpace(lines[i])
-		for _, prefix := range prefixes {
-			if bytes.HasPrefix(line, prefix) {
-				return string(bytes.TrimSpace(line[len(prefix):]))
-			}
+	if p, err := s.storage.GetPostByCommunityFile(community, postFile); err == nil && p != nil {
+		return p, nil
+	}
+	// One import at a time, so that two commands on the same new post do
+	// not both import it.
+	s.importMu.Lock()
+	defer s.importMu.Unlock()
+	p, err := importer.ImportPost(s.storage, importer.ImportBoardOptions{
+		BBSHome: s.cfg.BBSHome,
+		Board:   community,
+		IsBig5:  s.cfg.IsBig5(),
+		Users:   s.users,
+	}, postFile)
+	if err != nil {
+		if !errors.Is(err, importer.ErrPostNotFound) {
+			log.Printf("[post.svc] Cannot import %s/%s: %v", community, postFile, err)
 		}
+		return nil, fmt.Errorf("post not found: %s/%s", community, postFile)
 	}
-	return ""
+	return p, nil
 }
 
+// autoImportPost is postByFile for the callers that only need the post.
+func (s *Server) autoImportPost(community, postFile string) *model.Post {
+	p, _ := s.postByFile(community, postFile)
+	return p
+}
+
+// readDiskPostFile reads the article file of a post from its board.
 func (s *Server) readDiskPostFile(community, postFile string) []byte {
 	if postFile == "" || postFile == "-" {
 		return nil
 	}
-	var paths []string
-	if len(community) > 0 {
-		c := string(community[0])
-		paths = []string{
-			filepath.Join(s.cfg.BBSHome, "boards", c, community, postFile),
-			filepath.Join(s.cfg.BBSHome, "boards", strings.ToUpper(c), community, postFile),
-			filepath.Join(s.cfg.BBSHome, "boards", strings.ToLower(c), community, postFile),
-			filepath.Join(s.cfg.BBSHome, "boards", community, postFile),
-		}
-	} else {
-		matches, _ := filepath.Glob(filepath.Join(s.cfg.BBSHome, "boards", "*", "*", postFile))
-		if len(matches) == 0 {
-			matches, _ = filepath.Glob(filepath.Join(s.cfg.BBSHome, "boards", "*", postFile))
-		}
-		paths = matches
-	}
-	for _, pth := range paths {
-		if b, rErr := importer.ReadArticleFile(pth); rErr == nil && len(b) > 0 {
+	if boardDir, err := importer.LocateBoardDir(s.cfg.BBSHome, community); err == nil {
+		if b, rErr := importer.ReadArticleFile(filepath.Join(boardDir, filepath.Base(postFile))); rErr == nil && len(b) > 0 {
 			return b
 		}
 	}
@@ -201,70 +207,20 @@ func (s *Server) readDiskPostFileWithRetry(community, postFile string, retries i
 	return nil
 }
 
-func (s *Server) autoImportPost(community, postFile string) *model.Post {
-	if len(community) == 0 || len(postFile) == 0 {
-		return nil
-	}
-	rawBytes := s.readDiskPostFileWithRetry(community, postFile, 5)
-	if len(rawBytes) == 0 {
-		return nil
-	}
-	t := extractHeaderField(rawBytes, []byte("標題: "), []byte("Title: "))
-	if s.cfg.IsBig5() && !utf8.Valid([]byte(t)) {
-		t = big5uao.DecodeSGR66([]byte(t))
-	}
-	author := extractHeaderField(rawBytes, []byte("作者: "), []byte("Author: "))
-	if idx := strings.IndexByte(author, ' '); idx != -1 {
-		author = author[:idx]
-	}
-	if idx := strings.IndexByte(author, '('); idx != -1 {
-		author = strings.TrimSpace(author[:idx])
-	}
-
-	postCtime := int64(0)
-	parsed, err := importer.ParseArticleText(rawBytes, author, postCtime, community, postFile, s.cfg.IsBig5())
-	if err == nil && parsed != nil && len(parsed.Comments) > 0 {
-		comments, votes, upvotes, downvotes := importer.ConvertParsedComments(parsed.Comments, s.users)
-
-		post := &model.Post{
-			ParentID:    0,
-			Community:   community,
-			PostFile:    postFile,
-			Title:       t,
-			CreatorName: author,
-			CreatedAt:   postCtime,
-			Modified:    postCtime,
-			Upvotes:     upvotes,
-			Downvotes:   downvotes,
-			NumComments: len(comments),
-			Content:     parsed.BodyContent,
-			Encoding:    "utf-8",
-		}
-
-		item := &storage.ImportedPostData{
-			Post:     post,
-			Comments: comments,
-			Votes:    votes,
-		}
-		if err := s.storage.ImportPostBatch([]*storage.ImportedPostData{item}, ""); err == nil {
-			return post
+// checkOutputPath refuses to write over anything but a regular file (e.g.
+// /dev/null), and, if inBBSHome, anywhere outside BBSHOME.
+func (s *Server) checkOutputPath(path string, inBBSHome bool) error {
+	clean := filepath.Clean(path)
+	if inBBSHome {
+		home := filepath.Clean(s.cfg.BBSHome)
+		if !strings.HasPrefix(clean, home+string(filepath.Separator)) {
+			return fmt.Errorf("target outside BBSHOME: %s", path)
 		}
 	}
-
-	postContent := string(rawBytes)
-	if s.cfg.IsBig5() && !utf8.Valid(rawBytes) {
-		postContent = big5uao.DecodeSGR66(rawBytes)
+	if fi, err := os.Lstat(clean); err == nil && !fi.Mode().IsRegular() && !fi.IsDir() {
+		return fmt.Errorf("target is not a regular file: %s", path)
 	}
-	autoP := &model.Post{
-		Community:   community,
-		PostFile:    postFile,
-		Title:       t,
-		CreatorName: author,
-		Encoding:    "utf-8",
-		Content:     postContent,
-	}
-	p, _ := s.storage.CreatePost(autoP)
-	return p
+	return nil
 }
 
 func (s *Server) writeRenderOutput(conn net.Conn, p *model.Post, outputPath string, legacyFormat bool) {
@@ -288,7 +244,17 @@ func (s *Server) writeRenderOutput(conn net.Conn, p *model.Post, outputPath stri
 
 	targetPath := outputPath
 	if fi, err := os.Stat(targetPath); err == nil && fi.IsDir() {
-		targetPath = filepath.Join(targetPath, p.PostFile)
+		targetPath = filepath.Join(targetPath, boardFileName(p))
+	} else if base := filepath.Base(targetPath); base != boardFileName(p) && model.CanonicalPostFile(base) == p.PostFile {
+		// The file of the post under another of its names: mbbsd names a
+		// locked post L.<stamp> in .DIR but keeps its file as X.<stamp>
+		// (bof_fs_lock_post), and asks to render the .DIR name. Write the
+		// file the board has, so no stray L. file appears.
+		targetPath = filepath.Join(filepath.Dir(targetPath), boardFileName(p))
+	}
+	if err := s.checkOutputPath(targetPath, false); err != nil {
+		conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+		return
 	}
 
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
@@ -308,6 +274,15 @@ func (s *Server) writeRenderOutput(conn net.Conn, p *model.Post, outputPath stri
 	}
 
 	conn.Write([]byte(fmt.Sprintf("OK %d\n", len(rendered))))
+}
+
+// boardFileName returns the name of the board file of p: X.<stamp> while it
+// is locked (see model.CanonicalPostFile).
+func boardFileName(p *model.Post) string {
+	if p.Locked {
+		return model.LockedFileName(p.PostFile)
+	}
+	return p.PostFile
 }
 
 // decodeText converts text that mbbsd sent in Big5 to UTF-8.
@@ -456,12 +431,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			title = string(titleBytes)
 		}
 		if title == "" {
-			rawTitle := extractHeaderField(rawBytes, []byte("標題: "), []byte("Title: "))
-			if s.cfg.IsBig5() && !utf8.Valid([]byte(rawTitle)) {
-				title = big5uao.DecodeSGR66([]byte(rawTitle))
-			} else {
-				title = rawTitle
-			}
+			_, title = importer.ArticleHeader(rawBytes, s.cfg.IsBig5())
 		}
 
 		if ctime == 0 {
@@ -769,6 +739,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte("ERR invalid arguments for LIST_POST_LIKES_FILE\n"))
 			return
 		}
+		if !s.ensurePost(conn, parts[1], parts[2]) {
+			return
+		}
 		votes, err := s.storage.GetVotesByCommunityFile(parts[1], parts[2])
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
@@ -788,6 +761,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte("ERR invalid arguments for RESET_POST_SCORE_FILE\n"))
 			return
 		}
+		if !s.ensurePost(conn, parts[1], parts[2]) {
+			return
+		}
 		if err := s.storage.ResetVotesByCommunityFile(parts[1], parts[2]); err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -800,7 +776,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte("ERR invalid arguments for GET_POST_FILE\n"))
 			return
 		}
-		p, err := s.storage.GetPostByCommunityFile(parts[1], parts[2])
+		p, err := s.postByFile(parts[1], parts[2])
 		if err != nil {
 			conn.Write([]byte("ERR post not found\n"))
 			return
@@ -1068,6 +1044,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 		filemode, _ := strconv.Atoi(parts[3])
 		money, _ := strconv.Atoi(parts[4])
+		if !s.ensurePost(conn, parts[1], parts[2]) {
+			return
+		}
 		if err := s.storage.SetPostMeta(parts[1], parts[2], filemode, money); err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1076,9 +1055,11 @@ func (s *Server) handleIPC(conn net.Conn) {
 
 	case "SYNC_DIR":
 		// SYNC_DIR <board> [dryrun:0|1] [modes: comma separated full,prune,add-missing,rebuild, or -]
-		// Replies OK <records> <matched> <updated> <pruned> <added> <added_no_file> <rendered>.
+		// Replies OK <records> <matched> <updated> <pruned> <added> <added_no_file> <rendered> <imported> <kept>.
 		// rebuild writes .DIR purely from post.svc and renders the missing
-		// article files into the board directory.
+		// article files into the board directory; it first imports the
+		// posts of the old records that post.svc does not have, and keeps
+		// the records it cannot import as they are.
 		if len(parts) < 2 {
 			conn.Write([]byte("ERR invalid arguments for SYNC_DIR\n"))
 			return
@@ -1087,6 +1068,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			BBSHome: s.cfg.BBSHome,
 			Board:   parts[1],
 			IsBig5:  s.cfg.IsBig5(),
+			Users:   s.users,
 			DryRun:  len(parts) >= 3 && (parts[2] == "1" || strings.ToLower(parts[2]) == "true" || strings.ToLower(parts[2]) == "dryrun"),
 		}
 		if len(parts) >= 4 && parts[3] != "-" {
@@ -1112,8 +1094,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
 		}
-		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %d %d %d\n",
-			stats.Records, stats.Matched, stats.Updated, stats.Pruned, stats.Added, stats.AddedNoFile, stats.Rendered)))
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %d %d %d %d %d\n",
+			stats.Records, stats.Matched, stats.Updated, stats.Pruned, stats.Added, stats.AddedNoFile, stats.Rendered,
+			stats.Imported, stats.Kept)))
 
 	case "RENDER_FILE":
 		// RENDER_FILE <community> <post_file> <output_path> [format]
@@ -1179,6 +1162,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 
 	case "FETCH_POST_FILE", "PULL_POST_FILE":
 		// FETCH_POST_FILE <community> <post_file> <target_path> [source_path]
+		// Replies OK <modified> <title_len>\n<title>. target_path "-" writes
+		// nothing (to learn the version only); other targets must be
+		// (regular) files under BBSHOME.
 		if len(parts) < 4 {
 			conn.Write([]byte("ERR invalid arguments for FETCH_POST_FILE\n"))
 			return
@@ -1191,8 +1177,15 @@ func (s *Server) handleIPC(conn net.Conn) {
 			sourcePath = parts[4]
 		}
 
-		if !filepath.IsAbs(targetPath) {
-			targetPath = filepath.Join(s.cfg.BBSHome, targetPath)
+		noFile := targetPath == "-"
+		if !noFile {
+			if !filepath.IsAbs(targetPath) {
+				targetPath = filepath.Join(s.cfg.BBSHome, targetPath)
+			}
+			if err := s.checkOutputPath(targetPath, true); err != nil {
+				conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+				return
+			}
 		}
 
 		p, err := s.storage.GetPostByCommunityFile(community, postFile)
@@ -1207,10 +1200,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 					if s.cfg.IsBig5() && !utf8.Valid(rawBytes) {
 						postContent = big5uao.DecodeSGR66(rawBytes)
 					}
-					t := extractHeaderField(rawBytes, []byte("標題: "), []byte("Title: "))
-					if s.cfg.IsBig5() && !utf8.Valid([]byte(t)) {
-						t = big5uao.DecodeSGR66([]byte(t))
-					}
+					_, t := importer.ArticleHeader(rawBytes, s.cfg.IsBig5())
 					autoP := &model.Post{
 						Community: community,
 						PostFile:  postFile,
@@ -1230,40 +1220,42 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 
-		content := p.Content
-		if content == "" && p.PostFile != "" && p.PostFile != "-" {
-			rawBytes := s.readDiskPostFile(community, postFile)
-			if len(rawBytes) > 0 {
-				if s.cfg.IsBig5() && !utf8.Valid(rawBytes) {
-					content = big5uao.DecodeSGR66(rawBytes)
-				} else {
-					content = string(rawBytes)
+		if !noFile {
+			content := p.Content
+			if content == "" && p.PostFile != "" && p.PostFile != "-" {
+				rawBytes := s.readDiskPostFile(community, postFile)
+				if len(rawBytes) > 0 {
+					if s.cfg.IsBig5() && !utf8.Valid(rawBytes) {
+						content = big5uao.DecodeSGR66(rawBytes)
+					} else {
+						content = string(rawBytes)
+					}
+					_ = s.storage.SetPostContent(p.ID, content)
 				}
-				_ = s.storage.SetPostContent(p.ID, content)
 			}
-		}
 
-		var data []byte
-		if s.cfg.IsBig5() {
-			data = big5uao.Encode(content)
-		} else {
-			data = []byte(content)
-		}
+			var data []byte
+			if s.cfg.IsBig5() {
+				data = big5uao.Encode(content)
+			} else {
+				data = []byte(content)
+			}
 
-		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR mkdir failed: %v\n", err)))
-			return
-		}
+			if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+				conn.Write([]byte(fmt.Sprintf("ERR mkdir failed: %v\n", err)))
+				return
+			}
 
-		tmpTarget := fmt.Sprintf("%s.tmp.%d", targetPath, os.Getpid())
-		if err := os.WriteFile(tmpTarget, data, 0644); err != nil {
-			conn.Write([]byte(fmt.Sprintf("ERR write file failed: %v\n", err)))
-			return
-		}
-		if err := os.Rename(tmpTarget, targetPath); err != nil {
-			os.Remove(tmpTarget)
-			conn.Write([]byte(fmt.Sprintf("ERR rename file failed: %v\n", err)))
-			return
+			tmpTarget := fmt.Sprintf("%s.tmp.%d", targetPath, os.Getpid())
+			if err := os.WriteFile(tmpTarget, data, 0644); err != nil {
+				conn.Write([]byte(fmt.Sprintf("ERR write file failed: %v\n", err)))
+				return
+			}
+			if err := os.Rename(tmpTarget, targetPath); err != nil {
+				os.Remove(tmpTarget)
+				conn.Write([]byte(fmt.Sprintf("ERR rename file failed: %v\n", err)))
+				return
+			}
 		}
 
 		titleB := []byte(p.Title)
@@ -1377,6 +1369,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 		newTitle := string(titleBytes)
 		newContent := string(contentBytes)
 
+		if !s.ensurePost(conn, community, postFile) {
+			return
+		}
 		rev, newModified, err := s.storage.UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editor, editorID, expectedModified)
 		if err != nil {
 			if cErr, ok := err.(*model.ConflictError); ok {
@@ -1440,6 +1435,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 		}
 		newTitle := string(titleBytes)
+		if !s.ensurePost(conn, community, postFile) {
+			return
+		}
 		rev, err := s.storage.UpdatePostTitleByCommunityFile(community, postFile, newTitle, editor, editorID)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
@@ -1788,7 +1786,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 			return
 		}
 		name, id := args[0], model.ParsePersonID(args[1])
-		if !model.IsCreator(p.CreatorName, p.CreatorID, name, id) {
+		id, isCreator := s.postCreator(p, name, id)
+		if !isCreator {
 			conn.Write([]byte("ERR no_post_edit_allowed\n"))
 			return
 		}
@@ -1839,6 +1838,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte("ERR invalid arguments for LOCK_POST_FILE\n"))
 			return
 		}
+		if !s.ensurePost(conn, parts[1], parts[2]) {
+			return
+		}
 		if err := s.storage.LockPostByCommunityFile(parts[1], parts[2], parts[3] == "1"); err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -1870,6 +1872,22 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 		community := parts[1]
 		postFile := parts[2]
+		// A post deleted before the switch to post.svc is not in it:
+		// import it from its article, which mbbsd has put back first.
+		if p, err := s.storage.GetPostByCommunityFile(community, postFile); err != nil || p == nil {
+			s.importMu.Lock()
+			_, err := importer.ImportRestoredPost(s.storage, importer.ImportBoardOptions{
+				BBSHome: s.cfg.BBSHome,
+				Board:   community,
+				IsBig5:  s.cfg.IsBig5(),
+				Users:   s.users,
+			}, postFile)
+			s.importMu.Unlock()
+			if err != nil {
+				conn.Write([]byte(fmt.Sprintf("ERR post not found: %s/%s\n", community, postFile)))
+				return
+			}
+		}
 		if err := s.storage.UndeletePostByCommunityFile(community, postFile); err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -2312,6 +2330,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 			ctime, _ = strconv.ParseInt(parts[7], 10, 64)
 		}
 
+		if !s.ensurePost(conn, srcComm, srcFile) {
+			return
+		}
 		rec, count, err := s.storage.AddCrosspost(srcComm, srcFile, targetComm, targetFile, operator, creatorID, ctime)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
@@ -2360,6 +2381,33 @@ func (s *Server) handleIPC(conn net.Conn) {
 	}
 }
 
+// postCreator tells whether name / id (the person ID resolved from name
+// if not given) is the creator of p, who alone may delete it (Lemmy's
+// DeletePost), and returns that person ID. Posts imported from .DIR whose
+// author cannot be resolved (creator_id 0) are matched by name, ignoring
+// case as BBS user IDs do. The name of an anonymous post is a nickname, so
+// only its real account (creator_id) is its creator.
+func (s *Server) postCreator(p *model.Post, name string, id model.PersonID) (model.PersonID, bool) {
+	if id == 0 && name != "" {
+		id = importer.ResolvePersonID(s.users, name, 0, 0)
+	}
+	if p.Filemode&model.FileAnonymous != 0 {
+		return id, p.CreatorID != 0 && id == p.CreatorID
+	}
+	return id, model.IsCreator(p.CreatorName, p.CreatorID, name, id)
+}
+
+// ensurePost makes sure post.svc has the post postFile of community,
+// importing a legacy one (see postByFile); it answers ERR itself if it
+// cannot.
+func (s *Server) ensurePost(conn net.Conn, community, postFile string) bool {
+	if _, err := s.postByFile(community, postFile); err != nil {
+		conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+		return false
+	}
+	return true
+}
+
 // commentByID parses a comment ID argument and returns the comment, or
 // writes the error to conn.
 func (s *Server) commentByID(conn net.Conn, arg string) (*model.Comment, bool) {
@@ -2388,7 +2436,7 @@ func (s *Server) postArgs(conn net.Conn, cmd string, parts []string, n int) (*mo
 			conn.Write([]byte(fmt.Sprintf("ERR invalid arguments for %s\n", cmd)))
 			return nil, nil, false
 		}
-		p, err = s.storage.GetPostByCommunityFile(parts[1], parts[2])
+		p, err = s.postByFile(parts[1], parts[2])
 		args = parts[3:]
 	} else {
 		if len(parts) < 2+n {
@@ -2463,8 +2511,10 @@ func reasonArg(args []string) string {
 }
 
 // formatTSVComment formats a comment as one line of GET_COMMENTS:
-// <seq> <creator_name> <created_at> <ip> <type> <reason> <comment_id> <content
-// lines...>, tab-separated, where type is -1 for deleted comments.
+// <seq> <creator_name> <created_at>[/<modified_at>] <ip> <type> <reason>
+// <comment_id> <content lines...>, tab-separated, where modified_at is there
+// only if the comment was edited, type is -1 for deleted comments and ip
+// is "-" if unknown (or not given).
 func formatTSVComment(c *model.Comment) string {
 	cleanReason := strings.ReplaceAll(strings.TrimRight(c.Reason, "\r\n"), "\t", " ")
 	if !utf8.ValidString(cleanReason) {
@@ -2490,8 +2540,19 @@ func formatTSVComment(c *model.Comment) string {
 		contentField = " "
 	}
 
-	return fmt.Sprintf("%d\t%s\t%d\t%s\t%d\t%s\t%d\t%s\n",
-		c.Sequence, c.CreatorName, c.CreatedAt, c.IP, typeVal, cleanReason, c.ID, contentField)
+	// mbbsd (bof/ps/postsvc.c) takes "-" for no IP.
+	ip := c.IP
+	if ip == "" {
+		ip = "-"
+	}
+	// An edited comment has <created_at>/<modified_at> (Lemmy's
+	// comment.updated), which mbbsd shows as edited.
+	ctime := strconv.FormatInt(c.CreatedAt, 10)
+	if c.ModifiedAt > 0 {
+		ctime += "/" + strconv.FormatInt(c.ModifiedAt, 10)
+	}
+	return fmt.Sprintf("%d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\n",
+		c.Sequence, c.CreatorName, ctime, ip, typeVal, cleanReason, c.ID, contentField)
 }
 
 func formatTSVCommentRevision(r *model.CommentRevision) string {

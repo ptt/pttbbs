@@ -82,8 +82,13 @@ type SyncDirOptions struct {
 	// files are only caches of it: the old records are dropped, every post
 	// gets a record (deleted ones safe-deleted, unless Prune) ordered by
 	// the time in their file names, and the article files that are
-	// missing in the board directory are rendered.
+	// missing in the board directory are rendered. Old records of posts
+	// that post.svc does not have yet (legacy posts never imported) are
+	// imported first, as ImportBoard would; those that cannot be are kept
+	// as they are, so that a rebuild never drops a post from .DIR.
 	Rebuild bool
+	// Users resolves the authors of the posts that Rebuild imports.
+	Users UserResolver
 }
 
 // SyncDirStats reports what SyncDir did (or, in a dry run, would do).
@@ -95,6 +100,8 @@ type SyncDirStats struct {
 	Added       int // records added
 	AddedNoFile int // records added whose article file is not on the board
 	Rendered    int // article files rendered (Rebuild)
+	Imported    int // posts imported from old records (Rebuild)
+	Kept        int // old records kept as they are, as they could not be imported (Rebuild)
 }
 
 // ScoreFromVotes converts post.svc's votes to fileheader_t.score, which is
@@ -316,7 +323,20 @@ func SyncDir(st storage.Storage, opts SyncDirOptions) (*SyncDirStats, error) {
 	}
 
 	if opts.Rebuild {
-		return rebuildDir(st, opts, boardDir, dirPath, perm, data, posts)
+		kept, imported, err := importUnknownRecords(st, opts, boardDir, data, byFile)
+		if err != nil {
+			return nil, err
+		}
+		if imported > 0 {
+			if posts, err = st.ListPostMeta(opts.Board); err != nil {
+				return nil, fmt.Errorf("list posts: %w", err)
+			}
+		}
+		stats, err := rebuildDir(st, opts, boardDir, dirPath, perm, data, posts, kept)
+		if stats != nil {
+			stats.Imported = imported
+		}
+		return stats, err
 	}
 
 	stats := &SyncDirStats{}
@@ -463,9 +483,84 @@ func replaceDir(dirPath string, perm os.FileMode, entries []dirEntry) error {
 	return nil
 }
 
-// rebuildDir writes .DIR from posts alone (see SyncDirOptions.Rebuild).
-// data is the old .DIR, only used for the statistics.
-func rebuildDir(st storage.Storage, opts SyncDirOptions, boardDir, dirPath string, perm os.FileMode, data []byte, posts []*model.Post) (*SyncDirStats, error) {
+// importUnknownRecords imports the posts of the records in data (the old
+// .DIR) that post.svc does not have (byFile), as ImportBoard would, and
+// returns the records that could not be imported, to be kept as they are
+// (in a dry run, every such record). The records of the same post after
+// the first are dropped, as ImportBoard skips them too.
+func importUnknownRecords(st storage.Storage, opts SyncDirOptions, boardDir string, data []byte, byFile map[string]*model.Post) (kept []dirEntry, imported int, err error) {
+	importOpts := ImportBoardOptions{
+		BBSHome: opts.BBSHome,
+		Board:   opts.Board,
+		IsBig5:  opts.IsBig5,
+		Users:   opts.Users,
+	}
+	users := NewCachedResolver(opts.Users)
+	seen := make(map[string]bool)
+	type pending struct {
+		data  *storage.ImportedPostData
+		entry dirEntry
+	}
+	var batch []pending
+	flush := func() {
+		if len(batch) == 0 {
+			return
+		}
+		items := make([]*storage.ImportedPostData, len(batch))
+		for i, b := range batch {
+			items[i] = b.data
+		}
+		if err := st.ImportPostBatch(items, ""); err != nil {
+			// Keep their records rather than lose them.
+			for _, b := range batch {
+				kept = append(kept, b.entry)
+			}
+		} else {
+			imported += len(batch)
+		}
+		batch = batch[:0]
+	}
+	for off := 0; off+FileHeaderSize <= len(data); off += FileHeaderSize {
+		rec := data[off : off+FileHeaderSize]
+		name := cString(rec[fhdrOffFilename : fhdrOffFilename+fhdrLenFilename])
+		key, _ := IsSafeDeletedFilename(name)
+		key = model.CanonicalPostFile(key)
+		if byFile[key] != nil || seen[key] {
+			continue
+		}
+		seen[key] = true
+		ts := stampTime(key)
+		if ts == 0 {
+			ts = int64(binary.LittleEndian.Uint32(rec[fhdrOffModified:]))
+		}
+		entry := dirEntry{rec: append([]byte(nil), rec...), ts: ts, changed: true}
+		if opts.DryRun {
+			kept = append(kept, entry)
+			continue
+		}
+		job, ok := prepareRecord(rec, boardDir, true)
+		if !ok {
+			kept = append(kept, entry)
+			continue
+		}
+		d, _, err := buildRecord(st, importOpts, users, nil, job)
+		if err != nil || d == nil {
+			kept = append(kept, entry)
+			continue
+		}
+		batch = append(batch, pending{data: d, entry: entry})
+		if len(batch) >= 2000 {
+			flush()
+		}
+	}
+	flush()
+	return kept, imported, nil
+}
+
+// rebuildDir writes .DIR from posts (see SyncDirOptions.Rebuild), plus the
+// old records kept, which post.svc does not have. data is the old .DIR,
+// only used for the statistics.
+func rebuildDir(st storage.Storage, opts SyncDirOptions, boardDir, dirPath string, perm os.FileMode, data []byte, posts []*model.Post, kept []dirEntry) (*SyncDirStats, error) {
 	stats := &SyncDirStats{}
 	old := make(map[string]bool)
 	for off := 0; off < len(data); off += FileHeaderSize {
@@ -473,11 +568,9 @@ func rebuildDir(st storage.Storage, opts SyncDirOptions, boardDir, dirPath strin
 		key, _ := IsSafeDeletedFilename(cString(data[off+fhdrOffFilename : off+fhdrOffFilename+fhdrLenFilename]))
 		old[model.CanonicalPostFile(key)] = true
 	}
-	known := make(map[string]bool, len(posts))
 
 	var entries []dirEntry
 	for _, p := range posts {
-		known[p.PostFile] = true
 		if old[p.PostFile] {
 			stats.Matched++
 		}
@@ -512,13 +605,17 @@ func rebuildDir(st storage.Storage, opts SyncDirOptions, boardDir, dirPath strin
 		}
 		stats.Rendered++
 	}
+	for _, e := range kept {
+		_, safeDeleted := IsSafeDeletedFilename(cString(e.rec[fhdrOffFilename : fhdrOffFilename+fhdrLenFilename]))
+		if opts.Prune && safeDeleted {
+			stats.Pruned++
+			continue
+		}
+		stats.Kept++
+		entries = append(entries, e)
+	}
 	// Posts list in ID order; ties in time keep it.
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].ts < entries[j].ts })
-	for key := range old {
-		if !known[key] {
-			stats.Pruned++ // records of posts post.svc does not have
-		}
-	}
 	stats.Updated = len(entries)
 
 	if opts.DryRun {

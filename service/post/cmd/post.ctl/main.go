@@ -643,7 +643,7 @@ func main() {
 
 	case "import-board":
 		if len(args) < 2 {
-			log.Fatalf("Usage: post.ctl import-board <board> [render_target] [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
+			log.Fatalf("Usage: post.ctl import-board <board>|--all [render_target] [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
 		}
 		comm := args[1]
 		renderTarget := "-"
@@ -734,85 +734,68 @@ func main() {
 		if dryRun {
 			dryStr = "1"
 		}
-		header := fmt.Sprintf("IMPORT_BOARD %s %s %s %d %d %s %s %s %s %d\n", comm, renderTarget, ovStr, limit, offset, nmStr, commentdDB, legStr, dryStr, workers)
-
-		sockPath := getSocketPath()
-		conn, err := net.Dial("unix", sockPath)
-		if err != nil {
-			log.Fatalf("connect to %s failed: %v\n(Is post.svc running?)", sockPath, err)
+		mkHeader := func(board string) string {
+			return fmt.Sprintf("IMPORT_BOARD %s %s %s %d %d %s %s %s %s %d\n", board, renderTarget, ovStr, limit, offset, nmStr, commentdDB, legStr, dryStr, workers)
 		}
-		defer conn.Close()
+		printMode := func() {
+			if dryRun {
+				fmt.Println("    Mode: dry-run (simulation only, database and disk will not be modified)")
+			}
+			if workers > 0 {
+				fmt.Printf("    Workers: %d\n", workers)
+			}
+			if renderTarget != "-" && renderTarget != "" {
+				fmt.Printf("    Render target: %s\n", renderTarget)
+			} else {
+				fmt.Println("    Re-render: disabled (default, import to DB only)")
+			}
+			if overwrite {
+				fmt.Println("    Mode: overwrite (clearing existing board data)")
+			}
+			if commentdDB != "-" && commentdDB != "" {
+				fmt.Printf("    Commentd DB: %s\n", commentdDB)
+			}
+		}
 
-		if _, err := conn.Write([]byte(header)); err != nil {
-			log.Fatalf("send command failed: %v", err)
+		if comm == "--all" || comm == "-all" {
+			// Every board in .BRD, one after another, e.g. before
+			// switching the backend to post.svc.
+			if renderTarget != "-" && renderTarget != "boards" && renderTarget != "cache" {
+				log.Fatalf("import-board --all: the render target must be boards or cache (one directory per board), not %s", renderTarget)
+			}
+			boards, skipped, err := boardsToImport(bbs.BBSHome(), filepath.Join(bbs.BBSHome(), ".BRD"))
+			if err != nil {
+				log.Fatalf("import-board --all: read .BRD failed: %v", err)
+			}
+			fmt.Printf("[*] Importing %d boards from .BRD (%d without .DIR skipped)...\n", len(boards), len(skipped))
+			printMode()
+			var failed []string
+			for i, board := range boards {
+				prefix := fmt.Sprintf("[%d/%d] %s: ", i+1, len(boards), board)
+				fmt.Print(prefix)
+				r, err := runImportBoard(mkHeader(board), prefix)
+				if err != nil {
+					fmt.Printf("[!] %s: %v\n", board, err)
+					failed = append(failed, board)
+					continue
+				}
+				printImportBoardResult(r, dryRun)
+			}
+			fmt.Printf("[+] %d boards done, %d failed\n", len(boards)-len(failed), len(failed))
+			if len(failed) > 0 {
+				fmt.Printf("    Failed: %s\n", strings.Join(failed, " "))
+				os.Exit(1)
+			}
+			break
 		}
 
 		fmt.Printf("[*] Starting fast Go migration for board '%s'...\n", comm)
-		if dryRun {
-			fmt.Println("    Mode: dry-run (simulation only, database and disk will not be modified)")
+		printMode()
+		r, err := runImportBoard(mkHeader(comm), "")
+		if err != nil {
+			log.Fatalf("[!] Migration failed: %v", err)
 		}
-		if workers > 0 {
-			fmt.Printf("    Workers: %d\n", workers)
-		}
-		if renderTarget != "-" && renderTarget != "" {
-			fmt.Printf("    Render target: %s\n", renderTarget)
-		} else {
-			fmt.Println("    Re-render: disabled (default, import to DB only)")
-		}
-		if overwrite {
-			fmt.Println("    Mode: overwrite (clearing existing board data)")
-		}
-		if commentdDB != "-" && commentdDB != "" {
-			fmt.Printf("    Commentd DB: %s\n", commentdDB)
-		}
-
-		reader := bufio.NewReader(conn)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err == io.EOF {
-					fmt.Println()
-					log.Fatalf("[!] Connection closed prematurely by post.svc (service crashed or stopped)")
-				}
-				log.Fatalf("\nRead error: %v", err)
-			}
-			line = strings.TrimRight(line, "\r\n")
-			if strings.HasPrefix(line, "PROGRESS ") {
-				parts := strings.Fields(line)
-				if len(parts) >= 3 {
-					cur, _ := strconv.Atoi(parts[1])
-					total, _ := strconv.Atoi(parts[2])
-					pct := 0
-					if total > 0 {
-						pct = cur * 100 / total
-					}
-					fmt.Printf("\r%d/%d (%d%%)", cur, total, pct)
-				}
-			} else if strings.HasPrefix(line, "ERR_DETAIL ") {
-				fmt.Printf("\n[!] Error: %s", strings.TrimPrefix(line, "ERR_DETAIL "))
-			} else if strings.HasPrefix(line, "OK") {
-				fmt.Println()
-				parts := strings.Fields(line)
-				if len(parts) >= 6 {
-					if dryRun {
-						fmt.Printf("[+] Dry-run simulation completed in %ss:\n    Posts parsed:       %s\n    Comments parsed:    %s\n    Crossposts found:   %s\n    Errors encountered: %s\n",
-							parts[5], parts[1], parts[2], parts[3], parts[4])
-					} else {
-						fmt.Printf("[+] Migration completed in %ss:\n    Posts imported:     %s\n    Comments imported:  %s\n    Crossposts logged:  %s\n    Errors encountered: %s\n",
-							parts[5], parts[1], parts[2], parts[3], parts[4])
-					}
-					if len(parts) >= 8 {
-						fmt.Printf("    Deleted posts:      %s imported, %s marked deleted\n", parts[6], parts[7])
-					}
-				} else {
-					fmt.Println(line)
-				}
-				break
-			} else if strings.HasPrefix(line, "ERR") {
-				fmt.Println()
-				log.Fatalf("[!] Migration failed: %s", line)
-			}
-		}
+		printImportBoardResult(r, dryRun)
 
 	case "render-community":
 		if len(args) < 2 {
@@ -1236,6 +1219,9 @@ func main() {
 				fmt.Printf("[+] Rebuilt .DIR of '%s' from post.svc:\n", comm)
 			}
 			fmt.Printf("    Records before:     %s (%s known by post.svc, %s dropped)\n", parts[1], parts[2], parts[4])
+			if len(parts) >= 10 {
+				fmt.Printf("    Legacy posts:       %s imported first, %s records kept as they are\n", parts[8], parts[9])
+			}
 			fmt.Printf("    Records written:    %s (%s new)\n", parts[3], parts[5])
 			fmt.Printf("    Articles rendered:  %s (%s failed)\n", parts[7], parts[6])
 			if !dryRun {
@@ -1574,9 +1560,9 @@ Usage:
   post.ctl get <post>
   post.ctl render <post> [output] [--legacy-format]
   post.ctl render-community <community> [output_dir] [--legacy-format]
-  post.ctl import-board <board> [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
+  post.ctl import-board <board>|--all [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
   post.ctl sync-dir <board> [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]
-  post.ctl fetch <post> <output_path>
+  post.ctl fetch <post> <output_path>      (output under $BBSHOME; relative to it)
   post.ctl update <post> <title> <content> [editor]
   post.ctl update-title <post> <title> [editor]
   post.ctl remove <post> [mod] [reason]     (Lemmy's RemovePost)
@@ -1643,8 +1629,13 @@ func printCommentsTable(resp string, payload []byte) {
 		seq := cols[0]
 		commentID := cols[6]
 		author := cols[1]
-		ts, _ := strconv.ParseInt(cols[2], 10, 64)
+		// <created_at>[/<modified_at>]
+		created, modified, edited := strings.Cut(cols[2], "/")
+		ts, _ := strconv.ParseInt(created, 10, 64)
 		dateStr := time.Unix(ts, 0).Format("01/02 15:04")
+		if mts, _ := strconv.ParseInt(modified, 10, 64); edited && mts > 0 {
+			dateStr += " (edited " + time.Unix(mts, 0).Format("01/02 15:04") + ")"
+		}
 		ip := cols[3]
 		typeVal, _ := strconv.Atoi(cols[4])
 		isDel := (typeVal < 0)

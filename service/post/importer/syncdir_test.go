@@ -470,8 +470,9 @@ func TestSyncDirRebuild(t *testing.T) {
 	}
 	_ = p3
 
-	// The old .DIR has a post post.svc does not know, a stale record and
-	// a safe-deleted one.
+	// The old .DIR has a post post.svc does not know (whose article is
+	// lost, so it cannot be imported), a stale record and a safe-deleted
+	// one (imported as a deleted post).
 	dirPath := filepath.Join(boardDir, ".DIR")
 	old := bytes.Join([][]byte{
 		dirFixture{filename: "M.1728000009.A.009", owner: "ghost", title: "不明"}.record(),
@@ -499,8 +500,9 @@ func TestSyncDirRebuild(t *testing.T) {
 		return names
 	}
 
-	if stats := sync(SyncDirOptions{DryRun: true}); stats.Records != 3 || stats.Matched != 1 || stats.Pruned != 2 ||
-		stats.Updated != 3 || stats.Added != 2 || stats.Rendered != 1 {
+	// A dry run imports nothing and keeps the unknown records.
+	if stats := sync(SyncDirOptions{DryRun: true}); stats.Records != 3 || stats.Matched != 1 || stats.Pruned != 0 ||
+		stats.Kept != 2 || stats.Updated != 5 || stats.Added != 2 || stats.Rendered != 1 {
 		t.Errorf("rebuild dry-run: %+v", stats)
 	}
 	if got := readDirRecords(t, dirPath); !bytes.Equal(bytes.Join(got, nil), old) {
@@ -510,11 +512,21 @@ func TestSyncDirRebuild(t *testing.T) {
 		t.Fatal("dry-run rendered an article")
 	}
 
-	if stats := sync(SyncDirOptions{}); stats.Updated != 3 || stats.Rendered != 1 || stats.AddedNoFile != 0 {
+	// Rebuild never drops a record of a post that post.svc does not have:
+	// it imports it, or keeps the record as it is.
+	if stats := sync(SyncDirOptions{}); stats.Updated != 5 || stats.Rendered != 1 || stats.AddedNoFile != 0 ||
+		stats.Imported != 1 || stats.Kept != 1 || stats.Pruned != 0 {
 		t.Errorf("rebuild: %+v", stats)
 	}
-	if got := names(); len(got) != 3 || got[0] != "M.1728000001.A.001" || got[1] != ".d1728000002.A.002" || got[2] != "M.1728000003.A.003" {
+	if got := names(); len(got) != 5 || got[0] != "M.1728000001.A.001" || got[1] != ".d1728000002.A.002" || got[2] != "M.1728000003.A.003" ||
+		got[3] != ".d1728000007.A.007" || got[4] != "M.1728000009.A.009" {
 		t.Errorf("rebuilt .DIR: %v", got)
+	}
+	if p, err := engine.GetPostByCommunityFile("RebuildBoard", "M.1728000007.A.007"); err != nil || !p.Deleted {
+		t.Errorf("safe-deleted record not imported as a deleted post: %+v, %v", p, err)
+	}
+	if got := readDirRecords(t, dirPath)[4]; !bytes.Equal(got, old[:FileHeaderSize]) {
+		t.Errorf("unknown record not kept as it was")
 	}
 	recs := readDirRecords(t, dirPath)
 	if title := big5uao.Decode([]byte(cString(recs[2][fhdrOffTitle : fhdrOffTitle+fhdrLenTitle]))); title != "第三篇" {
@@ -532,10 +544,10 @@ func TestSyncDirRebuild(t *testing.T) {
 	}
 
 	// --rebuild --prune drops the deleted posts.
-	if stats := sync(SyncDirOptions{Prune: true}); stats.Updated != 2 || stats.Rendered != 0 {
+	if stats := sync(SyncDirOptions{Prune: true}); stats.Updated != 3 || stats.Rendered != 0 || stats.Kept != 1 {
 		t.Errorf("rebuild with prune: %+v", stats)
 	}
-	if got := names(); len(got) != 2 || got[0] != "M.1728000001.A.001" || got[1] != "M.1728000003.A.003" {
+	if got := names(); len(got) != 3 || got[0] != "M.1728000001.A.001" || got[1] != "M.1728000003.A.003" || got[2] != "M.1728000009.A.009" {
 		t.Errorf("rebuilt .DIR with prune: %v", got)
 	}
 
@@ -543,7 +555,7 @@ func TestSyncDirRebuild(t *testing.T) {
 	if err := os.Remove(dirPath); err != nil {
 		t.Fatal(err)
 	}
-	if stats := sync(SyncDirOptions{}); stats.Records != 0 || stats.Updated != 3 {
+	if stats := sync(SyncDirOptions{}); stats.Records != 0 || stats.Updated != 4 {
 		t.Errorf("rebuild of a missing .DIR: %+v", stats)
 	}
 

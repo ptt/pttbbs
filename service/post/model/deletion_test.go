@@ -25,4 +25,8 @@ func TestDeleteAndRemove(t *testing.T) {
 	if !IsCreator("alice", 0, "alice", 5) || IsCreator("alice", 1, "alice", 5) || IsCreator("alice", 0, "bob", 0) {
 		t.Fatalf("IsCreator: by ID when both are known, else by name")
 	}
+	// BBS user IDs ignore case.
+	if !IsCreator("OldUser", 0, "olduser", 0) || !IsCreator("alice", 0, "ALICE", 7) {
+		t.Fatalf("IsCreator: names ignore case")
+	}
 }

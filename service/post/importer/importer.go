@@ -770,11 +770,8 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 		numWorkers = 8
 	}
 	type parseJob struct {
-		seq         int
-		fhdr        *FileHeader
-		articlePath string
-		deleted     bool // safe-deleted record; fhdr.Filename is the original name
-		locked      bool // locked (L.<stamp> in .DIR); fhdr.Filename is the M. name
+		seq int
+		*recordJob
 	}
 	type parseResult struct {
 		seq      int
@@ -815,107 +812,10 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 							}
 						}()
 
-						if job.deleted {
-							data, marked, err := importSafeDeleted(engine, opts, users, job.fhdr)
-							select {
-							case <-ctx.Done():
-							case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, data: data, marked: marked, err: err}:
-							}
-							return
-						}
-
-						rawBytes, err := ReadArticleFile(job.articlePath)
-						if err != nil {
-							select {
-							case <-ctx.Done():
-							case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}:
-							}
-							return
-						}
-
-						postCtime := int64(job.fhdr.Modified)
-						mFn := postFilenameCtimeRegex.FindStringSubmatch(job.fhdr.Filename)
-						if len(mFn) >= 2 {
-							if v, err := strconv.ParseInt(mFn[1], 10, 64); err == nil {
-								postCtime = v
-							}
-						}
-						if postCtime == 0 {
-							if afi, err := os.Stat(job.articlePath); err == nil {
-								postCtime = afi.ModTime().Unix()
-							}
-						}
-
-						parsed, err := ParseArticleText(rawBytes, job.fhdr.Owner, postCtime, opts.Board, job.fhdr.Filename, opts.IsBig5, opts.NoMerge)
-						if err != nil {
-							select {
-							case <-ctx.Done():
-							case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, err: err}:
-							}
-							return
-						}
-
-						if commentDB != nil {
-							for idx, pc := range parsed.Comments {
-								if ts, ip, err := QueryCommentDB(commentDB, opts.Board, job.fhdr.Filename, uint32(idx)); err == nil && ts > 0 {
-									pc.CTime = ts
-									if ip != "" && pc.IP == "" {
-										pc.IP = ip
-									}
-								}
-							}
-						}
-
-						title := job.fhdr.Title
-						if opts.IsBig5 && !utf8.Valid([]byte(title)) {
-							title = big5uao.DecodeSGR66([]byte(title))
-						}
-
-						comments, votes, upvotes, downvotes := ConvertParsedComments(parsed.Comments, users)
-
-						var crossposts []*model.CrosspostRecord
-						for _, cp := range parsed.Crossposts {
-							crossposts = append(crossposts, &model.CrosspostRecord{
-								TargetCommunity: cp.TargetBoard,
-								TargetPostFile:  cp.TargetFile,
-								CreatorName:     cp.CreatorName,
-								CreatorID:       ResolvePersonID(users, cp.CreatorName, 0, cp.CTime),
-								CreatedAt:       cp.CTime,
-							})
-						}
-
-						post := &model.Post{
-							ParentID:    0,
-							Community:   opts.Board,
-							PostFile:    job.fhdr.Filename,
-							Title:       title,
-							CreatorName: job.fhdr.Owner,
-							CreatorID:   resolveAuthor(users, job.fhdr, postCtime),
-							CreatedAt:   postCtime,
-							Modified:    postModified(job.fhdr, postCtime),
-							Filemode:    int(job.fhdr.Filemode),
-							Money:       moneyOf(job.fhdr),
-							Upvotes:     upvotes,
-							Downvotes:   downvotes,
-							NumComments: len(comments),
-							Content:     parsed.BodyContent,
-							Locked:      job.locked,
-							Encoding:    "utf-8",
-						}
-
+						data, marked, err := buildRecord(engine, opts, users, commentDB, job.recordJob)
 						select {
 						case <-ctx.Done():
-							return
-						case results <- &parseResult{
-							seq:      job.seq,
-							filename: job.fhdr.Filename,
-							data: &storage.ImportedPostData{
-								Post:       post,
-								Comments:   comments,
-								Crossposts: crossposts,
-								Votes:      votes,
-							},
-						}:
+						case results <- &parseResult{seq: job.seq, filename: job.fhdr.Filename, data: data, marked: marked, err: err}:
 						}
 					}()
 				}
@@ -951,51 +851,19 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 				break
 			}
 
-			fhdr, err := UnpackFileHeader(buf)
-			if err != nil || fhdr.Filename == "" || (fhdr.Filemode&0x0020 != 0) {
+			job, ok := prepareRecord(buf, boardDir, false)
+			if !ok {
 				continue
 			}
-			deleted := false
-			if orig, ok := IsSafeDeletedFilename(fhdr.Filename); ok {
-				fhdr.Filename = orig
-				deleted = true
-			} else if strings.HasPrefix(fhdr.Filename, ".") {
+			if seenFiles[job.fhdr.Filename] {
 				continue
 			}
-
-			locked := false
-			if canon := model.CanonicalPostFile(fhdr.Filename); canon != fhdr.Filename {
-				locked = !deleted
-				fhdr.Filename = canon
-			}
-
-			if seenFiles[fhdr.Filename] {
-				continue
-			}
-			seenFiles[fhdr.Filename] = true
-
-			articlePath := filepath.Join(boardDir, fhdr.Filename)
-			if locked {
-				// mbbsd keeps the file of a locked post as X.<stamp>
-				// (older locks left it as L.<stamp>).
-				for _, name := range []string{model.LockedFileName(fhdr.Filename), model.LockedListName(fhdr.Filename)} {
-					if _, err := os.Stat(filepath.Join(boardDir, name)); err == nil {
-						articlePath = filepath.Join(boardDir, name)
-						break
-					}
-				}
-			}
+			seenFiles[job.fhdr.Filename] = true
 			validCount++
 			select {
 			case <-ctx.Done():
 				return
-			case jobs <- &parseJob{
-				seq:         validCount,
-				fhdr:        fhdr,
-				articlePath: articlePath,
-				deleted:     deleted,
-				locked:      locked,
-			}:
+			case jobs <- &parseJob{seq: validCount, recordJob: job}:
 			}
 		}
 	}()

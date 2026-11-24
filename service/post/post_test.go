@@ -824,7 +824,7 @@ func TestServerIPC(t *testing.T) {
 	t.Logf("CROSSPOST, GET_CROSSPOSTS, and GET_CROSSPOST_PARENT IPC verified: %s", strings.TrimSpace(originResp))
 
 	// 18. FETCH_POST_FILE via IPC
-	pulledTarget := filepath.Join(tmpDir, "pulled_post.txt")
+	pulledTarget := filepath.Join(tmpDir, "bbshome", "tmp", "pulled_post.txt")
 	conn18, _ := net.Dial("unix", sockPath)
 	defer conn18.Close()
 	conn18.Write([]byte(fmt.Sprintf("FETCH_POST_FILE gossiping M.1727800000.A.003 %s\n", pulledTarget)))

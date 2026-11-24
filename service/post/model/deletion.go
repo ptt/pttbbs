@@ -24,12 +24,13 @@ func (d *Deletion) DeletedOrRemoved() bool {
 }
 
 // IsCreator reports whether byName / byID is the creator creatorName /
-// creatorID (by ID when both are known, else by name).
+// creatorID (by ID when both are known, else by name, ignoring case as BBS
+// user IDs do).
 func IsCreator(creatorName string, creatorID PersonID, byName string, byID PersonID) bool {
 	if byID != 0 && creatorID != 0 {
 		return byID == creatorID
 	}
-	return byName == creatorName
+	return strings.EqualFold(byName, creatorName)
 }
 
 // Delete takes it down at time at, on behalf of byName / byID: as deleted
