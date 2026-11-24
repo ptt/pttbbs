@@ -129,10 +129,14 @@ func CommentsFromCount(n int) uint16 {
 	return uint16(n)
 }
 
-// IsSafeDeletedFilename reports whether fn is the file name of a record that
-// mbbsd has safe-deleted, and returns the original file name of the post.
+// IsSafeDeletedFilename reports whether fn is the file name of a deleted
+// post's record as sync-dir writes it (".d<stamp>..."), and returns the
+// original file name of the post.
 func IsSafeDeletedFilename(fn string) (string, bool) {
-	if len(fn) > len(safeDelPrefix) && fn[:len(safeDelPrefix)] == safeDelPrefix {
+	// Only ".d<stamp>...", as sync-dir writes them: the tombstones of mbbsd
+	// (FN_SAFEDEL, ".deleted") have lost the name of their post.
+	if len(fn) > len(safeDelPrefix) && fn[:len(safeDelPrefix)] == safeDelPrefix &&
+		fn[len(safeDelPrefix)] >= '0' && fn[len(safeDelPrefix)] <= '9' {
 		return "M." + fn[len(safeDelPrefix):], true
 	}
 	return fn, false

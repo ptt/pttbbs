@@ -71,3 +71,18 @@ func TestParseModernFloors(t *testing.T) {
 		t.Errorf("converted: %+v %+v %+v", comments[2], comments[3], comments[4])
 	}
 }
+
+// The tombstones of mbbsd (".deleted") have lost the name of their post:
+// they are not posts to import, while those sync-dir writes are.
+func TestSafeDeletedNames(t *testing.T) {
+	for fn, want := range map[string]string{
+		".d1791120379.A.546": "M.1791120379.A.546",
+		".deleted":           "",
+		".dummy":             "",
+	} {
+		got, ok := IsSafeDeletedFilename(fn)
+		if (want != "") != ok || (ok && got != want) {
+			t.Errorf("IsSafeDeletedFilename(%q) = %q, %v; want %q", fn, got, ok, want)
+		}
+	}
+}
