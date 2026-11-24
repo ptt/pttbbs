@@ -183,7 +183,21 @@ var (
 	crosspostFromRegex     = regexp.MustCompile(`^※\s*\[本文轉錄自\s+([A-Za-z0-9_\-\.]+)\s+看板\s*(?:([A-Za-z0-9_\-\.]+))?\]`)
 	postFilenameCtimeRegex = regexp.MustCompile(`^[A-Z]\.(\d+)\.`)
 	editMarkRegex          = regexp.MustCompile(`^※\s*編輯:`)
+
+	// The comments post.svc writes into the articles (FormatCommentBlock in
+	// storage): a floor is "|userid[!]|text|[ip ]MM/DD/YYYY HH:MM|[~]No",
+	// its other lines "| text". "!" marks a deleted or removed floor, "~"
+	// an edited one. Articles of a board that post.svc kept before (or
+	// rendered with --re-render) have them.
+	modernHeadRegex = regexp.MustCompile(`^\|([A-Za-z0-9_]+)(!?)\|(.*)\|(?:(\S+) )?(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\|(~?)(\d+)$`)
+	modernMoreRegex = regexp.MustCompile(`^\| (.*)$`)
 )
+
+// isCommentLine tells whether a line begins the comments: a push line of
+// mbbsd, or a floor written by post.svc.
+func isCommentLine(clean string) bool {
+	return isPushLine(clean) || modernHeadRegex.MatchString(clean)
+}
 
 // isPushLine checks if a line is a genuine push comment line.
 func isPushLine(clean string) bool {
@@ -202,6 +216,14 @@ type ParsedComment struct {
 	LastCTime   int64
 	CommentType string // "推", "噓", "→", "white"
 	LegacyType  uint8  // 0: OLD_RECOMMEND, 1: 推, 2: 噓, 3: 箭頭
+	// A floor post.svc wrote (modernHeadRegex): never merged with others,
+	// as it is one floor already; it may be deleted (by its creator) or
+	// removed (with Reason), or edited.
+	Floor   bool
+	Deleted bool
+	Removed bool
+	Reason  string
+	Edited  bool
 }
 
 // ParsedCrosspost represents an extracted crosspost record
@@ -273,10 +295,11 @@ func MergeConsecutiveComments(comments []*ParsedComment) []*ParsedComment {
 	}
 	var merged []*ParsedComment
 	for _, c := range comments {
-		if strings.TrimSpace(c.Content) == "" {
+		if strings.TrimSpace(c.Content) == "" && !c.Floor {
 			continue
 		}
-		if len(merged) > 0 && strings.EqualFold(merged[len(merged)-1].CreatorName, c.CreatorName) {
+		if len(merged) > 0 && !c.Floor && !merged[len(merged)-1].Floor &&
+			strings.EqualFold(merged[len(merged)-1].CreatorName, c.CreatorName) {
 			prev := merged[len(merged)-1]
 			lastTime := prev.LastCTime
 			if lastTime == 0 {
@@ -350,7 +373,7 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 		splitIdx := len(rawLines)
 		for i, l := range rawLines {
 			clean := strings.TrimSpace(model.StripANSI(l))
-			if strings.HasPrefix(clean, "※ 發信站:") || isPushLine(clean) {
+			if strings.HasPrefix(clean, "※ 發信站:") || isCommentLine(clean) {
 				splitIdx = i
 				break
 			}
@@ -400,7 +423,7 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 	}
 	for i := searchStart; i < len(candidateLines); i++ {
 		clean := strings.TrimSpace(model.StripANSI(candidateLines[i]))
-		if isPushLine(clean) {
+		if isCommentLine(clean) {
 			firstPushIdx = i
 			break
 		}
@@ -463,12 +486,62 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 	}
 
 	var comments []*ParsedComment
+	var floor *ParsedComment // the floor of post.svc being read, for its "| " lines
 
 	for _, l := range commentRawLines {
 		cleanTrimmed := strings.TrimSpace(model.StripANSI(l))
 		if cleanTrimmed == "" {
 			continue
 		}
+
+		// A floor written by post.svc, then its other lines.
+		if m := modernHeadRegex.FindStringSubmatch(cleanTrimmed); m != nil {
+			ts := lastTs
+			if t, err := time.ParseInLocation("01/02/2006 15:04", m[5], time.Local); err == nil {
+				ts = t.Unix()
+			}
+			floor = &ParsedComment{
+				CreatorName: m[1],
+				Content:     m[3],
+				CTime:       ts,
+				LastCTime:   ts,
+				CommentType: "→",
+				LegacyType:  model.LegacyTypeArrow,
+				Floor:       true,
+				Edited:      m[6] == "~",
+			}
+			if isValidIP(m[4]) {
+				floor.IP = m[4]
+			}
+			if m[2] == "!" {
+				// FormatCommentBlock: 留言已刪除, or 留言已移除 [(reason)]
+				// (留言已隱藏 before).
+				floor.Content = ""
+				if strings.HasPrefix(m[3], "留言已刪除") {
+					floor.Deleted = true
+				} else {
+					floor.Removed = true
+					r := strings.TrimPrefix(strings.TrimPrefix(m[3], "留言已隱藏"), "留言已移除")
+					r = strings.TrimSpace(r)
+					r = strings.TrimSuffix(strings.TrimPrefix(r, "("), ")")
+					floor.Reason = r
+				}
+			}
+			comments = append(comments, floor)
+			if ts > lastTs {
+				lastTs = ts
+				t := time.Unix(ts, 0)
+				currYear, prevMonth, prevDay = t.Year(), int(t.Month()), t.Day()
+			}
+			continue
+		}
+		if floor != nil && !floor.Deleted && !floor.Removed {
+			if m := modernMoreRegex.FindStringSubmatch(cleanTrimmed); m != nil {
+				floor.Content += "\n" + m[1]
+				continue
+			}
+		}
+		floor = nil
 
 		// Safeguard: any system information line starting with '※' or '◆'
 		if strings.HasPrefix(cleanTrimmed, "※") || strings.HasPrefix(cleanTrimmed, "◆") {

@@ -123,7 +123,7 @@ func ConvertParsedComments(parsed []*ParsedComment, users UserResolver) (comment
 				votes = append(votes, v)
 			}
 		}
-		comments = append(comments, &model.Comment{
+		c := &model.Comment{
 			CreatorName:   pc.CreatorName,
 			CreatorID:     personID,
 			Content:       pc.Content,
@@ -131,7 +131,16 @@ func ConvertParsedComments(parsed []*ParsedComment, users UserResolver) (comment
 			CreatedAt:     pc.CTime,
 			LastCommentAt: pc.LastCTime,
 			LegacyType:    pc.LegacyType,
-		})
+		}
+		// A floor post.svc wrote keeps what it said of itself; when it was
+		// edited or taken down is not in the article, so its time is used.
+		if pc.Edited {
+			c.ModifiedAt = pc.CTime
+		}
+		if pc.Deleted || pc.Removed {
+			c.Deleted, c.Removed, c.Reason, c.DeletedAt = pc.Deleted, pc.Removed, pc.Reason, pc.CTime
+		}
+		comments = append(comments, c)
 	}
 	for _, v := range votes {
 		if v.Vote == model.VoteUp {
