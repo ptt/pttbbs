@@ -810,6 +810,15 @@
 #define CONFIG_RATING 1
 #endif
 
+/* CONFIG_COMMENT_EDIT is always on with CONFIG_NEST_SVC too: nest.svc keeps
+ * each comment (a floor of several lines) with its revisions, so people
+ * edit or delete their own comments ('E' on a post), as Lemmy's EditComment
+ * and DeleteComment; a board may still forbid it. */
+#if IS_ENABLED(CONFIG_NEST_SVC)
+#undef CONFIG_COMMENT_EDIT
+#define CONFIG_COMMENT_EDIT 1
+#endif
+
 /* The records of posts read (bof/readmarks.c): the effective size of the
  * file of a person and the posts kept per board; pttbbs.conf may set both.
  * BRC_MAXSIZE must not exceed 64KB. */

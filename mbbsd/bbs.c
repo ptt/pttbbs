@@ -11,6 +11,8 @@
 #define NEWIDPOST_LIMIT_DAYS (14)
 
 static int comment(int ent, fileheader_t * fhdr, const char *direct);
+// The lines of a comment with nest.svc (its MaxCommentLines); else one.
+#define COMMENT_MAX_LINES (IS_ENABLED(CONFIG_NEST_SVC) ? 15 : 1)
 #if IS_ENABLED(CONFIG_RATING)
 static int vote_post(int ent, fileheader_t * fhdr, const char *direct);
 #endif
@@ -1716,20 +1718,24 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
             genbuf[0] = '\0';
     }
     // Commenters edit their comments (EditComment), where the site allows
-    // it (CONFIG_COMMENT_EDIT); authors choose.
+    // it (CONFIG_COMMENT_EDIT); authors choose. In lines of their own where
+    // the backend keeps comments apart (nest.svc), in one line in files.
+    const int comment_lines = IS_ENABLED(CONFIG_NEST_SVC);
     int my_comments = IS_ENABLED(CONFIG_COMMENT_EDIT) &&
                       psb_has_my_comments(currboard, direct, ent, fhdr);
     if (!is_file_owner(fhdr, &cuser)) {
         if (!my_comments)
             return DONOTHING;
-        if (psb_comment_editor(currboard, direct, ent, fhdr, 0))
+        if (psb_comment_editor(currboard, direct, ent, fhdr,
+                               comment_lines))
             brc_addlist(fhdr->filename, fhdr->modified);
         return FULLUPDATE;
     }
     if (my_comments) {
         int ans = vans("編輯: [1] 文章內文 [2] 我的推文 [q] 取消: ");
         if (ans == '2') {
-            if (psb_comment_editor(currboard, direct, ent, fhdr, 0))
+            if (psb_comment_editor(currboard, direct, ent, fhdr,
+                                   comment_lines))
                 brc_addlist(fhdr->filename, fhdr->modified);
             return FULLUPDATE;
         }
@@ -2837,7 +2843,8 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 int
 comment(int ent, fileheader_t * fhdr, const char *direct)
 {
-    char            buf[PATHLEN], msg[STRLEN];
+    // msg: with nest.svc, a comment of several lines (COMMENT_MAX_LINES).
+    char            buf[PATHLEN], msg[STRLEN * COMMENT_MAX_LINES];
     const char	    *myid = cuser.userid;
     char	    aligncmt = 0;
     char	    mynick[IDLEN+1];
@@ -3125,10 +3132,22 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     move(b_lines, 0);
     clrtoeol();
 
-    if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
+    if (IS_ENABLED(CONFIG_NEST_SVC)) {
+        // nest.svc keeps a comment of several lines, as one floor.
+        char prompt[STRLEN * 2];
+        snprintf(prompt, sizeof(prompt), "%s" ANSI_COLOR(1;36)
+                 "(可多行，按 TAB 加行，Backspace 刪空行，Ctrl-C 取消)"
+                 ANSI_RESET, buf);
+        msg[0] = '\0';
+        if (v_multiline_text(msg, sizeof(msg), COMMENT_MAX_LINES,
+                             maxlength - 1, prompt, " 留言 ", NULL,
+                             VMULTI_NO_SCROLL) <= 0 || !msg[0])
+            return FULLUPDATE;  // (it asks to confirm itself)
+    } else if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
 	return FULLUPDATE;
 
     // make sure to do modification
+    if (!IS_ENABLED(CONFIG_NEST_SVC))
     {
         // to hold ':wq', ':q!' 'ZZ'
 	char ans[2];

@@ -2881,10 +2881,28 @@ pvcm_cmd_edit(cmd_ctx_t *ctx) {
     }
     if (!pvcm_allowed(cx->board, cx->fh))
         return 0;
-    if (cx->multiline) {
+    // A comment of several lines (kept by nest.svc, or made on the web) is
+    // edited as such, never flattened into one line; one that does not fit
+    // the editor is left alone.
+    int lines = 1, width = COMMENT_LINE_LEN;
+    for (const char *p = c->content; *p; ) {
+        const char *eol = strchrnul(p, '\n');
+        if (eol - p > width)
+            width = eol - p;
+        if (!*eol)
+            break;
+        lines++;
+        p = eol + 1;
+    }
+    if (cx->multiline || lines > 1) {
+        if (lines > 16 || width > STRLEN - 3) {
+            vmsg("這則推文太長，無法在這裡修改。");
+            return 0;
+        }
         strlcpy(msg, c->content, sizeof(msg));
-        if (v_multiline_text(msg, sizeof(msg), PVCM_EDIT_LINES,
-                             COMMENT_LINE_LEN,
+        if (v_multiline_text(msg, sizeof(msg),
+                             lines > PVCM_EDIT_LINES ? lines : PVCM_EDIT_LINES,
+                             width,
                              "請編輯推文內容: (可多行，按 TAB 加行，"
                              "Backspace 刪空行，Ctrl-C 取消)",
                              " 修改推文 ", NULL, VMULTI_NO_SCROLL) <= 0)
