@@ -47,7 +47,7 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
 {
     fileheader_t    fhdr;
     int             bid;
-    char            genbuf[PATHLEN];
+    char            genbuf[PATHLEN], postpath[PATHLEN];
 
     if (!board)
 	board = BN_RECORD;
@@ -55,6 +55,7 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
     setbpath(genbuf, board);
     stampfile(genbuf, &fhdr);
     Rename(fpath, genbuf);
+    STRLCPY(postpath, genbuf);
 
     if (sym) {
 	AUTO_STR(genbuf2, "../%s", genbuf);
@@ -73,7 +74,18 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
         bof_create_post_t req = {
             .community = board, .bbs_dir = genbuf, .bbs_header = &fhdr,
         };
-        bof_create_post(&sys, &req, NULL);
+        if (bof_create_post(&sys, &req, NULL) != BOF_OK) {
+            // Not a post (e.g. post.svc failed): the log goes back where it
+            // was, rather than left in the board.
+            fprintf(stderr, "keeplog: failed to post %s to %s\n", fpath,
+                    board);
+            Rename(postpath, fpath);
+            if (sym) {
+                AUTO_STR(sympath, "log/%s", sym);
+                unlink(sympath);
+            }
+            return;
+        }
     }
     /* XXX: bid of cache.c's getbnum starts from 1 */
     if ((bid = getbnum(board)) > 0)

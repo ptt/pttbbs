@@ -16,6 +16,16 @@ import (
 	"golang.org/x/term"
 )
 
+// postSvcBuild is set at build time (-ldflags -X main.postSvcBuild=YES, see
+// Makefile) when pttbbs.conf enables CONFIG_POST_SVC: the .DIR of a board is
+// then only the cache of post.svc, and a mode written into it here is lost
+// (mbbsd sets FILE_SOLVED through BoF, bof_bbs_set_post_modes). So viewdir
+// is read-only by default there.
+var postSvcBuild string
+
+// readOnly: never write .DIR (-readonly).
+var readOnly bool
+
 // RawFileHeader represents fileheader_t structure in PTT (128 bytes)
 type RawFileHeader struct {
 	Filename [28]byte
@@ -107,6 +117,9 @@ type AppState struct {
 	sigChan       chan os.Signal
 	suspendMu     sync.Mutex
 	suspendAction func()
+
+	// A message for the status bar, until the next key.
+	notice string
 }
 
 func (app *AppState) suspend() {
@@ -507,6 +520,9 @@ func (app *AppState) renderDirView(buf *bytes.Buffer) {
 		} else if len(app.articles) > 0 {
 			statusStr = fmt.Sprintf(" 文章 %d/%d  [↑/↓: 選擇  Enter: 閱讀  L: 解決  a: 搜作者  /: 搜標題  PgUp/PgDn: 翻頁  q: 離開]", app.selectedIndex+1, len(app.articles))
 		}
+		if app.notice != "" {
+			statusStr = app.notice
+		}
 		buf.WriteString(fmt.Sprintf("\x1b[1;37;44m%s\x1b[0m", padRightWidth(statusStr, app.termWidth)))
 	}
 }
@@ -564,6 +580,9 @@ func (app *AppState) renderFileView(buf *bytes.Buffer) {
 			}
 		}
 		statusStr := fmt.Sprintf(" [頁次: %d/%d (%d%%)]  (Left/q: 返回  L: 解決  ↑/↓/PgUp/PgDn/Space: 翻頁)", app.fileScrollLine+1, totalLines, percent)
+		if app.notice != "" {
+			statusStr = app.notice
+		}
 		buf.WriteString(fmt.Sprintf("\x1b[1;37;44m%s\x1b[0m", padRightWidth(statusStr, app.termWidth)))
 	}
 }
@@ -978,6 +997,8 @@ func main() {
 	var encFlag string
 	flag.StringVar(&encFlag, "encoding", "", "Output encoding (utf8 or big5)")
 	flag.StringVar(&encFlag, "e", "", "Output encoding (utf8 or big5), shorthand")
+	flag.BoolVar(&readOnly, "readonly", postSvcBuild != "",
+		"Never write .DIR (L does nothing); the default when built with CONFIG_POST_SVC")
 	flag.Parse()
 
 	paths := flag.Args()
@@ -1116,6 +1137,7 @@ func main() {
 }
 
 func (app *AppState) handleInput(input []byte) bool {
+	app.notice = ""
 	if app.mode == ModeSearchInput {
 		return app.handleSearchInput(input)
 	}
@@ -1181,6 +1203,10 @@ func (app *AppState) handleInput(input []byte) bool {
 				return false
 			}
 		case 'L': // Toggle FILE_SOLVED with y/n confirmation
+			if readOnly && (app.mode == ModeDirView || app.mode == ModeFileView) {
+				app.notice = " 唯讀模式 (-readonly；post.svc 的 .DIR 只是快取)：請在 BBS 裡用 L 設定"
+				return false
+			}
 			if (app.mode == ModeDirView || app.mode == ModeFileView) && len(app.articles) > 0 && app.selectedIndex >= 0 && app.selectedIndex < len(app.articles) {
 				app.prevMode = app.mode
 				app.mode = ModeConfirmSolve

@@ -2,3 +2,16 @@ This file contains upgrading tools/scripts/...
 
 Usually you should stop whole BBS and then run scripts here.
 
+With post.svc (CONFIG_POST_SVC), the files of the boards (.DIR, articles)
+are only its cache, and .BRD is mirrored into it. These tools write the
+files directly, not through BoF, so:
+
+ - Run the tools that rewrite posts or .DIR (convert_utf8, convert_sgr_66,
+   fix_2026h, dir_recommend_to_rating) before the boards are imported into
+   post.svc (`post.ctl import-board`); on a site already on post.svc, the
+   next render or sync of post.svc reverts them. Stop post.svc, run them,
+   and import the boards again.
+ - After the tools that rewrite .BRD (board_split_title,
+   migrate_board_moderators), run `post.ctl import-boards`.
+
+See docs/post_svc_migration.md.

@@ -2,12 +2,13 @@
 
 void keeplog(FILE *fin, char *board, char *title, char *owner) {
     fileheader_t fhdr;
-    char genbuf[256], buf[512];
+    char genbuf[256], fpath[256], buf[512];
     FILE *fout;
     int bid;
     
     setbpath(genbuf, board);
     stampfile(genbuf, &fhdr);
+    STRLCPY(fpath, genbuf);
     
     if(!(fout = fopen(genbuf, "w"))) {
 	perror(genbuf);
@@ -29,7 +30,12 @@ void keeplog(FILE *fin, char *board, char *title, char *owner) {
     bof_create_post_t req = {
         .community = board, .bbs_dir = genbuf, .bbs_header = &fhdr,
     };
-    bof_create_post(&sys, &req, NULL);
+    if (bof_create_post(&sys, &req, NULL) != BOF_OK) {
+	// Not a post: the file written for it goes (e.g. post.svc failed).
+	fprintf(stderr, "failed to post to %s\n", board);
+	unlink(fpath);
+	return;
+    }
     /* XXX: bid of cache.c's getbnum starts from 1 */
     if((bid = getbnum(board)) > 0)
 	touchbtotal(bid);

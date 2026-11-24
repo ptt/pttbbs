@@ -288,6 +288,11 @@ int main(int argc, char **argv)
     initMan();
     initSymLink();
     initHistory();
-    
+
+    // .BRD is written here directly, before post.svc runs: it learns of the
+    // boards by importing them.
+    if (BOF_FILES_ARE_CACHE)
+        printf("post.svc (CONFIG_POST_SVC): start post.svc, then run "
+               "`post.ctl import-boards`.\n");
     return 0;
 }

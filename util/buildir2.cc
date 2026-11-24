@@ -207,6 +207,20 @@ int main(int argc, char **argv)
     if (bdir.empty())
 	die("-d must be specified");
 
+    // With post.svc the list of a board is only its cache: the output must
+    // not become the .DIR of a board. Posts post.svc lacks are imported
+    // (post.ctl import-board), and the list made from post.svc
+    // (post.ctl sync-dir --rebuild).
+    if (BOF_FILES_ARE_CACHE) {
+	char board[BRDNAME_SIZE];
+	if (bfile_to_brdname(outdir.c_str(), board, sizeof(board)))
+	    die("With post.svc, the output may not be in a board directory: use "
+		"`post.ctl import-board` and `post.ctl sync-dir --rebuild` instead.");
+	if (bpath_to_brdname(bdir.c_str(), board, sizeof(board)))
+	    fprintf(stderr, "Note: with post.svc the files of board %s are its "
+		    "cache; do not move the output into the board.\n", board);
+    }
+
     std::unordered_set<std::string> indexed;
     for (const auto& dir : dirs) {
 	if (!insert_filenames(indexed, dir)) {

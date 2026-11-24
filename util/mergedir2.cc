@@ -20,6 +20,7 @@ void usage(const char *progname) {
 	    "This program is useful when merging from backup. Here's an example invocation of this use case:\n"
 	    "$ %s .DIR.merge /backup-path/.DIR .DIR && cp .DIR .DIR.bak && mv .DIR.merge .DIR\n"
 	    "Note: You might want to `shmctl touchboard <brdname>` afterwards. This program will not do this for you.\n"
+	    "With post.svc (CONFIG_POST_SVC) the .DIR of a board is only its cache: this program refuses to write into a board.\n"
 	    "\n",
 	    progname, progname);
 }
@@ -89,6 +90,21 @@ int main(int argc, char **argv) {
     const char *path = argv[1];
     int offset = 0;
     AnnotatedHeaderSet hdrset;
+
+    // With post.svc the list of a board is only its cache, and records put
+    // there by hand are unknown to post.svc (lost on the next sync, or
+    // never shown elsewhere): restore posts into post.svc instead.
+    if (BOF_FILES_ARE_CACHE) {
+	char board[BRDNAME_SIZE];
+	if (bfile_to_brdname(path, board, sizeof(board))) {
+	    fprintf(stderr, "With post.svc, the output may not be in a board "
+		    "directory (%s): import the posts with `post.ctl import-board` "
+		    "and run `post.ctl sync-dir --rebuild` instead.\n", board);
+	    return 1;
+	}
+	fprintf(stderr, "Note: with post.svc, do not move the output into a "
+		"board; see docs/post_svc_migration.md.\n");
+    }
 
     for (int i = 2; i < argc; ++i) {
 	int nr = read_dir(hdrset, argv[i], offset);

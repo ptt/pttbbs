@@ -11,6 +11,27 @@ int mysort(const struct dirent **a, const struct dirent **b)
                      get_fhdr_stamp_ts((*b)->d_name));
 }
 
+// With post.svc (BOF_FILES_ARE_CACHE), the list of a board is the cache of
+// post.svc: made again from post.svc through BoF (as `post.ctl sync-dir
+// --rebuild` does), not from the files. Returns 1 if path was a board.
+static int
+rebuild_board(const char *path)
+{
+    char board[BRDNAME_SIZE];
+    bof_actor_t sys = { .name = "system" };
+    bof_bbs_rebuild_community_t req = { .community = board };
+    bof_error_t err;
+
+    if (!BOF_FILES_ARE_CACHE || !bpath_to_brdname(path, board, sizeof(board)))
+        return 0;
+    if ((err = bof_bbs_rebuild_community(&sys, &req, NULL)) != BOF_OK)
+        fprintf(stderr, "%s: could not rebuild the board from post.svc: %s\n",
+                path, bof_error_name(err));
+    else
+        printf("%s: rebuilt from post.svc\n", path);
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
     int k;
@@ -25,6 +46,8 @@ int main(int argc, char **argv)
 	char *ptr, path[MAXPATHLEN];
 	struct dirent **dirlist;
 	
+	if (rebuild_board(argv[k]))
+	    continue;
 	sprintf(path, "%s/.DIR", argv[k]);
 	if((fdir = OpenCreate(path, O_WRONLY | O_TRUNC)) == -1) {
 	    perror(path);

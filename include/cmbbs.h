@@ -21,6 +21,8 @@ void sethomedir (char *buf, const char *userid);
 void sethomeman (char *buf, const char *userid);
 void sethomefile(char *buf, const char *userid, const char *fname);
 void setuserhashedfile(char *buf, const char *filename);
+int  bpath_to_brdname(const char *path, char *name, size_t sz);
+int  bfile_to_brdname(const char *file, char *name, size_t sz);
 // setuserfile
 
 /* money.c */

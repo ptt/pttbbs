@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
 #include "common.h"
 #include "var.h"
 
@@ -128,3 +129,50 @@ setdirpath(char *buf, const char *direct, const char *fname)
     strlcpy(p + 1, fname, PATHLEN-(p+1-buf));
 }
 
+/*
+ * Whether path is the directory of a board (boards/<c>/<name> under
+ * BBSHOME, however it is written), for tools that take a directory: the
+ * posts of a board change only through BoF. Copies the name of the board
+ * into name (sz bytes). Returns 1 if it is one, 0 if not.
+ */
+int
+bpath_to_brdname(const char *path, char *name, size_t sz)
+{
+    char real[PATH_MAX], base[PATH_MAX];
+    const char *p;
+    size_t n;
+
+    if (!realpath(path, real) || !realpath(BBSHOME "/boards", base))
+        return 0;
+    n = strlen(base);
+    if (strncmp(real, base, n) != 0 || real[n] != '/')
+        return 0;
+    p = real + n + 1;
+    // <c>/<name>, where <c> is the first letter of the name (BoF checks
+    // the name itself; not here, for the programs without string.o).
+    if (!p[0] || p[1] != '/' || p[2] != p[0] || strchr(p + 2, '/'))
+        return 0;
+    if (strlcpy(name, p + 2, sz) >= sz)
+        return 0;
+    return 1;
+}
+
+/*
+ * As bpath_to_brdname(), for a file (that may not exist yet), e.g. a .DIR:
+ * whether it is in the directory of a board.
+ */
+int
+bfile_to_brdname(const char *file, char *name, size_t sz)
+{
+    char dir[PATH_MAX], *p;
+
+    if (strlcpy(dir, file, sizeof(dir)) >= sizeof(dir))
+        return 0;
+    if (!(p = strrchr(dir, '/')))
+        return bpath_to_brdname(".", name, sz);
+    if (p == dir)
+        p[1] = 0;
+    else
+        *p = 0;
+    return bpath_to_brdname(dir, name, sz);
+}

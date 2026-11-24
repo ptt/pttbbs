@@ -241,7 +241,11 @@ int main(int argc, char *argv[]){
         bof_create_post_t req = {
             .community = target, .bbs_dir = output_dir, .bbs_header = &fhdr,
         };
-        bof_create_post(&sys, &req, NULL);
+        if (bof_create_post(&sys, &req, NULL) != BOF_OK) {
+            // Not a post (e.g. post.svc failed): the file goes.
+            unlink(output_path);
+            die("Failed to post to: %s\n", target);
+        }
         touchbtotal(bid);
     }
     return 0;
