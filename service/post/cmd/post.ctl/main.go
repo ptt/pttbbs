@@ -1623,8 +1623,11 @@ func printCommentsTable(resp string, payload []byte) {
 		content := strings.Join(cols[7:], " / ")
 		status := "ACTIVE"
 		if isDel {
+			// Taken back by its creator (DeleteComment, no reason), or
+			// removed by a moderator (RemoveComment, with one).
 			status = "DELETED"
-			if reason != "" {
+			if reason != "" && reason != "自刪" {
+				status = "REMOVED"
 				content = "[" + reason + "] " + content
 			}
 		}
