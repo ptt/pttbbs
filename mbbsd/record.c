@@ -80,53 +80,6 @@ set_safedel_fhdr(fileheader_t *fhdr, const char *newtitle)
     bof_files_set_tombstone(fhdr, newtitle, cuser.userid);
 }
 
-int
-safe_article_delete(int ent, const fileheader_t *fhdr, const char *direct, const char *newtitle)
-{
-    return bof_files_tombstone(direct, ent, fhdr, newtitle, cuser.userid);
-}
-
-int
-safe_article_delete_range(const char *direct, int from, int to)
-{
-    fileheader_t newfhdr;
-    int     fd;
-    char    fn[128], *ptr;
-
-    STRLCPY(fn, direct);
-    if( (ptr = rindex(fn, '/')) == NULL )
-	return -1;
-
-    ++ptr;
-    if( (fd = open(direct, O_RDWR)) != -1) {
-	if (lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET) == -1 ){
-	    close(fd);
-	    return -1;
-	}
-
-	for( ; from <= to ; ++from ){
-	    // the (from, to) range may be invalid...
-	    if (read_fileheader(fd, &newfhdr) != 1)
-		break;
-	    if (!is_valid_fileheader(&newfhdr))
-		continue;
-	    if( newfhdr.filemode & (FILE_MARKED | FILE_DIGEST | FILE_BOTTOM) )
-		continue;
-	    if(newfhdr.filename[0]=='L') newfhdr.filename[0]='M';
-	    strlcpy(ptr, newfhdr.filename, sizeof(newfhdr.filename));
-	    unlink(fn);
-
-	    set_safedel_fhdr(&newfhdr, NULL);
-	    // because off_t is unsigned, we could NOT seek backward.
-	    lseek(fd, sizeof(fileheader_t) * (from - 1), SEEK_SET);
-	    write_fileheader(fd, &newfhdr);
-	}
-	close(fd);
-	return 0;
-    }
-    return -1;
-}
-
 // Delete and archive the physical (except header) of file
 //
 // if backup_direct is provided, backup according to that directory.

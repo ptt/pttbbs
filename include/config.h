@@ -825,6 +825,25 @@
 #define BOF_DEFAULT_STORAGE_IS_FILES 1
 #endif
 
+/* BOF_FILES_ARE_CACHE: 1 when the files of the boards (.DIR, articles) are
+ * only the cache of another backend (post.svc), so nothing but BoF may
+ * write them: tools that rebuild or prune them refuse, or go through BoF.
+ * A pttbbs.conf that names bof_storage_files itself should also define
+ * BOF_DEFAULT_STORAGE_IS_FILES. */
+#ifdef BOF_DEFAULT_STORAGE_IS_FILES
+#define BOF_FILES_ARE_CACHE 0
+#else
+#define BOF_FILES_ARE_CACHE 1
+#endif
+
+/* USE_COMMENTD keeps a copy of each comment in commentd, which is never
+ * told of edits, deletes or removes of comments. post.svc keeps the
+ * comments itself (with where they came from, and their history), so the
+ * two do not go together. */
+#if IS_ENABLED(CONFIG_POST_SVC) && defined(USE_COMMENTD)
+#error "USE_COMMENTD does not work with CONFIG_POST_SVC (post.svc keeps the comments); undefine it in pttbbs.conf"
+#endif
+
 #if defined(DEBUG) && !defined(CONFIG_DEBUG)
 #define CONFIG_DEBUG 1
 #endif

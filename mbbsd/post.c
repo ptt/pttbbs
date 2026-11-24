@@ -43,6 +43,46 @@ comment_wait(int tries_left, void *ctx GCC_UNUSED)
     doupdate();
 }
 
+// With post.svc, the cache shows comments in its own form (a block
+// "|user|text|from time|No" with "| more" lines), not as the line of the
+// BBS. Gets the lines it appended to path for the comment of the user
+// (from before to after), as readers of the file see them, if they are one
+// new block of the user's; 0 if not (e.g. merged into the previous one, or
+// with another comment meanwhile), and the caller publishes its line.
+static int
+live_comment_lines(const char *path, off_t before, off_t after,
+                   char *buf, size_t sz)
+{
+    char head[IDLEN + 3];
+    ssize_t len = after - before;
+    int fd, blocks = 0;
+
+    if (before <= 0 || len <= 1 || (size_t)len >= sz)
+        return 0;
+    if ((fd = open(path, O_RDONLY)) < 0)
+        return 0;
+    // From the start of a line, up to the end of one.
+    if (pread(fd, buf, 1, before - 1) != 1 || buf[0] != '\n' ||
+        pread(fd, buf, len, before) != len) {
+        close(fd);
+        return 0;
+    }
+    close(fd);
+    buf[len] = '\0';
+    if (buf[len - 1] != '\n')
+        return 0;
+    snprintf(head, sizeof(head), "|%s|", cuser.userid);
+    if (strncmp(buf, head, strlen(head)) != 0)
+        return 0;
+    for (const char *p = buf; *p; ) {
+        const char *nl = strchr(p, '\n');
+        if (p[0] == '|' && p[1] != ' ')
+            blocks++;
+        p = nl ? nl + 1 : p + strlen(p);
+    }
+    return blocks == 1;
+}
+
 int
 CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                  int ent, int type, const char *msg, const char *formatted)
@@ -62,6 +102,12 @@ CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
     fileheader_t updated;
     bof_comment_response_t res = { .bbs_header = &updated };
     off_t fsize;    // file size after our append: live dedupe token
+    char fpath[PATHLEN];
+    off_t before = 0;   // the size of the cache before the comment
+
+    setdirpath(fpath, direct, fhdr->filename);
+    if (BOF_FILES_ARE_CACHE)
+        before = dashs(fpath);
 
     switch (bof_create_comment(&me, &req, &res)) {
     case BOF_OK:
@@ -89,7 +135,9 @@ CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
             bid = get_board_bid(board);
         if (bid > 0 && aid > 0) {
             char buf[IPC_TEXT_LEN];
-            STRLCPY(buf, formatted);
+            if (!BOF_FILES_ARE_CACHE || res.bbs_merged ||
+                !live_comment_lines(fpath, before, fsize, buf, sizeof(buf)))
+                STRLCPY(buf, formatted);
             size_t len = strlen(buf);
             while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r'))
                 buf[--len] = '\0';

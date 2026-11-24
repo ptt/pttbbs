@@ -2194,8 +2194,12 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 		    tail);
 
             // use do_add_recommend to log forward info and also modify the file
-            // record
-            CommentAddRecord(currboard, direct, fhdr, ent, RECTYPE_ARROW, NULL, buf);
+            // record. A backend that keeps comments apart (post.svc) keeps
+            // what it says (no colors) as an arrow, not the line.
+            char cplog_text[STRLEN];
+            snprintf(cplog_text, sizeof(cplog_text), "Âà¿ý¦Ü%s", bname);
+            CommentAddRecord(currboard, direct, fhdr, ent, RECTYPE_ARROW,
+                             cplog_text, buf);
 	} else
 	{
 	    /* now point bp to new bord; xbid was checked above */
@@ -4844,7 +4848,12 @@ good_post(int ent, fileheader_t * fhdr, const char *direct)
 	// something other than money.
 	if (fhdr->filemode & INVALIDMONEY_MODES)
 	    digest.multi.money = 0;
-	AUTO_STR(genbuf2, "%s%s", buf, fhdr->filename);
+	// From the file as bof gives it: up to date, where the files are
+	// the cache of the backend (post.svc renders them when read).
+	char genbuf2[PATHLEN];
+	bof_post_ref_t gref = bof_ref(direct, ent, &updated);
+	if (bof_bbs_get_post_file(&gref, genbuf2, sizeof(genbuf2)) != BOF_OK)
+	    snprintf(genbuf2, sizeof(genbuf2), "%s%s", buf, fhdr->filename);
 	Copy(genbuf2, genbuf);
 	strcpy(ptr, fn_mandex);
 	append_fileheader(buf, &digest);
