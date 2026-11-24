@@ -103,6 +103,22 @@ test_board_headers(void)
     EXPECT_INT(bof_edit_community(&sysop, &ed), BOF_ERR_INVALID_BODY_FIELD);
     EXPECT_INT(bof_create_community(&sysop, &cr, &res),
                BOF_ERR_INVALID_BODY_FIELD);
+
+    // An older board whose name the rules no longer allow (a digit first)
+    // keeps it when edited, but may not be renamed to another such name.
+    memset(&bh, 0, sizeof(bh));
+    strlcpy(bh.brdname, "Beta", sizeof(bh.brdname));
+    EXPECT_OK(bof_create_community(&sysop, &cr, &res));
+    strlcpy(bh.brdname, "98Old", sizeof(bh.brdname));
+    substitute_record(FN_BOARD, &bh, sizeof(bh), res.bbs_id);
+    reset_board(res.bbs_id);
+    ed.bbs_id = res.bbs_id;
+    bh.brdattr |= BRD_COMMENT_READONLY;
+    EXPECT_OK(bof_edit_community(&sysop, &ed));
+    EXPECT_INT(slot(res.bbs_id)->brdattr & BRD_COMMENT_READONLY,
+               BRD_COMMENT_READONLY);
+    strlcpy(bh.brdname, "99New", sizeof(bh.brdname));
+    EXPECT_INT(bof_edit_community(&sysop, &ed), BOF_ERR_INVALID_BODY_FIELD);
 }
 
 static void

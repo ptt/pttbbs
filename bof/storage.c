@@ -970,12 +970,18 @@ bof_edit_community(const bof_actor_t *actor, const bof_edit_community_t *req)
     const bof_person_t *p = person_of(actor);
     bof_community_t c;
 
-    if (!req || !valid_header(req->bbs_id, req->bbs_header))
+    if (!req || !req->bbs_header)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    int found = bof_bbs_get_community_at(req->bbs_id, &c) == BOF_OK;
+    // A board keeps the name it has, even one the rules of names no longer
+    // allow (older boards may begin with a digit); a new name must be valid.
+    if (!valid_header(req->bbs_id, req->bbs_header) &&
+        !(found && req->bbs_id >= 1 && req->bbs_id <= MAX_BOARD &&
+          strcmp(c.name, req->bbs_header->brdname) == 0))
         return BOF_ERR_INVALID_BODY_FIELD;
     // Its moderators change the settings of a board, and the operators of
     // its groups the rest of it, as admins do.
     if (p) {
-        int found = bof_bbs_get_community_at(req->bbs_id, &c) == BOF_OK;
         if (!(found && bof_bbs_may_moderate(p, &c)))
             CHECK_ADMIN(actor, found ? c.name : NULL, BOF_BBS_GROUP_OP);
     }
