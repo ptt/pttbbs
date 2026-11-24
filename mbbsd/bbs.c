@@ -13,9 +13,7 @@
 static int comment(int ent, fileheader_t * fhdr, const char *direct);
 // The lines of a comment with nest.svc (its MaxCommentLines); else one.
 #define COMMENT_MAX_LINES (IS_ENABLED(CONFIG_NEST_SVC) ? 15 : 1)
-#if IS_ENABLED(CONFIG_RATING)
 static int vote_post(int ent, fileheader_t * fhdr, const char *direct);
-#endif
 static int view_postinfo(int ent, const fileheader_t * fhdr,
                          const char *direct, int crs_ln);
 
@@ -2316,11 +2314,9 @@ static const cmd_t read_post_cmds[] = {
     { 'y', "回應", "回覆文章至看板或信箱", rp_cmd_replyall, 0, CMD_PRIO_HIGH },
     { 'Y', NULL, NULL, rp_cmd_replyall, 0, CMD_PRIO_NONE },
     { 'X', "推文", "給予文章評論/評分", rp_cmd_comment, 0, CMD_PRIO_HIGH },
-#if IS_ENABLED(CONFIG_RATING)
-    { '%', "評分", "評分文章(推/噓)", rp_cmd_score, 0, CMD_PRIO_NORM },
-#else
-    { '%', NULL, NULL, rp_cmd_score, 0, CMD_PRIO_NONE },
-#endif
+    { '%', IS_ENABLED(CONFIG_RATING) ? "評分" : NULL,
+      IS_ENABLED(CONFIG_RATING) ? "評分文章(推/噓)" : NULL, rp_cmd_score, 0,
+      IS_ENABLED(CONFIG_RATING) ? CMD_PRIO_NORM : CMD_PRIO_NONE },
     { 's', "切換看板", "搜尋並切換至其他看板", rp_cmd_selectbrd, PERM_BASIC, CMD_PRIO_LOW },
     { 'S', NULL, NULL, rp_cmd_selectbrd, PERM_BASIC, CMD_PRIO_NONE },
     { '#', "代碼搜尋", "以文章代碼(AID)搜尋文章", rp_cmd_selectaid, PERM_BASIC, CMD_PRIO_LOW },
@@ -2474,10 +2470,10 @@ read_post(int ent, fileheader_t * fhdr, const char *direct)
 	    do_reply(fhdr);
             return FULLUPDATE;
 	case RP_SCORE:
-#if IS_ENABLED(CONFIG_RATING)
-            vote_post(ent, fhdr, direct);
-	    return FULLUPDATE;
-#endif
+            if (IS_ENABLED(CONFIG_RATING)) {
+                vote_post(ent, fhdr, direct);
+                return FULLUPDATE;
+            }
 	    // Without ratings, a score is a comment that pushes or boos.
 	case RP_COMMENT:
             comment(ent, fhdr, direct);
@@ -2992,12 +2988,6 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     if (content_precheck(CONTENT_KIND_COMMENT, NULL))
 	return FULLUPDATE;
 
-#if IS_ENABLED(CONFIG_RATING)
-    // With ratings (CONFIG_RATING, always on with nest.svc), a comment only
-    // comments (no vote: RECTYPE_ARROW): pushes and boos are the ratings
-    // of '%' (vote_post()). nest.svc shows it as a plain comment.
-    type = RECTYPE_ARROW;
-#else
     type = RECTYPE_GOOD;
 
     // why "recommend == 0" here?
@@ -3007,12 +2997,18 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     // they tend to use the counter to identify whether an arcitle
     // has new recommends or not.
     // so, make them happy here.
+    if (IS_ENABLED(CONFIG_RATING)) {
+	// With ratings (CONFIG_RATING, always on with nest.svc), a comment
+	// only comments (no vote: RECTYPE_ARROW): pushes and boos are the
+	// ratings of '%' (vote_post()). nest.svc shows it as a plain comment.
+	type = RECTYPE_ARROW;
+    }
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     // no matter it is first time or not.
-    if (is_file_owner(fhdr, &cuser))
+    else if (is_file_owner(fhdr, &cuser))
 #else
     // old format is one way counter, so let's relax.
-    if (fhdr->score == 0 && is_file_owner(fhdr, &cuser))
+    else if (fhdr->score == 0 && is_file_owner(fhdr, &cuser))
 #endif
     {
 	// owner recommend
@@ -3070,7 +3066,6 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
 	move(b_lines, 0); clrtoeol();
     }
-#endif
 #endif
 
     // warn if article is outside post
@@ -3210,7 +3205,6 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     return FULLUPDATE;
 }
 
-#if IS_ENABLED(CONFIG_RATING)
 // Ratings (CONFIG_RATING): pushes and boos apart from comments, one per
 // person (Lemmy's CreatePostLike), on boards that rate posts (BRD_SCORE).
 typedef struct {
@@ -3225,8 +3219,8 @@ vote_view_header(PSB_CTX *ctx)
 {
     vote_view_ctx_t *cx = (vote_view_ctx_t *)ctx->cmd.priv;
     char sub[128];
-    snprintf(sub, sizeof(sub), "推: " ANSI_COLOR(1;33) "%d" ANSI_RESET
-                               " 噓: " ANSI_COLOR(1;31) "%d" ANSI_RESET
+    snprintf(sub, sizeof(sub), "讚: " ANSI_COLOR(1;33) "%d" ANSI_RESET
+                               " 倒讚: " ANSI_COLOR(1;31) "%d" ANSI_RESET
                                " 淨分: %+d (共 %d 筆)",
              cx->up_count, cx->down_count, cx->up_count - cx->down_count,
              ctx->cmd.total);
@@ -3250,8 +3244,8 @@ vote_view_renderer(int idx, PSB_CTX *ctx)
             strftime(timestr, sizeof(timestr), "%Y/%m/%d %H:%M:%S", tm);
     }
 
-    const char *vtype = (v->score > 0) ? ANSI_COLOR(1;33) "推薦 (+1)" ANSI_RESET :
-                        (v->score < 0) ? ANSI_COLOR(1;31) "劣評 (-1)" ANSI_RESET :
+    const char *vtype = (v->score > 0) ? ANSI_COLOR(1;33) "讚   (+1)" ANSI_RESET :
+                        (v->score < 0) ? ANSI_COLOR(1;31) "倒讚 (-1)" ANSI_RESET :
                                         ANSI_COLOR(1;37) "取消 ( 0)" ANSI_RESET;
 
     prints("  [%3d]  %-19s  %s  " ANSI_COLOR(1;36) "%-12s" ANSI_RESET "  %s",
@@ -3378,9 +3372,9 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
     move(b_lines, 0);
     clrtoeol();
     outs(ANSI_COLOR(1) "您覺得這篇文章 ");
-    outs(ANSI_COLOR(1;33) "1." ANSI_RESET "值得推薦 ");
+    outs(ANSI_COLOR(1;33) "1." ANSI_RESET "值得推薦(讚) ");
     if (!(bp->brdattr & BRD_NO_DOWNVOTE)) {
-	outs(ANSI_COLOR(1;31) "2." ANSI_RESET "給它劣評 ");
+	outs(ANSI_COLOR(1;31) "2." ANSI_RESET "不喜歡(倒讚) ");
     }
     outs(ANSI_COLOR(1;37) "0." ANSI_RESET "取消評分 ");
     outs(ANSI_COLOR(1;36) "V." ANSI_RESET "評分明細 ");
@@ -3393,7 +3387,7 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
 	vote = 1;
     } else if (ch == '2') {
 	if (bp->brdattr & BRD_NO_DOWNVOTE) {
-	    vmsg("本板禁止劣評");
+	    vmsg("本板不開放倒讚");
 	    return FULLUPDATE;
 	}
 	vote = -1;
@@ -3419,20 +3413,17 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
     }
 
     if (rc == 1) {
-	if (vote == 1)
-	    vmsg("先前已推薦過，未重覆計分");
-	else if (vote == -1)
-	    vmsg("先前已給劣過，未重覆計分");
+	if (vote)
+	    vmsg("已評分過，未重覆計分");
     } else if (vote == 1)
-	vmsg("已完成推薦");
+	vmsg("已按讚");
     else if (vote == -1)
-	vmsg("已完成劣評");
+	vmsg("已按倒讚");
     else
 	vmsg("已取消評分");
 
     return FULLUPDATE;
 }
-#endif
 
 // Why del_range() skips a record, or NULL to delete it.
 static const char *
@@ -5202,9 +5193,7 @@ DEFINE_READ_NOITEM_CMD(bbs_cmd_post_petition, do_post_petition)
 DEFINE_READ_NOITEM_CMD(bbs_cmd_whereami, whereami)
 DEFINE_READ_ITEM_CMD(bbs_cmd_cross_post, cross_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_comment, comment)
-#if IS_ENABLED(CONFIG_RATING)
 DEFINE_READ_ITEM_CMD(bbs_cmd_vote_post, vote_post)
-#endif
 DEFINE_READ_ITEM_CMD(bbs_cmd_limitedit, do_limitedit)
 DEFINE_READ_ITEM_CMD(bbs_cmd_del_range, del_range_post)
 DEFINE_READ_ITEM_CMD(bbs_cmd_edit_post, edit_post)
@@ -5251,11 +5240,10 @@ const cmd_t read_comms[] = {
     { 'y', "回應", "回覆文章或參與連署", bbs_cmd_reply_post, 0, CMD_PRIO_HIGH, true },
     { 'Y', NULL, NULL, bbs_cmd_reply_post, 0, CMD_PRIO_NONE, true },
     { 'X', "推文", "推薦或評論文章", bbs_cmd_comment, 0, CMD_PRIO_HIGH, true },
-#if IS_ENABLED(CONFIG_RATING)
-    { '%', "評分", "評分文章(推/噓)", bbs_cmd_vote_post, 0, CMD_PRIO_HIGH, true },
-#else
-    { '%', NULL, NULL, bbs_cmd_comment, 0, CMD_PRIO_NONE, true },
-#endif
+    { '%', IS_ENABLED(CONFIG_RATING) ? "評分" : NULL,
+      IS_ENABLED(CONFIG_RATING) ? "評分文章(推/噓)" : NULL,
+      IS_ENABLED(CONFIG_RATING) ? bbs_cmd_vote_post : bbs_cmd_comment, 0,
+      IS_ENABLED(CONFIG_RATING) ? CMD_PRIO_HIGH : CMD_PRIO_NONE, true },
     { 'd', "刪除", "刪除選取的文章", bbs_cmd_del_post, 0, CMD_PRIO_HIGH, true },
     { 'E', "編輯", "編輯文章內容", bbs_cmd_edit_post, 0, CMD_PRIO_LOW, true },
     { 'v', "已讀/未讀", "切換文章已讀或未讀狀態", bbs_cmd_mark_read, 0, CMD_PRIO_LOW, true },
