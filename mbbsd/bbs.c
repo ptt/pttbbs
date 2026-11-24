@@ -3219,8 +3219,8 @@ vote_view_header(PSB_CTX *ctx)
 {
     vote_view_ctx_t *cx = (vote_view_ctx_t *)ctx->cmd.priv;
     char sub[128];
-    snprintf(sub, sizeof(sub), "讚: " ANSI_COLOR(1;33) "%d" ANSI_RESET
-                               " 倒讚: " ANSI_COLOR(1;31) "%d" ANSI_RESET
+    snprintf(sub, sizeof(sub), "推: " ANSI_COLOR(1;33) "%d" ANSI_RESET
+                               " 噓: " ANSI_COLOR(1;31) "%d" ANSI_RESET
                                " 淨分: %+d (共 %d 筆)",
              cx->up_count, cx->down_count, cx->up_count - cx->down_count,
              ctx->cmd.total);
@@ -3244,8 +3244,8 @@ vote_view_renderer(int idx, PSB_CTX *ctx)
             strftime(timestr, sizeof(timestr), "%Y/%m/%d %H:%M:%S", tm);
     }
 
-    const char *vtype = (v->score > 0) ? ANSI_COLOR(1;33) "讚   (+1)" ANSI_RESET :
-                        (v->score < 0) ? ANSI_COLOR(1;31) "倒讚 (-1)" ANSI_RESET :
+    const char *vtype = (v->score > 0) ? ANSI_COLOR(1;33) "推   (+1)" ANSI_RESET :
+                        (v->score < 0) ? ANSI_COLOR(1;31) "噓   (-1)" ANSI_RESET :
                                         ANSI_COLOR(1;37) "取消 ( 0)" ANSI_RESET;
 
     prints("  [%3d]  %-19s  %s  " ANSI_COLOR(1;36) "%-12s" ANSI_RESET "  %s",
@@ -3372,9 +3372,9 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
     move(b_lines, 0);
     clrtoeol();
     outs(ANSI_COLOR(1) "您覺得這篇文章 ");
-    outs(ANSI_COLOR(1;33) "1." ANSI_RESET "值得推薦(讚) ");
+    outs(ANSI_COLOR(1;33) "1." ANSI_RESET "值得推薦(推) ");
     if (!(bp->brdattr & BRD_NO_DOWNVOTE)) {
-	outs(ANSI_COLOR(1;31) "2." ANSI_RESET "不喜歡(倒讚) ");
+	outs(ANSI_COLOR(1;31) "2." ANSI_RESET "不喜歡(噓) ");
     }
     outs(ANSI_COLOR(1;37) "0." ANSI_RESET "取消評分 ");
     outs(ANSI_COLOR(1;36) "V." ANSI_RESET "評分明細 ");
@@ -3387,7 +3387,7 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
 	vote = 1;
     } else if (ch == '2') {
 	if (bp->brdattr & BRD_NO_DOWNVOTE) {
-	    vmsg("本板不開放倒讚");
+	    vmsg("本板不開放噓文");
 	    return FULLUPDATE;
 	}
 	vote = -1;
@@ -3416,9 +3416,9 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
 	if (vote)
 	    vmsg("已評分過，未重覆計分");
     } else if (vote == 1)
-	vmsg("已按讚");
+	vmsg("已推");
     else if (vote == -1)
-	vmsg("已按倒讚");
+	vmsg("已噓");
     else
 	vmsg("已取消評分");
 
