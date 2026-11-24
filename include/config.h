@@ -819,6 +819,15 @@
 #define CONFIG_COMMENT_EDIT 1
 #endif
 
+/* CONFIG_COMMENT_MODERATION is always on with CONFIG_NEST_SVC as well: the
+ * moderators remove comments one by one (Ctrl-E, V), as Lemmy's
+ * RemoveComment, which nest.svc keeps (with the reason, and their history),
+ * also where people may not edit or delete their own (BRD_COMMENT_READONLY). */
+#if IS_ENABLED(CONFIG_NEST_SVC)
+#undef CONFIG_COMMENT_MODERATION
+#define CONFIG_COMMENT_MODERATION 1
+#endif
+
 /* The records of posts read (bof/readmarks.c): the effective size of the
  * file of a person and the posts kept per board; pttbbs.conf may set both.
  * BRC_MAXSIZE must not exceed 64KB. */
