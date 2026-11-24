@@ -1720,8 +1720,12 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // Commenters edit their comments (EditComment), where the site allows
     // it (CONFIG_COMMENT_EDIT); authors choose. In lines of their own where
     // the backend keeps comments apart (nest.svc), in one line in files.
+    // Where comments are kept as they are (BRD_COMMENT_READONLY), only the
+    // author edits, and only the post: no need to look for comments.
+    // Moderators manage comments elsewhere (Ctrl-E, V).
     const int comment_lines = IS_ENABLED(CONFIG_NEST_SVC);
     int my_comments = IS_ENABLED(CONFIG_COMMENT_EDIT) &&
+                      !(bp->brdattr & BRD_COMMENT_READONLY) &&
                       psb_has_my_comments(currboard, direct, ent, fhdr);
     if (!is_file_owner(fhdr, &cuser)) {
         if (!my_comments)

@@ -2833,12 +2833,14 @@ pvcm_allowed(const char *board, const fileheader_t *fh)
     int bid = getbnum(board);
     boardheader_t *bp = bid > 0 ? getbcache(bid) : NULL;
 
-    if (CBRD_IS_BM())
-        return true;
+    // Read-only for everyone, moderators too: they remove comments in
+    // the comment management (Ctrl-E, V), not here.
     if (bp && (bp->brdattr & BRD_COMMENT_READONLY)) {
         vmsg("本看板禁止修改或刪除推文。");
         return false;
     }
+    if (CBRD_IS_BM())
+        return true;
     // Where they could not comment, by the rules bof keeps.
     bof_person_t me = mbbsd_person();
     bof_community_t c;
