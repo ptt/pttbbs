@@ -4711,7 +4711,7 @@ pin_post(int ent, fileheader_t *old_fhdr, const char *direct)
 
     assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
     boardheader_t *bp = getbcache(currbid);
-    resolve_board_bottoms(currbid, NULL);
+    resolve_board_bottoms(currbid, NULL, save_board_header);
 
     aidu_t target_raw = aidu_raw(fn2aidu(old_fhdr->filename));
     if (target_raw == 0)

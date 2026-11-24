@@ -683,8 +683,17 @@ getbottomtotal(int bid)
     return SHM->n_bottom[bid - 1];
 }
 
+/*
+ * Checks the pinned posts of board bid (bh->bottom) against its .DIR: drops
+ * those gone and updates the positions; fills out_recs (if not NULL) with
+ * their records. A changed header is written by save (mbbsd: through BoF,
+ * which also tells post.svc: common/ cannot use bof), or only kept in the
+ * board cache if save is NULL or fails: the slots are hints that are checked
+ * again here each time. Returns how many are pinned.
+ */
 int
-resolve_board_bottoms(int bid, int32_t out_recs[MAX_BOTTOM_POSTS])
+resolve_board_bottoms(int bid, int32_t out_recs[MAX_BOTTOM_POSTS],
+                      int (*save)(int bid, const boardheader_t *bh))
 {
     if (bid < 1 || bid > MAX_BOARD)
         return 0;
@@ -742,8 +751,10 @@ resolve_board_bottoms(int bid, int32_t out_recs[MAX_BOTTOM_POSTS])
     close(fd);
 
     if (dirty && memcmp(snap, bh->bottom, sizeof(snap)) == 0) {
-        memcpy(bh->bottom, new_slots, sizeof(bh->bottom));
-        substitute_record(FN_BOARD, bh, sizeof(boardheader_t), bid);
+        boardheader_t nb = *bh;
+        memcpy(nb.bottom, new_slots, sizeof(nb.bottom));
+        if (!save || save(bid, &nb) != 0)
+            memcpy(bh->bottom, new_slots, sizeof(bh->bottom));
     }
     SHM->n_bottom[bid - 1] = valid_cnt;
     return valid_cnt;

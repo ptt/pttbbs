@@ -764,7 +764,8 @@ select_by_aid(read_ctx_t *cx, int *pnew_ln, int *pnewdirect_new_ln,
 	if (currbid > 0) {
 	    boardheader_t *bp = getbcache(currbid);
 	    int32_t brecs[MAX_BOTTOM_POSTS];
-	    int bcnt = bp ? resolve_board_bottoms(currbid, brecs) : 0;
+	    int bcnt = bp ? resolve_board_bottoms(currbid, brecs,
+						  save_board_header) : 0;
 	    if (bp) {
 		int b_slot = 0;
 		for (int i = 0; i < MAX_BOTTOM_POSTS; i++) {
@@ -1934,7 +1935,8 @@ read_loader(PSB_CTX *psbctx)
             setbtotal(currbid);
             last_line = getbtotal(currbid);
             cx->bottom_line = last_line;
-            cx->view.bottom_count = resolve_board_bottoms(currbid, cx->view.bottom_recs);
+            cx->view.bottom_count = resolve_board_bottoms(
+                currbid, cx->view.bottom_recs, save_board_header);
             last_line += cx->view.bottom_count;
         } else {
             if (cx->view.remap) {
@@ -1985,7 +1987,8 @@ read_loader(PSB_CTX *psbctx)
         int btotal = getbtotal(currbid);
         /* Always re-resolve: pinned records may have shifted (physical
          * deletion) even when the counts are unchanged. */
-        cx->view.bottom_count = resolve_board_bottoms(currbid, cx->view.bottom_recs);
+        cx->view.bottom_count = resolve_board_bottoms(
+            currbid, cx->view.bottom_recs, save_board_header);
         int rec_num = btotal + cx->view.bottom_count;
         if (last_line != rec_num || cx->bottom_line != btotal) {
             cx->bottom_line = btotal;

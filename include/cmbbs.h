@@ -115,7 +115,8 @@ void addbrd_touchcache(void);
 void reset_board(int bid);
 void resolve_board_group(int gid, int type);
 int  getbottomtotal(int bid);
-int  resolve_board_bottoms(int bid, int32_t out_recs[MAX_BOTTOM_POSTS]);
+int  resolve_board_bottoms(int bid, int32_t out_recs[MAX_BOTTOM_POSTS],
+                           int (*save)(int bid, const boardheader_t *bh));
 void setbottomtotal(int bid);
 int  search_dir_by_stamp_fd(int fd, int total, int hint_idx, char prefix_ch,
                             time4_t target_ts, unsigned int target_hex,
