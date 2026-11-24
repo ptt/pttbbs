@@ -2036,6 +2036,7 @@ func FormatCommentBlock(c *model.Comment) string {
 		}
 		cleanReason = strings.TrimSpace(cleanReason)
 		isSelf := c.Deleted || cleanReason == "自刪"
+		// Lemmy's words: deleted by its creator, removed by a moderator.
 		var msg string
 		if isSelf {
 			msg = "留言已刪除"
@@ -2044,9 +2045,9 @@ func FormatCommentBlock(c *model.Comment) string {
 				cleanReason = strings.TrimRight(cleanReason, "\r\n")
 				cleanReason = strings.ReplaceAll(cleanReason, "--", "-")
 				cleanReason = strings.ReplaceAll(cleanReason, "|", "-")
-				msg = fmt.Sprintf("留言已隱藏 (%s)", cleanReason)
+				msg = fmt.Sprintf("留言已移除 (%s)", cleanReason)
 			} else {
-				msg = "留言已隱藏"
+				msg = "留言已移除"
 			}
 		}
 		return fmt.Sprintf("|%s|%s|%s|%s%d\n", authorMark, msg, creation, modMark, c.Sequence)

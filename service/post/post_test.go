@@ -2378,12 +2378,12 @@ func TestCommentModifiedAndDeletedRendering(t *testing.T) {
 	if !strings.Contains(rendered, "|user4!|留言已刪除|11/15/2023 06:13|4\n") {
 		t.Errorf("user4 self-deleted format mismatch:\n%s", rendered)
 	}
-	// Verify user5: custom reason -> "|user5!|留言已隱藏 (違規水桶)|11/15/2023 06:13|5\n"
-	if !strings.Contains(rendered, "|user5!|留言已隱藏 (違規水桶)|11/15/2023 06:13|5\n") {
+	// Verify user5: custom reason -> "|user5!|留言已移除 (違規水桶)|11/15/2023 06:13|5\n"
+	if !strings.Contains(rendered, "|user5!|留言已移除 (違規水桶)|11/15/2023 06:13|5\n") {
 		t.Errorf("user5 admin-deleted format mismatch:\n%s", rendered)
 	}
-	// Verify user6: admin deletion without reason -> "|user6!|留言已隱藏|11/15/2023 06:13|6\n"
-	if !strings.Contains(rendered, "|user6!|留言已隱藏|11/15/2023 06:13|6\n") {
+	// Verify user6: admin deletion without reason -> "|user6!|留言已移除|11/15/2023 06:13|6\n"
+	if !strings.Contains(rendered, "|user6!|留言已移除|11/15/2023 06:13|6\n") {
 		t.Errorf("user6 admin-deleted without reason format mismatch:\n%s", rendered)
 	}
 }
