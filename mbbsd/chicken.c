@@ -4,7 +4,6 @@
 #define DEPRECATE_CHICKEN
 
 #define NUM_KINDS   15		/* 有多少種動物 */
-#define CHICKENLOG  "etc/chicken"
 #define CHICKEN_PIC "etc/chickens"
 
 static const char * const cage[17] = {
@@ -191,12 +190,6 @@ new_chicken(void)
     write(fd, &mychicken, sizeof(chicken_t));
     close(fd);
 
-    // log data
-    log_filef(CHICKENLOG,
-              ANSI_COLOR(31) "%s " ANSI_RESET
-              "養了一隻叫" ANSI_COLOR(33) " %s " ANSI_RESET "的 "
-              ANSI_COLOR(32) "%s" ANSI_RESET "\n", cuser.userid,
-              mychicken.name, chicken_type[(int)mychicken.type]);
     return 1;
 }
 
@@ -482,11 +475,6 @@ ch_kill(chicken_t *mychicken)
 
 	pay(100, "棄養寵物費");
 	more(CHICKEN_PIC "/deadth", YEA);
-	log_filef(CHICKENLOG,
-		 ANSI_COLOR(31) "%s " ANSI_RESET "把 "
-                 ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(32) " %s "
-		 ANSI_RESET "宰了\n", cuser.userid, mychicken->name,
-		 chicken_type[(int)mychicken->type]);
 	mychicken->name[0] = 0;
     }
 }
@@ -697,11 +685,6 @@ deadtype(const chicken_t * thechicken, chicken_t *mychicken)
 	return DEADTYPE_NOTYET;
 
     if (thechicken == mychicken) {
-	log_filef(CHICKENLOG,
-                 ANSI_COLOR(31) "%s" ANSI_RESET " 所疼愛的"
-                 ANSI_COLOR(33) " %s" ANSI_COLOR(32) " %s "
-                 ANSI_RESET "掛了\n", cuser.userid, thechicken->name,
-                 chicken_type[(int)thechicken->type]);
 	mychicken->name[0] = 0;
     }
     return i;
@@ -747,12 +730,6 @@ ch_changename(chicken_t *mychicken)
 
     if (strlen(newname) >= 3 && strcmp(newname, mychicken->name)) {
 	STRLCPY(mychicken->name, newname);
-	log_filef(CHICKENLOG,
-                ANSI_COLOR(31) "%s" ANSI_RESET " 把疼愛的" ANSI_COLOR(33)
-                " %s" ANSI_COLOR(32) " %s "
-                ANSI_RESET "改名為" ANSI_COLOR(33) " %s" ANSI_RESET "\n",
-                 cuser.userid, mychicken->name,
-                 chicken_type[(int)mychicken->type], newname);
     }
 }
 

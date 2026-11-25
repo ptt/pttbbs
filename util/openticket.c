@@ -17,6 +17,32 @@ int sendalert_uid(int uid, int alert)
     return 0;
 }
 
+// The bets of a lottery (ticket.user: "<userid> <item> <count>" lines) are
+// kept in log/lottery_bets.log, which bin/rotatelog archives in adm/YYYY/,
+// a line each: "<time> <board> <userid> <count> <item name>". They used to
+// be posted to Security, which only admins read; the board has the result.
+static void
+archive_bets(const char *brdname, char betname[MAX_ITEM][MAX_ITEM_LEN],
+             int count, time4_t now)
+{
+    char path[PATHLEN], userid[IDLEN + 1];
+    int item, num;
+    FILE *in, *out;
+
+    setbfile(path, brdname, FN_TICKET_USER);
+    if (!(in = fopen(path, "r")))
+        return;
+    if (!(out = fopen("log/lottery_bets.log", "a"))) {
+        fclose(in);
+        return;
+    }
+    while (fscanf(in, "%12s %d %d\n", userid, &item, &num) == 3)
+        fprintf(out, "%s %s %s %d %s\n", Cdate(&now), brdname, userid, num,
+                item >= 0 && item < count ? betname[item] : "?");
+    fclose(in);
+    fclose(out);
+}
+
 static int post_result_file(const char *bname, const char *title, const char *filename, const char *author)
 {
     char fname[PATHLEN];
@@ -319,19 +345,13 @@ int main(int argc, char **argv)
         fclose(fp);
     }
 
-    /* Post announcements */
+    /* Post the result to the board; Record and Security had copies. */
     AUTO_STR(post_title, TN_ANNOUNCE " %s %s", brdname,
              win_idx != 98 ? "樂透開獎" : "樂透取消");
-    AUTO_STR(rec_title, "%s %s", brdname,
-             win_idx != 98 ? "樂透開獎" : "樂透取消");
-
     post_result_file(brdname, post_title, outcome, "[彩券]");
-    post_result_file("Record", rec_title, outcome, "[馬路探子]");
-    post_result_file(BN_SECURITY, rec_title, outcome, "[馬路探子]");
 
-    /* Backup bets log to Security */
+    archive_bets(brdname, betname, count, now);
     setbfile(buf, brdname, FN_TICKET_USER);
-    post_result_file(BN_SECURITY, brdname, buf, "[投注紀錄]");
     unlink(buf);
 
     setbfile(buf, brdname, FN_TICKET_RECORD);

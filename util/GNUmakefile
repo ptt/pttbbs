@@ -39,7 +39,7 @@ CPROG_WITHOUT_UTIL := \
 	$(END)
 
 SCRIPT_PROGS := \
-	backpasswd.sh	topsong.sh	\
+	backpasswd.sh	\
 	toplazyBM.sh	dailybackup.pl	waterball.pl	\
 	timecap_expire.sh	\
 	$(END)

@@ -18,9 +18,6 @@
 30	5	*	*	*	bin/topusr 10 etc/topusr
 30	5	*	*	*	bin/topusr 100 etc/topusr100
 
-# 每個月初一, 十五點歌排行榜
-20	6	1,15	*	*	bin/topsong.sh
-
 # 每週六清理板主、小組長與群組長權限
 55	3	*	*	6	bin/check_moderators -w
 

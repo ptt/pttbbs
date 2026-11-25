@@ -374,10 +374,9 @@ b_result_one(const poll_buffer_t *vbuf, boardheader_t * fh, int *total)
     fclose(tfp);
 
     // Post to boards
+    // On the board only: it used to be copied to Record too (unless hidden
+    // or not counted), the same post twice.
     poll_report(bname, bname, b_report);
-    if (!(fh->brdattr & (BRD_NOCOUNT|BRD_HIDE))) { // from ptt2 local modification
-	poll_report(bname, BN_RECORD, b_report);
-    }
 
     // Reuse the report file, and append old results after it.
     tfp = fopen(b_report, "a");

@@ -173,13 +173,16 @@ func parseWeekday(s string) (time.Weekday, error) {
 }
 
 // DefaultConfig is used when there is no etc/rotatelog.conf: the logs that
-// bin/account used to rotate itself (it still moves usies to log/usies at
-// 0:01, right after counting it).
+// bin/account rotated or posted to Security itself (it still moves usies to
+// log/usies at 0:01, right after counting it), and the bets openticket
+// posted there.
 const DefaultConfig = `
-log/usies      daily       archive
-etc/mailog     daily       archive
-etc/osong.log  daily       archive
-tmp            weekly:sat  snapshot
+log/usies             daily       archive
+etc/mailog            daily       archive
+etc/osong.log         daily       archive
+etc/money             daily       archive
+log/lottery_bets.log  monthly     archive
+tmp                   weekly:sat  snapshot
 `
 
 // ParseConfig parses a configuration:

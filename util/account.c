@@ -138,6 +138,22 @@ move_usies(void)
     remove(act_file);
 }
 
+// Posts the song chart (etc/topsong, which mbbsd keeps) of the half month
+// just ended to Record, and starts the counts (ussong) again.
+static void
+post_topsong(int second_half)
+{
+    const char tmp[] = "etc/topsong.post";
+
+    if (dashs(FN_TOPSONG) <= 0)
+        return;
+    Copy(FN_TOPSONG, tmp);
+    keeplog(tmp, BN_RECORD, second_half ? "下半個月點歌排行榜" :
+            "上半個月點歌排行榜");
+    // As topsong.sh did (mv ussong tmp): bin/rotatelog packs tmp weekly.
+    Rename(FN_USSONG, "tmp/" FN_USSONG);
+}
+
 static int
 parse_usies(const char *fn, int *act)
 {
@@ -465,8 +481,6 @@ main(/*int argc, char **argv*/)
 	/* system("rm -f note.dat"); */
 
 	keeplog("etc/today", BN_RECORD, "上站人次統計");
-	keeplog(FN_MONEY, BN_SECURITY, "本日金錢往來記錄");
-	keeplog("etc/chicken", BN_RECORD, "雞場報告");
 
         // Restore etc/yesterday because keeplog removes it.
         Copy("etc/yesterday", "etc/today");
@@ -499,6 +513,10 @@ main(/*int argc, char **argv*/)
 
 	if (tm_now.tm_yday == 1)
 	    keeplog("etc/year", BN_RECORD, "年度熱門話題");
+
+	// The song chart of the half month (was bin/topsong.sh at 6:20).
+	if (tm_now.tm_mday == 1 || tm_now.tm_mday == 15)
+	    post_topsong(tm_now.tm_mday == 1);
     }
 
     /* Ptt reset Ptt's share memory */

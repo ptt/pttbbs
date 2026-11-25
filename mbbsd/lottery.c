@@ -972,8 +972,8 @@ hold_gamble(void)
 
     // Announced outside the region: posting takes .DIR locks.
     SNPRINTF(genbuf, TN_ANNOUNCE " %s 板 開始舉辦樂透!", currboard);
+    // On the board only (it used to be copied to Record too).
     post_msg(currboard, genbuf, msg, cuser.userid);
-    post_msg("Record", genbuf + 7, msg, "[馬路探子]");
 
     vmsg("樂透彩券設定完成");
     return FULLUPDATE;
