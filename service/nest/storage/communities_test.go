@@ -562,6 +562,107 @@ func TestCommunityUpsert(t *testing.T) {
 	}
 }
 
+// TestCommunityBIDIndex checks that a new community is refused the board
+// slot (BID) of an active community, through the index of the slots, as
+// communities are taken down or move between slots; and that the counts of
+// the communities per shard given to the assigner follow the registry.
+func TestCommunityBIDIndex(t *testing.T) {
+	dir := t.TempDir()
+	reg, err := OpenCommunityRegistry(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lastCounts map[int]int
+	next := 0
+	assign := func(_ string, _ int64, counts map[int]int) int {
+		lastCounts = counts
+		next = (next + 1) % 2
+		return next
+	}
+	reg.SetShardAssigner(assign)
+	upsert := func(name string, bid int) error {
+		_, err := reg.Upsert(&model.Community{Name: name, BID: bid})
+		return err
+	}
+	for i := 1; i <= 4; i++ {
+		if err := upsert(fmt.Sprintf("B%d", i), i); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if lastCounts[0]+lastCounts[1] != 3 {
+		t.Fatalf("counts given for the 4th community: %v, want 3 in all", lastCounts)
+	}
+	if err := upsert("New", 2); !errors.Is(err, ErrCommunityExists) {
+		t.Fatalf("new community on the slot of B2: err = %v, want ErrCommunityExists", err)
+	}
+
+	// A taken-down community frees its slot.
+	if _, err := reg.RemoveCommunity("B2", 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := upsert("New", 2); err != nil {
+		t.Fatalf("new community on the slot of removed B2: %v", err)
+	}
+
+	// B3 moves to slot 5: slot 3 is free, slot 5 is not.
+	if err := upsert("B3", 5); err != nil {
+		t.Fatal(err)
+	}
+	if err := upsert("Other", 5); !errors.Is(err, ErrCommunityExists) {
+		t.Fatalf("new community on the new slot of B3: err = %v, want ErrCommunityExists", err)
+	}
+	if err := upsert("Three", 3); err != nil {
+		t.Fatalf("new community on the old slot of B3: %v", err)
+	}
+
+	// Two active communities on one slot (B4 moved onto it): taking one
+	// down still leaves the slot to the other.
+	if err := upsert("B4", 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reg.RemoveCommunity("B4", 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := upsert("Again", 1); !errors.Is(err, ErrCommunityExists) {
+		t.Fatalf("new community on the slot of B1: err = %v, want ErrCommunityExists", err)
+	}
+
+	// The same after reopening, and the counts include the taken-down
+	// communities and survive moves and purges.
+	reg.Close()
+	if reg, err = OpenCommunityRegistry(dir); err != nil {
+		t.Fatal(err)
+	}
+	defer reg.Close()
+	reg.SetShardAssigner(assign)
+	if err := upsert("Again", 1); !errors.Is(err, ErrCommunityExists) {
+		t.Fatalf("after reopen, new community on the slot of B1: err = %v, want ErrCommunityExists", err)
+	}
+	id, _ := reg.Lookup("B1")
+	if err := reg.SetShard(id, 1); err != nil {
+		t.Fatal(err)
+	}
+	b2 := int64(0)
+	for _, c := range reg.List() {
+		if c.Name == "B2" {
+			b2 = c.ID
+		}
+	}
+	if err := reg.Purge(b2); err != nil {
+		t.Fatal(err)
+	}
+	want := map[int]int{}
+	for _, c := range reg.List() {
+		want[c.Shard]++
+	}
+	if err := upsert("Last", 0); err != nil {
+		t.Fatal(err)
+	}
+	if lastCounts[0] != want[0] || lastCounts[1] != want[1] {
+		t.Fatalf("counts given after reopen, move and purge: %v, want %v", lastCounts, want)
+	}
+}
+
 func TestShardedRoutingSurvivesReopen(t *testing.T) {
 	dir := t.TempDir()
 	locations := make([]config.EngineLocation, 3)

@@ -43,6 +43,13 @@ type CommunityRegistry struct {
 	mu     sync.RWMutex
 	byID   map[int64]*model.Community
 	byName map[string]int64 // lower-cased name of active communities
+	// byBID maps a board slot (BID) to the active community that last
+	// mirrored it. It may be stale (see activeByBIDLocked), but a slot
+	// that an active community mirrors is always there.
+	byBID map[int]int64
+	// shardCounts counts the communities (taken-down ones included) of
+	// each shard, for assignShard.
+	shardCounts map[int]int
 
 	persons personTable // see persons.go
 
@@ -124,10 +131,12 @@ func OpenCommunityRegistry(dataDir string) (*CommunityRegistry, error) {
 	}
 
 	r := &CommunityRegistry{
-		db:     db,
-		dir:    dataDir,
-		byID:   make(map[int64]*model.Community),
-		byName: make(map[string]int64),
+		db:          db,
+		dir:         dataDir,
+		byID:        make(map[int64]*model.Community),
+		byName:      make(map[string]int64),
+		byBID:       make(map[int]int64),
+		shardCounts: make(map[int]int),
 	}
 	if err := r.load(); err != nil {
 		db.Close()
@@ -156,8 +165,12 @@ func (r *CommunityRegistry) load() error {
 		c.Deleted = c.DeletedAt != 0 && !c.Removed
 		c.Derive()
 		r.byID[c.ID] = c
+		r.shardCounts[c.Shard]++
 		if !c.DeletedOrRemoved() {
 			r.byName[communityKey(c.Name)] = c.ID
+			if c.BID != 0 {
+				r.byBID[c.BID] = c.ID
+			}
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -263,8 +276,34 @@ func (r *CommunityRegistry) SetShard(id int64, shard int) error {
 	if _, err := r.db.Exec(`UPDATE community SET shard = ?, updated = ? WHERE id = ?`, shard, now, id); err != nil {
 		return fmt.Errorf("set shard of community #%d failed: %w", id, err)
 	}
+	r.shardCounts[c.Shard]--
+	r.shardCounts[shard]++
 	c.Shard = shard
 	c.Updated = now
+	return nil
+}
+
+// activeByBIDLocked returns the active community that mirrors the board
+// slot bid, or nil; r.mu must be held. byBID is kept up to date when a
+// community mirrors a slot, but not when it is taken down, purged or moves
+// to another slot, so such a stale entry is checked here, and the
+// communities scanned then for another one on the same slot (which can
+// only happen while .BRD and nest.svc disagree).
+func (r *CommunityRegistry) activeByBIDLocked(bid int) *model.Community {
+	id, ok := r.byBID[bid]
+	if !ok {
+		return nil
+	}
+	if c := r.byID[id]; c != nil && c.BID == bid && !c.DeletedOrRemoved() {
+		return c
+	}
+	delete(r.byBID, bid)
+	for _, c := range r.byID {
+		if c.BID == bid && !c.DeletedOrRemoved() {
+			r.byBID[bid] = c.ID
+			return c
+		}
+	}
 	return nil
 }
 
@@ -286,9 +325,9 @@ func (r *CommunityRegistry) insertLocked(name string, now int64) (*model.Communi
 	}
 	shard := 0
 	if r.assignShard != nil {
-		counts := make(map[int]int)
-		for _, c := range r.byID {
-			counts[c.Shard]++
+		counts := make(map[int]int, len(r.shardCounts))
+		for s, n := range r.shardCounts {
+			counts[s] = n
 		}
 		shard = r.assignShard(name, id, counts)
 	}
@@ -301,6 +340,7 @@ func (r *CommunityRegistry) insertLocked(name string, now int64) (*model.Communi
 	c := &model.Community{ID: id, Name: name, Shard: shard, Published: now}
 	r.byID[id] = c
 	r.byName[communityKey(name)] = id
+	r.shardCounts[shard]++
 	return c, nil
 }
 
@@ -350,11 +390,9 @@ func (r *CommunityRegistry) Upsert(in *model.Community) (int64, error) {
 		// A board renamed in .BRD but not in nest.svc must not become a
 		// second community: the board (bid) already has one.
 		if in.BID != 0 {
-			for _, other := range r.byID {
-				if !other.DeletedOrRemoved() && other.BID == in.BID {
-					return 0, fmt.Errorf("%w: board #%d is community %s (#%d); rename or remove it first",
-						ErrCommunityExists, in.BID, other.Name, other.ID)
-				}
+			if other := r.activeByBIDLocked(in.BID); other != nil {
+				return 0, fmt.Errorf("%w: board #%d is community %s (#%d); rename or remove it first",
+					ErrCommunityExists, in.BID, other.Name, other.ID)
 			}
 		}
 		var err error
@@ -437,6 +475,9 @@ func (r *CommunityRegistry) Upsert(in *model.Community) (int64, error) {
 		return 0, err
 	}
 	*c = updated
+	if c.BID != 0 && !c.DeletedOrRemoved() {
+		r.byBID[c.BID] = c.ID
+	}
 	return c.ID, nil
 }
 
@@ -639,6 +680,7 @@ func (r *CommunityRegistry) Purge(id int64) error {
 		delete(r.byName, communityKey(c.Name))
 	}
 	delete(r.byID, id)
+	r.shardCounts[c.Shard]--
 	return nil
 }
 
