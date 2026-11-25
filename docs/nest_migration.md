@@ -17,7 +17,7 @@ render or `sync-dir` of nest.svc reverts it, or nest.svc never learns of it.
 1. Build and install nest.svc (`service/nest`) and `nest.ctl`, and make sure
    it runs: `nest.ctl ping`. It keeps its databases in `$BBSHOME/db/nest.db/`
    (`--datadir`, or `engine` in `etc/nest.svc.conf`, to put them
-   elsewhere).
+   elsewhere; see "Several disks" to spread them over several disks).
 2. Run the upgrade tools your site still needs (`upgrade/`, see
    `upgrade/README`) **before** importing. The ones that rewrite posts or
    `.DIR` (`convert_utf8`, `convert_sgr_66`, `fix_2026h`,
@@ -29,6 +29,79 @@ render or `sync-dir` of nest.svc reverts it, or nest.svc never learns of it.
    comments commentd has can be imported with `--commentd-db` (below).
 4. Plan to stop the cron jobs that write the files of the boards while you
    switch (see "Cron jobs").
+
+## Several disks (shards)
+
+nest.svc can keep its databases on several disks: each `engine` in
+`etc/nest.svc.conf` is a shard with its own Pebble and SQLite databases,
+and every board is kept whole in one of them. Decide this **before**
+importing: the shard of a board is chosen once, when nest.svc first sees the
+board, and only `nest.ctl move-community` changes it later.
+
+### How much space
+
+The databases take about 0.7 times what the boards take on disk (`du -sh`,
+not the apparent size; the gems in `man/` are not imported). They come **in
+addition** to the files of the boards, which stay as the cache of nest.svc
+and keep growing with new posts. Leave room for Pebble compactions too: plan
+for each disk to stay below 70-80% full.
+
+Shards on partitions of the same physical disk spread the space but not the
+I/O. Use as few shards as fit; each one takes its share of `cache_size_mb`
+(at least 32 MB) and a lookup by post ID alone asks every shard.
+
+### Configuration
+
+```ini
+# etc/nest.svc.conf
+cache_size_mb = 1024        # shared by all shards
+
+[engines]
+/scsi1/bbs/db/nest.db       # shard 0, also keeps communities.db
+/scsi2/bbs/db/nest.db       # shard 1
+/scsi3/bbs/db/nest.db       # shard 2
+
+[pins]
+# Optional: the shard of boards created from now on, by name.
+# Gossiping = 2
+```
+
+- Shards are numbered from 0 in the order of `[engines]`. Never reorder or
+  remove lines once there is data: the registry records each board by
+  shard number.
+- `communities.db`, the registry of the boards and their shards, is kept in
+  the first shard only. It is small but cannot be rebuilt, so back it up
+  (`nest.ctl backup` and `daily-backup` do).
+- Leave out `[caches]`: every shard then renders into the usual
+  `boards/<c>/<name>/`, which is what mbbsd reads. A cache directory per
+  shard would be a second copy of the files.
+- Keep the data directories under `db/nest.db` of each disk, as the other
+  services keep theirs under `db/<service>.db`.
+- A single `$BBSHOME/db/nest.db` that already has data can become the first
+  shard: list it first and add the new ones after it. Post IDs stay valid.
+
+### Which shard a board goes to
+
+- A board pinned in `[pins]` (by case-insensitive name) goes to that shard.
+- Any other new board goes to the shard whose databases are the smallest.
+  This counts the databases of nest.svc only, not the free space of the
+  disk: watch `df` on disks that other data (e.g. `home/`, `man/`) also
+  fills.
+- The choice is stored in `communities.db`. Changing `[pins]`, renaming a
+  board or adding shards never moves an existing board; a new shard just
+  takes the new boards until it has caught up.
+- To move a board yourself: `nest.ctl move-community <board> <shard>`.
+- `nest.ctl community <board>` shows the shard of a board (`Shard`; not
+  shown for shard 0).
+
+### Backups
+
+`nest.ctl backup` and `nest.ctl daily-backup` write a hard-linked checkpoint
+of each shard on its own disk. `daily-backup -cross` copies shard N to the
+disk of shard N+1, and `-dest DIR` copies every shard under `DIR/shard-N/`.
+`-cross` does not help when the shards are partitions of the same physical
+disk; use `-dest` with another disk, or `rsync -aH` the copies to another
+host.
 
 ## Steps
 
