@@ -20,4 +20,20 @@ as many moderators want when the comments move to nest.svc. Run it by hand
 once when switching (dry run unless -w); it writes .BRD through BoF, which
 tells nest.svc.
 
+clean_log_posts moves the logs that were posted to Security (by the old
+bin/account: usies, up to ~350 MB a day, the song log and the money log;
+by openticket: the bets of each lottery; by mailog.sh: a part of mailog)
+into adm/YYYY/<name>/<name>-YYYYMMDD.zst (.gz without zstd), where
+bin/rotatelog now keeps them, checking each archive. It also removes the
+posts that only copied others or that nobody needs, no longer made: the
+results of lotteries in Security and Record, and in Record the starts of
+lotteries, the results of polls (all on their boards), the chicken report
+and the empty lists of spam mails. Fewer posts make the import into
+nest.svc faster. It recompresses the old adm/usies-YYMMDD.gz and
+adm/mailog-YYMMDD.gz into adm/YYYY/ too. It writes .DIR directly: run it
+once, by hand, after installing bin/rotatelog and before the boards are
+imported into nest.svc (dry run unless -w; -n N to try it on N posts of
+each board first; zstd -9 takes a few seconds for a 350 MB day, -l 19
+makes it 20% smaller in ~1.5 minutes).
+
 See docs/nest_migration.md.

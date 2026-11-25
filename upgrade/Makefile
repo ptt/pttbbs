@@ -33,6 +33,7 @@ migreate_board_moderators: migrate_board_moderators
 comment_readonly: comment_readonly.c
 # It writes the board headers through BoF.
 comment_readonly: LDLIBS := $(SRCROOT)/bof/libbof.a $(LDLIBS)
+clean_log_posts: clean_log_posts.c
 
 #$(SRCROOT)/include/var.h: $(SRCROOT)/mbbsd/var.c
 #	cd $(SRCROOT)/mbbsd; $(MAKE) $(SRCROOT)/include/var.h
