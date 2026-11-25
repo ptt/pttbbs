@@ -8,7 +8,7 @@
 // Archives are named after the last day they cover; snapshots after the
 // day they are taken.
 //
-// Two kinds of entries:
+// Three kinds of entries:
 //
 //   - archive: a log (usies, mailog, ...), compressed into
 //     adm/YYYY/<name>/<name>-YYYYMMDD.<ext> and removed (<name>: the file
@@ -21,6 +21,10 @@
 //   - snapshot: a directory (tmp): moved away, a new empty one made, and the
 //     old one packed into adm/YYYY/<name>/<name>-YYYYMMDD.tar.<ext>, then
 //     removed.
+//   - trim: a log not worth keeping (the logs of services and daemons, the
+//     output of cron jobs): cut to its last size bytes (2 MB by default),
+//     from a line start, in place, so that a daemon keeping it open goes on
+//     writing to it (opened with O_APPEND, as >> does).
 //
 // The writers of the BBS open the log for each line (log_filef(),
 // file_appendf()), so moving a log is enough: the next line goes to a new
@@ -45,10 +49,11 @@ type Kind int
 const (
 	Archive Kind = iota
 	Snapshot
+	Trim
 )
 
 func (k Kind) String() string {
-	return [...]string{"archive", "snapshot"}[k]
+	return [...]string{"archive", "snapshot", "trim"}[k]
 }
 
 // Period is how often an entry is rotated.
@@ -130,6 +135,7 @@ type Entry struct {
 	Weekday      time.Weekday // for Weekly
 	Kind         Kind
 	Name         string // Archive, Snapshot: name of the archives
+	Size         int64  // Trim: the most kept, in bytes
 	CopyTruncate bool
 	Compression  Compression
 	Line         int
@@ -151,6 +157,9 @@ func (e *Entry) When() string {
 
 // What describes the action, as in the configuration.
 func (e *Entry) What() string {
+	if e.Kind == Trim {
+		return "trim:" + FormatSize(e.Size)
+	}
 	return e.Kind.String() + ":" + e.Name
 }
 
@@ -189,7 +198,7 @@ tmp                   weekly:sat  snapshot
 //
 //	compress <zstd[:level] | gzip[:level] | none>
 //	weekday <sun..sat>
-//	<path> <daily | weekly[:<day>] | monthly> <archive[:name] | snapshot[:name]> [copytruncate] [compress=...]
+//	<path> <daily | weekly[:<day>] | monthly> <archive[:name] | snapshot[:name] | trim[:size]> [copytruncate] [compress=...]
 //
 // The global settings apply to the entries after them.
 func ParseConfig(r io.Reader) (*Config, error) {
@@ -232,7 +241,7 @@ func ParseConfig(r io.Reader) (*Config, error) {
 			continue
 		}
 		if len(f) < 3 {
-			return nil, bad("usage: <path> <daily|weekly[:day]|monthly> <archive[:name]|snapshot[:name]> [options]")
+			return nil, bad("usage: <path> <daily|weekly[:day]|monthly> <archive[:name]|snapshot[:name]|trim[:size]> [options]")
 		}
 		e := &Entry{Path: strings.TrimSuffix(f[0], "/"), Compression: cfg.Compression,
 			Weekday: cfg.Weekday, Line: n}
@@ -287,18 +296,31 @@ func ParseConfig(r io.Reader) (*Config, error) {
 				return nil, bad("name %s is already used on line %d", e.Name, prev)
 			}
 			names[e.Name] = n
+		case "trim":
+			e.Kind = Trim
+			e.Size = DefaultTrimSize
+			if hasArg {
+				size, err := ParseSize(arg)
+				if err != nil {
+					return nil, bad("%v", err)
+				}
+				e.Size = size
+			}
 		default:
-			return nil, bad("unknown action %q (archive[:name], snapshot[:name])", f[2])
+			return nil, bad("unknown action %q (archive[:name], snapshot[:name], trim[:size])", f[2])
 		}
 
 		for _, o := range f[3:] {
 			switch {
 			case o == "copytruncate":
-				if e.Kind == Snapshot {
-					return nil, bad("copytruncate is for files, not snapshot")
+				if e.Kind != Archive {
+					return nil, bad("copytruncate is for archive")
 				}
 				e.CopyTruncate = true
 			case strings.HasPrefix(o, "compress="):
+				if e.Kind == Trim {
+					return nil, bad("trim does not compress")
+				}
 				c, err := ParseCompression(strings.TrimPrefix(o, "compress="))
 				if err != nil {
 					return nil, bad("%v", err)
@@ -314,6 +336,43 @@ func ParseConfig(r io.Reader) (*Config, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+// DefaultTrimSize is how much trim keeps without a size: the last 2 MB.
+const DefaultTrimSize = 2 << 20
+
+// ParseSize parses a size: bytes, or with K, M or G (1024-based).
+func ParseSize(s string) (int64, error) {
+	mult := int64(1)
+	num := s
+	if n := len(s); n > 0 {
+		switch s[n-1] {
+		case 'K', 'k':
+			mult, num = 1<<10, s[:n-1]
+		case 'M', 'm':
+			mult, num = 1<<20, s[:n-1]
+		case 'G', 'g':
+			mult, num = 1<<30, s[:n-1]
+		}
+	}
+	v, err := strconv.ParseInt(num, 10, 64)
+	if err != nil || v <= 0 || v > (1<<40)/mult {
+		return 0, fmt.Errorf("bad size %q (e.g. 2M, 512K, 1048576)", s)
+	}
+	return v * mult, nil
+}
+
+// FormatSize formats a size as ParseSize reads it.
+func FormatSize(n int64) string {
+	switch {
+	case n%(1<<30) == 0:
+		return fmt.Sprintf("%dG", n>>30)
+	case n%(1<<20) == 0:
+		return fmt.Sprintf("%dM", n>>20)
+	case n%(1<<10) == 0:
+		return fmt.Sprintf("%dK", n>>10)
+	}
+	return strconv.FormatInt(n, 10)
 }
 
 // LoadConfig reads the configuration from path, or DefaultConfig if it

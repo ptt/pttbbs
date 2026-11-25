@@ -1,6 +1,7 @@
 package rotate
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -107,6 +108,8 @@ func (r *Rotator) Run(force map[string]bool) []error {
 			err = r.archive(e)
 		case Snapshot:
 			err = r.snapshot(e)
+		case Trim:
+			err = r.trim(e)
 		}
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", e.Path, err))
@@ -255,6 +258,46 @@ func (r *Rotator) archive(e *Entry) error {
 			rel(r, rotating), err)
 	}
 	return os.Remove(rotating)
+}
+
+// trim: <path> cut to its last e.Size bytes, from a line start, in place:
+// read the tail, empty the file and write the tail back through O_APPEND,
+// so that writers appending (O_APPEND) go on after it. Lines written while
+// it is done may be lost.
+func (r *Rotator) trim(e *Entry) error {
+	src := r.path(e.Path)
+	fi, err := os.Stat(src)
+	if err != nil || fi.Size() <= e.Size {
+		return nil
+	}
+	if r.DryRun {
+		r.printf("%s: would trim %s to the last %s", e.Path, human(fi.Size()),
+			human(e.Size))
+		return nil
+	}
+	f, err := os.OpenFile(src, os.O_RDWR|os.O_APPEND, 0)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	size := fi.Size()
+	tail := make([]byte, e.Size)
+	n, err := f.ReadAt(tail, size-e.Size)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	tail = tail[:n]
+	if i := bytes.IndexByte(tail, '\n'); i >= 0 {
+		tail = tail[i+1:]
+	}
+	if err := f.Truncate(0); err != nil {
+		return err
+	}
+	if _, err := f.Write(tail); err != nil {
+		return err
+	}
+	r.printf("%s: trimmed %s to %s", e.Path, human(size), human(int64(len(tail))))
+	return nil
 }
 
 // snapshot: <dir> packed into adm/YYYY/<name>/<name>-YYYYMMDD.tar.<ext>, then

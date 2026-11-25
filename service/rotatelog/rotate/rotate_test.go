@@ -3,6 +3,7 @@ package rotate
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -359,5 +360,60 @@ func TestDryRun(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "would") {
 		t.Errorf("out = %s", out.String())
+	}
+}
+
+func TestTrimConfig(t *testing.T) {
+	cfg := mustParse(t, "log/a.svc.log daily trim\nlog/b.log weekly trim:512K\nlog/c daily trim:3\n")
+	e := cfg.Entries
+	if e[0].Kind != Trim || e[0].Size != 2<<20 || e[0].What() != "trim:2M" {
+		t.Errorf("a = %+v %s", e[0], e[0].What())
+	}
+	if e[1].Size != 512<<10 || e[1].What() != "trim:512K" || e[2].Size != 3 {
+		t.Errorf("b, c = %+v %+v", e[1], e[2])
+	}
+	for _, bad := range []string{
+		"x daily trim:0", "x daily trim:-1", "x daily trim:2X", "x daily trim:M",
+		"x daily trim copytruncate", "x daily trim compress=gzip",
+	} {
+		if _, err := ParseConfig(strings.NewReader(bad)); err == nil {
+			t.Errorf("ParseConfig(%q): no error", bad)
+		}
+	}
+}
+
+func TestTrim(t *testing.T) {
+	home := t.TempDir()
+	var b strings.Builder
+	for i := 0; i < 100; i++ {
+		fmt.Fprintf(&b, "line %03d\n", i) // 9 bytes each
+	}
+	write(t, home+"/log/x.svc.log", b.String())
+	write(t, home+"/log/small.log", "small\n")
+	// A daemon keeping it open, appending (as >> does).
+	w, err := os.OpenFile(home+"/log/x.svc.log", os.O_WRONLY|os.O_APPEND, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer w.Close()
+	conf := "log/x.svc.log daily trim:50\nlog/small.log daily trim:50\nlog/none.log daily trim\n"
+	if errs := run(t, home, conf, "2026-11-25T00:20"); errs != nil {
+		t.Fatal(errs)
+	}
+	got, _ := os.ReadFile(home + "/log/x.svc.log")
+	// The last 50 bytes, from a line start: the last 5 lines (45 bytes).
+	if string(got) != "line 095\nline 096\nline 097\nline 098\nline 099\n" {
+		t.Errorf("trimmed = %q", got)
+	}
+	w.Write([]byte("after\n"))
+	got, _ = os.ReadFile(home + "/log/x.svc.log")
+	if !strings.HasSuffix(string(got), "line 099\nafter\n") || len(got) != 51 {
+		t.Errorf("after the daemon wrote = %q", got)
+	}
+	if b, _ := os.ReadFile(home + "/log/small.log"); string(b) != "small\n" {
+		t.Errorf("small = %q", b)
+	}
+	if exists(home+"/log/none.log") || exists(home+"/adm") {
+		t.Errorf("made files: %v", files(t, home))
 	}
 }

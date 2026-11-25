@@ -91,6 +91,9 @@ func main() {
 				next = "now"
 			}
 			opt := e.Compression.String()
+			if e.Kind == rotate.Trim {
+				opt = "-"
+			}
 			left, _ := filepath.Glob(filepath.Join(home, e.Path) + ".*.rotating")
 			if e.Kind == rotate.Archive && len(left) > 0 {
 				opt += fmt.Sprintf(" (%d not archived yet: %s.*.rotating)",
