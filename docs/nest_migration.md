@@ -132,13 +132,22 @@ host.
    number of comments in `.DIR`, and with nest.svc the post list shows it
    instead of the score on boards that do not rate posts (see "Comments
    and votes").
-7. Enable `CONFIG_NEST_SVC` in `pttbbs.conf` (`#define CONFIG_NEST_SVC 1`),
+7. Render the articles of every board again from nest.svc:
+   `nest.ctl render-community --all boards --jobs 8`. The imported
+   articles still have their comments in the old format (`推 user: ...`);
+   nest.svc writes them as it keeps them (`|user|comment|time|floor`, one
+   floor per comment, which mbbsd shows with the floors), as it would
+   anyway the next time a post changes. Never run it while an mbbsd
+   without `CONFIG_NEST_SVC` serves the boards: it shows the new format as
+   it is. It replaces the article files; `--legacy-format` writes the old
+   format back, if ever needed.
+8. Enable `CONFIG_NEST_SVC` in `pttbbs.conf` (`#define CONFIG_NEST_SVC 1`),
    check that `USE_COMMENTD` is not defined, then rebuild everything (the
    setting is read by `include/config.h`, so `bof/`, `common/`, `mbbsd/`
    and `util/` all change) and install it.
-8. Check a few boards: `nest.ctl sync-dir <board> --dry-run` should report
+9. Check a few boards: `nest.ctl sync-dir <board> --dry-run` should report
    nothing to change.
-9. Start the BBS and the cron jobs again (with the changes below).
+10. Start the BBS and the cron jobs again (with the changes below).
 
 ## Comments and votes
 

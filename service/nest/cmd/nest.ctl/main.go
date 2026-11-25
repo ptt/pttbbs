@@ -796,80 +796,89 @@ func main() {
 		printImportBoardResult(os.Stdout, r, dryRun)
 
 	case "render-community":
+		// render-community <community>|--all [output_dir|boards|cache] [--legacy-format] [--jobs N]
+		//   boards: into the board directories, the cache that mbbsd reads.
+		//   cache (the default for one community): $BBSHOME/cache/<community>.
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl render-community <community> [output_dir] [--legacy-format]")
+			log.Fatalf("Usage: nest.ctl render-community <community>|--all [output_dir|boards|cache] [--legacy-format] [--jobs N]")
 		}
 		comm := args[1]
-		outDir := filepath.Join(bbs.BBSHome(), "cache", comm)
+		target := ""
 		legacyFormat := false
-
+		jobs := 1
 		for i := 2; i < len(args); i++ {
 			arg := args[i]
 			if arg == "--legacy-format" || arg == "-legacy-format" || arg == "--legacy" {
 				legacyFormat = true
+			} else if (arg == "--jobs" || arg == "-jobs" || arg == "-j") && i+1 < len(args) {
+				jobs, _ = strconv.Atoi(args[i+1])
+				i++
+			} else if strings.HasPrefix(arg, "--jobs=") {
+				jobs, _ = strconv.Atoi(strings.TrimPrefix(arg, "--jobs="))
 			} else if !strings.HasPrefix(arg, "-") {
-				outDir = arg
-				if abs, err := filepath.Abs(outDir); err == nil {
-					outDir = abs
-				}
+				target = arg
 			}
 		}
-		_ = os.MkdirAll(outDir, 0755)
-
 		fmtStr := "modern"
 		if legacyFormat {
 			fmtStr = "legacy"
 		}
-
-		header := fmt.Sprintf("RENDER_COMMUNITY %s %s %s\n", comm, outDir, fmtStr)
-		sockPath := getSocketPath()
-		conn, err := net.Dial("unix", sockPath)
-		if err != nil {
-			log.Fatalf("connect to %s failed: %v\n(Is nest.svc running?)", sockPath, err)
+		// outDir is where the files of board go, as sent to nest.svc.
+		outDir := func(board string) string {
+			switch target {
+			case "boards":
+				return "boards"
+			case "", "cache":
+				return filepath.Join(bbs.BBSHome(), "cache", board)
+			}
+			if abs, err := filepath.Abs(target); err == nil {
+				return abs
+			}
+			return target
 		}
-		defer conn.Close()
-
-		if _, err := conn.Write([]byte(header)); err != nil {
-			log.Fatalf("send command failed: %v", err)
-		}
-
-		fmt.Printf("[*] Rendering community '%s' into %s (format: %s)...\n", comm, outDir, fmtStr)
-		reader := bufio.NewReader(conn)
-		for {
-			line, err := reader.ReadString('\n')
+		render := func(board, prefix string, out io.Writer) (func(io.Writer), error) {
+			dir := outDir(board)
+			if dir != "boards" {
+				_ = os.MkdirAll(dir, 0755)
+			}
+			n, secs, err := runRenderCommunity(fmt.Sprintf("RENDER_COMMUNITY %s %s %s\n", board, dir, fmtStr), prefix, out)
 			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				log.Fatalf("\nRead error: %v", err)
+				return nil, err
 			}
-			line = strings.TrimRight(line, "\r\n")
-			if strings.HasPrefix(line, "PROGRESS ") {
-				parts := strings.Fields(line)
-				if len(parts) >= 3 {
-					cur, _ := strconv.Atoi(parts[1])
-					total, _ := strconv.Atoi(parts[2])
-					pct := 0
-					if total > 0 {
-						pct = cur * 100 / total
-					}
-					fmt.Printf("\r%d/%d (%d%%)", cur, total, pct)
-				}
-			} else if strings.HasPrefix(line, "OK") {
-				fmt.Println()
-				parts := strings.Fields(line)
-				if len(parts) >= 3 {
-					fmt.Printf("[+] Render completed in %ss: %s posts rendered into %s (format: %s)\n",
-						parts[2], parts[1], outDir, fmtStr)
-				} else {
-					fmt.Println(line)
-				}
-				break
-			} else if strings.HasPrefix(line, "ERR") {
-				fmt.Println()
-				log.Fatalf("[!] Render failed: %s", line)
-			}
+			return func(w io.Writer) {
+				fmt.Fprintf(w, "[+] Render completed in %ss: %s posts rendered into %s (format: %s)\n", secs, n, dir, fmtStr)
+			}, nil
 		}
+
+		if comm == "--all" || comm == "-all" {
+			// Every board in .BRD that has a .DIR, e.g. after import-board
+			// --all and sync-dir --all when switching to nest.svc.
+			if target != "boards" && target != "cache" {
+				log.Fatalf("render-community --all: the target must be boards or cache (one directory per board), not %q", target)
+			}
+			boards, skipped, err := boardsToImport(bbs.BBSHome(), filepath.Join(bbs.BBSHome(), ".BRD"))
+			if err != nil {
+				log.Fatalf("render-community --all: read .BRD failed: %v", err)
+			}
+			fmt.Printf("[*] Rendering %d boards from .BRD into %s (format: %s; %d without .DIR skipped)...\n", len(boards), target, fmtStr, len(skipped))
+			if jobs > 1 {
+				fmt.Printf("    Jobs: %d boards at a time\n", jobs)
+			}
+			failed := eachBoard(boards, jobs, render)
+			fmt.Printf("[+] %d boards done, %d failed\n", len(boards)-len(failed), len(failed))
+			if len(failed) > 0 {
+				fmt.Printf("    Failed: %s\n", strings.Join(failed, " "))
+				os.Exit(1)
+			}
+			break
+		}
+
+		fmt.Printf("[*] Rendering community '%s' into %s (format: %s)...\n", comm, outDir(comm), fmtStr)
+		report, err := render(comm, "", os.Stdout)
+		if err != nil {
+			log.Fatalf("[!] Render failed: %v", err)
+		}
+		report(os.Stdout)
 
 	case "update", "update-file", "edit", "edit-file":
 		if len(args) < 4 {
@@ -1537,7 +1546,7 @@ Usage:
   nest.ctl list <community> [count [start]] [deleted]
   nest.ctl get <post>
   nest.ctl render <post> [output] [--legacy-format]
-  nest.ctl render-community <community> [output_dir] [--legacy-format]
+  nest.ctl render-community <community>|--all [output_dir|boards|cache] [--legacy-format] [--jobs N]
   nest.ctl import-board <board>|--all [--overwrite] [--dry-run] [--workers N] [--jobs N (with --all: boards at a time)] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
   nest.ctl sync-dir <board>|--all [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]
   nest.ctl fetch <post> <output_path>      (output under $BBSHOME; relative to it)

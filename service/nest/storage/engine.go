@@ -3513,8 +3513,13 @@ func (e *Engine) RenderLegacyPostText(postID uint64, asBig5 bool) ([]byte, error
 
 // RenderCommunityOptions defines parameters for bulk community rendering
 type RenderCommunityOptions struct {
-	Community    string
-	TargetDir    string
+	Community string
+	TargetDir string
+	// BoardFiles renders into the board directory of the community
+	// (boards/<c>/<name>, the cache that mbbsd reads) instead of
+	// TargetDir: each file is replaced atomically, and a locked post gets
+	// its locked file name, as RenderAndSave writes them.
+	BoardFiles   bool
 	LegacyFormat bool
 	NumWorkers   int
 	ProgressFn   func(current, total int)
@@ -3522,18 +3527,22 @@ type RenderCommunityOptions struct {
 
 // RenderCommunity renders all posts and comments of a community directly into TargetDir in parallel
 func (e *Engine) RenderCommunity(opts RenderCommunityOptions) (int, error) {
-	if opts.TargetDir == "" {
-		return 0, fmt.Errorf("targetDir cannot be empty")
-	}
-	if err := os.MkdirAll(opts.TargetDir, 0755); err != nil {
-		return 0, fmt.Errorf("mkdir targetDir failed: %w", err)
-	}
-
 	cid, ok := e.reg.Lookup(opts.Community)
 	if !ok {
 		return 0, nil
 	}
-	rows, err := e.metaDB.Query("SELECT id, post_file FROM posts WHERE community_id = ? AND deleted = 0 AND removed = 0 ORDER BY id ASC", cid)
+	targetDir := opts.TargetDir
+	if opts.BoardFiles {
+		targetDir = BoardDir(e.cfg.BBSHome, e.reg.Name(cid))
+	}
+	if targetDir == "" {
+		return 0, fmt.Errorf("targetDir cannot be empty")
+	}
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return 0, fmt.Errorf("mkdir targetDir failed: %w", err)
+	}
+
+	rows, err := e.metaDB.Query("SELECT id, post_file, COALESCE(locked, 0) FROM posts WHERE community_id = ? AND deleted = 0 AND removed = 0 ORDER BY id ASC", cid)
 	if err != nil {
 		return 0, fmt.Errorf("query posts failed: %w", err)
 	}
@@ -3546,9 +3555,16 @@ func (e *Engine) RenderCommunity(opts RenderCommunityOptions) (int, error) {
 	var items []renderItem
 	for rows.Next() {
 		var it renderItem
-		if err := rows.Scan(&it.id, &it.postFile); err == nil && it.postFile != "" && it.postFile != "-" {
+		var locked bool
+		if err := rows.Scan(&it.id, &it.postFile, &locked); err == nil && it.postFile != "" && it.postFile != "-" {
+			if opts.BoardFiles && locked {
+				it.postFile = model.LockedFileName(it.postFile)
+			}
 			items = append(items, it)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("query posts failed: %w", err)
 	}
 
 	total := len(items)
@@ -3581,8 +3597,15 @@ func (e *Engine) RenderCommunity(opts RenderCommunityOptions) (int, error) {
 					rendered, rErr = e.RenderFullPostText(it.id, e.cfg.IsBig5())
 				}
 				if rErr == nil && len(rendered) > 0 {
-					targetPath := filepath.Join(opts.TargetDir, it.postFile)
-					_ = os.WriteFile(targetPath, rendered, 0644)
+					targetPath := filepath.Join(targetDir, it.postFile)
+					if opts.BoardFiles {
+						tmp := fmt.Sprintf("%s.tmp.%d", targetPath, os.Getpid())
+						if os.WriteFile(tmp, rendered, 0644) == nil && os.Rename(tmp, targetPath) != nil {
+							os.Remove(tmp)
+						}
+					} else {
+						_ = os.WriteFile(targetPath, rendered, 0644)
+					}
 				}
 				cur := int(renderedCount.Add(1))
 				if opts.ProgressFn != nil && (cur%200 == 0 || cur == total) {

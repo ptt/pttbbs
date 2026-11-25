@@ -1127,6 +1127,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 
 	case "RENDER_COMMUNITY":
 		// RENDER_COMMUNITY <community> <target_dir> [format:modern|legacy]
+		// target_dir "boards" renders into the board directory of the
+		// community: the cache that mbbsd reads.
 		if len(parts) < 3 {
 			conn.Write([]byte("ERR invalid arguments for RENDER_COMMUNITY\n"))
 			return
@@ -1142,6 +1144,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 		opts := storage.RenderCommunityOptions{
 			Community:    community,
 			TargetDir:    targetDir,
+			BoardFiles:   targetDir == "boards",
 			LegacyFormat: legacyFormat,
 			NumWorkers:   32,
 			ProgressFn: func(current, total int) {

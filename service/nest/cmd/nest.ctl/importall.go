@@ -157,22 +157,34 @@ func printImportBoardResult(w io.Writer, r *importBoardResult, dryRun bool) {
 
 // importBoards imports boards with header(board), jobs boards at a time
 // (nest.svc imports different boards at once; the boards of one shard
-// only take turns to commit), and returns the boards that failed. With
-// one job the progress of each board is shown as it goes; with more, the
-// result of each board is shown when it is done.
+// only take turns to commit), and returns the boards that failed.
 func importBoards(boards []string, jobs int, header func(string) string, dryRun bool) []string {
+	return eachBoard(boards, jobs, func(board, prefix string, out io.Writer) (func(io.Writer), error) {
+		r, err := runImportBoard(header(board), prefix, out)
+		if err != nil {
+			return nil, err
+		}
+		return func(w io.Writer) { printImportBoardResult(w, r, dryRun) }, nil
+	})
+}
+
+// eachBoard runs run for each of boards, jobs boards at a time, and returns
+// the boards that failed. With one job, run shows the progress of each
+// board on out (with prefix) as it goes; with more, out is nil and the
+// report that run returns is shown when the board is done.
+func eachBoard(boards []string, jobs int, run func(board, prefix string, out io.Writer) (report func(io.Writer), err error)) []string {
 	var failed []string
 	if jobs <= 1 {
 		for i, board := range boards {
 			prefix := fmt.Sprintf("[%d/%d] %s: ", i+1, len(boards), board)
 			fmt.Print(prefix)
-			r, err := runImportBoard(header(board), prefix, os.Stdout)
+			report, err := run(board, prefix, os.Stdout)
 			if err != nil {
 				fmt.Printf("[!] %s: %v\n", board, err)
 				failed = append(failed, board)
 				continue
 			}
-			printImportBoardResult(os.Stdout, r, dryRun)
+			report(os.Stdout)
 		}
 		return failed
 	}
@@ -186,7 +198,7 @@ func importBoards(boards []string, jobs int, header func(string) string, dryRun 
 		go func() {
 			defer wg.Done()
 			for board := range next {
-				r, err := runImportBoard(header(board), "", nil)
+				report, err := run(board, "", nil)
 				mu.Lock()
 				done++
 				if err != nil {
@@ -194,7 +206,7 @@ func importBoards(boards []string, jobs int, header func(string) string, dryRun 
 					failed = append(failed, board)
 				} else {
 					fmt.Printf("[%d/%d] %s:\n", done, len(boards), board)
-					printImportBoardResult(os.Stdout, r, dryRun)
+					report(os.Stdout)
 				}
 				mu.Unlock()
 			}
@@ -206,4 +218,59 @@ func importBoards(boards []string, jobs int, header func(string) string, dryRun 
 	close(next)
 	wg.Wait()
 	return failed
+}
+
+// runRenderCommunity sends one RENDER_COMMUNITY header to nest.svc, shows
+// its progress (prefixed by prefix) on out, if not nil, and returns the
+// number of posts rendered and the seconds it took.
+func runRenderCommunity(header, prefix string, out io.Writer) (rendered, seconds string, err error) {
+	sockPath := getSocketPath()
+	conn, err := net.Dial("unix", sockPath)
+	if err != nil {
+		return "", "", fmt.Errorf("connect to %s failed: %v (is nest.svc running?)", sockPath, err)
+	}
+	defer conn.Close()
+	if _, err := conn.Write([]byte(header)); err != nil {
+		return "", "", fmt.Errorf("send command failed: %v", err)
+	}
+	newline := func() {
+		if out != nil {
+			fmt.Fprintln(out)
+		}
+	}
+	reader := bufio.NewReader(conn)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			newline()
+			if err == io.EOF {
+				return "", "", fmt.Errorf("connection closed prematurely by nest.svc (service crashed or stopped)")
+			}
+			return "", "", fmt.Errorf("read error: %v", err)
+		}
+		line = strings.TrimRight(line, "\r\n")
+		switch {
+		case strings.HasPrefix(line, "PROGRESS "):
+			parts := strings.Fields(line)
+			if out != nil && len(parts) >= 3 {
+				cur, _ := strconv.Atoi(parts[1])
+				total, _ := strconv.Atoi(parts[2])
+				pct := 0
+				if total > 0 {
+					pct = cur * 100 / total
+				}
+				fmt.Fprintf(out, "\r%s%d/%d (%d%%)", prefix, cur, total, pct)
+			}
+		case strings.HasPrefix(line, "OK"):
+			newline()
+			parts := strings.Fields(line)
+			if len(parts) < 3 {
+				return "", "", fmt.Errorf("unexpected reply: %s", line)
+			}
+			return parts[1], parts[2], nil
+		case strings.HasPrefix(line, "ERR"):
+			newline()
+			return "", "", fmt.Errorf("%s", line)
+		}
+	}
 }
