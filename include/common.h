@@ -47,6 +47,7 @@
 #define FN_VISABLE      "visable"	// 不知道是誰拼錯的，將錯就錯吧...
 #define FN_ALOHAED      "alohaed"       // 上站要通知我的名單 (編輯用)
 #define FN_USIES        "usies"         /* BBS log */
+#define FN_ACCOUNT_EVENTS "log/account_events.log" /* accounts made and deleted, posted to Security daily */
 #define FN_DIR		".DIR"
 #define FN_BOARD        ".BRD"          /* board list */
 #define FN_USEBOARD     "usboard"       /* 看板統計 */

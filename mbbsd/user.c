@@ -16,16 +16,24 @@ ban_usermail(const userec_t *u, const char *reason) {
               u->userid, reason, cuser.userid, u->email);
 }
 
+// Deletes an account; tag tells why, in usies and the log of accounts
+// posted to Security (FN_ACCOUNT_EVENTS).
 int
-kill_user(int num, const char *userid)
+kill_user_as(int num, const char *userid, const char *tag)
 {
     if (!userid || num <= 0) return -1;
-    int ret = purge_user_account(num, userid, "KILL ");
+    int ret = purge_user_account(num, userid, tag);
     // Its uid will go to a new account, which must not be a moderator.
     bof_actor_t me = mbbsd_user_actor();
     bof_bbs_remove_moderator_t req = { .bbs_usernum = num, .name = userid };
     bof_bbs_remove_moderator(&me, &req, NULL);
     return ret;
+}
+
+int
+kill_user(int num, const char *userid)
+{
+    return kill_user_as(num, userid, "KILL");
 }
 
 // New accounts get fewer free mails and stricter content checks.

@@ -244,8 +244,12 @@ compute_user_value(const userec_t * urec, time4_t clock)
     return site_get_keep_days(urec) * 24 * 60 - value;
 }
 
-int
-check_and_expire_account(int uid, const userec_t * urec, int expireRange)
+// Deletes the account if it expired more than expireRange minutes ago;
+// why tags it (EXPIRE: the hourly clean up; EXPIRE(REPLACE): someone
+// registers its name). Returns the minutes left, or <= 0.
+static int
+check_and_expire_account(int uid, const userec_t * urec, int expireRange,
+                         const char *why)
 {
     char            genbuf[200];
     int             val;
@@ -260,7 +264,7 @@ check_and_expire_account(int uid, const userec_t * urec, int expireRange)
 	{
 	    log_usies("DATED", genbuf);
 	    // log_usies("CLEAN", genbuf);
-	    kill_user(uid, urec->userid);
+	    kill_user_as(uid, urec->userid, why);
 	} else val = 0;
     }
     return val;
@@ -342,7 +346,7 @@ setupnewuser(const userec_t *user)
 	    for (uid = 2; uid <= MAX_USERS; uid++) {
 		passwd_sync_query(uid, &utmp);
 		// tolerate for one year.
-		check_and_expire_account(uid, &utmp, 365*12*60);
+		check_and_expire_account(uid, &utmp, 365*12*60, "EXPIRE");
 	    }
 	}
     }
@@ -369,6 +373,7 @@ setupnewuser(const userec_t *user)
 
     setuserid(uid, user->userid);
     log_usies("APPLY", TEMPFORMAT(32, "uid %d", uid));
+    log_account_event("CREATE", uid, user, fromhost);
 
     SHM->money[uid - 1] = user->money;
 
@@ -838,7 +843,8 @@ new_register(void)
 	    outs("此代號已由系統保留，請使用別的代號\n");
 	else if ((id = getuser(passbuf, &xuser)) &&
 		// >=: see check_and_expire_account definition
-		 (minute = check_and_expire_account(id, &xuser, 0)) >= 0)
+		 (minute = check_and_expire_account(id, &xuser, 0,
+						     "EXPIRE(REPLACE)")) >= 0)
 	{
             // XXX Magic number >= MAX_USERS: never expires.
             // Probably because of sysadmin perms, or due to violation.

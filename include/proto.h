@@ -1027,6 +1027,7 @@ int u_query_records(void);
 
 /* user */
 int kill_user(int num, const char *userid);
+int kill_user_as(int num, const char *userid, const char *tag);
 bool is_new_account(const userec_t *u);
 int u_set_mind();
 void user_display(const userec_t *u, int real);

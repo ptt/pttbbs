@@ -282,6 +282,60 @@ passwd_update(int num, userec_t * buf)
     return passwd_update_diff(num, NULL, buf);
 }
 
+// Formats t as YYYY/MM/DD HH:MM for the log of accounts, "-" if unset.
+static const char *
+account_event_time(char *buf, size_t sz, time4_t t)
+{
+    time_t tt = time4_to_time(t);
+    struct tm tm;
+
+    if (!t || !localtime_r(&tt, &tm))
+        strlcpy(buf, "-", sz);
+    else
+        strftime(buf, sz, "%Y/%m/%d %H:%M", &tm);
+    return buf;
+}
+
+// Logs an account made or deleted to FN_ACCOUNT_EVENTS, which bin/account
+// posts to Security every day: what admins need to tell a deleted account
+// from a new one of the same name (registered when, last seen when and
+// from where, how active, the email). PTT-specific: Lemmy keeps no such
+// log (an admin purging a person is in its modlog).
+//
+// Two lines, to fit in 80 columns (only a long email goes past). The day
+// is that of the post, so only the time of the event is written (not
+// with log_filef, which puts the date and seconds before each):
+//
+//   00:30 EXPIRE(REPLACE) olduser      #123456  regok days=812   posts=37
+//         2009/03/14 21:05 - 2025/11/02 23:40 1.2.3.4         x@example.com
+//
+// The second line is the first and last login, where from (the last login,
+// or where a new account registers from) and the email.
+void
+log_account_event(const char *action, int unum, const userec_t *u,
+                  const char *from)
+{
+    char now[8], first[20], last[20];
+    time_t t = time(NULL);
+    struct tm tm;
+
+    if (!u || !u->userid[0])
+        return;
+    if (!from || !*from)
+        from = u->lasthost[0] ? u->lasthost : "-";
+    localtime_r(&t, &tm);
+    strftime(now, sizeof(now), "%H:%M", &tm);
+    file_appendf(FN_ACCOUNT_EVENTS,
+                 "%s %-15s %-12s #%-7d %s days=%-5u posts=%u\n"
+                 "      %-16s - %-16s %-15s %s\n",
+                 now, action, u->userid, unum,
+                 (u->userlevel & PERM_LOGINOK) ? "regok" : "unreg",
+                 u->numlogindays, u->numposts,
+                 account_event_time(first, sizeof(first), u->firstlogin),
+                 account_event_time(last, sizeof(last), u->lastlogin),
+                 from, u->email[0] ? u->email : "-");
+}
+
 /**
  * Safely purge/delete a user account and clean up home directory,
  * SHM hash table, audit logs, and .PASSWDS file.
@@ -294,7 +348,7 @@ passwd_update(int num, userec_t * buf)
 int
 purge_user_account(int unum, const char *userid, const char *action_tag)
 {
-    userec_t u = {0};
+    userec_t u = {0}, old = {0};
     char src[PATH_MAX];
     const char *uid_shm;
     int ret;
@@ -312,6 +366,10 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
         return -1;
     }
 
+    // The record as it was, for the log of accounts.
+    if (passwd_query(unum, &old) != 0 || strcasecmp(old.userid, userid) != 0)
+        memset(&old, 0, sizeof(old));
+
     // Clear user hash table mapping and money in memory SHM
     setumoney(unum, 0);
     setuserid(unum, "");
@@ -327,6 +385,8 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
 
     time4_t now_t = (time4_t)time(NULL);
     file_appendf(FN_USIES, "%s %s %-12s\n", Cdate(&now_t), action_tag, userid);
+    if (ret == 0)
+        log_account_event(action_tag, unum, &old, NULL);
 
     // Archive or remove user home directory
     sethomepath(src, userid);

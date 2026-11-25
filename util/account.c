@@ -487,6 +487,11 @@ main(/*int argc, char **argv*/)
 	move_usies();
 	printf("log/usies\n");
 
+	// The accounts made and deleted (expired, replaced, killed) yesterday,
+	// for admins: one post a day, rather than one each.
+	if (dashs(FN_ACCOUNT_EVENTS) > 0)
+	    keeplog(FN_ACCOUNT_EVENTS, BN_SECURITY, "[安全報告] 本日帳號建立與刪除");
+
 	/* Ptt 節日處理 */
 	printf("節日處理\n");
 	update_holiday_list(&tm_now);

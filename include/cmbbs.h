@@ -180,6 +180,8 @@ int  passwd_update(int num, userec_t *buf);
 // them through BoF (bof_bbs_remove_moderator()), before its uid goes to a
 // new account.
 int  purge_user_account(int unum, const char *userid, const char *action_tag);
+void log_account_event(const char *action, int unum, const userec_t *u,
+                       const char *from);
 int  passwd_query (int num, userec_t *buf);
 int  passwd_load_user(const char *userid, userec_t *buf);
 int  passwd_apply (void *data, int (*fptr)(void *, int, userec_t *));
