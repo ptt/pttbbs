@@ -43,7 +43,7 @@ reset_garbage(void)
 }
 
 static void
-keeplog(const char *fpath, const char *board, const char *title, const char *sym)
+keeplog(const char *fpath, const char *board, const char *title)
 {
     fileheader_t    fhdr;
     int             bid;
@@ -57,12 +57,6 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
     Rename(fpath, genbuf);
     STRLCPY(postpath, genbuf);
 
-    if (sym) {
-	AUTO_STR(genbuf2, "../%s", genbuf);
-	AUTO_STR(sympath, "log/%s", sym);
-        unlink(sympath);
-        symlink(genbuf2, sympath);
-    }
     /*
      * printf("keep record:[%s][%s][%s][%s]\n",fpath, board, title,genbuf);
      */
@@ -80,10 +74,6 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
             fprintf(stderr, "keeplog: failed to post %s to %s\n", fpath,
                     board);
             Rename(postpath, fpath);
-            if (sym) {
-                AUTO_STR(sympath, "log/%s", sym);
-                unlink(sympath);
-            }
             return;
         }
     }
@@ -93,13 +83,59 @@ keeplog(const char *fpath, const char *board, const char *title, const char *sym
 }
 
 
-// moves "source" to "target""suffix", then gzips it
-static void 
-gzip(const char *source, const char *target, const char *suffix)
+// Moves usies, just counted, to log/usies at midnight, from where
+// bin/rotatelog (crontab, etc/rotatelog.conf) archives it in adm/YYYY/ and
+// removes it. If log/usies is still there (not archived yet), the day is
+// appended to it rather than replacing it. .act, where the count of usies
+// is up to, goes with it. (usies used to be posted to Security, its only
+// copy, ~350 MB a day on ptt.cc in 2026, with log/usies a symlink to the
+// post.)
+static void
+move_usies(void)
 {
-    AUTO_STR(buf, "gzip -f9n adm/%s%s", target, suffix);
-    Rename(source, &buf[14]);
-    system(buf);
+    const char held[] = "log/usies", moving[] = "log/usies.new";
+    struct stat st;
+
+    if (access(FN_USIES, F_OK) != 0)
+        return;
+    // A symlink (to the post in Security, as before) is replaced.
+    if (lstat(held, &st) != 0 || !S_ISREG(st.st_mode)) {
+        unlink(held);
+        if (Rename(FN_USIES, held) != 0) {
+            fprintf(stderr, "account: failed to move %s to %s\n", FN_USIES,
+                    held);
+            return;
+        }
+    } else {
+        char buf[65536];
+        size_t n;
+        FILE *in, *out;
+        int ok = 1;
+
+        if (Rename(FN_USIES, moving) != 0 || !(in = fopen(moving, "rb"))) {
+            fprintf(stderr, "account: failed to move %s to %s\n", FN_USIES,
+                    moving);
+            return;
+        }
+        if (!(out = fopen(held, "ab"))) {
+            fclose(in);
+            fprintf(stderr, "account: cannot append to %s (the day is in "
+                    "%s)\n", held, moving);
+            return;
+        }
+        while ((n = fread(buf, 1, sizeof(buf), in)) > 0)
+            if (fwrite(buf, 1, n, out) != n)
+                ok = 0;
+        fclose(in);
+        if (fclose(out) != 0 || !ok) {
+            fprintf(stderr, "account: failed to append to %s (the day is in "
+                    "%s)\n", held, moving);
+            return;
+        }
+        unlink(moving);
+        printf("%s was not archived yet: the day is appended to it\n", held);
+    }
+    remove(act_file);
 }
 
 static int
@@ -428,27 +464,14 @@ main(/*int argc, char **argv*/)
         Copy("etc/today", "etc/yesterday");
 	/* system("rm -f note.dat"); */
 
-	keeplog("etc/today", BN_RECORD, "上站人次統計", NULL);
-	keeplog(FN_MONEY, BN_SECURITY, "本日金錢往來記錄", NULL);
-	keeplog("etc/osong.log", BN_SECURITY, "本日點歌記錄", NULL);
-	keeplog("etc/chicken", BN_RECORD, "雞場報告", NULL);
+	keeplog("etc/today", BN_RECORD, "上站人次統計");
+	keeplog(FN_MONEY, BN_SECURITY, "本日金錢往來記錄");
+	keeplog("etc/chicken", BN_RECORD, "雞場報告");
 
         // Restore etc/yesterday because keeplog removes it.
         Copy("etc/yesterday", "etc/today");
-
-	SNPRINTF(buf, "[安全報告] 使用者上線監控 [%02d/%02d:%02d]",
-		tm_now.tm_mon + 1, tm_now.tm_mday, tm_now.tm_hour);
-	keeplog("usies", "Security", buf, "usies");
-        // usies is removed - so we have to also delete .act
-        remove(act_file);
-	printf("[安全報告] 使用者上線監控\n");
-
-	sprintf(buf, "-%02d%02d%02d",
-		tm_adjusted.tm_year % 100, tm_adjusted.tm_mon + 1, tm_adjusted.tm_mday);
-
-	printf("壓縮使用者上線監控\n");
-	gzip(log_file, "usies", buf);
-	gzip("etc/mailog", "mailog", buf);
+	move_usies();
+	printf("log/usies\n");
 
 	/* Ptt 節日處理 */
 	printf("節日處理\n");
@@ -469,23 +492,13 @@ main(/*int argc, char **argv*/)
 	}
 
 	if (tm_now.tm_wday == 0)
-	    keeplog("etc/week", BN_RECORD, "本週熱門話題", NULL);
+	    keeplog("etc/week", BN_RECORD, "本週熱門話題");
 
 	if (tm_now.tm_mday == 1)
-	    keeplog("etc/month", BN_RECORD, "本月熱門話題", NULL);
+	    keeplog("etc/month", BN_RECORD, "本月熱門話題");
 
 	if (tm_now.tm_yday == 1)
-	    keeplog("etc/year", BN_RECORD, "年度熱門話題", NULL);
-    } else if (tm_now.tm_hour == 3 && tm_now.tm_wday == 6) {
-	const char fn1[] = "tmp";
-	const char fn2[] = "suicide";
-
-	rename(fn1, fn2);
-	Mkdir(fn1);
-	AUTO_STR(tar_cmd, "tar cfz adm/%s-%02d%02d%02d.tgz %s",
-		 fn2, tm_now.tm_year % 100, tm_now.tm_mon + 1, tm_now.tm_mday, fn2);
-	system(tar_cmd);
-	RmTree(fn2);
+	    keeplog("etc/year", BN_RECORD, "年度熱門話題");
     }
 
     /* Ptt reset Ptt's share memory */

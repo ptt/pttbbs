@@ -1,13 +1,15 @@
-# 信件紀錄
-20	7	*	*	*	bin/mailog.sh
-
-
 # 每天早上清除過期使用者
 # warning:  目前這個程式無法正常運作, 且可能會搞爛整個密碼檔!!
 #10	7	*	*	*	bin/reaper
 
 # 每個小時 1分執行上站人次統計
 1	*	*	*	*	bin/account
+# (At 0:01 it also moves usies, counted, to log/usies.)
+
+# Rotate the logs as in etc/rotatelog.conf, after the busy minute of 0:01:
+# they are archived in adm/YYYY/ (remove the years no longer needed by
+# hand, e.g. rm -rf adm/2024); no savelog lines are needed.
+20	0	*	*	*	bin/rotatelog >>log/rotatelog.log 2>&1
 
 # 每個小時 10 分執行熱門話題統計
 10	*	*	*	*	bin/poststat /home/bbs
