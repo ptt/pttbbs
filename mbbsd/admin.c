@@ -989,17 +989,6 @@ edit_board_general_form(boardheader_t *bh, int bid)
     sort_bcache();
     log_usies("SetBoard", newbh.brdname);
 
-    AUTO_STR(buf, "[看板變更] %s (by %s)", bh->brdname, cuser.userid);
-    AUTO_STR(msg, "板名: %s => %s\n"
-                  "類別: %s => %s\n"
-                  "主題: %s => %s\n"
-                  "獎勵: %s => %s\n",
-             bh->brdname, newbh.brdname,
-             bh->bclass, newbh.bclass,
-             bh->desc, newbh.desc,
-             (bh->brdattr & BRD_NOCREDIT) ? "禁止" : "正常",
-             (newbh.brdattr & BRD_NOCREDIT) ? "禁止" : "正常");
-    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
     if (name_changed || class_changed || desc_changed || reward_changed) {
         bof_modlog_t log;
         // One change may fit on the first line.
@@ -1118,11 +1107,6 @@ m_mod_board(char *bname)
 	    // the group flag decides which permission the moderators need
 	    board_enable_moderator_perms(&newbh);
 
-	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
-	    AUTO_STR(msg, "板名: %s\n"
-			  "屬性: 0x%08x => 0x%08x\n",
-		     bh.brdname, bh.brdattr, newbh.brdattr);
-	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
 	    bof_modlog_t log;
 	    bof_modlog_set_flags(bof_modlog_init(&log, "修改看板屬性"), "屬性",
 			     bh.brdattr, newbh.brdattr, str_permboard, NUMPERMS);
@@ -1167,12 +1151,6 @@ m_mod_board(char *bname)
 	    sort_bcache();
 	    log_usies("SetBoardPerm", newbh.brdname);
 
-	    AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
-	    AUTO_STR(msg, "板名: %s\n"
-			  "屬性: 0x%08x => 0x%08x\n"
-			  "權限: 0x%08x => 0x%08x\n",
-		     bh.brdname, bh.brdattr, newbh.brdattr, bh.level, newbh.level);
-	    post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
 	    bof_modlog_t log;
 	    bof_modlog_init(&log, "修改看板讀寫權限");
 	    bool mask_changed = (bh.brdattr ^ newbh.brdattr) & BRD_POSTMASK;
@@ -1210,17 +1188,10 @@ m_mod_board(char *bname)
 		sort_bcache();
 		log_usies("SetBoard", newbh.brdname);
 
-		AUTO_STR(buf, "[看板變更] %s (by %s)", bh.brdname, cuser.userid);
 		char bm_buf1[BOARD_MODERATORS_FORMAT_MAX_LEN];
 		char bm_buf2[BOARD_MODERATORS_FORMAT_MAX_LEN];
 		board_format_moderators(&bh, bm_buf1, sizeof(bm_buf1));
 		board_format_moderators(&newbh, bm_buf2, sizeof(bm_buf2));
-		AUTO_STR(msg, "板名: %s\n"
-			      "板主: %s => %s\n"
-			      "彩蛋: %s => %s\n",
-			 bh.brdname, bm_buf1, bm_buf2,
-			 bh.moderator_notes, newbh.moderator_notes);
-		post_msg(BN_SECURITY, buf, msg, "[系統安全局]");
 		bof_modlog_t log;
 		bof_modlog_init(&log, "修改板主名單");
 		bool bm_changed = strcmp(bm_buf1, bm_buf2) != 0;

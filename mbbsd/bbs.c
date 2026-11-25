@@ -4331,23 +4331,13 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 static int
 mark_suspicious(int ent, fileheader_t * fhdr, const char *direct)
 {
-    aidu_t aidu = 0;
-    aidu = fn2aidu((char *)fhdr->filename);
-    if (aidu > 0) {
-        char aidc[10];
-        char buf[256];
-        aidu2aidc(aidc, aidu);
-
-        if (fhdr->filemode & FILE_SUSPICIOUS)
-            snprintf(buf, sizeof(buf),
-                     "%s 將 #%s (%s) 解除待查證", cuser.userid, aidc, currboard);
-        else
-            snprintf(buf, sizeof(buf),
-                     "%s 將 #%s (%s) 標記待查證", cuser.userid, aidc, currboard);
-
-        post_msg(BN_SECURITY, buf, "請注意標記的合法性", "[待證標記]");
-   }
-
+    // A board affair: in the modlog of the board (it used to be posted to
+    // Security, where only admins see it).
+    bof_modlog_t log;
+    bof_modlog_add_post(bof_modlog_init(&log,
+            (fhdr->filemode & FILE_SUSPICIOUS) ? "解除待查證" : "標記待查證"),
+            fhdr);
+    modlog(currboard, NULL, &log);
 
    return change_post_mode(ent, fhdr, direct, FILE_SUSPICIOUS);
 }
