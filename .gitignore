@@ -13,6 +13,7 @@ tags
 # ...but only the built binaries: keep the cmd/<name>.svc|ctl/ source dirs.
 !*.svc/
 !*.ctl/
+/service/rotatelog/rotatelog
 /service-private
 # mk/clang_src.py's files while compiling (left by a killed build).
 .clang_src.*

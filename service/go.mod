@@ -7,6 +7,7 @@ go 1.23.0
 
 require (
 	github.com/cockroachdb/pebble v1.1.5
+	github.com/klauspost/compress v1.16.0
 	golang.org/x/text v0.28.0
 	modernc.org/sqlite v1.34.5
 )
@@ -26,7 +27,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
