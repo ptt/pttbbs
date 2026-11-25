@@ -1413,12 +1413,6 @@ do_post_article(int edflags)
     {
 	setbtotal(currbid);
 
-        if (LOG_CONF_POST) {
-            file_appendf("log/post", "%d %s %s %d\n",
-                      (int)now, cuser.userid,
-                      TEMP_BFILE(currboard, postfile.filename), money);
-        }
-
 	brc_addlist(postfile.filename, postfile.modified);
 
         if (IS_OPENBRD(bp)) {
@@ -1845,11 +1839,6 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
         fhdr->multi.money = 0;
     int retitle = strcmp(save_title, fhdr->title) != 0;
     if (retitle) {
-        LOG_IF(LOG_CONF_EDIT_TITLE,
-               log_filef("log/edit_title.log",
-                         "%s(E) %s(%s) %s => %s\n",
-                         cuser.userid, currboard, fhdr->owner, fhdr->title,
-                         save_title));
         STRLCPY(fhdr->title, save_title);
     }
 
@@ -2824,11 +2813,6 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
     }
     if (fee > 0)
         vmsgf("修改此標題分類，扣除全部稿費 %d " MONEYNAME "。", fee);
-    LOG_IF(LOG_CONF_EDIT_TITLE,
-           log_filef("log/edit_title.log",
-                     "%s(%d) %s %s=>%s %s=>%s %s => %s\n",
-                     cuser.userid, allow, currboard, fhdr->owner, tmpfhdr.owner,
-                     fhdr->date, tmpfhdr.date, fhdr->title, tmpfhdr.title));
     // Sync caller.
     memcpy(fhdr, &tmpfhdr, sizeof(*fhdr));
     return FULLUPDATE;

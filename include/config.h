@@ -549,9 +549,6 @@
 /////////////////////////////////////////////////////////////////////////////
 // Logging 記錄設定
 
-#ifndef LOG_CONF_KEYWORD        // 記錄搜尋的關鍵字
-#define LOG_CONF_KEYWORD        (0)
-#endif
 #ifndef LOG_CONF_INTERNETMAIL   // 記錄 internet outgoing mail
 #define LOG_CONF_INTERNETMAIL   (0)
 #endif
@@ -560,9 +557,6 @@
 #endif
 #ifndef LOG_CONF_EDIT_CALENDAR  // 記錄編輯行事曆
 #define LOG_CONF_EDIT_CALENDAR  (0)
-#endif
-#ifndef LOG_CONF_POST           // 記錄發文
-#define LOG_CONF_POST           (0)
 #endif
 #ifndef LOG_CONF_CROSSPOST      // 記錄轉錄
 #define LOG_CONF_CROSSPOST      (0)
@@ -581,9 +575,6 @@
 #endif
 #ifndef LOG_CONF_OSONG_VERBOSE  // 詳細點播記錄
 #define LOG_CONF_OSONG_VERBOSE  (0)
-#endif
-#ifndef LOG_CONF_EDIT_TITLE     // 編輯標題記錄
-#define LOG_CONF_EDIT_TITLE     (0)
 #endif
 
 /////////////////////////////////////////////////////////////////////////////

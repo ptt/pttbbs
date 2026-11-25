@@ -892,9 +892,6 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 		    currmode & MODE_SELECT ? "增加條件 標題: ":"搜尋標題: ",
 		    keyword, TTLEN, DOECHO) || trim_blank(keyword))
 	    return READ_REDRAW;
-
-	LOG_IF(LOG_CONF_KEYWORD, log_filef("keyword_search_log",
-					   "%s:%s\n", currboard, keyword));
     } else if(sr_mode & RS_KEYWORD_EXCLUDE) {
 	if (currmode & MODE_SELECT) {
 	    // TTLEN width exceed default screen
