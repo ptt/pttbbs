@@ -643,7 +643,7 @@ func main() {
 
 	case "import-board":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl import-board <board>|--all [render_target] [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
+			log.Fatalf("Usage: nest.ctl import-board <board>|--all [render_target] [--overwrite] [--dry-run] [--workers N] [--jobs N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
 		}
 		comm := args[1]
 		renderTarget := "-"
@@ -655,10 +655,16 @@ func main() {
 		legacyFormat := false
 		dryRun := false
 		workers := 0
+		jobs := 1
 
 		for i := 2; i < len(args); i++ {
 			arg := args[i]
-			if arg == "--overwrite" || arg == "-overwrite" {
+			if (arg == "--jobs" || arg == "-jobs" || arg == "-j") && i+1 < len(args) {
+				jobs, _ = strconv.Atoi(args[i+1])
+				i++
+			} else if strings.HasPrefix(arg, "--jobs=") {
+				jobs, _ = strconv.Atoi(strings.TrimPrefix(arg, "--jobs="))
+			} else if arg == "--overwrite" || arg == "-overwrite" {
 				overwrite = true
 			} else if arg == "--dry-run" || arg == "-dry-run" || arg == "--dryrun" || arg == "-n" {
 				dryRun = true
@@ -769,18 +775,10 @@ func main() {
 			}
 			fmt.Printf("[*] Importing %d boards from .BRD (%d without .DIR skipped)...\n", len(boards), len(skipped))
 			printMode()
-			var failed []string
-			for i, board := range boards {
-				prefix := fmt.Sprintf("[%d/%d] %s: ", i+1, len(boards), board)
-				fmt.Print(prefix)
-				r, err := runImportBoard(mkHeader(board), prefix)
-				if err != nil {
-					fmt.Printf("[!] %s: %v\n", board, err)
-					failed = append(failed, board)
-					continue
-				}
-				printImportBoardResult(r, dryRun)
+			if jobs > 1 {
+				fmt.Printf("    Jobs: %d boards at a time\n", jobs)
 			}
+			failed := importBoards(boards, jobs, mkHeader, dryRun)
 			fmt.Printf("[+] %d boards done, %d failed\n", len(boards)-len(failed), len(failed))
 			if len(failed) > 0 {
 				fmt.Printf("    Failed: %s\n", strings.Join(failed, " "))
@@ -791,11 +789,11 @@ func main() {
 
 		fmt.Printf("[*] Starting fast Go migration for board '%s'...\n", comm)
 		printMode()
-		r, err := runImportBoard(mkHeader(comm), "")
+		r, err := runImportBoard(mkHeader(comm), "", os.Stdout)
 		if err != nil {
 			log.Fatalf("[!] Migration failed: %v", err)
 		}
-		printImportBoardResult(r, dryRun)
+		printImportBoardResult(os.Stdout, r, dryRun)
 
 	case "render-community":
 		if len(args) < 2 {
@@ -1540,7 +1538,7 @@ Usage:
   nest.ctl get <post>
   nest.ctl render <post> [output] [--legacy-format]
   nest.ctl render-community <community> [output_dir] [--legacy-format]
-  nest.ctl import-board <board>|--all [--overwrite] [--dry-run] [--workers N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
+  nest.ctl import-board <board>|--all [--overwrite] [--dry-run] [--workers N] [--jobs N (with --all: boards at a time)] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
   nest.ctl sync-dir <board>|--all [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]
   nest.ctl fetch <post> <output_path>      (output under $BBSHOME; relative to it)
   nest.ctl update <post> <title> <content> [editor]

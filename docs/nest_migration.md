@@ -122,7 +122,10 @@ host.
    imports the boards.
 5. Import the posts, comments and votes of every board:
    `nest.ctl import-board --all`. Useful options: `--dry-run`,
-   `--workers N`, `--commentd-db PATH` (the comments of commentd).
+   `--workers N` (posts of one board parsed at a time), `--jobs N` (boards
+   imported at a time; with the BBS stopped, e.g. `--jobs 8 --workers 4`
+   uses the CPUs much better on a site with many small boards),
+   `--commentd-db PATH` (the comments of commentd).
    A single board: `nest.ctl import-board <board>`.
 6. Write the scores and numbers of comments of nest.svc into the `.DIR` of
    every board: `nest.ctl sync-dir --all`. The files backend never kept the
