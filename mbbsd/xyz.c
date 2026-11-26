@@ -1,13 +1,6 @@
 #include "bbs.h"
 
 int
-x_boardman(void)
-{
-    more("etc/topboardman", YEA);
-    return 0;
-}
-
-int
 x_user100(void)
 {
     more("etc/topusr100", YEA);

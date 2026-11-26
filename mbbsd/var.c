@@ -158,7 +158,7 @@ char           * const loginview_file[NUMVIEWFILE][2] = {
     {"etc/today", "今天上站人次"},
     {"etc/yesterday", "昨日上站人次"},
     {"etc/history", "歷史上的今天"},
-    {"etc/topboardman", "精華區排行榜"},
+    {"", "(保留)"},
     {"etc/topboard.tmp", "看板人氣排行榜"},
     {NULL, NULL}
 };

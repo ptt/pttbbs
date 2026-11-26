@@ -1082,7 +1082,6 @@ int do_petition(int);
 void do_petition_reply(const fileheader_t *fhdr);
 
 /* xyz */
-int x_boardman(void);
 int x_login(void);
 int x_week(void);
 int x_issue(void);

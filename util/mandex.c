@@ -4,7 +4,6 @@
 #include "bbs.h"
 
 // Where -s saves the list of files of each board: MANDEX_LIST_DIR/B/BOARD.
-#define FN_MANDEX_EXCLUDE "etc/mandex_exclude"
 
 #ifndef MANDEX_LIST_DIR
 #define MANDEX_LIST_DIR BBSHOME "/man/list"
@@ -21,17 +20,6 @@ static const char *fn_new = ".index.new";
 static const char *index_title = "¡· ºëµØ°Ï¥Ø¿ý¯Á¤Þ";;
 int     savelist = 0;
 FILE    *flist;
-
-int sortbyname(const void *a, const void *b)
-{
-    return strcmp(((boardinfo_t*)b)->bname, ((boardinfo_t*)a)->bname);
-}
-
-int k_cmp(const void *x, const void *y)
-{
-    const boardinfo_t *b = (boardinfo_t *)x, *a = (boardinfo_t *)y;
-    return ((a->k / 100 + a->ndir + a->nfile) - (b->k / 100 + b->ndir + b->nfile));
-}
 
 static FILE *fp_index;
 static boardinfo_t curr_brdinfo;
@@ -208,46 +196,6 @@ man_index(const char * brdname)
     remove_index_links(brdname, keep);
 }
 
-void
-output_chart(const boardinfo_t * board, const int nbrds)
-{
-    FILE * fp;
-    int i, n, place = 0;
-    boardheader_t *bptr = NULL;
-
-    if (!(fp = fopen(BBSHOME "/etc/topboardman", "w")))
-	return;
-
-    fprintf(fp, "[1;44m±Æ¦W[47;30m        ¬Ý ªO  ¥Ø¿ý¼Æ   ÀÉ®×¼Æ"
-	    "     byte¼Æ [30m  Á` ¤À     ªO   ¥D          [m\n");
-
-    for (i = 0; i < nbrds; i++) {
-	if ((n = getbnum(board[i].bname)) == 0)
-	    continue;
-
-	bptr = getbcache(n);
-	if (strcmp(board[i].bname, bptr->brdname) != 0)
-	    continue;
-
-        // ÁôªO¤F§O¤H¬Ý¤£¨ìÁÙ¦³¤°»ò¦n»¡ªº¡H
-	if (bptr->brdattr & (BRD_NOCREDIT | BRD_NOCOUNT | BRD_HIDE))
-	    continue;
-
-	/* ¯¸¤è¤£¦C¤J±Æ¦Wªº¬ÝªO (etc/mandex_exclude, ¤@¦æ¤@­Ó) */
-	if (file_exist_entry(FN_MANDEX_EXCLUDE, bptr->brdname))
-	    continue;
-
-	if (board[i].ndir + board[i].nfile < 5)
-	    break;
-
-	fprintf(fp, "%3d.[33m%15s[m %5d %7d %10d   %6d [31m%-24.24s[m\n",
-		++place, board[i].bname, board[i].ndir, board[i].nfile, board[i].k
-		,board[i].k / 100 + board[i].nfile + board[i].ndir
-		,board_format_moderators(bptr, (char[BOARD_MODERATORS_FORMAT_SIZE]){0}, BOARD_MODERATORS_FORMAT_SIZE));
-    }
-    fclose(fp);
-}
-static boardinfo_t board[MAX_BOARD+1];
 static const char dirs[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
@@ -259,12 +207,10 @@ static const char dirs[] = {
 
 int main(int argc, char* argv[])
 {
-    boardinfo_t *biptr;
-    int     nSorted, nb;
     DIR     *dirp;
     struct  dirent *de;
     char    listpath[MAXPATHLEN];
-    int     i, fd, checkrebuild = 0;
+    int     i, checkrebuild = 0;
     char    *fname, fpath[PATHLEN];
 
     // gem.svc keeps the gem areas and makes their tables of contents on
@@ -330,31 +276,6 @@ int main(int argc, char* argv[])
     }
 
     /* process all boards */
-    if (checkrebuild &&	(fd = open("man/.rank.cache", O_RDONLY)) >= 0) {
-	int dirty = 0;
-	read(fd, board, sizeof(board));
-	close(fd);
-	qsort(board, MAX_BOARD, sizeof(boardinfo_t), sortbyname);
-	for (nb = 0; board[nb].bname[0] != 0; ++nb) {
-	    /* delete non-existing and duplicated boards */
-	    if (getbnum(board[nb].bname) == 0 ||
-                (nb > 0 && strcasecmp(board[nb].bname, board[nb - 1].bname) == 0)) {
-		memset(&(board[nb]), 0, sizeof(boardinfo_t));
-		dirty = 1;
-	    }
-	}
-	/* sort again if dirty */
-	if (dirty) {
-	    qsort(board, MAX_BOARD, sizeof(boardinfo_t), sortbyname);
-	    for (nb = 0; board[nb].bname[0] != 0; ++nb);
-	}
-	nSorted = nb;
-    } else {
-	memset(board, 0, sizeof(board));
-	checkrebuild = 0;
-	nSorted = nb = 0;
-    }
-
     for (i = 0; dirs[i] != 0; ++i) {
 	SNPRINTF(fpath, "man/boards/%c", dirs[i]);
 	if (!(dirp = opendir(fpath))) {
@@ -392,35 +313,10 @@ int main(int argc, char* argv[])
 		flist = NULL;
 	    }
 
-	    if (!curr_brdinfo.k)
-		continue;
-
-	    // determine if this board was not seen in partial update queue
-	    biptr = bsearch(fname, board, nSorted, sizeof(boardinfo_t), sortbyname);
-	    if (!biptr)
-	    {
-		// give up if exceeded max entry
-		if (nb >= MAX_BOARD)
-		    continue;
-		biptr = &board[nb++];
-	    }
-
-	    // update record
-	    assert(biptr);
-	    memcpy(biptr, &curr_brdinfo, sizeof(boardinfo_t));
 	}
 	closedir(dirp);
     }
-    
-    qsort(board, nb, sizeof(boardinfo_t), k_cmp);
-    output_chart(board, nb);
+    // Leftover cache of the removed gem area ranking.
     unlink(BBSHOME "/man/.rank.cache");
-
-    if ((fd = open(BBSHOME "/man/.rank.cache",
-		   O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0660)) >= 0) {
-	write(fd, board, sizeof(board));
-	close(fd);
-    }
-
     return 0;
 }
