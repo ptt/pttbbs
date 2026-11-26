@@ -101,7 +101,15 @@ gem_path_parse(const char *path, char *root, size_t rootsz,
         }
     }
 
-    if (path_prefix(path, "man/boards", &rest)) {
+    if (path_prefix(path, "trash", &rest)) {
+        // trash/<root>[/sub]: the trash of root.
+        char area[GEM_ROOT_SIZE];
+        if (!next_name(&rest, area, sizeof(area)) ||
+            !(strcmp(area, "site") == 0 || strncmp(area, "board:", 6) == 0 ||
+              strncmp(area, "user:", 5) == 0))
+            return 0;
+        snprintf(root, rootsz, GEM_TRASH_PREFIX "%s", area);
+    } else if (path_prefix(path, "man/boards", &rest)) {
         // man/boards/<c>/<board>[/sub]
         if (!next_name(&rest, letter, sizeof(letter)) ||
             !next_name(&rest, name, sizeof(name)))
@@ -552,6 +560,93 @@ gem_remove(const char *root, const char *sub, int idx, const char *name)
     snprintf(hdr, sizeof(hdr), "REMOVE %s %s %d %s", root, wire_path(sub),
              idx, name);
     return simple(hdr, NULL, 0, NULL, 0);
+}
+
+int
+gem_is_trash(const char *root)
+{
+    return strncmp(root, GEM_TRASH_PREFIX, strlen(GEM_TRASH_PREFIX)) == 0;
+}
+
+int
+gem_delete(const char *root, const char *sub, int idx, const char *name,
+           const char *by)
+{
+    char hdr[PATHLEN + 64];
+    snprintf(hdr, sizeof(hdr), "DELETE %s %s %d %s %s", root, wire_path(sub),
+             idx, name, (by && *by) ? by : "-");
+    return simple(hdr, NULL, 0, NULL, 0);
+}
+
+// Reads the line following a reply into out (NUL terminated, cut to sz).
+static int
+read_line(reply_t *r, char *out, size_t sz)
+{
+    size_t n = 0;
+    for (;;) {
+        if (r->start == r->end && fill(r) < 0) {
+            set_error("bbs_gem_unavailable short reply");
+            return -1;
+        }
+        char c = r->buf[r->start++];
+        if (c == '\n')
+            break;
+        if (out && n + 1 < sz)
+            out[n++] = c;
+    }
+    if (out && sz)
+        out[n] = '\0';
+    return 0;
+}
+
+// The path of a reply line as a sub path ("" for the top).
+static void
+sub_path(char *path)
+{
+    if (strcmp(path, ".") == 0)
+        path[0] = '\0';
+}
+
+int
+gem_trash_from(const char *root, const char *name, char *path, size_t pathsz)
+{
+    char hdr[GEM_ROOT_SIZE + FNSIZE + 32];
+    reply_t r;
+    int idx;
+
+    snprintf(hdr, sizeof(hdr), "TRASH_ENTRY %s %s", root, name);
+    if (call(&r, hdr, NULL, 0, NULL, 0) < 0)
+        return -1;
+    idx = (int)word(&r, 0);
+    if (read_line(&r, path, pathsz) < 0) {
+        reply_close(&r);
+        return -1;
+    }
+    reply_close(&r);
+    if (path)
+        sub_path(path);
+    return idx;
+}
+
+int
+gem_restore(const char *root, const char *name, char *path, size_t pathsz)
+{
+    char hdr[GEM_ROOT_SIZE + FNSIZE + 32];
+    reply_t r;
+    int idx;
+
+    snprintf(hdr, sizeof(hdr), "RESTORE %s %s", root, name);
+    if (call(&r, hdr, NULL, 0, NULL, 0) < 0)
+        return -1;
+    idx = (int)word(&r, 0);
+    if (read_line(&r, path, pathsz) < 0) {
+        reply_close(&r);
+        return -1;
+    }
+    reply_close(&r);
+    if (path)
+        sub_path(path);
+    return idx;
 }
 
 int

@@ -27,7 +27,7 @@
 #define GEM_KIND_MISSING  4
 #define GEM_KIND_INDEX    5   /* the table of contents (gem_index()) */
 
-#define GEM_ROOT_SIZE  (IDLEN + 8)   /* "board:" or "user:" and a name */
+#define GEM_ROOT_SIZE  (IDLEN + 16)  /* ["trash:"] "board:" or "user:" and a name */
 
 /* An entry as gem.svc sends it (service/gem/protocol). */
 typedef struct gem_entry_t {
@@ -60,7 +60,8 @@ int gem_last_error_is(const char *code);
 
 /* Maps a path of man/ (relative to BBSHOME, or under it) to a root and the
  * path within it. Returns 1 if path is in a gem area, 0 if not (e.g. a post
- * or a mail, which are files). */
+ * or a mail, which are files). "trash/<root>[/sub]" is the trash of root
+ * (root "trash:<root>", see gem_delete()). */
 int gem_path_parse(const char *path, char *root, size_t rootsz,
                    char *sub, size_t subsz);
 
@@ -103,7 +104,29 @@ int gem_put(const char *root, const char *sub, int idx, const char *name,
 int gem_put_file(const char *root, const char *sub, int idx,
                  const char *name, const char *fpath);
 
+/* Removes an entry for good (gem_delete() keeps it in the trash). */
 int gem_remove(const char *root, const char *sub, int idx, const char *name);
+
+/* The trash of an area is read as the area "trash:<root>": its top lists
+ * the deleted entries, last first, with who deleted each as owner and when
+ * as time. Only gem_restore() and gem.ctl purge change it. */
+#define GEM_TRASH_PREFIX "trash:"
+int gem_is_trash(const char *root);
+
+/* Moves an entry (a directory with all below it) to the trash of its area,
+ * deleted by userid by. */
+int gem_delete(const char *root, const char *sub, int idx, const char *name,
+               const char *by);
+
+/* Where the entry name of the trash of root was: its directory in path, its
+ * index there (the result). */
+int gem_trash_from(const char *root, const char *name, char *path,
+                   size_t pathsz);
+
+/* Moves the entry name of the trash of root back where it was; returns its
+ * index there, its directory in path (may be NULL). */
+int gem_restore(const char *root, const char *name, char *path,
+                size_t pathsz);
 
 /* Moves an entry to index to within its directory; returns where. */
 int gem_reorder(const char *root, const char *sub, int idx, const char *name,

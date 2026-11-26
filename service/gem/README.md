@@ -206,7 +206,11 @@ did not change. Articles are read and edited through a file in
 `tmp/gem.<pid>/`. A paste of a copied directory shares it (copy on write). The
 entry of kind `index`, and the key `i`, show what `INDEX` makes (one
 snapshot, each directory read once, cut at 16 MB); `util/mandex` does
-nothing. Links are not followed: one left by an import (before
+nothing. Deleting (`d`, `D`) moves entries to the trash of the area (no
+more to the gem area of the board `deleted`, nor files to the posts of the
+board); `u` opens the trash, path `trash/<root>` for `gem_path_parse()`,
+read only but for `u` at its top, which restores an entry where it was.
+Links are not followed: one left by an import (before
 `resolve-links`) shows as broken. The films of the `Note` board, the songs ordered (`etc/SONGO`), the
 creation, renaming and removal of boards follow gem.svc as well.
 

@@ -816,28 +816,10 @@ a_moveitem(gmenu_t * pm)
     pm->m.now = num;
 }
 
-// Puts a deleted file where announce.c did (delete_file_content() into
-// backup_dir): through a copy in tmp/.
+// Deletes a range of entries (to the trash of the area); directories are
+// skipped.
 static void
-a_backup_file(const gmenu_t *pm, const fileheader_t *fhdr,
-	      const char *backup_dir)
-{
-    char fpath[PATHLEN], direct[PATHLEN];
-
-    if (!backup_dir)
-	return;
-    if (gem_fetch(pm, fpath, sizeof(fpath)) < 0)
-	return;
-    snprintf(direct, sizeof(direct), "%s/" FN_DIR, gem_tmpdir());
-    if (delete_file_content(direct, fhdr, backup_dir, NULL, 0) ==
-	    DELETE_FILE_CONTENT_BACKUP_FAILED)
-	vmsg("檔案已刪除但無法備份。請至 " BN_BUGREPORT
-	     "報告您試圖刪除檔案的位置。");
-    unlink(fpath);
-}
-
-static void
-a_delrange(gmenu_t * pm, const char *backup_dir)
+a_delrange(gmenu_t * pm)
 {
     char numstr[8];
     int num1, num2, num, cdeleted = 0, failed = 0;
@@ -887,16 +869,8 @@ a_delrange(gmenu_t * pm, const char *backup_dir)
 	    doupdate();
 	    continue;
 	}
-	if (e->kind == GEM_KIND_FILE && backup_dir) {
-	    // The file at its place, for a_backup_file().
-	    gmenu_t one = *pm;
-	    one.ents = e;
-	    one.m.page = one.m.now = num1 - 1 + i - cdeleted;
-	    one.m.header_size = 1;
-	    one.m.num = one.m.now + 1;
-	    a_backup_file(&one, &e->header, backup_dir);
-	}
-	if (gem_remove(pm->root, pm->sub, -1, e->header.filename) < 0) {
+	if (gem_delete(pm->root, pm->sub, -1, e->header.filename,
+		       cuser.userid) < 0) {
 	    failed = 1;
 	    break;
 	}
@@ -913,8 +887,10 @@ a_delrange(gmenu_t * pm, const char *backup_dir)
     gem_list(pm->root, pm->sub, 0, 0, NULL, &pm->m.num, NULL);
 }
 
+// Deletes the entry at the cursor: to the trash of the area (gem.ctl purge
+// removes it for good after some days), where it can be restored.
 static void
-a_delete(gmenu_t * pm, const char *backup_dir)
+a_delete(gmenu_t * pm)
 {
     char            ans[4];
     gem_entry_t    *e = cur_entry(pm);
@@ -939,47 +915,19 @@ a_delete(gmenu_t * pm, const char *backup_dir)
 		sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return;
-	a_backup_file(pm, fhdr, backup_dir);
     } else if (e->kind == GEM_KIND_DIR) {
-	// The directory goes to the gem area of BN_DELETED (BN_JUNK from a
-	// mail folder), as announce.c moved it there: a move in gem.svc.
-	// XXX we also check PERM_MAILLIMIT here because RMAIL
-	// may be not trusted...
-	const char *save_bn = ( HasUserPerm(PERM_MAILLIMIT) && (currstat & RMAIL) ) ?
-		BN_JUNK : BN_DELETED;
-	char save_root[GEM_ROOT_SIZE];
-	fileheader_t backup;
-
 	getdata(b_lines - 1, 1, "您確定要刪除整個目錄嗎(Y/N)？[N] ", ans,
 		sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return;
-
-	memset(&backup, 0, sizeof(backup));
-	fhdr_set_date(&backup, now);
-	STRLCPY(backup.owner, cuser.userid);
-	const char *title = mbs_nth(fhdr->title, 1);
-	snprintf(backup.title, sizeof(backup.title), "◆%s", title ? title : "");
-        // restrict access if source is hidden
-        if ((fhdr->filemode & FILE_BM) || (fhdr->filemode & FILE_HIDE))
-            backup.filemode |= FILE_BM;
-
-	snprintf(save_root, sizeof(save_root), "board:%s", save_bn);
-	if (gem_copy(1, pm->root, pm->sub, pm->m.now, fhdr->filename,
-		     save_root, "", -1, &backup, NULL) < 0) {
-	    vmsgf("抱歉，系統目前無法刪除資料，請通知站務人員 (%s)",
-		  gem_last_error());
-	    return;
-	}
-	pm->m.num--;
-	return;
     } else {			/* Ptt 損毀的項目 */
 	getdata(b_lines - 1, 1, "您確定要刪除此損毀的項目嗎(Y/N)？[N] ",
 		ans, sizeof(ans), LCECHO);
 	if (ans[0] != 'y')
 	    return;
     }
-    if (gem_remove(pm->root, pm->sub, pm->m.now, fhdr->filename) < 0) {
+    if (gem_delete(pm->root, pm->sub, pm->m.now, fhdr->filename,
+		   cuser.userid) < 0) {
 	vmsg(msg_errsync);
 	return;
     }
@@ -1672,7 +1620,7 @@ announce_cmd_del(cmd_ctx_t *ctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
     announce_sync_pos(ctx);
-    a_delete(cx->me, cx->sess->backup_dir);
+    a_delete(cx->me);
     ctx->reload = true;
     return 0;
 }
@@ -1682,7 +1630,59 @@ announce_cmd_delrange(cmd_ctx_t *ctx)
 {
     announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
     announce_sync_pos(ctx);
-    a_delrange(cx->me, cx->sess->backup_dir);
+    a_delrange(cx->me);
+    ctx->reload = true;
+    return 0;
+}
+
+// Opens the trash of the area: what was deleted from it, to read, copy out
+// or restore (announce_trash_cmds).
+static int
+announce_cmd_trash(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    gmenu_t *me = cx->me;
+    char path[PATHLEN];
+
+    if (gem_is_trash(me->root))
+	return 0;
+    snprintf(path, sizeof(path), "trash/%s", me->root);
+    a_menu("精華區回收區", path, me->m.level, me->m.bid, NULL, NULL);
+    ctx->reload = true;
+    return 0;
+}
+
+// Restores the entry at the cursor of the top of a trash where it was.
+static int
+announce_cmd_restore(cmd_ctx_t *ctx)
+{
+    announce_ctx_t *cx = (announce_ctx_t *)ctx->priv;
+    gmenu_t *me = cx->me;
+    gem_entry_t *e;
+    char area[GEM_ROOT_SIZE], from[PATHLEN], name[FNSIZE], prompt[STRLEN],
+	 ans[3];
+    int idx;
+
+    announce_sync_pos(ctx);
+    if (!(e = cur_entry(me)) || !gem_is_trash(me->root) || me->sub[0])
+	return 0;
+    STRLCPY(area, me->root + strlen(GEM_TRASH_PREFIX));
+    STRLCPY(name, e->header.filename);
+    if ((idx = gem_trash_from(area, name, from, sizeof(from))) < 0) {
+	gem_fail("讀取");
+	return 0;
+    }
+    snprintf(prompt, sizeof(prompt),
+	     "還原到 %s 第 %d 項嗎(Y/N)？[N] ",
+	     *from ? from : "最上層", idx + 1);
+    getdata(b_lines - 1, 1, prompt, ans, sizeof(ans), LCECHO);
+    if (ans[0] != 'y')
+	return 0;
+    if ((idx = gem_restore(area, name, from, sizeof(from))) < 0) {
+	gem_fail("還原");
+	return 0;
+    }
+    vmsgf("已還原到 %s 第 %d 項", *from ? from : "最上層", idx + 1);
     ctx->reload = true;
     return 0;
 }
@@ -1751,6 +1751,13 @@ static const cmd_t announce_bm_cmds[] = {
     { 'a', "附加項目", "將已複製的項目附加至選取文章之後", announce_cmd_append, 0, CMD_PRIO_HIGH, true },
     { Ctrl('P'), "貼上標記", "將看板或信箱內以 t 標記的文章貼入精華區", announce_cmd_paste_tag, 0, CMD_PRIO_LOW },
     { Ctrl('A'), "附加標記", "將看板或信箱內以 t 標記的文章附加至選取後", announce_cmd_append_tag, 0, CMD_PRIO_LOW, true },
+    { 'u', "回收區", "查看、還原已刪除的項目", announce_cmd_trash, 0, CMD_PRIO_LOW },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
+};
+
+// The top of a trash, for those who may change the area (announce_cmd_trash).
+static const cmd_t announce_trash_cmds[] = {
+    { 'u', "還原項目", "將選取的項目還原到原來的位置", announce_cmd_restore, 0, CMD_PRIO_HIGH, true },
     { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE }
 };
 
@@ -1849,7 +1856,9 @@ announce_loader(PSB_CTX *psbctx)
     announce_ctx_t *cx = (announce_ctx_t *)psbctx->cmd.priv;
     gmenu_t *me = cx->me;
     int cq = copyqueue_querysize();
-    cx->layers[0].cmds = cq > 0 ? (me->m.level ? announce_cq_bm_cmds : announce_cq_user_cmds) : announce_empty_cmds;
+    cx->layers[0].cmds = cq > 0 ? ((me->m.level && !gem_is_trash(me->root)) ?
+                                   announce_cq_bm_cmds : announce_cq_user_cmds) :
+                         announce_empty_cmds;
     psbctx->cmd.caption = announce_caption(me);
 
     if (psbctx->cmd.reload) {
@@ -1957,10 +1966,14 @@ a_menu_rec(const char *maintitle, const char *path,
             me.m.now = 0;
     }
 
+    // A trash is read only, but for restoring from its top.
+    int is_trash = gem_is_trash(me.root);
     cmd_layer_t layers[] = {
         { announce_empty_cmds, NULL },
-        { me.m.level >= SYSOP ? announce_sysop_cmds : announce_empty_cmds, NULL },
-        { me.m.level >= MANAGER ? announce_bm_cmds : announce_empty_cmds, NULL },
+        { (me.m.level >= SYSOP && !is_trash) ? announce_sysop_cmds : announce_empty_cmds, NULL },
+        { me.m.level < MANAGER ? announce_empty_cmds :
+          !is_trash ? announce_bm_cmds :
+          !me.sub[0] ? announce_trash_cmds : announce_empty_cmds, NULL },
         { announce_base_cmds, NULL },
         { bbs_global_cmds, NULL },
         { NULL, NULL }

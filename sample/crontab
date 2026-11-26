@@ -43,9 +43,10 @@
 30	6	1	*	*	bin/mandex
 30	6	2-31	*	2,4,6	bin/mandex -x
 # With CONFIG_GEM the gem areas are kept by gem.svc, which makes the table
-# of contents when read (mandex does nothing): instead of the three lines
-# above, empty the gem area of the deleted board (made again when used).
-#20	6	*	*	*	bin/gem.ctl delete-root deleted
+# of contents when read (mandex does nothing), and keeps what is deleted in
+# the trash of each area: instead of the three lines above, remove for good
+# what was deleted more than 30 days ago.
+#20	6	*	*	*	bin/gem.ctl purge -days 30
 
 # 每天砍掉點歌超過 5天檔案
 0	7	*	*	*	/usr/bin/find /home/bbs/etc/SONGO/M* -mtime +5 -exec rm -f {} ';'
