@@ -170,3 +170,23 @@ func TestArticleHeader(t *testing.T) {
 		}
 	}
 }
+
+// TestPostCtimeInTheFuture checks that a post whose file name has a stamp
+// later than now (a clock gone wrong) is dated by its file instead.
+func TestPostCtimeInTheFuture(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "M.2085983221.A")
+	if err := os.WriteFile(path, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	written := time.Date(2001, 10, 12, 15, 47, 1, 0, time.UTC)
+	if err := os.Chtimes(path, written, written); err != nil {
+		t.Fatal(err)
+	}
+	if got := postCtimeOf(&FileHeader{Filename: "M.2085983221.A"}, path); got != written.Unix() {
+		t.Errorf("future stamp: ctime = %d, want the time of the file %d", got, written.Unix())
+	}
+	if got := postCtimeOf(&FileHeader{Filename: "M.1002901621.A"}, path); got != 1002901621 {
+		t.Errorf("past stamp: ctime = %d, want the stamp", got)
+	}
+}

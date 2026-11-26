@@ -1142,7 +1142,9 @@ func importSafeDeleted(engine storage.Storage, opts ImportBoardOptions, users Us
 	}
 
 	ctime := stampTime(fhdr.Filename)
-	if ctime == 0 {
+	if ctime == 0 || ctime > time.Now().Unix() && deletedAt > 0 {
+		// No stamp, or one in the future (see postCtimeOf); there is no
+		// file to date it by.
 		ctime = deletedAt
 	}
 	creatorID := ResolvePersonID(users, creatorName, 0, ctime)

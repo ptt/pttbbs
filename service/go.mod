@@ -8,6 +8,7 @@ go 1.23.0
 require (
 	github.com/cockroachdb/pebble v1.1.5
 	github.com/klauspost/compress v1.16.0
+	golang.org/x/sys v0.22.0
 	golang.org/x/text v0.28.0
 	modernc.org/sqlite v1.34.5
 )
@@ -41,7 +42,6 @@ require (
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
-	golang.org/x/sys v0.22.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect

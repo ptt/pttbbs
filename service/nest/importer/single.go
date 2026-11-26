@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -65,6 +66,12 @@ func prepareRecord(buf []byte, boardDir string, withBid bool) (*recordJob, bool)
 
 // postCtimeOf returns the creation time of a post: the stamp in its file
 // name, else the time in its record, else the time of its file.
+//
+// A stamp later than now comes from a clock gone wrong when the post was
+// written (an NTP rollover set some hosts to 2036-02-07 06:28:16 UTC for a
+// while), so the creation time of the file is taken instead: the file name
+// stays, as it names the post, but the post is not dated in the future
+// (where it would top every list by time).
 func postCtimeOf(fhdr *FileHeader, articlePath string) int64 {
 	postCtime := int64(fhdr.Modified)
 	if m := postFilenameCtimeRegex.FindStringSubmatch(fhdr.Filename); len(m) >= 2 {
@@ -72,12 +79,29 @@ func postCtimeOf(fhdr *FileHeader, articlePath string) int64 {
 			postCtime = v
 		}
 	}
-	if postCtime == 0 {
-		if afi, err := os.Stat(articlePath); err == nil {
-			postCtime = afi.ModTime().Unix()
+	if postCtime == 0 || postCtime > time.Now().Unix() {
+		if t := fileCreationTime(articlePath); t > 0 {
+			postCtime = t
 		}
 	}
 	return postCtime
+}
+
+// fileCreationTime returns when the file at path was created, as well as
+// the file system tells: its birth time where there is one (statx), unless
+// its modification time is earlier, as for a file copied or restored with
+// its times kept (rsync -a, tar), whose birth time is the copy. 0 if the
+// file cannot be read.
+func fileCreationTime(path string) int64 {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+	t := fi.ModTime().Unix()
+	if b := fileBirthTime(path); b > 0 && b < t {
+		t = b
+	}
+	return t
 }
 
 // buildRecord returns what to import for one .DIR record, the way
