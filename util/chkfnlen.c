@@ -39,6 +39,9 @@ typedef struct {
     uint64_t shorten_skipped;
     /* Records with bad names left alone, as a file has that name. */
     uint64_t bad_name_file_exists;
+    /* --prune-missing: announce records without their file, dropped */
+    uint64_t need_prune;
+    uint64_t pruned;
     /* Spare space: how many records have each byte of fileheader_t not 0
      * (as read, before any repair), and the longest of the other strings. */
     uint64_t byte_nz[sizeof(fileheader_t)];
@@ -104,11 +107,14 @@ static int opt_scan_man = 0;
 static int opt_include_backup = 0;
 static int opt_include_digest = 0;
 static int opt_rename = 0;
+static int opt_prune_missing = 0;
 static char opt_bbshome[MAX_SCAN_PATH] = "";
 
 /* --rename: the current .DIR's directory and the names its records use or
  * were given, so no new name is taken twice. */
 static char cur_dirname[MAX_SCAN_PATH];
+/* Whether the .DIR being scanned lists an announce (man) directory. */
+static int cur_is_man;
 static char (*cur_names)[FNLEN];
 static size_t cur_nnames, cur_cap;
 
@@ -137,6 +143,11 @@ static void print_usage(const char *progname)
     printf("                            the file and fixing the record; another hex (a new AID) if\n");
     printf("                            that name is taken. Other names are only reported.\n");
     printf("                            Backups (.DIR.old, ...) keep the old names.\n");
+    printf("      --prune-missing     With -r, drop the records of announce (man) directories\n");
+    printf("                            whose file or directory does not exist (or whose name\n");
+    printf("                            is a bad path or not NUL-terminated), as the announce\n");
+    printf("                            menu deletes entries; instead of tombstones or renames.\n");
+    printf("                            Boards and mailboxes are not pruned. Run mandex after.\n");
     printf("      --boards            Scan only boards/ directory\n");
     printf("      --mail, --home      Scan only home/ (mailboxes) directory\n");
     printf("      --man, --announce   Scan only man/ and man/boards/ directory\n");
@@ -219,6 +230,8 @@ static void merge_stats(section_stats_t *dst, const section_stats_t *src)
     dst->shorten_aid_changed += src->shorten_aid_changed;
     dst->shorten_skipped += src->shorten_skipped;
     dst->bad_name_file_exists += src->bad_name_file_exists;
+    dst->need_prune += src->need_prune;
+    dst->pruned += src->pruned;
 
     for (int i = 0; i <= FNLEN; i++) {
         dst->len_hist[i] += src->len_hist[i];
@@ -390,9 +403,37 @@ static void make_tombstone(fileheader_t *fh)
     bof_files_set_tombstone(fh, title, "chkfnlen");
 }
 
-static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
-                           int fd, off_t record_offset, section_stats_t *stats)
+/* Whether path is in an announce (man) tree: it has a "man" directory that
+ * is not a board or user named man (boards/m/man, home/m/man). */
+static int is_announce_path(const char *path)
 {
+    static const char *const hashed[] = { "boards/", "home/" };
+
+    for (const char *p = path; (p = strstr(p, "man/")) != NULL; p++) {
+        if (p != path && p[-1] != '/')
+            continue;
+        int named = 0;
+        /* "<hashed>X/" right before: a board or a user named man. */
+        for (size_t k = 0; k < sizeof(hashed) / sizeof(hashed[0]); k++) {
+            size_t n = strlen(hashed[k]);
+            const char *q = p - 2 - n;  /* start of "<hashed>X/" */
+            if (p - path >= (ptrdiff_t)(n + 2) && p[-1] == '/' &&
+                strncmp(q, hashed[k], n) == 0 && (q == path || q[-1] == '/'))
+                named = 1;
+        }
+        if (!named)
+            return 1;
+    }
+    return 0;
+}
+
+/* Repairs are written at record_offset; *drop (--prune-missing) leaves the
+ * record out, and the caller rewrites the .DIR. */
+static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
+                           int fd, off_t record_offset, section_stats_t *stats,
+                           int *drop)
+{
+    *drop = 0;
     stats->total_records++;
 
     /* Spare space, from the record as it is on disk. */
@@ -473,6 +514,26 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
 
     int need_rename = (cond1_bad_path || cond2_non_ascii || cond3_has_space || cond4_unterminated || cond6_non_exist);
     int need_repair = (need_rename || cond5_dirty_trailing);
+
+    /* Dropped as the announce menu deletes entries: no tombstones there. */
+    if (opt_prune_missing && cur_is_man && len > 0 &&
+        (cond1_bad_path || cond4_unterminated ||
+         !cur_dir_has_file(fh->filename))) {
+        char title[sizeof(fh->title) * 4 + 1];
+        escape_str(title, sizeof(title), fh->title, sizeof(fh->title));
+        *drop = 1;
+        if (opt_repair)
+            stats->pruned++;
+        else
+            stats->need_prune++;
+        printf("[%s] %s #%d\n", opt_repair ? "PRUNED" : "NEED-PRUNE",
+               dir_path, rec_idx);
+        printf("      '%s' (len=%zu): %s; title '%s'\n\n", orig_escaped, len,
+               (cond1_bad_path || cond4_unterminated) ?
+               "not a file name" : "no such file or directory", title);
+        fflush(stdout);
+        return;
+    }
 
     const char *new_name = NULL;
     /* A bad name with a file: the post may still be there, so fix by hand. */
@@ -749,17 +810,46 @@ static void scan_dir_file(const char *dir_path, section_stats_t *stats)
     if (opt_rename)
         cur_names_load(fd);
 
+    /* Pruning moves kept records down and truncates: whole records only. */
+    cur_is_man = is_announce_path(dir_path);
+    if (opt_prune_missing && cur_is_man &&
+        st.st_size % (off_t)sizeof(fileheader_t) != 0) {
+        fprintf(stderr, "[WARN] %s: not pruned: not a whole number of records\n",
+                dir_path);
+        cur_is_man = 0;
+    }
+
     fileheader_t buf[CHUNK_RECORDS];
     ssize_t bytes_read;
     int rec_idx = 0;
+    off_t kept = 0;     /* records kept so far, for --prune-missing */
+    int dropped = 0;
 
     while ((bytes_read = read(fd, buf, sizeof(buf))) > 0) {
         size_t count = (size_t)bytes_read / sizeof(fileheader_t);
         for (size_t i = 0; i < count; i++) {
+            int drop = 0;
             rec_idx++;
-            off_t offset = (off_t)(rec_idx - 1) * (off_t)sizeof(fileheader_t);
-            process_record(&buf[i], dir_path, rec_idx, fd, offset, stats);
+            /* At or before where it was read: never over unread records. */
+            off_t offset = kept * (off_t)sizeof(fileheader_t);
+            process_record(&buf[i], dir_path, rec_idx, fd, offset, stats, &drop);
+            if (drop) {
+                dropped++;
+                continue;
+            }
+            if (opt_repair && dropped &&
+                pwrite(fd, &buf[i], sizeof(buf[i]), offset) != (ssize_t)sizeof(buf[i])) {
+                fprintf(stderr, "[ERROR] Cannot move %s #%d: %s\n",
+                        dir_path, rec_idx, strerror(errno));
+            }
+            kept++;
         }
+    }
+
+    if (opt_repair && dropped &&
+        ftruncate(fd, kept * (off_t)sizeof(fileheader_t)) != 0) {
+        fprintf(stderr, "[ERROR] Cannot cut %s after %" PRIu64 " records: %s\n",
+                dir_path, (uint64_t)kept, strerror(errno));
     }
 
     close(fd);
@@ -947,6 +1037,14 @@ static void print_summary_table(const section_stats_t *boards,
     if (overall->bad_name_file_exists > 0)
         printf("Bad names left alone as a file has them ([MANUAL]): %s\n\n",
                fmt_num(overall->bad_name_file_exists, b1));
+
+    if (opt_prune_missing) {
+        printf("Prune (--prune-missing, announce records without their file):\n");
+        printf("  %-28s %14s\n\n", opt_repair ? "Dropped:" : "To drop:",
+               fmt_num(opt_repair ? overall->pruned : overall->need_prune, b1));
+        if (opt_repair && overall->pruned)
+            printf("  NOTE: run mandex to rebuild the announce index.\n\n");
+    }
 
     if (opt_rename) {
         printf("Rename (--rename, names longer than %d):\n", opt_threshold);
@@ -1174,6 +1272,7 @@ int main(int argc, char **argv)
         {"include-backup", no_argument,       0, 1004},
         {"include-digest", no_argument,       0, 1005},
         {"rename",         no_argument,       0, 1006},
+        {"prune-missing",  no_argument,       0, 1007},
         {"verbose",        no_argument,       0, 'v'},
         {"quiet",          no_argument,       0, 'q'},
         {"all",            no_argument,       0, 'a'},
@@ -1214,6 +1313,9 @@ int main(int argc, char **argv)
             break;
         case 1006:
             opt_rename = 1;
+            break;
+        case 1007:
+            opt_prune_missing = 1;
             break;
         case 'v':
             opt_verbose = 1;
