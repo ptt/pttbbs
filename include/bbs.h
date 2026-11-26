@@ -53,6 +53,7 @@ extern "C" {
 #include "vform.h"
 #include "bof.h"
 #include "bof_files.h"
+#include "gem.h"
 #include "proto.h"
 #include "fnv_hash.h"
 #include "convert.h"

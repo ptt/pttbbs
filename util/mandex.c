@@ -235,6 +235,13 @@ int main(int argc, char* argv[])
     int     i, fd, checkrebuild = 0;
     char    *fname, fpath[PATHLEN];
 
+    // gem.svc keeps the gem areas and makes their tables of contents on
+    // demand (gem.ctl index <board>): nothing to do here.
+    if (IS_ENABLED(CONFIG_GEM)) {
+        fprintf(stderr, "mandex: CONFIG_GEM is on, gem.svc makes the index\n");
+        return 0;
+    }
+
     nice(10);
 
     while ((i = getopt(argc, argv, "sxh")) != -1) {

@@ -257,6 +257,7 @@ int start_services()
         CONDITIONAL_SVC(CONTENT, "content")
         CONDITIONAL_SVC(UQUERY, "uquery")
         CONDITIONAL_SVC(TRACKMAIL, "trackmail")
+        IF_ENABLED(CONFIG_GEM, "gem",)
     };
 
     for (size_t i = 0; i < ARRAY_SIZE(services); i++) {

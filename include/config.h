@@ -780,6 +780,10 @@
 #define GUEST_URL ""
 #endif
 
+/* CONFIG_GEM: gem.svc keeps the gem areas instead of man/ (gem.c instead
+ * of announce.c). Import first with gem.ctl import-all; gem.ctl export
+ * writes them back to switch back. Off by default. */
+
 /* CONFIG_NEST_SVC: nest.svc keeps the posts, comments and votes, and the
  * files of the boards are its cache: BoF uses its backend
  * (bof_storage_nest) unless pttbbs.conf names another. Everything goes

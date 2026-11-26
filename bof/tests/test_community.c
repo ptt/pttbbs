@@ -178,8 +178,11 @@ test_rename(void)
     EXPECT(!board_exists("Old"));
     setbfile(path, "New", "M.1.A.001");
     EXPECT(dashf(path));
-    setapath(path, "New");
-    EXPECT(dashd(path));
+    // The digest follows in man/, or in gem.svc with CONFIG_GEM.
+    if (!IS_ENABLED(CONFIG_GEM)) {
+        setapath(path, "New");
+        EXPECT(dashd(path));
+    }
 
     // Gone, or taken.
     EXPECT_INT(bof_bbs_rename_community(&sysop, &req),

@@ -899,6 +899,61 @@ buildBMcache(int bid) /* bid starts from 1 */
  * section - PTT cache (adbanner cache?)
  * 動態看板與其它
  */
+#define ORDERSONG_FOLDERNAME	"<點歌>"
+
+#if IS_ENABLED(CONFIG_GEM)
+// The films of the moving board (the directories of the gem area of
+// BN_NOTE whose titles are "<...>"), from gem.svc. Returns how many.
+static int
+reload_notes_gem(void)
+{
+    char root[GEM_ROOT_SIZE];
+    gem_entry_t *dirs = NULL, *files = NULL;
+    int ndirs = 0, id = 0;
+
+    snprintf(root, sizeof(root), "board:%s", BN_NOTE);
+    if (gem_list(root, "", 0, 0, NULL, &ndirs, NULL) < 0 || ndirs <= 0 ||
+        !(dirs = calloc(ndirs, sizeof(gem_entry_t))))
+        return 0;
+    ndirs = gem_list(root, "", 0, ndirs, dirs, NULL, NULL);
+    for (int i = 0; i < ndirs && id < MAX_ADBANNER; i++) {
+        const fileheader_t *item = &dirs[i].header;
+        int nfiles = 0, is_ordersong_dir;
+
+        if (dirs[i].kind != GEM_KIND_DIR ||
+            item->title[3] != '<' || item->title[8] != '>')
+            continue;
+        is_ordersong_dir = strncmp(item->title + 3, ORDERSONG_FOLDERNAME,
+                                   strlen(ORDERSONG_FOLDERNAME)) == 0;
+        if (gem_list(root, item->filename, 0, 0, NULL, &nfiles, NULL) < 0 ||
+            nfiles <= 0 || !(files = calloc(nfiles, sizeof(gem_entry_t))))
+            continue;
+        nfiles = gem_list(root, item->filename, 0, nfiles, files, NULL, NULL);
+        for (int j = 0; j < nfiles && id < MAX_ADBANNER; j++) {
+            size_t len;
+            char *data;
+            if (files[j].kind != GEM_KIND_FILE ||
+                !(data = gem_get(root, item->filename, j,
+                                 files[j].header.filename, &len)))
+                continue;
+            if (len > sizeof(SHM->notes[0]) - 1)
+                len = sizeof(SHM->notes[0]) - 1;
+            memcpy(SHM->notes[id], data, len);
+            SHM->notes[id][len] = 0;
+            free(data);
+            storage_to_mb(SHM->notes[id], SHM->notes[id], sizeof(SHM->notes[0]));
+            id++;
+        }
+        free(files);
+        files = NULL;
+        if (is_ordersong_dir)
+            SHM->last_usong = id - 1;
+    }
+    free(dirs);
+    return id;
+}
+#endif
+
 /* cache for 動態看板 */
 void
 reload_pttcache(void)
@@ -925,6 +980,11 @@ reload_pttcache(void)
     int             id;
 	SHM->last_film = 0;
 	bzero(SHM->notes, sizeof(SHM->notes));
+#if IS_ENABLED(CONFIG_GEM)
+	id = reload_notes_gem();
+	(void)item; (void)subitem; (void)pbuf; (void)buf; (void)fp; (void)fp1;
+	(void)fp2;
+#else
 	setapath(pbuf, BN_NOTE);
 	setadir(buf, pbuf);
 
@@ -940,7 +1000,6 @@ reload_pttcache(void)
 		if (item.title[3] != '<' || item.title[8] != '>')
 		    continue;
 
-#define ORDERSONG_FOLDERNAME	"<點歌>"
 		if (strncmp(item.title+3, ORDERSONG_FOLDERNAME, strlen(ORDERSONG_FOLDERNAME)) == 0)
 		    is_ordersong_dir = 1;
 
@@ -981,6 +1040,7 @@ reload_pttcache(void)
 	    } // end of .DIR loop
 	    fclose(fp);
 	}
+#endif
 	SHM->last_film = id - 1;
 
 	/* 等所有資料更新後再設定 uptime */

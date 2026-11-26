@@ -2621,7 +2621,8 @@ b_man(void)
     AUTO_BDIR(backup_path, currboard);
     AUTO_APATH(apath, currboard);
 
-    if (CBRD_IS_BM() || HasUserPerm(PERM_BOARDS)) {
+    // .rebuild asks util/mandex to rebuild .index; gem.svc makes it on demand.
+    if (!IS_ENABLED(CONFIG_GEM) && (CBRD_IS_BM() || HasUserPerm(PERM_BOARDS))) {
 	AUTO_STR(rebuild_path, "%s/.rebuild", apath);
 	autoclose int fd = OpenCreate(rebuild_path, O_RDWR);
     }

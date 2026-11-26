@@ -2431,7 +2431,8 @@ mail_man(void)
     // if user already has man directory or permission,
     // allow entering mail-man folder.
 
-    if (!dashd(buf) && !HasUserPerm(PERM_MAILLIMIT))
+    if (!(IS_ENABLED(CONFIG_GEM) ? gem_user_folder_exists(cuser.userid) :
+          dashd(buf)) && !HasUserPerm(PERM_MAILLIMIT))
 	return DONOTHING;
 
     SNPRINTF(title, "%s ªº«H¥ó§¨", cuser.userid);

@@ -1,6 +1,10 @@
 #include "bbs.h"
 #include "psb.h"
 
+// The gem areas in the files of man/; gem.c keeps them in gem.svc instead
+// when CONFIG_GEM is on.
+#if !IS_ENABLED(CONFIG_GEM)
+
 // XXX piaip 2007/12/29
 // 最近發現很多 code 都死在 announce
 // 因為進來要看 lastlevel 而非 currbid
@@ -1887,3 +1891,5 @@ Announce(void)
     return 0;
 }
 
+
+#endif // !CONFIG_GEM

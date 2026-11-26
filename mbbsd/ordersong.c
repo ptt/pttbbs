@@ -1,10 +1,62 @@
 #include "bbs.h"
+#include "gem.h"
 
 #define lockreturn(unmode, state)  if(lockutmpmode(unmode, state)) return
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 #define lockbreak(unmode, state)   if(lockutmpmode(unmode, state)) break
 #define SONGBOOK  "etc/SONGBOOK"
 #define OSONGPATH "etc/SONGO"
+
+// The songs ordered (OSONGPATH, in the gem area of the Note board): kept
+// by gem.svc with CONFIG_GEM, else in files.
+static int
+order_song_append(const char *fpath, const fileheader_t *fh)
+{
+#if IS_ENABLED(CONFIG_GEM)
+    char root[GEM_ROOT_SIZE], sub[PATHLEN];
+    if (!gem_path_parse(OSONGPATH, root, sizeof(root), sub, sizeof(sub)))
+        return -1;
+    return gem_add_file(root, sub, -1, fh, fpath, NULL) < 0 ? -1 : 0;
+#else
+    (void)fpath;
+    return append_fileheader(OSONGPATH "/" FN_DIR, fh);
+#endif
+}
+
+static int
+order_song_count(void)
+{
+#if IS_ENABLED(CONFIG_GEM)
+    char root[GEM_ROOT_SIZE], sub[PATHLEN];
+    int count = 0;
+    if (!gem_path_parse(OSONGPATH, root, sizeof(root), sub, sizeof(sub)) ||
+        gem_list(root, sub, 0, 0, NULL, &count, NULL) < 0)
+        return 0;
+    return count;
+#else
+    return get_num_records(OSONGPATH "/" FN_DIR, sizeof(fileheader_t));
+#endif
+}
+
+// Removes the n oldest songs.
+static void
+order_song_trim(int n)
+{
+#if IS_ENABLED(CONFIG_GEM)
+    char root[GEM_ROOT_SIZE], sub[PATHLEN];
+    gem_entry_t *ents;
+    int got;
+    if (n <= 0 || !gem_path_parse(OSONGPATH, root, sizeof(root), sub, sizeof(sub)) ||
+        !(ents = calloc(n, sizeof(gem_entry_t))))
+        return;
+    got = gem_list(root, sub, 0, n, ents, NULL, NULL);
+    for (int i = 0; i < got; i++)
+        gem_remove(root, sub, -1, ents[i].header.filename);
+    free(ents);
+#else
+    delete_range(OSONGPATH "/" FN_DIR, 1, n);
+#endif
+}
 
 #ifndef ORDERSONG_MIN_NUMPOST
 #define ORDERSONG_MIN_NUMPOST   (3)
@@ -200,7 +252,8 @@ do_order_song(void)
     }
     if (IS_ENABLED(CONFIG_DEBUG))
         vmsg(trans_buffer);
-    STRLCPY(filename, OSONGPATH);
+    // With CONFIG_GEM the songs are kept by gem.svc: written in tmp/ first.
+    STRLCPY(filename, IS_ENABLED(CONFIG_GEM) ? "tmp" : OSONGPATH);
     stampfile(filename, &mail);
     unlink(filename);
 
@@ -272,7 +325,7 @@ do_order_song(void)
     if (IS_ENABLED(CONFIG_ANGEL) && override_receiver)
 	angel_log_order_song(override_receiver);
 
-    if (append_fileheader(OSONGPATH "/" FN_DIR, &mail) != -1) {
+    if (order_song_append(filename, &mail) != -1) {
 	StatIncDailySong();
 	/* Jaky 超過 MAX_ADBANNER 首歌就開始砍 */
 	// XXX 載入的順序會長得像是:
@@ -281,10 +334,10 @@ do_order_song(void)
 	// 5. ◆ <廣告> 動態看板   SYSOP [08/22/09]
 	// 6. ◆ <看板> 動態看板   SYSOP [04/16/09]
 	// 由於點歌部份算是早載入的，不能直接用 MAX_ADBANNER 不然後面都沒得玩。
-	nsongs = get_num_records(OSONGPATH "/" FN_DIR, sizeof(mail));
+	nsongs = order_song_count();
 	if (nsongs > MAX_SONGS) {
 	    // XXX race condition
-	    delete_range(OSONGPATH "/" FN_DIR, 1, nsongs - MAX_SONGS);
+	    order_song_trim(nsongs - MAX_SONGS);
 	}
 	SNPRINTF(genbuf, "%s says \"%s\" to %s.",
 		sender, say, receiver);
@@ -295,6 +348,9 @@ do_order_song(void)
     if (*address) {
 	save_mailbox(cuser.userid, address, save_title, NULL, filename, 0, MAILSEND_FLAG_ALLOW_FORWARD | MAILSEND_FLAG_CHECK_RECV_LIMIT, NULL);
     }
+    // gem.svc keeps its own copy.
+    if (IS_ENABLED(CONFIG_GEM))
+        unlink(filename);
 
     clear();
     outs(

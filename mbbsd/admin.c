@@ -559,6 +559,12 @@ setup_man(const boardheader_t * board, const boardheader_t * oldboard GCC_UNUSED
 {
     char            genbuf[200];
 
+    if (IS_ENABLED(CONFIG_GEM)) {
+        // gem.svc keeps it (gem_root_create() fails if it is there).
+        SNPRINTF(genbuf, "board:%s", board->brdname);
+        gem_root_create(genbuf);
+        return;
+    }
     setapath(genbuf, board->brdname);
     Mkdir(genbuf);
 }

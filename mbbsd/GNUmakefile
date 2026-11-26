@@ -8,7 +8,7 @@ SCRIPT_DIR := $(SRCROOT)/mk
 #######################################################################
 
 PROG      := mbbsd
-COREOBJS  := bbs.o announce.o read.o board.o brc.o mail.o record.o fav.o \
+COREOBJS  := bbs.o announce.o gem.o read.o board.o brc.o mail.o record.o fav.o \
 	     livepost.o
 ABUSEOBJS := captcha.o contentcheck.o
 ACCOBJS   := user.o acl.o register.o passwd.o emaildb.o

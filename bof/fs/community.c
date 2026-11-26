@@ -12,6 +12,7 @@
 
 #include "../bof_int.h"
 #include "bof_fs.h"
+#include "gem.h"
 
 // Writes the header of slot bid into .BRD and the board cache, with its
 // moderators, as reset_board() would have read it again.
@@ -68,6 +69,14 @@ bof_fs_remove_community(void *ctx GCC_UNUSED,
 
     setbpath(bpath, req->community);
     setapath(apath, req->community);
+    // With CONFIG_GEM the digest is in gem.svc, removed there (the copy
+    // below is of the files of the board only).
+    if (IS_ENABLED(CONFIG_GEM)) {
+        char root[GEM_ROOT_SIZE];
+        snprintf(root, sizeof(root), "board:%s", req->community);
+        gem_root_delete(root);
+        apath[0] = '\0';
+    }
     // A copy of the files, as the BBS has always kept (the name is checked:
     // no shell characters).
     snprintf(cmd, sizeof(cmd),
@@ -77,7 +86,8 @@ bof_fs_remove_community(void *ctx GCC_UNUSED,
         // Removed all the same, as before.
     }
     RmTree(bpath);
-    RmTree(apath);
+    if (apath[0])
+        RmTree(apath);
     if (out)
         out->bbs_posts_kept = 0;
     return BOF_OK;
@@ -100,6 +110,13 @@ bof_fs_rename_community(void *ctx GCC_UNUSED,
     if (Rename(src, dst) != 0)
         return BOF_ERR_COULDNT_UPDATE_COMMUNITY;
     // The digest follows; a board may have none.
+    if (IS_ENABLED(CONFIG_GEM)) {
+        char from[GEM_ROOT_SIZE], to[GEM_ROOT_SIZE];
+        snprintf(from, sizeof(from), "board:%s", req->community);
+        snprintf(to, sizeof(to), "board:%s", req->new_name);
+        gem_root_rename(from, to);
+        return BOF_OK;
+    }
     setapath(src, req->community);
     setapath(dst, req->new_name);
     Rename(src, dst);
