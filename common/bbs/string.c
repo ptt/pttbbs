@@ -7,8 +7,14 @@
 #include "common.h"
 #include "var.h"
 
-bool
-is_valid_brdname(const char *brdname)
+// Board names are letters, digits, '_', '-' and '.'. New names (not
+// existing) must also be BRDNAME_MIN_NEW long or more, begin with a letter
+// and have no '.', as Lemmy's community names (3 or more of [a-zA-Z0-9_]);
+// '-' stays, as a quarter of the boards have it.
+#define BRDNAME_MIN_NEW 3
+
+static bool
+check_brdname(const char *brdname, bool existing)
 {
     int i;
     int len;
@@ -16,20 +22,40 @@ is_valid_brdname(const char *brdname)
     assert(brdname);
 
     len = strlen(brdname);
-    if (len < 2 || len > IDLEN)
+    if (len < (existing ? 2 : BRDNAME_MIN_NEW) || len > IDLEN)
 	return false;
 
     for (i = 0; i < len; i++) {
-	char ch = brdname[i];
+	unsigned char ch = (unsigned char)brdname[i];
 	if (i == 0) {
-	    if (!isalpha((int)ch))
+	    if (!isalpha(ch) && !(existing && isdigit(ch)))
 		return false;
 	} else {
-	    if (!isalnum(ch) && ch != '_' && ch != '-' && ch != '.')
+	    if (!isalnum(ch) && ch != '_' && ch != '-' &&
+		!(existing && ch == '.'))
 		return false;
 	}
     }
     return true;
+}
+
+// Whether brdname may name a new board (or the new name of a board):
+// 3 to IDLEN letters, digits, '_' or '-', a letter first.
+bool
+is_valid_brdname(const char *brdname)
+{
+    return check_brdname(brdname, false);
+}
+
+// Whether brdname may be the name of a board that exists: as
+// is_valid_brdname(), but older boards may begin with a digit (e.g.
+// 8words, 2nd_NTUCCC), have a '.' (S.H.E) or only 2 letters (F4), which
+// the rules of new names no longer allow. Still a single safe path
+// component (never '.' first, nor '/').
+bool
+is_valid_existing_brdname(const char *brdname)
+{
+    return check_brdname(brdname, true);
 }
 
 static int *

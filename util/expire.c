@@ -174,7 +174,7 @@ life_t  db, table[MAX_BOARD], *key;
 
 void toexpire(char *brdname)
 {
-    if (!is_valid_brdname(brdname))
+    if (!is_valid_existing_brdname(brdname))
 	return;
 
     key = NULL;

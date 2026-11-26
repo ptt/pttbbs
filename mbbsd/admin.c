@@ -839,7 +839,7 @@ b_gen_brdname_validator(const vform_field_t *field GCC_UNUSED, const void *val_p
     if (getbnum(val))
         return "錯誤: 此新看板名已存在";
     if (!is_valid_brdname(val))
-        return "錯誤: 看板名稱不合規定 (需英數字或 _-. 且開頭需為英文字母)";
+        return "錯誤: 看板名稱不合規定 (需 3 字以上英數字或 _- 且開頭需為英文字母)";
     return NULL;
 }
 
@@ -862,7 +862,7 @@ b_gen_desc_validator(const vform_field_t *field GCC_UNUSED, const void *val_ptr,
 }
 
 static const vform_field_t b_general_fields[] = {
-    VFORM_FIELD_TEXT("看板名稱", "看板英文名稱 (英數字或 _-., 僅總管可修改)", NULL,
+    VFORM_FIELD_TEXT("看板名稱", "看板英文名稱 (3 字以上英數字或 _-, 僅總管可修改)", NULL,
                      b_general_form_t, brdname, 0, b_gen_brdname_validator),
     VFORM_FIELD_TEXT("看板類別", "分類標籤 (恰為 4 半形字元或 2 個中文字)", NULL,
                      b_general_form_t, bclass, 0, b_gen_bclass_validator),
@@ -881,12 +881,12 @@ b_new_brdname_validator(const vform_field_t *field GCC_UNUSED, const void *val_p
     if (getbnum(val))
         return "錯誤: 此新看板名已存在";
     if (!is_valid_brdname(val))
-        return "錯誤: 看板名稱不合規定 (需英數字或 _-. 且開頭需為英文字母)";
+        return "錯誤: 看板名稱不合規定 (需 3 字以上英數字或 _- 且開頭需為英文字母)";
     return NULL;
 }
 
 static const vform_field_t b_new_board_fields[] = {
-    VFORM_FIELD_TEXT("看板名稱", "看板英文名稱 (英數字或 _-.)", NULL,
+    VFORM_FIELD_TEXT("看板名稱", "看板英文名稱 (3 字以上英數字或 _-)", NULL,
                      b_general_form_t, brdname, 0, b_new_brdname_validator),
     VFORM_FIELD_TEXT("看板類別", "分類標籤 (恰為 4 半形字元或 2 個中文字)", NULL,
                      b_general_form_t, bclass, 0, b_gen_bclass_validator),

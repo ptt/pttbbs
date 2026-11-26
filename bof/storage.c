@@ -135,7 +135,7 @@ dir_in_community(const char *community, const char *dir)
         return 0;
     if (!community)
         return strncmp(dir, "boards/", 7) == 0;
-    if (!is_valid_brdname(community))
+    if (!is_valid_existing_brdname(community))
         return 0;
     // Under boards/<c>/<community>/ (as setbpath() makes it), compared
     // without making it: lists are read record by record through here.
@@ -727,7 +727,7 @@ bof_resolve_report(const bof_actor_t *actor, const bof_resolve_report_t *req,
                    bof_report_t *out)
 {
     bof_report_t local = { 0 };
-    if (req->community && !is_valid_brdname(req->community))
+    if (req->community && !is_valid_existing_brdname(req->community))
         return BOF_ERR_INVALID_BODY_FIELD;
     CHECK(actor, req->community, MAY_MODERATE, NULL);
     return WRITE(resolve_report, out ? out : &local, actor, req);
@@ -873,7 +873,7 @@ bof_error_t
 bof_bbs_find_post(const bof_post_key_t *key, bof_found_post_t *out)
 {
     if (!key || !key->community[0] || !key->bbs_post_file[0] || !out ||
-        !out->bbs_header || !is_valid_brdname(key->community) ||
+        !out->bbs_header || !is_valid_existing_brdname(key->community) ||
         !bof_bbs_valid_post_file(key->bbs_post_file))
         return BOF_ERR_INVALID_BODY_FIELD;
     return READ(find_post, key, out);
@@ -1063,7 +1063,7 @@ bof_remove_community(const bof_actor_t *actor,
 {
     bof_remove_community_response_t local = { 0 };
 
-    if (!req || !req->community || !is_valid_brdname(req->community) ||
+    if (!req || !req->community || !is_valid_existing_brdname(req->community) ||
         req->removed != 1 || (req->reason && !plain_text(req->reason)))
         return BOF_ERR_INVALID_BODY_FIELD;
     CHECK_ADMIN(actor, req->community, BOF_BBS_GROUP_LEAD);
@@ -1076,8 +1076,10 @@ bof_error_t
 bof_bbs_rename_community(const bof_actor_t *actor,
                          const bof_bbs_rename_community_t *req)
 {
+    // The board may have an older name; the new one must follow the rules.
     if (!req || !req->community || !req->new_name ||
-        !is_valid_brdname(req->community) || !is_valid_brdname(req->new_name))
+        !is_valid_existing_brdname(req->community) ||
+        !is_valid_brdname(req->new_name))
         return BOF_ERR_INVALID_BODY_FIELD;
     CHECK_ADMIN(actor, req->community, BOF_BBS_GROUP_OP);
     return CALL(rename_community, actor, req);
@@ -1090,8 +1092,10 @@ bof_bbs_merge_communities(const bof_actor_t *actor,
 {
     bof_bbs_merge_communities_response_t local = { 0 };
 
-    if (!req || !req->from || !req->to || !is_valid_brdname(req->from) ||
-        !is_valid_brdname(req->to) || strcasecmp(req->from, req->to) == 0)
+    if (!req || !req->from || !req->to ||
+        !is_valid_existing_brdname(req->from) ||
+        !is_valid_existing_brdname(req->to) ||
+        strcasecmp(req->from, req->to) == 0)
         return BOF_ERR_INVALID_BODY_FIELD;
     CHECK_ADMIN(actor, req->to, 0);
     if (out)
@@ -1106,7 +1110,7 @@ bof_bbs_rebuild_community(const bof_actor_t *actor,
 {
     bof_bbs_rebuild_community_response_t local = { 0 };
 
-    if (!req || !req->community || !is_valid_brdname(req->community))
+    if (!req || !req->community || !is_valid_existing_brdname(req->community))
         return BOF_ERR_INVALID_BODY_FIELD;
     CHECK_ADMIN(actor, req->community, 0);
     if (out)

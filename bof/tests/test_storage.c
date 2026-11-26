@@ -148,6 +148,36 @@ test_reads(void)
     EXPECT_OK(bof_get_posts(&req, &res));
     EXPECT_INT(res.count, 7);
     EXPECT_STR(a.calls, "get_posts ");
+
+    // Older boards may begin with a digit (8words): their lists are read
+    // all the same, though no new board may be named so.
+    a.calls[0] = '\0';
+    req.community = "8words";
+    req.bbs_dir = "boards/8/8words/.DIR";
+    EXPECT_OK(bof_get_posts(&req, &res));
+    EXPECT_STR(a.calls, "get_posts ");
+    EXPECT_INT(is_valid_brdname("8words"), 0);
+    EXPECT_INT(is_valid_existing_brdname("8words"), 1);
+    // New names: 3 or more, a letter first, no '.' (as Lemmy); older
+    // boards keep theirs.
+    EXPECT_INT(is_valid_brdname("Abc"), 1);
+    EXPECT_INT(is_valid_brdname("NTU-K8"), 1);
+    EXPECT_INT(is_valid_brdname("F4"), 0);
+    EXPECT_INT(is_valid_existing_brdname("F4"), 1);
+    EXPECT_INT(is_valid_brdname("S.H.E"), 0);
+    EXPECT_INT(is_valid_existing_brdname("S.H.E"), 1);
+    EXPECT_INT(is_valid_existing_brdname(".SHE"), 0);
+    EXPECT_INT(is_valid_existing_brdname("A/B"), 0);
+    EXPECT_INT(is_valid_existing_brdname("X"), 0);
+
+    // Still not a list of another board, nor a way out.
+    a.calls[0] = '\0';
+    req.bbs_dir = "boards/F/Fortune/.DIR";
+    EXPECT_INT(bof_get_posts(&req, &res), BOF_ERR_INVALID_BODY_FIELD);
+    req.community = ".8";
+    req.bbs_dir = "boards/./.8/.DIR";
+    EXPECT_INT(bof_get_posts(&req, &res), BOF_ERR_INVALID_BODY_FIELD);
+    EXPECT_STR(a.calls, "");
 }
 
 static void

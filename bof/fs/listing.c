@@ -23,7 +23,7 @@ bof_fs_get_posts(void *ctx GCC_UNUSED, const bof_get_posts_t *req,
     const char *dir = req->bbs_dir;
 
     // The list of the board itself, if not given (e.g. by a gateway).
-    if (!dir && req->community && is_valid_brdname(req->community)) {
+    if (!dir && req->community && is_valid_existing_brdname(req->community)) {
         setbfile(bdir, req->community, FN_DIR);
         dir = bdir;
     }
@@ -112,7 +112,8 @@ bof_fs_find_post(void *ctx GCC_UNUSED, const bof_post_key_t *key,
 {
     int i, fd = -1;
 
-    if (!is_valid_brdname(key->community) || strchr(key->bbs_post_file, '/'))
+    if (!is_valid_existing_brdname(key->community) ||
+        strchr(key->bbs_post_file, '/'))
         return BOF_ERR_INVALID_BODY_FIELD;
     setbfile(out->bbs_dir, key->community, FN_DIR);
     if (!dashf(out->bbs_dir))

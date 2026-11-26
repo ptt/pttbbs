@@ -369,7 +369,7 @@ bof_bbs_name_post(const char *community, fileheader_t *fh)
 {
     char path[PATHLEN];
 
-    if (!community || !is_valid_brdname(community) || !fh)
+    if (!community || !is_valid_existing_brdname(community) || !fh)
         return BOF_ERR_INVALID_BODY_FIELD;
     setbpath(path, community);
     if (!dashd(path))

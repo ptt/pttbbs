@@ -30,6 +30,7 @@ const char* money_level(int money);
 
 /* string.c */  
 bool is_valid_brdname(const char *brdname);
+bool is_valid_existing_brdname(const char *brdname);
 const char *subject_ex(const char *title, int *ptype);
 const char *subject(const char *title);
 
