@@ -120,6 +120,9 @@ CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
     case BOF_ERR_BBS_READ_ONLY:
         vmsg("錯誤: 系統目前唯讀中，無法修改。");
         return -1;
+    case BOF_ERR_BBS_POST_TOO_LARGE:
+        vmsg("推文已達上限, 無法繼續推文, 請另撰文發表");
+        return -1;
     default:
         vmsg("錯誤: 原檔案已被刪除。 無法寫入。");
         return -1;

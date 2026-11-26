@@ -23,6 +23,11 @@ var ErrCommentNotFound = errors.New("comment not found")
 // ErrTooManyComments is returned when a post has no floor left.
 var ErrTooManyComments = fmt.Errorf("a post has at most %d floors", model.MaxFloor)
 
+// ErrPostTooLarge is returned when the comments of a post would exceed
+// Config.MaxPostCommentLines. PTT-specific: Lemmy and Reddit limit each
+// comment and stop threads by locking.
+var ErrPostTooLarge = errors.New("bbs_post_too_large")
+
 // commentAt returns the comment at (postID, seq), or nil.
 func (e *Engine) commentAt(postID uint64, seq uint32) *model.Comment {
 	val, closer, err := e.commentsDB.Get(model.EncodeCommentKey(postID, seq))

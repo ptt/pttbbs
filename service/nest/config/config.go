@@ -27,7 +27,10 @@ type ServiceConfig struct {
 	MinReplyRunes  int    `json:"min_reply_runes"`
 	FilterEncoding string `json:"filter_encoding"`
 	MaxOpenFiles   int    `json:"max_open_files"`
-	ImportWorkers  int    `json:"import_workers"`
+	// MaxPostCommentLines limits the lines of the comments of a post in
+	// all (0: no limit); 51,200 by default, about what 5 MiB held before.
+	MaxPostCommentLines int `json:"max_post_comment_lines"`
+	ImportWorkers       int `json:"import_workers"`
 	// SiteURL (e.g. https://www.ptt.cc) makes the ActivityPub IDs (ap_id,
 	// actor_id) in the Lemmy API.
 	SiteURL string `json:"site_url,omitempty"`
@@ -46,6 +49,10 @@ func (c *ServiceConfig) IsBig5() bool {
 	enc := strings.ToLower(strings.TrimSpace(c.FilterEncoding))
 	return enc == "" || enc == "big5" || enc == "big5-uao" || enc == "uao"
 }
+
+// DefaultMaxPostCommentLines: the busiest PTT posts stopped at 5 MiB,
+// about 51,300 lines of comments.
+const DefaultMaxPostCommentLines = 51200
 
 // DataDir returns where nest.svc keeps its databases by default (its Pebble
 // DBs, SQLite and the community registry): $BBSHOME/db/nest.db, as every
@@ -71,6 +78,8 @@ func DefaultConfig(bbshome string) *ServiceConfig {
 		MinReplyRunes:  20,
 		FilterEncoding: "big5",
 		ImportWorkers:  8,
+
+		MaxPostCommentLines: DefaultMaxPostCommentLines,
 		Engines: []EngineLocation{
 			{
 				Index:    0,
@@ -222,6 +231,10 @@ func LoadConfigFile(path string, bbshome string) (*ServiceConfig, error) {
 			case "max_open_files", "max_files":
 				if n, err := strconv.Atoi(val); err == nil && n > 0 {
 					cfg.MaxOpenFiles = n
+				}
+			case "max_post_comment_lines":
+				if n, err := strconv.Atoi(val); err == nil && n >= 0 {
+					cfg.MaxPostCommentLines = n
 				}
 			case "workers", "import_workers":
 				if n, err := strconv.Atoi(val); err == nil && n > 0 {

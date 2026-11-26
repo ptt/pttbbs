@@ -1252,7 +1252,8 @@ nest_create_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                     sizeof(resp));
     free(msg);
     if (!ok)
-        return BOF_ERR_COULDNT_CREATE_COMMENT;
+        return strstr(resp, "bbs_post_too_large") ?
+            BOF_ERR_BBS_POST_TOO_LARGE : BOF_ERR_COULDNT_CREATE_COMMENT;
     sscanf(resp, "OK %d %lld %d %15s", &seq, &ctime, &score, status);
     merged = strcmp(status, "MERGED") == 0;
 

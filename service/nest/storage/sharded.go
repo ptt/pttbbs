@@ -57,6 +57,8 @@ func OpenStorage(sc *config.ServiceConfig) (Storage, error) {
 		MinReplyRunes:  sc.MinReplyRunes,
 		FilterEncoding: sc.FilterEncoding,
 		MaxOpenFiles:   sc.MaxOpenFiles,
+
+		MaxPostCommentLines: sc.MaxPostCommentLines,
 	}
 
 	if len(sc.Engines) <= 1 {

@@ -2950,7 +2950,9 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	if (bof_bbs_get_post_file(&ref, path, sizeof(path)) != BOF_OK)
 	    setdirpath(path, direct, fhdr->filename);
 	off_t size = dashs(path);
-	if (size > 5*1024*1024) {
+	// nest.svc limits the lines of the comments itself, not the file,
+	// whose article may be large (BBSmovie): bbs_post_too_large.
+	if (!BOF_FILES_ARE_CACHE && size > 5*1024*1024) {
 	    vmsg("檔案太大, 無法繼續推文, 請另撰文發表");
 	    return FULLUPDATE;
 	}

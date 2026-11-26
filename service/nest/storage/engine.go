@@ -36,6 +36,9 @@ type Config struct {
 	FilterEncoding string // "big5" (default) or "utf-8"
 	NumShards      int    // engines sharing the file descriptors
 	MaxOpenFiles   int
+	// MaxPostCommentLines is how many lines the comments of a post may
+	// have in all (0: no limit); see ErrPostTooLarge.
+	MaxPostCommentLines int
 
 	// NextPostID allocates the ID of a new post. Post IDs are global: a
 	// sharded storage hands out one sequence to all its engines, so an ID
@@ -80,8 +83,13 @@ type Engine struct {
 	ownsReg     bool
 
 	// In-memory atomic sequence counters per post
-	seqMu       sync.RWMutex
-	postSeqs    map[uint64]*uint32
+	seqMu    sync.RWMutex
+	postSeqs map[uint64]*uint32
+
+	// linesMu guards postLines, the lines of the comments of the posts
+	// commented on since nest.svc started (see reserveCommentLines).
+	linesMu     sync.Mutex
+	postLines   map[uint64]int
 	dirtyDeltas map[uint64]*postDelta
 	dirtyMu     sync.Mutex
 	flushTicker *time.Ticker
@@ -250,6 +258,7 @@ func OpenEngine(cfg Config) (*Engine, error) {
 		reg:         reg,
 		ownsReg:     ownsReg,
 		postSeqs:    make(map[uint64]*uint32),
+		postLines:   make(map[uint64]int),
 		dirtyDeltas: make(map[uint64]*postDelta),
 		flushTicker: time.NewTicker(time.Duration(cfg.FlushSeconds) * time.Second),
 		stopFlush:   make(chan struct{}),
@@ -970,9 +979,20 @@ func (e *Engine) GetOriginPost(targetCommunity, targetPostFile string) (*model.P
 // AddComment appends a comment, storing it in Pebble (RFC 822) and updating dirty counts.
 // Consecutive comments by the same author without intervening comments within 3 minutes (< 180s)
 // are automatically merged into the same comment floor.
-func (e *Engine) AddComment(c *model.Comment) (*model.Comment, error) {
+func (e *Engine) AddComment(c *model.Comment) (added *model.Comment, err error) {
 	if c.CreatedAt == 0 {
 		c.CreatedAt = time.Now().Unix()
+	}
+	if e.cfg.MaxPostCommentLines > 0 {
+		lines := model.CountCommentLines(model.TruncateCommentLines(c.Content, model.MaxCommentLines))
+		if err := e.reserveCommentLines(c.PostID, lines); err != nil {
+			return nil, err
+		}
+		defer func() {
+			if err != nil {
+				e.forgetCommentLines(c.PostID) // counted again when needed
+			}
+		}()
 	}
 
 	// 1. Check if previous comment is from the same author within 3 minutes (< 180s)
@@ -1057,7 +1077,7 @@ func (e *Engine) AddComment(c *model.Comment) (*model.Comment, error) {
 	batch := e.commentsDB.NewBatch()
 	_ = batch.Set(model.EncodeCommentKey(c.PostID, c.Sequence), model.EncodeRFC822Comment(c), nil)
 	_ = batch.Set(model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, c.PostID, c.Sequence), []byte{}, nil)
-	err := batch.Commit(pebble.NoSync)
+	err = batch.Commit(pebble.NoSync)
 	batch.Close()
 	if err != nil {
 		return nil, fmt.Errorf("write pebble comment failed: %w", err)
@@ -1077,6 +1097,68 @@ func (e *Engine) AddComment(c *model.Comment) (*model.Comment, error) {
 	_ = e.AppendCommentCache(c)
 
 	return c, nil
+}
+
+// reserveCommentLines adds lines to the comment line count of postID, or
+// returns ErrPostTooLarge past MaxPostCommentLines. The count is made from
+// the comments on first use; forgetCommentLines drops it after other changes.
+func (e *Engine) reserveCommentLines(postID uint64, lines int) error {
+	e.linesMu.Lock()
+	defer e.linesMu.Unlock()
+	total, ok := e.postLines[postID]
+	if !ok {
+		total = e.countCommentLines(postID)
+	}
+	if total+lines > e.cfg.MaxPostCommentLines {
+		e.postLines[postID] = total
+		return ErrPostTooLarge
+	}
+	e.postLines[postID] = total + lines
+	return nil
+}
+
+// countCommentLines returns how many lines the comments of postID have.
+func (e *Engine) countCommentLines(postID uint64) int {
+	prefix := model.EncodeCommentPrefix(postID)
+	iter, err := e.commentsDB.NewIter(&pebble.IterOptions{
+		LowerBound: prefix,
+		UpperBound: append(prefix, 0xff),
+	})
+	if err != nil {
+		return 0
+	}
+	defer iter.Close()
+	total := 0
+	for ok := iter.First(); ok; ok = iter.Next() {
+		_, seq, err := model.DecodeCommentKey(iter.Key())
+		if err != nil {
+			continue
+		}
+		c, err := model.DecodeRFC822Comment(postID, seq, iter.Value())
+		if err != nil {
+			continue
+		}
+		if c.DeletedOrRemoved() {
+			total++
+		} else {
+			total += model.CountCommentLines(c.Content)
+		}
+	}
+	return total
+}
+
+// forgetCommentLines drops the count of lines of the comments of the
+// posts given, or of every post with none.
+func (e *Engine) forgetCommentLines(postIDs ...uint64) {
+	e.linesMu.Lock()
+	defer e.linesMu.Unlock()
+	if len(postIDs) == 0 {
+		clear(e.postLines)
+		return
+	}
+	for _, id := range postIDs {
+		delete(e.postLines, id)
+	}
 }
 
 func (e *Engine) nextSequence(postID uint64) uint32 {
@@ -1191,6 +1273,7 @@ func (e *Engine) GetCommentsByCommunityFileFiltered(community, postFile string, 
 
 // PurgeUserComments deletes all comments from an author created within maxAge (e.g. 7 days for anti-spam)
 func (e *Engine) PurgeUserComments(author string, maxAge time.Duration) (purged int, err error) {
+	defer e.forgetCommentLines()
 	minTimestamp := time.Now().Add(-maxAge).Unix()
 	prefix := model.EncodeAuthorCommentPrefix(author)
 
@@ -1375,6 +1458,7 @@ func (e *Engine) RemoveCommunity(name string, mod model.PersonID, reason string)
 }
 
 func (e *Engine) clearCommunity(community int64) (postsDeleted int, commentsDeleted int, err error) {
+	defer e.forgetCommentLines()
 	// 1. Flush any pending deltas first so SQLite is up to date
 	e.FlushDirtyDeltas()
 
@@ -1602,6 +1686,7 @@ func (e *Engine) purgePostRecord(p *model.Post) error {
 // stay here) and its cache file if the other engine uses the same one
 // (keepCache).
 func (e *Engine) removePostRecord(p *model.Post, keepIncoming, keepCache bool) error {
+	defer e.forgetCommentLines(p.ID)
 	if p == nil {
 		return fmt.Errorf("post is nil")
 	}
@@ -2783,6 +2868,7 @@ func (e *Engine) UndeletePostByCommunityFile(community, postFile string) error {
 }
 
 func (e *Engine) UpdateComment(postID uint64, seq uint32, newContent, editorName string, editorID model.PersonID) (uint32, error) {
+	defer e.forgetCommentLines(postID)
 	cKey := model.EncodeCommentKey(postID, seq)
 	val, closer, err := e.commentsDB.Get(cKey)
 	if err != nil {
@@ -2885,6 +2971,7 @@ func (e *Engine) RemoveComment(postID uint64, seq uint32, modName string, modID 
 }
 
 func (e *Engine) takeDownComment(postID uint64, seq uint32, deleterName string, deleterID model.PersonID, reason string, remove bool) (uint32, error) {
+	defer e.forgetCommentLines(postID)
 	cKey := model.EncodeCommentKey(postID, seq)
 	val, closer, err := e.commentsDB.Get(cKey)
 	if err != nil {
@@ -2973,6 +3060,7 @@ func (e *Engine) DeleteCommentByCommunityFile(community, postFile string, seq ui
 }
 
 func (e *Engine) UndeleteComment(postID uint64, seq uint32) error {
+	defer e.forgetCommentLines(postID)
 	cKey := model.EncodeCommentKey(postID, seq)
 	val, closer, err := e.commentsDB.Get(cKey)
 	if err != nil {
@@ -3370,6 +3458,13 @@ const importCommentsPerWorker = 4096
 // lock serializes, so a large batch is split by the number of comments
 // among several goroutines, each writing a Pebble batch of its own.
 func (e *Engine) writeImportedComments(batch []*ImportedPostData) error {
+	defer func() {
+		ids := make([]uint64, len(batch))
+		for i, item := range batch {
+			ids[i] = item.Post.ID
+		}
+		e.forgetCommentLines(ids...)
+	}()
 	total := 0
 	for _, item := range batch {
 		total += len(item.Comments)

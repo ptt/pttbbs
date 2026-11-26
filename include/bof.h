@@ -65,6 +65,8 @@ typedef enum bof_error_t {
     BOF_ERR_BBS_NOT_ALLOWED,        /* bbs_not_allowed: by a BBS rule */
     BOF_ERR_NOT_AN_ADMIN,           /* not_an_admin */
     BOF_ERR_COULDNT_UPDATE_COMMUNITY, /* couldnt_update_community */
+    BOF_ERR_BBS_POST_TOO_LARGE,     /* bbs_post_too_large: no room for more
+                                       comments (nest.svc's limit of lines) */
     BOF_ERR_MAX
 } bof_error_t;
 

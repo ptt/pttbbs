@@ -34,6 +34,7 @@ static const char *const bof_error_names[BOF_ERR_MAX] = {
     [BOF_ERR_BBS_NOT_ALLOWED] = "bbs_not_allowed",
     [BOF_ERR_NOT_AN_ADMIN] = "not_an_admin",
     [BOF_ERR_COULDNT_UPDATE_COMMUNITY] = "couldnt_update_community",
+    [BOF_ERR_BBS_POST_TOO_LARGE] = "bbs_post_too_large",
 };
 
 const char *
