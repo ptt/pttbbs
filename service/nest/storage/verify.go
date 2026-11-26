@@ -28,8 +28,8 @@ import (
 //
 // Problems that make the backup unusable are errors. Differences that a live
 // backup can legitimately contain (writes in flight between the checkpoints,
-// titles changed by UpdatePostTitle, counters of deleted posts imported from
-// .DIR) are warnings.
+// and older data whose titles or deleted-post counters are only in SQLite)
+// are warnings.
 
 // VerifyReport is the result of VerifyDataDir.
 type VerifyReport struct {
@@ -646,8 +646,8 @@ func comparePost(r *VerifyReport, row *metaRow, val []byte, a postAggregate) {
 		r.warn(kind, row.id, fmt.Sprintf("meta.sqlite3=%v pebble=%v", sqlite, pebble))
 	}
 	if row.title != h["Title"] {
-		// UpdatePostTitle changes the title and modified time only in SQLite.
-		diff("title (UpdatePostTitle is not written to Pebble)", row.title, h["Title"])
+		// Older versions changed titles (UpdatePostTitle) only in SQLite.
+		diff("title", row.title, h["Title"])
 	} else if row.modified != modified {
 		diff("modified", row.modified, modified)
 	}

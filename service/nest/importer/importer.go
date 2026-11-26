@@ -1115,61 +1115,31 @@ func moneyOf(fhdr *FileHeader) int {
 
 // importSafeDeleted handles a record that mbbsd has safe-deleted: its
 // article file is gone, so only what the record tells is kept. A post that
-// nest.svc already has is marked deleted (unless it already is); otherwise
-// a deleted post without content is imported.
+// nest.svc already has is marked deleted (unless it already is); other
+// safe-deleted records are skipped.
 func importSafeDeleted(engine storage.Storage, opts ImportBoardOptions, users UserResolver, fhdr *FileHeader) (*storage.ImportedPostData, bool, error) {
+	p, err := engine.GetPostByCommunityFile(opts.Board, fhdr.Filename)
+	if err != nil || p == nil {
+		// Not imported: the article is gone, and RebuildSQLiteFromPebble
+		// could not recount what the record has left.
+		return nil, false, nil
+	}
+	if p.DeletedOrRemoved() || opts.DryRun {
+		return nil, !p.DeletedOrRemoved(), nil
+	}
 	title := fhdr.Title
 	if opts.IsBig5 && !utf8.Valid([]byte(title)) {
 		title = big5uao.DecodeSGR66([]byte(title))
 	}
-	creatorName, deletedByName, reason := parseDeletedTitle(title)
-	deletedAt := int64(fhdr.Modified)
-
-	if p, err := engine.GetPostByCommunityFile(opts.Board, fhdr.Filename); err == nil && p != nil {
-		if p.DeletedOrRemoved() || opts.DryRun {
-			return nil, !p.DeletedOrRemoved(), nil
-		}
-		deletedByID := p.CreatorID
-		if deletedByName != "" && deletedByName != p.CreatorName {
-			deletedByID = ResolvePersonID(users, deletedByName, 0, deletedAt)
-		} else {
-			deletedByName = p.CreatorName
-		}
-		if _, err := engine.DeletePostByCommunityFile(opts.Board, fhdr.Filename, deletedByName, deletedByID, reason); err != nil {
-			return nil, false, err
-		}
-		return nil, true, nil
+	_, deletedByName, reason := parseDeletedTitle(title)
+	deletedByID := p.CreatorID
+	if deletedByName != "" && deletedByName != p.CreatorName {
+		deletedByID = ResolvePersonID(users, deletedByName, 0, int64(fhdr.Modified))
+	} else {
+		deletedByName = p.CreatorName
 	}
-
-	ctime := stampTime(fhdr.Filename)
-	if ctime == 0 || ctime > time.Now().Unix() && deletedAt > 0 {
-		// No stamp, or one in the future (see postCtimeOf); there is no
-		// file to date it by.
-		ctime = deletedAt
+	if _, err := engine.DeletePostByCommunityFile(opts.Board, fhdr.Filename, deletedByName, deletedByID, reason); err != nil {
+		return nil, false, err
 	}
-	creatorID := ResolvePersonID(users, creatorName, 0, ctime)
-	if int(fhdr.Filemode)&model.FileAnonymous != 0 {
-		creatorID = resolveAnonymous(users, int(int32(fhdr.Multi)), ctime)
-	}
-	deletedByID := creatorID
-	if deletedByName != creatorName {
-		deletedByID = ResolvePersonID(users, deletedByName, 0, deletedAt)
-	}
-	score := int(fhdr.Score)
-	post := &model.Post{
-		Community:   opts.Board,
-		PostFile:    fhdr.Filename,
-		CreatorName: creatorName,
-		CreatorID:   creatorID,
-		CreatedAt:   ctime,
-		Modified:    deletedAt,
-		Filemode:    int(fhdr.Filemode),
-		Money:       moneyOf(fhdr),
-		Upvotes:     max(score, 0),
-		Downvotes:   max(-score, 0),
-		NumComments: int(fhdr.Comments),
-		Encoding:    "utf-8",
-	}
-	post.Deletion.Delete(creatorName, creatorID, deletedByName, deletedByID, reason, deletedAt)
-	return &storage.ImportedPostData{Post: post}, false, nil
+	return nil, true, nil
 }

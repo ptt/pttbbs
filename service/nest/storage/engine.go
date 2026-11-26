@@ -2710,7 +2710,13 @@ func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editorName string, edi
 	p.Title = newTitle
 	p.Modified = now
 
-	// 3. Update SQLite title and modified (metaDB)
+	// 3. Update the post record: the revision above keeps the old title, so
+	// RebuildSQLiteFromPebble can only learn the new one from here.
+	if err := e.postsDB.Set(model.EncodePostKey(p.ID), model.EncodeRFC822Post(p), pebble.NoSync); err != nil {
+		return 0, fmt.Errorf("update post failed: %w", err)
+	}
+
+	// 4. Update SQLite title and modified (metaDB)
 	e.metaWriteMu.Lock()
 	_, _ = e.metaDB.Exec("UPDATE posts SET title = ?, modified = ? WHERE id = ?", p.Title, p.Modified, p.ID)
 	e.metaWriteMu.Unlock()

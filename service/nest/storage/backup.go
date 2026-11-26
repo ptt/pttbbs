@@ -43,10 +43,8 @@ import (
 // communities.db, and no rebuild can recover them: it must be backed up.
 //
 // To restore, put the backed-up meta.sqlite3 (and communities.db) back together with the Pebble DBs
-// and do NOT run `nest.svc -rebuild`: SQLite holds a few things Pebble does not
-// (e.g. titles changed by UpdatePostTitle, and the counters of deleted posts
-// imported from .DIR), which a rebuild would lose. Rebuild only when
-// meta.sqlite3 is missing or corrupt.
+// and do NOT run `nest.svc -rebuild` unless meta.sqlite3 is missing or
+// corrupt: SQLite may hold data from older versions that Pebble lacks.
 
 // BackupSubdir is the directory under each engine's DataDir that holds named
 // backups.

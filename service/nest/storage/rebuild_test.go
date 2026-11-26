@@ -58,10 +58,8 @@ func dumpMetaRows(t *testing.T, db *sql.DB) map[string]string {
 // checks that RebuildSQLiteFromPebble reproduces exactly the same rows, i.e.
 // that SQLite holds nothing Pebble cannot give back.
 //
-// Known, accepted gaps that are deliberately not exercised here:
-//   - UpdatePostTitle changes the title and modified time only in SQLite.
-//   - Deleted posts imported from .DIR without an article file keep their
-//     .DIR counters only in SQLite; a rebuild resets them to 0.
+// Data from older versions may still differ: titles and deleted-post
+// counters they kept only in SQLite.
 func TestRebuildReproducesLiveSQLite(t *testing.T) {
 	dir := t.TempDir()
 	e, err := OpenEngine(Config{
@@ -133,6 +131,9 @@ func TestRebuildReproducesLiveSQLite(t *testing.T) {
 	// Content edits, deletion, restore, meta and votes reset.
 	edited := create("M.1.A.004", "edited", "author")
 	_, _, err = e.UpdatePost(edited.ID, "edited title\n", "new body", "author", 0, 0)
+	must(err)
+	retitled := create("M.1.A.011", "old title", "author")
+	_, err = e.UpdatePostTitle(retitled.ID, "new title", "mod", 0)
 	must(err)
 	removed := create("M.1.A.005", "removed", "author")
 	_, err = e.DeletePost(removed.ID, "mod", 0, "rule 1")

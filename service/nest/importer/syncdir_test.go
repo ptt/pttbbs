@@ -207,7 +207,7 @@ func TestSyncDir(t *testing.T) {
 		// 1: deleted by its author in nest.svc after the import
 		{filename: "M.1728000002.A.002", owner: "userB", title: "第二篇", modified: 1728000200,
 			content: "本文二\n" + sig + "噓 userA: 噓 10/01 12:05\n"},
-		// 2: already safe-deleted by a moderator in .DIR
+		// 2: already safe-deleted by a moderator in .DIR: not imported
 		{filename: ".d1728000003.A.003", owner: "-", title: "(本文已被移除) <userC>", modified: 1728000300,
 			score: -3, comments: 4},
 		// 3: anonymous, in nest.svc but (later) not in .DIR
@@ -254,8 +254,8 @@ func TestSyncDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ImportBoard failed: %v", err)
 	}
-	if importStats.PostsImported != 4 || importStats.DeletedImported != 1 {
-		t.Fatalf("ImportBoard: %+v, want 4 posts imported, 1 of them deleted", importStats)
+	if importStats.PostsImported != 3 || importStats.DeletedImported != 0 {
+		t.Fatalf("ImportBoard: %+v, want 3 posts imported, none deleted", importStats)
 	}
 
 	// Metadata from .DIR is imported.
@@ -270,11 +270,7 @@ func TestSyncDir(t *testing.T) {
 	if err != nil || len(cmts) != 3 || cmts[0].CreatorID != uidOf("userB") || cmts[2].CreatorID != 0 {
 		t.Errorf("post 1 comments: %+v, %v (userD is unknown)", cmts, err)
 	}
-	p3, err := engine.GetPostByCommunityFile("SyncBoard", "M.1728000003.A.003")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !p3.DeletedOrRemoved() || p3.CreatorName != "userC" || p3.CreatorID != uidOf("userC") || p3.NumComments != 4 || p3.Downvotes != 3 {
+	if p3, err := engine.GetPostByCommunityFile("SyncBoard", "M.1728000003.A.003"); err == nil {
 		t.Errorf("safe-deleted post 3 imported as %+v", p3)
 	}
 	p4, err := engine.GetPostByCommunityFile("SyncBoard", "M.1728000004.A.004")
@@ -310,8 +306,8 @@ func TestSyncDir(t *testing.T) {
 	}
 
 	// --only-scores
-	if stats := sync(SyncDirOptions{DryRun: true}); stats.Records != 4 || stats.Matched != 3 || stats.Updated != 2 {
-		t.Errorf("only-scores dry-run: %+v, want 4 records, 3 matched, 2 updated", stats)
+	if stats := sync(SyncDirOptions{DryRun: true}); stats.Records != 4 || stats.Matched != 2 || stats.Updated != 2 {
+		t.Errorf("only-scores dry-run: %+v, want 4 records, 2 matched, 2 updated", stats)
 	}
 	if got := readDirRecords(t, dirPath); !bytes.Equal(bytes.Join(got, nil), withoutP4) {
 		t.Fatal("dry-run modified .DIR")
@@ -361,7 +357,7 @@ func TestSyncDir(t *testing.T) {
 		big5uao.Decode([]byte(cString(recs[1][fhdrOffTitle:fhdrOffTitle+fhdrLenTitle]))); fn != ".d1728000002.A.002" || owner != "-" || title != "(本文已被刪除) [userB]" {
 		t.Errorf("deleted post 2: filename=%q owner=%q title=%q", fn, owner, title)
 	}
-	// The record imported from a safe-deleted one comes back unchanged.
+	// The safe-deleted record, unknown to nest.svc, is kept unchanged.
 	if !bytes.Equal(recs[2], original[2]) {
 		t.Errorf("safe-deleted post 3:\n got %q\nwant %q", recs[2], original[2])
 	}
@@ -472,7 +468,7 @@ func TestSyncDirRebuild(t *testing.T) {
 
 	// The old .DIR has a post nest.svc does not know (whose article is
 	// lost, so it cannot be imported), a stale record and a safe-deleted
-	// one (imported as a deleted post).
+	// one (not imported either: its article is gone).
 	dirPath := filepath.Join(boardDir, ".DIR")
 	old := bytes.Join([][]byte{
 		dirFixture{filename: "M.1728000009.A.009", owner: "ghost", title: "不明"}.record(),
@@ -515,15 +511,15 @@ func TestSyncDirRebuild(t *testing.T) {
 	// Rebuild never drops a record of a post that nest.svc does not have:
 	// it imports it, or keeps the record as it is.
 	if stats := sync(SyncDirOptions{}); stats.Updated != 5 || stats.Rendered != 1 || stats.AddedNoFile != 0 ||
-		stats.Imported != 1 || stats.Kept != 1 || stats.Pruned != 0 {
+		stats.Imported != 0 || stats.Kept != 2 || stats.Pruned != 0 {
 		t.Errorf("rebuild: %+v", stats)
 	}
 	if got := names(); len(got) != 5 || got[0] != "M.1728000001.A.001" || got[1] != ".d1728000002.A.002" || got[2] != "M.1728000003.A.003" ||
 		got[3] != ".d1728000007.A.007" || got[4] != "M.1728000009.A.009" {
 		t.Errorf("rebuilt .DIR: %v", got)
 	}
-	if p, err := engine.GetPostByCommunityFile("RebuildBoard", "M.1728000007.A.007"); err != nil || !p.Deleted {
-		t.Errorf("safe-deleted record not imported as a deleted post: %+v, %v", p, err)
+	if p, err := engine.GetPostByCommunityFile("RebuildBoard", "M.1728000007.A.007"); err == nil {
+		t.Errorf("safe-deleted record imported as %+v", p)
 	}
 	if got := readDirRecords(t, dirPath)[4]; !bytes.Equal(got, old[:FileHeaderSize]) {
 		t.Errorf("unknown record not kept as it was")
@@ -555,7 +551,7 @@ func TestSyncDirRebuild(t *testing.T) {
 	if err := os.Remove(dirPath); err != nil {
 		t.Fatal(err)
 	}
-	if stats := sync(SyncDirOptions{}); stats.Records != 0 || stats.Updated != 4 {
+	if stats := sync(SyncDirOptions{}); stats.Records != 0 || stats.Updated != 3 {
 		t.Errorf("rebuild of a missing .DIR: %+v", stats)
 	}
 

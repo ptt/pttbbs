@@ -241,7 +241,7 @@ func TestVerifyDataDir(t *testing.T) {
 	}
 	e.AddCrosspost("board", "M.1.A.001", "other", "M.9.A.001", "op", 0, 1727800003)
 	e.DeleteComment(2, 1, "mod", 0, "spam")
-	// A known gap: the new title is only in SQLite.
+	// The new title goes to Pebble too.
 	if _, err := e.UpdatePostTitle(3, "new title", "author", 0); err != nil {
 		t.Fatal(err)
 	}
@@ -258,8 +258,8 @@ func TestVerifyDataDir(t *testing.T) {
 	if !r.OK() || r.Posts != 3 || r.Comments != 3 || r.Votes != 3 {
 		t.Errorf("VerifyDataDir = ok %v, %d posts, %d comments, %d votes; want ok, 3, 3, 3", r.OK(), r.Posts, r.Comments, r.Votes)
 	}
-	if len(r.Warnings) != 1 || r.Warnings["title (UpdatePostTitle is not written to Pebble)"] != 1 {
-		t.Errorf("warnings = %v, want only the title of post 3", r.Warnings)
+	if len(r.Warnings) != 0 {
+		t.Errorf("warnings = %v, want none", r.Warnings)
 	}
 	if after := dirSnapshot(t, backupDir); fmt.Sprint(after) != fmt.Sprint(before) {
 		t.Errorf("VerifyDataDir modified the backup:\nbefore %v\nafter  %v", before, after)
