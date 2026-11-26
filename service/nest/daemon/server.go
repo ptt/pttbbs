@@ -54,6 +54,15 @@ type Server struct {
 	activeImports   map[string]bool
 	importMu        sync.Mutex // serializes postByFile imports
 	users           importer.UserResolver
+
+	// ctx is cancelled by Stop, which then closes the connections still
+	// open and waits for their handlers, so that the storage is not closed
+	// under a command still running (e.g. IMPORT_BOARD).
+	ctx      context.Context
+	cancel   context.CancelFunc
+	connsMu  sync.Mutex
+	conns    map[net.Conn]struct{}
+	handlers sync.WaitGroup
 }
 
 func NewServer(cfg ServerConfig, st storage.Storage) *Server {
@@ -66,12 +75,16 @@ func NewServer(cfg ServerConfig, st storage.Storage) *Server {
 	if cfg.ImportWorkers <= 0 {
 		cfg.ImportWorkers = 8
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Server{
 		cfg:           cfg,
 		storage:       st,
 		users:         importer.NewCachedResolver(cfg.Users),
 		quit:          make(chan struct{}),
 		activeImports: make(map[string]bool),
+		ctx:           ctx,
+		cancel:        cancel,
+		conns:         make(map[net.Conn]struct{}),
 	}
 }
 
@@ -116,12 +129,22 @@ func (s *Server) Start() error {
 	return nil
 }
 
+// Stop stops accepting connections, cancels the commands that can be
+// (IMPORT_BOARD), closes the connections and waits until no handler runs,
+// so the caller may close the storage then.
 func (s *Server) Stop() {
 	close(s.quit)
 	for _, ln := range s.listeners {
 		ln.Close()
 	}
 	s.wg.Wait()
+	s.cancel()
+	s.connsMu.Lock()
+	for conn := range s.conns {
+		conn.Close()
+	}
+	s.connsMu.Unlock()
+	s.handlers.Wait()
 }
 
 func (s *Server) acceptLoop(ln net.Listener, handler func(net.Conn)) {
@@ -136,7 +159,19 @@ func (s *Server) acceptLoop(ln net.Listener, handler func(net.Conn)) {
 				return
 			}
 		}
-		go handler(conn)
+		s.connsMu.Lock()
+		s.conns[conn] = struct{}{}
+		s.handlers.Add(1)
+		s.connsMu.Unlock()
+		go func() {
+			defer func() {
+				s.connsMu.Lock()
+				delete(s.conns, conn)
+				s.connsMu.Unlock()
+				s.handlers.Done()
+			}()
+			handler(conn)
+		}()
 	}
 }
 
@@ -983,7 +1018,7 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(s.ctx)
 		defer cancel()
 
 		// Monitor connection disconnect to cancel migration immediately if client drops

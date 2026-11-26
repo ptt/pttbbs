@@ -957,6 +957,9 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 		if len(batch) == 0 {
 			return nil
 		}
+		if err := ctx.Err(); err != nil {
+			return err // cancelled: write nothing more
+		}
 		if !opts.DryRun {
 			if err := engine.ImportPostBatch(batch, targetDir, opts.LegacyFormat); err != nil {
 				stats.Errors += len(batch)
