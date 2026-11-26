@@ -59,8 +59,8 @@ struct fileheader_t;
 
 /* Updates the record of the post named fhdr_name at position ent of
  * direct: modified (if not 0), title, owner and date (if not NULL or ""),
- * multi (if not NULL), the score by score_delta (within
- * MAX_DISPLAY_SCORE), and the filemode bits to enable and disable. out
+ * multi (if not NULL), the score by score_delta (within int16_t; the
+ * list shows it capped at MAX_DISPLAY_SCORE), and the filemode bits to enable and disable. out
  * (if not NULL) gets the updated record. Returns 0, or -1 if the record
  * there is not that post. */
 int bof_files_modify_record(const char *direct, int ent,
@@ -82,7 +82,7 @@ int bof_files_update_record(const char *direct, int ent,
 
 /* Updates the record of the post named fhdr_name at position ent of direct
  * for comments: modified (if not 0), the score by score_delta (within
- * MAX_DISPLAY_SCORE) and the count of comments by comments_delta. out (if
+ * int16_t) and the count of comments by comments_delta. out (if
  * not NULL) gets the updated record. Returns 0, or -1. */
 int bof_files_count_comments(const char *direct, int ent,
                              const char *fhdr_name, time4_t modified,

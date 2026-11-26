@@ -225,9 +225,19 @@ test_edit_post(void)
     bof_edit_post_t stale = { .post = r, .name = "x" };
     EXPECT_INT(bof_edit_post(&me, &stale, &res), BOF_ERR_COULDNT_FIND_POST);
 
-    // The score stays within MAX_DISPLAY_SCORE.
+    // The whole score is kept, past MAX_DISPLAY_SCORE (the list caps it).
     EXPECT_INT(bof_files_modify_record(DIRPATH, 4, "M.1700000005.A.005", 0,
                                        NULL, NULL, NULL, MAX_DISPLAY_SCORE + 5,
+                                       NULL, 0, 0, &updated), 0);
+    EXPECT_INT(updated.score, MAX_DISPLAY_SCORE + 5);
+    // ... within its int16_t.
+    EXPECT_INT(bof_files_modify_record(DIRPATH, 4, "M.1700000005.A.005", 0,
+                                       NULL, NULL, NULL, 100000,
+                                       NULL, 0, 0, &updated), 0);
+    EXPECT_INT(updated.score, INT16_MAX);
+    EXPECT_INT(bof_files_modify_record(DIRPATH, 4, "M.1700000005.A.005", 0,
+                                       NULL, NULL, NULL,
+                                       MAX_DISPLAY_SCORE - INT16_MAX,
                                        NULL, 0, 0, &updated), 0);
     EXPECT_INT(updated.score, MAX_DISPLAY_SCORE);
 }

@@ -80,10 +80,11 @@ apply_record_changes(fileheader_t *fhdr, const void *ctx)
     if (c->multi)
         memcpy(&fhdr->multi, c->multi, sizeof(fhdr->multi));
     if (c->score_delta) {
+        // The whole score, as nest.svc keeps it; the list shows it capped
+        // (MAX_DISPLAY_SCORE).
         int score = fhdr->score + c->score_delta;
-        if (score > MAX_DISPLAY_SCORE) score = MAX_DISPLAY_SCORE;
-        else if (score < -MAX_DISPLAY_SCORE) score = -MAX_DISPLAY_SCORE;
-        fhdr->score = score;
+        fhdr->score = score < INT16_MIN ? INT16_MIN :
+                      score > INT16_MAX ? INT16_MAX : score;
     }
     if (c->comments_delta) {
         int n = (int)fhdr->comments + c->comments_delta;

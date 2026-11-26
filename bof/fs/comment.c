@@ -77,9 +77,9 @@ bof_fs_create_comment(void *ctx GCC_UNUSED,
     if ((err = append_comment(path, req->content, req, &size)) != BOF_OK)
         return err;
 
-    if (req->bbs_vote > 0 && fh->score < MAX_DISPLAY_SCORE)
+    if (req->bbs_vote > 0 && fh->score < INT16_MAX)
         delta = 1;
-    else if (req->bbs_vote < 0 && fh->score > -MAX_DISPLAY_SCORE)
+    else if (req->bbs_vote < 0 && fh->score > INT16_MIN)
         delta = -1;
 
     updated = *fh;
