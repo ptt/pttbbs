@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,6 +47,20 @@ type Config struct {
 	// Communities is the community registry shared by all engines. If nil,
 	// OpenEngine opens one in DataDir and closes it with the engine.
 	Communities *CommunityRegistry
+}
+
+// writeHeavyOptions tunes the options of a Pebble DB that imports write in
+// bulk (the comments of a board are tens of MB per batch): with Pebble's
+// defaults, one compaction at a time and writes stopped at 12 files in L0,
+// an import into one engine spent much of its time waiting for compactions.
+func writeHeavyOptions(o *pebble.Options) *pebble.Options {
+	compactions := min(4, max(1, runtime.NumCPU()/4))
+	o.MaxConcurrentCompactions = func() int { return compactions }
+	o.MemTableStopWritesThreshold = 4
+	o.L0CompactionThreshold = 4
+	o.L0StopWritesThreshold = 32
+	o.LBaseMaxBytes = 256 << 20
+	return o
 }
 
 func (c Config) IsBig5() bool {
@@ -152,11 +167,11 @@ func OpenEngine(cfg Config) (*Engine, error) {
 
 	// 1. Posts Pebble DB
 	postsPath := filepath.Join(cfg.DataDir, "posts.pebble")
-	postsOpts := &pebble.Options{
+	postsOpts := writeHeavyOptions(&pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/3) * 1024 * 1024),
 		MemTableSize: 16 * 1024 * 1024,
 		MaxOpenFiles: maxOpenFiles,
-	}
+	})
 	postsDB, err := pebble.Open(postsPath, postsOpts)
 	if err != nil {
 		return nil, fmt.Errorf("open posts pebble failed: %w", err)
@@ -164,11 +179,11 @@ func OpenEngine(cfg Config) (*Engine, error) {
 
 	// 2. Comments Pebble DB
 	commentsPath := filepath.Join(cfg.DataDir, "comments.pebble")
-	commentsOpts := &pebble.Options{
+	commentsOpts := writeHeavyOptions(&pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/3) * 1024 * 1024),
-		MemTableSize: 32 * 1024 * 1024,
+		MemTableSize: 64 * 1024 * 1024,
 		MaxOpenFiles: maxOpenFiles,
-	}
+	})
 	commentsDB, err := pebble.Open(commentsPath, commentsOpts)
 	if err != nil {
 		postsDB.Close()
@@ -177,11 +192,11 @@ func OpenEngine(cfg Config) (*Engine, error) {
 
 	// 3. Votes Pebble DB (Separate DB to enforce 1 vote per user without write amplification)
 	votesPath := filepath.Join(cfg.DataDir, "votes.pebble")
-	votesOpts := &pebble.Options{
+	votesOpts := writeHeavyOptions(&pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/3) * 1024 * 1024),
 		MemTableSize: 16 * 1024 * 1024,
 		MaxOpenFiles: maxOpenFiles,
-	}
+	})
 	votesDB, err := pebble.Open(votesPath, votesOpts)
 	if err != nil {
 		postsDB.Close()
@@ -3075,61 +3090,9 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 		return nil
 	}
 
-	e.metaWriteMu.Lock()
-	unlocked := false
-	defer func() {
-		if !unlocked {
-			e.metaWriteMu.Unlock()
-		}
-	}()
-
-	tx, err := e.metaDB.Begin()
-	if err != nil {
-		return fmt.Errorf("begin transaction failed: %w", err)
-	}
-	defer tx.Rollback()
-
-	stmtPost, err := tx.Prepare(`
-		INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding,
-			deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(community_id, post_file) DO UPDATE SET
-			locked = excluded.locked,
-			title = excluded.title,
-			creator_name = excluded.creator_name,
-			creator_id = excluded.creator_id,
-			created_at = excluded.created_at,
-			modified = excluded.modified,
-			filemode = excluded.filemode,
-			upvotes = excluded.upvotes,
-			downvotes = excluded.downvotes,
-			num_comments = excluded.num_comments,
-			num_crossposts = excluded.num_crossposts,
-			encoding = excluded.encoding,
-			money = excluded.money
-		RETURNING id
-	`)
-	if err != nil {
-		return fmt.Errorf("prepare insert post failed: %w", err)
-	}
-	defer stmtPost.Close()
-
-	stmtCP, err := tx.Prepare(`
-		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`)
-	if err != nil {
-		return fmt.Errorf("prepare insert crosspost failed: %w", err)
-	}
-	defer stmtCP.Close()
-
-	postBatch := e.postsDB.NewBatch()
-	defer postBatch.Close()
-	commentBatch := e.commentsDB.NewBatch()
-	defer commentBatch.Close()
-	voteBatch := e.votesDB.NewBatch()
-	defer voteBatch.Close()
-
+	// What needs no post ID is done before taking the write lock, so that
+	// several imports into this engine (import-board --all --jobs) only
+	// take turns for what must be serial.
 	for _, item := range batch {
 		item.Comments = foldComments(item.Comments)
 		p := item.Post
@@ -3146,26 +3109,41 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 		if p.Encoding == "" {
 			p.Encoding = "utf-8"
 		}
+	}
 
-		var candidateID any
-		if p.ID > 0 {
-			candidateID = p.ID
-		} else if e.cfg.NextPostID != nil {
-			candidateID = e.cfg.NextPostID()
+	e.metaWriteMu.Lock()
+	unlocked := false
+	defer func() {
+		if !unlocked {
+			e.metaWriteMu.Unlock()
 		}
+	}()
 
-		var id uint64
-		err := stmtPost.QueryRow(
-			candidateID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID,
-			p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes,
-			p.NumComments, p.NumCrossposts, p.Encoding,
-			boolToInt(p.Deleted), boolToInt(p.Removed), p.DeletedAt, p.ModPersonName, p.ModPersonID, p.Reason,
-			p.Money, boolToInt(p.Locked),
-		).Scan(&id)
-		if err != nil {
-			return fmt.Errorf("insert post %s/%s failed: %w", p.Community, p.PostFile, err)
-		}
-		p.ID = id
+	tx, err := e.metaDB.Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction failed: %w", err)
+	}
+	defer tx.Rollback()
+
+	stmtCP, err := tx.Prepare(`
+		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("prepare insert crosspost failed: %w", err)
+	}
+	defer stmtCP.Close()
+
+	postBatch := e.postsDB.NewBatch()
+	defer postBatch.Close()
+	voteBatch := e.votesDB.NewBatch()
+	defer voteBatch.Close()
+
+	if err := insertImportedPosts(tx, batch, e.cfg.NextPostID); err != nil {
+		return err
+	}
+	for _, item := range batch {
+		p := item.Post
 		if err := checkPostID(p.ID); err != nil {
 			return err
 		}
@@ -3175,22 +3153,6 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 		postVal := model.EncodeRFC822Post(p)
 		if err := postBatch.Set(postKey, postVal, nil); err != nil {
 			return fmt.Errorf("postBatch.Set failed: %w", err)
-		}
-
-		// Comments, by floor.
-		for i, c := range item.Comments {
-			c.PostID = p.ID
-			c.Sequence = uint32(i + 1)
-			c.ID = model.MakeCommentID(p.ID, c.Sequence)
-			cKey := model.EncodeCommentKey(p.ID, c.Sequence)
-			cVal := model.EncodeRFC822Comment(c)
-			if err := commentBatch.Set(cKey, cVal, nil); err != nil {
-				return fmt.Errorf("commentBatch.Set failed: %w", err)
-			}
-			authKey := model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, p.ID, c.Sequence)
-			if err := commentBatch.Set(authKey, []byte{}, nil); err != nil {
-				return fmt.Errorf("commentBatch.Set author failed: %w", err)
-			}
 		}
 
 		// User Votes
@@ -3232,11 +3194,11 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	e.seqMu.Unlock()
 
 	// Commit Pebble batches
+	if err := e.writeImportedComments(batch); err != nil {
+		return err
+	}
 	if err := postBatch.Commit(pebble.NoSync); err != nil {
 		return fmt.Errorf("commit postBatch failed: %w", err)
-	}
-	if err := commentBatch.Commit(pebble.NoSync); err != nil {
-		return fmt.Errorf("commit commentBatch failed: %w", err)
 	}
 	if err := voteBatch.Commit(pebble.NoSync); err != nil {
 		return fmt.Errorf("commit voteBatch failed: %w", err)
@@ -3284,6 +3246,186 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	}
 
 	return nil
+}
+
+// importPostColumns are the columns of posts that ImportPostBatch writes,
+// and importPostUpsert what it does with a post that is there already.
+const (
+	importPostColumns = `id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding,
+		deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked`
+	importPostUpsert = `ON CONFLICT(community_id, post_file) DO UPDATE SET
+			locked = excluded.locked,
+			title = excluded.title,
+			creator_name = excluded.creator_name,
+			creator_id = excluded.creator_id,
+			created_at = excluded.created_at,
+			modified = excluded.modified,
+			filemode = excluded.filemode,
+			upvotes = excluded.upvotes,
+			downvotes = excluded.downvotes,
+			num_comments = excluded.num_comments,
+			num_crossposts = excluded.num_crossposts,
+			encoding = excluded.encoding,
+			money = excluded.money`
+	importPostParams = 23
+	// importPostsPerInsert is how many posts one INSERT writes: the SQLite
+	// driver prepares every statement it runs again, which took as long as
+	// the insert itself when it was one statement per post.
+	importPostsPerInsert = 64
+)
+
+// insertImportedPosts writes the posts of batch into SQLite in tx, a few
+// dozen per statement, and sets the ID of each: the one it had, or a new
+// one (from nextID, if not nil), or the ID of the post that was already
+// there with the same file in the community.
+func insertImportedPosts(tx *sql.Tx, batch []*ImportedPostData, nextID func() uint64) error {
+	args := func(p *model.Post) []any {
+		var candidateID any
+		if p.ID > 0 {
+			candidateID = p.ID
+		} else if nextID != nil {
+			candidateID = nextID()
+		}
+		return []any{candidateID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID,
+			p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes,
+			p.NumComments, p.NumCrossposts, p.Encoding,
+			boolToInt(p.Deleted), boolToInt(p.Removed), p.DeletedAt, p.ModPersonName, p.ModPersonID, p.Reason,
+			p.Money, boolToInt(p.Locked)}
+	}
+	row := "(" + strings.TrimSuffix(strings.Repeat("?, ", importPostParams), ", ") + ")"
+	type fileKey struct {
+		community int64
+		file      string
+	}
+	for off := 0; off < len(batch); off += importPostsPerInsert {
+		chunk := batch[off:min(off+importPostsPerInsert, len(batch))]
+		byFile := make(map[fileKey]*model.Post, len(chunk))
+		values := make([]any, 0, len(chunk)*importPostParams)
+		for _, item := range chunk {
+			p := item.Post
+			k := fileKey{p.CommunityID, p.PostFile}
+			if byFile[k] != nil {
+				// The same file twice: the upsert cannot update a row
+				// that its own statement inserted, so one at a time.
+				byFile = nil
+				break
+			}
+			byFile[k] = p
+			values = append(values, args(p)...)
+		}
+		if byFile == nil {
+			for _, item := range chunk {
+				p := item.Post
+				q := `INSERT INTO posts (` + importPostColumns + `) VALUES ` + row + ` ` + importPostUpsert + ` RETURNING id`
+				if err := tx.QueryRow(q, args(p)...).Scan(&p.ID); err != nil {
+					return fmt.Errorf("insert post %s/%s failed: %w", p.Community, p.PostFile, err)
+				}
+			}
+			continue
+		}
+		q := `INSERT INTO posts (` + importPostColumns + `) VALUES ` +
+			strings.TrimSuffix(strings.Repeat(row+", ", len(chunk)), ", ") + ` ` + importPostUpsert +
+			` RETURNING id, community_id, post_file`
+		rows, err := tx.Query(q, values...)
+		if err != nil {
+			p := chunk[0].Post
+			return fmt.Errorf("insert posts %s/%s... failed: %w", p.Community, p.PostFile, err)
+		}
+		n := 0
+		for rows.Next() {
+			var id uint64
+			var k fileKey
+			if err := rows.Scan(&id, &k.community, &k.file); err != nil {
+				rows.Close()
+				return err
+			}
+			// RETURNING gives the rows in no particular order.
+			if p := byFile[k]; p != nil {
+				p.ID = id
+				n++
+			}
+		}
+		if err := rows.Close(); err != nil {
+			return err
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		if n != len(chunk) {
+			p := chunk[0].Post
+			return fmt.Errorf("insert posts %s/%s...: %d of %d IDs returned", p.Community, p.PostFile, n, len(chunk))
+		}
+	}
+	return nil
+}
+
+// importCommentsPerWorker is how many comments a batch of imported posts
+// needs for each goroutine that writeImportedComments uses.
+const importCommentsPerWorker = 4096
+
+// writeImportedComments writes the comments of a batch of imported posts
+// (whose IDs are known by then) into Pebble, by floor, with the index by
+// author. Encoding them takes most of the time of an import that the write
+// lock serializes, so a large batch is split by the number of comments
+// among several goroutines, each writing a Pebble batch of its own.
+func (e *Engine) writeImportedComments(batch []*ImportedPostData) error {
+	total := 0
+	for _, item := range batch {
+		total += len(item.Comments)
+	}
+	if total == 0 {
+		return nil
+	}
+	workers := min(runtime.GOMAXPROCS(0), 8, (total+importCommentsPerWorker-1)/importCommentsPerWorker)
+
+	write := func(items []*ImportedPostData) error {
+		b := e.commentsDB.NewBatch()
+		defer b.Close()
+		for _, item := range items {
+			p := item.Post
+			for i, c := range item.Comments {
+				c.PostID = p.ID
+				c.Sequence = uint32(i + 1)
+				c.ID = model.MakeCommentID(p.ID, c.Sequence)
+				if err := b.Set(model.EncodeCommentKey(p.ID, c.Sequence), model.EncodeRFC822Comment(c), nil); err != nil {
+					return fmt.Errorf("commentBatch.Set failed: %w", err)
+				}
+				authKey := model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, p.ID, c.Sequence)
+				if err := b.Set(authKey, []byte{}, nil); err != nil {
+					return fmt.Errorf("commentBatch.Set author failed: %w", err)
+				}
+			}
+		}
+		if err := b.Commit(pebble.NoSync); err != nil {
+			return fmt.Errorf("commit commentBatch failed: %w", err)
+		}
+		return nil
+	}
+	if workers <= 1 {
+		return write(batch)
+	}
+
+	// Contiguous runs of posts with about total/workers comments each.
+	var chunks [][]*ImportedPostData
+	start, n := 0, 0
+	for i, item := range batch {
+		n += len(item.Comments)
+		if n*workers >= total*(len(chunks)+1) || i == len(batch)-1 {
+			chunks = append(chunks, batch[start:i+1])
+			start = i + 1
+		}
+	}
+	errs := make([]error, len(chunks))
+	var wg sync.WaitGroup
+	for i, items := range chunks {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs[i] = write(items)
+		}()
+	}
+	wg.Wait()
+	return errors.Join(errs...)
 }
 
 // RenderPostWithComments renders a post and its comments directly in memory
