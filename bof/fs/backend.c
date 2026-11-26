@@ -49,6 +49,10 @@ const bof_storage_ops_t bof_storage_files = {
     .list_reports = bof_fs_list_reports,
     // Votes are kept only with comments in files.
     .list_post_likes = NULL,
+    .list_crossposts = NULL,
+    .get_crosspost_parent = NULL,
+    // The files keep no crossposts to limit.
+    .check_crosspost = NULL,
     .post_version_matches = bof_fs_post_version_matches,
     .refresh_post = bof_fs_refresh_post,
     // A record of the files has no room for an ID.

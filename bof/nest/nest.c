@@ -423,11 +423,12 @@ nest_create_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         return BOF_ERR_COULDNT_CREATE_POST;
     }
 
+    // nest.svc keeps it with the original of the source.
     if (req->bbs_crosspost_community && req->bbs_crosspost_file)
-        svc_cmd(NULL, 0, "CROSSPOST %s %s %s %s %s %" PRIu64 " %ld\n",
+        svc_cmd(NULL, 0, "CROSSPOST %s %s %s %s %s %" PRIu64 " %ld %d\n",
                 req->bbs_crosspost_community, req->bbs_crosspost_file,
                 req->community, fh->filename, who(actor), uid(actor),
-                (long)time4(NULL));
+                (long)time4(NULL), req->bbs_crosspost_exempt ? 1 : 0);
 
     // The record in the cache. nest.svc writes the article into the board
     // itself; the content is copied there only if it has not.
@@ -525,6 +526,113 @@ nest_list_post_likes(void *ctx GCC_UNUSED, const bof_list_post_likes_t *req,
     out->bbs_total = total;
     free(r);
     return BOF_OK;
+}
+
+static bof_error_t
+nest_list_crossposts(void *ctx GCC_UNUSED, const bof_list_crossposts_t *req,
+                     bof_list_crossposts_response_t *out)
+{
+    const bof_post_ref_t *post = &req->post;
+    int first = (req->page > 0 ? req->page - 1 : 0) * req->limit;
+    char cmd[256], *r, *line;
+    int total = 0;
+
+    if (!valid(post))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // GET_CROSSPOSTS <community> <file>: OK <n>, then a line per crosspost:
+    // <board> TAB <file> TAB <creator> TAB <time>.
+    snprintf(cmd, sizeof(cmd), "GET_CROSSPOSTS %s %s\n", post->community,
+             post->bbs_header->filename);
+    r = svc_call(cmd, NULL, 0, NULL, 0);
+    if (!r || sscanf(r, "OK %d", &total) != 1) {
+        free(r);
+        return BOF_ERR_COULDNT_FIND_POST;
+    }
+    line = strchr(r, '\n');
+    for (int i = 0; line && *++line && i < total; i++) {
+        char *next = strchr(line, '\n');
+        if (next)
+            *next = '\0';
+        if (i >= first && out->count < req->limit) {
+            bof_crosspost_t *c = &out->crossposts[out->count];
+            char board[16] = "", file[32] = "", name[16] = "";
+            long long when = 0;
+
+            if (sscanf(line, "%15[^\t]\t%31[^\t]\t%15[^\t]\t%lld", board,
+                       file, name, &when) == 4) {
+                memset(c, 0, sizeof(*c));
+                strlcpy(c->community, board, sizeof(c->community));
+                strlcpy(c->bbs_file, file, sizeof(c->bbs_file));
+                strlcpy(c->creator, name, sizeof(c->creator));
+                c->published = (int32_t)when;
+                out->count++;
+            }
+        }
+        line = next;
+    }
+    out->bbs_total = total;
+    free(r);
+    return BOF_OK;
+}
+
+static bof_error_t
+nest_get_crosspost_parent(void *ctx GCC_UNUSED,
+                          const bof_get_crosspost_parent_t *req,
+                          bof_post_key_t *out)
+{
+    const bof_post_ref_t *post = &req->post;
+    char resp[512], board[BOF_COMMUNITY_NAME_MAX], file[BOF_POST_FILE_MAX];
+
+    if (!valid(post))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // GET_CROSSPOST_PARENT <community> <file>: OK <board> TAB <file> TAB
+    // ..., or ERR (not a crosspost).
+    if (!svc_cmd(resp, sizeof(resp), "GET_CROSSPOST_PARENT %s %s\n",
+                 post->community, post->bbs_header->filename) ||
+        sscanf(resp, "OK %15[^\t]\t%31[^\t\n]", board, file) != 2)
+        return BOF_ERR_COULDNT_FIND_POST;
+    strlcpy(out->community, board, sizeof(out->community));
+    strlcpy(out->bbs_post_file, file, sizeof(out->bbs_post_file));
+    return BOF_OK;
+}
+
+static bof_error_t
+nest_check_crosspost(void *ctx GCC_UNUSED, const bof_actor_t *actor,
+                     const bof_check_crosspost_t *req,
+                     bof_check_crosspost_response_t *out)
+{
+    static const struct {
+        const char *name;
+        bof_error_t err;
+    } errs[] = {
+        { "bbs_already_crossposted", BOF_ERR_BBS_ALREADY_CROSSPOSTED },
+        { "bbs_crosspost_back_to_origin",
+          BOF_ERR_BBS_CROSSPOST_BACK_TO_ORIGIN },
+        { "bbs_crosspost_person_limit", BOF_ERR_BBS_CROSSPOST_PERSON_LIMIT },
+        { "bbs_crosspost_post_limit", BOF_ERR_BBS_CROSSPOST_POST_LIMIT },
+    };
+    const bof_post_ref_t *post = &req->post;
+    char resp[256], name[64];
+    int limit = 0;
+
+    if (!valid(post) || strpbrk(req->community, " \t\r\n"))
+        return BOF_ERR_INVALID_BODY_FIELD;
+    // CHECK_CROSSPOST <community> <file> <target> <creator> <uid> <exempt>:
+    // OK, or ERR <name> [limit].
+    if (svc_cmd(resp, sizeof(resp), "CHECK_CROSSPOST %s %s %s %s %" PRIu64
+                " %d\n", post->community, post->bbs_header->filename,
+                req->community, who(actor), uid(actor),
+                req->bbs_exempt ? 1 : 0))
+        return BOF_OK;
+    if (sscanf(resp, "ERR %63s %d", name, &limit) < 1)
+        return BOF_ERR_UNKNOWN;
+    for (size_t i = 0; i < sizeof(errs) / sizeof(errs[0]); i++)
+        if (strcmp(name, errs[i].name) == 0) {
+            out->bbs_limit = limit;
+            return errs[i].err;
+        }
+    return strstr(resp, "not found") ? BOF_ERR_COULDNT_FIND_POST :
+        BOF_ERR_UNKNOWN;
 }
 
 static bof_error_t
@@ -2031,6 +2139,9 @@ const bof_storage_ops_t bof_storage_nest = {
     .note_modlog_edit = bof_fs_note_modlog_edit,
     .list_reports = bof_fs_list_reports,
     .list_post_likes = nest_list_post_likes,
+    .list_crossposts = nest_list_crossposts,
+    .get_crosspost_parent = nest_get_crosspost_parent,
+    .check_crosspost = nest_check_crosspost,
     // Read from the cache.
     .get_posts = bof_fs_get_posts,
     .get_post = bof_fs_get_post,

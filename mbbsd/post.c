@@ -18,12 +18,23 @@ post_draft_path(char *buf, size_t sz)
 int
 PostAddRecord(const char *board, fileheader_t *fhdr, const char *content_path)
 {
+    return CrosspostAddRecord(board, fhdr, content_path, NULL, NULL, 0);
+}
+
+int
+CrosspostAddRecord(const char *board, fileheader_t *fhdr,
+                   const char *content_path, const char *src_board,
+                   const char *src_file, int exempt)
+{
     // The list of the board itself, also from the digest.
     AUTO_BFILE(dir, board, FN_DIR);
     bof_actor_t me = mbbsd_user_actor();
     bof_create_post_t req = {
         .community = board, .bbs_dir = dir, .bbs_header = fhdr,
         .bbs_content_path = content_path,
+        .bbs_crosspost_community = src_board,
+        .bbs_crosspost_file = src_file,
+        .bbs_crosspost_exempt = exempt,
     };
     fileheader_t created;
     bof_post_response_t res = { .bbs_header = &created };

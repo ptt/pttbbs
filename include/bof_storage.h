@@ -130,6 +130,15 @@ typedef struct bof_storage_ops_t {
     bof_error_t (*list_post_likes)(void *ctx,
                                    const bof_list_post_likes_t *req,
                                    bof_list_post_likes_response_t *out);
+    bof_error_t (*list_crossposts)(void *ctx,
+                                   const bof_list_crossposts_t *req,
+                                   bof_list_crossposts_response_t *out);
+    bof_error_t (*get_crosspost_parent)(void *ctx,
+                                        const bof_get_crosspost_parent_t *req,
+                                        bof_post_key_t *out);
+    bof_error_t (*check_crosspost)(void *ctx, const bof_actor_t *actor,
+                                   const bof_check_crosspost_t *req,
+                                   bof_check_crosspost_response_t *out);
     /* 1 if the post still has the content of ver, else 0. */
     int (*post_version_matches)(void *ctx, const bof_post_ref_t *post,
                                 const bof_post_version_t *ver);

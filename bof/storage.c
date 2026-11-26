@@ -607,6 +607,67 @@ bof_list_post_likes(const bof_actor_t *actor,
     return BOF_OK;
 }
 
+bof_error_t
+bof_list_crossposts(const bof_actor_t *actor,
+                    const bof_list_crossposts_t *req,
+                    bof_list_crossposts_response_t *out)
+{
+    bof_error_t err;
+
+    if (!req || req->page < 0 || req->limit <= 0 || !out || !out->crossposts)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    out->count = out->bbs_total = 0;
+    GATE_POST(bof_list_crossposts_t, post);
+    CHECK(actor, req->post.community, MAY_READ, NULL);
+    if ((err = READ(list_crossposts, req, out)) != BOF_OK)
+        return err;
+    // A board the actor may not read is not named.
+    for (int i = 0; i < out->count; i++)
+        if (out->crossposts[i].community[0] &&
+            check_actor(actor, out->crossposts[i].community, MAY_READ,
+                        NULL) != BOF_OK)
+            out->crossposts[i].community[0] = '\0';
+    return BOF_OK;
+}
+
+bof_error_t
+bof_get_crosspost_parent(const bof_actor_t *actor,
+                         const bof_get_crosspost_parent_t *req,
+                         bof_post_key_t *out)
+{
+    bof_error_t err;
+
+    if (!req || !out)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    memset(out, 0, sizeof(*out));
+    GATE_POST(bof_get_crosspost_parent_t, post);
+    CHECK(actor, req->post.community, MAY_READ, NULL);
+    if ((err = READ(get_crosspost_parent, req, out)) != BOF_OK)
+        return err;
+    // A board the actor may not read is not named.
+    if (out->community[0] &&
+        check_actor(actor, out->community, MAY_READ, NULL) != BOF_OK)
+        out->community[0] = '\0';
+    return BOF_OK;
+}
+
+bof_error_t
+bof_check_crosspost(const bof_actor_t *actor,
+                    const bof_check_crosspost_t *req,
+                    bof_check_crosspost_response_t *out)
+{
+    bof_check_crosspost_response_t local;
+
+    if (!req || !req->community || !*req->community)
+        return BOF_ERR_INVALID_BODY_FIELD;
+    if (!out)
+        out = &local;
+    out->bbs_limit = 0;
+    GATE_POST(bof_check_crosspost_t, post);
+    CHECK(actor, req->post.community, MAY_READ, NULL);
+    return READ(check_crosspost, actor, req, out);
+}
+
 /* ------------------------------------------------------------------------
  * Comments
  * ------------------------------------------------------------------------ */

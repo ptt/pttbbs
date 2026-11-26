@@ -67,6 +67,11 @@ typedef enum bof_error_t {
     BOF_ERR_COULDNT_UPDATE_COMMUNITY, /* couldnt_update_community */
     BOF_ERR_BBS_POST_TOO_LARGE,     /* bbs_post_too_large: no room for more
                                        comments (nest.svc's limit of lines) */
+    /* The limits of crossposts (bof_check_crosspost()). */
+    BOF_ERR_BBS_ALREADY_CROSSPOSTED,      /* bbs_already_crossposted */
+    BOF_ERR_BBS_CROSSPOST_BACK_TO_ORIGIN, /* bbs_crosspost_back_to_origin */
+    BOF_ERR_BBS_CROSSPOST_PERSON_LIMIT,   /* bbs_crosspost_person_limit */
+    BOF_ERR_BBS_CROSSPOST_POST_LIMIT,     /* bbs_crosspost_post_limit */
     BOF_ERR_MAX
 } bof_error_t;
 
@@ -609,6 +614,9 @@ typedef struct bof_create_post_t {
      * from, by its board and file name; NULL if none. */
     const char *bbs_crosspost_community;
     const char *bbs_crosspost_file;
+    /* The crosspost is not counted against the limits of crossposts (see
+     * bof_check_crosspost()). */
+    int bbs_crosspost_exempt;
 } bof_create_post_t;
 
 /* What changing a post gives back (Lemmy's PostResponse has the post view;
@@ -717,6 +725,68 @@ typedef struct bof_list_post_likes_response_t {
 bof_error_t bof_list_post_likes(const bof_actor_t *actor,
                                 const bof_list_post_likes_t *req,
                                 bof_list_post_likes_response_t *out);
+
+/* The crossposts of a post, oldest first (Lemmy's cross_posts, Reddit's
+ * crossposts). The files backend gives bbs_storage_not_supported. A board
+ * the actor may not read is left empty: PTT never names a hidden board. */
+typedef struct bof_crosspost_t {
+    char community[16];        /* the board it went to; "" if hidden */
+    char bbs_file[32];         /* the file of the copy there */
+    char creator[16];          /* who crossposted it */
+    int32_t published;         /* when */
+} bof_crosspost_t;
+
+typedef struct bof_list_crossposts_t {
+    bof_post_ref_t post;
+    int page;                  /* 1-based, of limit each; 0: the first */
+    int limit;
+} bof_list_crossposts_t;
+
+typedef struct bof_list_crossposts_response_t {
+    bof_crosspost_t *crossposts;   /* by the caller, room for limit */
+    int count;
+    int bbs_total;                 /* of all pages */
+} bof_list_crossposts_response_t;
+
+bof_error_t bof_list_crossposts(const bof_actor_t *actor,
+                                const bof_list_crossposts_t *req,
+                                bof_list_crossposts_response_t *out);
+
+/* The post a crosspost was copied from (Reddit's crosspost_parent), its
+ * community left empty if the actor may not read it. Errors:
+ * couldnt_find_post (not a crosspost), bbs_storage_not_supported (the
+ * files backend). */
+typedef struct bof_get_crosspost_parent_t {
+    bof_post_ref_t post;
+} bof_get_crosspost_parent_t;
+
+bof_error_t bof_get_crosspost_parent(const bof_actor_t *actor,
+                                     const bof_get_crosspost_parent_t *req,
+                                     bof_post_key_t *out);
+
+/* PTT: whether the actor may crosspost a post to a board, before it is
+ * copied (Lemmy and Reddit have no such limits). A crosspost of a crosspost
+ * counts as one of the original: one copy per board and none back to the
+ * board of the original, for good; and, within a day, at most so many
+ * boards per person and crossposts per original, unless bbs_exempt (and
+ * then not counted). Errors: bbs_already_crossposted,
+ * bbs_crosspost_back_to_origin, bbs_crosspost_person_limit and
+ * bbs_crosspost_post_limit (with the limit in out->bbs_limit), and
+ * bbs_storage_not_supported (the files backend keeps no crossposts). */
+typedef struct bof_check_crosspost_t {
+    bof_post_ref_t post;        /* the post to crosspost */
+    const char *community;      /* the board to crosspost it to */
+    /* By a moderator of that board, or of a post by the site staff. */
+    int bbs_exempt;
+} bof_check_crosspost_t;
+
+typedef struct bof_check_crosspost_response_t {
+    int bbs_limit;              /* the limit reached, if any */
+} bof_check_crosspost_response_t;
+
+bof_error_t bof_check_crosspost(const bof_actor_t *actor,
+                                const bof_check_crosspost_t *req,
+                                bof_check_crosspost_response_t *out);
 
 /* PTT: whether the content of a post is still of version ver (see
  * bof_bbs_get_post_body()), to tell early that an edit would fail. */

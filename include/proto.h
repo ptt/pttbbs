@@ -238,6 +238,13 @@ const struct CommentKeyReq *CommentsGetKeyReq(void *ctx);
 void post_draft_path(char *buf, size_t sz);
 int PostAddRecord(const char *board, fileheader_t *fhdr,
                   const char *content_path);
+// As PostAddRecord(), for a crosspost of src_file of src_board (Reddit's
+// crosspost_parent), which a backend that keeps crossposts (nest.svc)
+// records, with the original if src_file is a copy; exempt ones are not
+// counted against the limits of crossposts.
+int CrosspostAddRecord(const char *board, fileheader_t *fhdr,
+                       const char *content_path, const char *src_board,
+                       const char *src_file, int exempt);
 int CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
                      int ent, int type, const char *msg, const char *formatted);
 int VotePostRecord(const char *board, const char *direct, fileheader_t *fhdr,

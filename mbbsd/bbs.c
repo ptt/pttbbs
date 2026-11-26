@@ -1943,6 +1943,52 @@ crosspost_denied(int bid, const char *fname, int xbid)
     return 1;
 }
 
+// Whether a crosspost of fhdr to board xbid is not limited (nor counted)
+// by nest.svc: by a moderator of the board, or of a post by the site staff.
+static int
+crosspost_exempt(int xbid, const fileheader_t *fhdr)
+{
+    userec_t xuser;
+
+    if (is_board_moderator(xbid))
+        return 1;
+    if ((fhdr->filemode & FILE_ANONYMOUS) || !fhdr->owner[0])
+        return 0;
+    return getuser(fhdr->owner, &xuser) > 0 &&
+        (xuser.userlevel & PERM_ADMIN);
+}
+
+// Asks bof whether src may be crossposted to xboard (one copy per board,
+// and how many a day; a crosspost of a crosspost is one of the original)
+// and tells the user why not. Returns 1 if not. Without the limits (the
+// files backend) or an answer, it is allowed.
+static int
+crosspost_limited(const bof_post_ref_t *src, const char *xboard, int exempt)
+{
+    bof_actor_t me = mbbsd_user_actor();
+    bof_check_crosspost_t req = {
+        .post = *src, .community = xboard, .bbs_exempt = exempt,
+    };
+    bof_check_crosspost_response_t res = { 0 };
+
+    switch (bof_check_crosspost(&me, &req, &res)) {
+    case BOF_ERR_BBS_ALREADY_CROSSPOSTED:
+	vmsg("這篇文章(或它的原文)已經轉錄到該看板過了，不能再轉錄。");
+	return 1;
+    case BOF_ERR_BBS_CROSSPOST_BACK_TO_ORIGIN:
+	vmsg("這篇是從該看板轉錄來的，不能再轉回去。");
+	return 1;
+    case BOF_ERR_BBS_CROSSPOST_PERSON_LIMIT:
+	vmsgf("同一篇文章 24 小時內最多轉錄到 %d 個看板。", res.bbs_limit);
+	return 1;
+    case BOF_ERR_BBS_CROSSPOST_POST_LIMIT:
+	vmsgf("這篇文章 24 小時內已被轉錄 %d 次，請稍後再試。", res.bbs_limit);
+	return 1;
+    default:
+	return 0;
+    }
+}
+
 // Whether the board a cross-post goes to is still there under the name it
 // was picked by: it may be deleted or renamed while the user sits at the
 // prompts. Checks the name at bid, as getbnum() can miss a board while the
@@ -2029,9 +2075,10 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
     // restriction (see pakkei0712* events on 2007/12)
     // for (1) increase numpost (2) flood target board
     // (3) flood original post
-    // You must have post permission on current board
+    // You must have post permission on current board. With nest.svc the
+    // post does not grow and every crosspost is kept: BRD_CPLOG is unused.
     //
-    if( (bp->brdattr & BRD_CPLOG) &&
+    if( (bp->brdattr & BRD_CPLOG) && !BOF_FILES_ARE_CACHE &&
 	(!CheckPostPerm() || !CheckPostRestriction(currbid)))
     {
 	vmsg("由本板轉錄文章需有發文權限(可按 i 查看限制)");
@@ -2064,6 +2111,12 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("同板不需轉錄。");
 	return FULLUPDATE;
     }
+
+    // nest.svc checks it, as one of the original if it is a copy, and
+    // records it with the original.
+    int exempt = crosspost_exempt(xbid, fhdr);
+    if (crosspost_limited(&src, xboard, exempt))
+	return FULLUPDATE;
 
     // check target postperm
     if (get_board_restriction_reason(xbid, sizeof(genbuf), genbuf))
@@ -2100,6 +2153,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    return FULLUPDATE;
 	}
 	if (crosspost_denied(currbid, fhdr->filename, xbid))
+	    return FULLUPDATE;
+	// Again, as someone may have crossposted it meanwhile.
+	if (crosspost_limited(&src, xboard, exempt))
 	    return FULLUPDATE;
 	// Written aside, created through bof.
 	post_draft_path(xfpath, sizeof(xfpath));
@@ -2172,8 +2228,9 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
         // try to record in ALLPOST
         log_crosspost_in_allpost(xboard, &xfile);
 
-	/* add cp log. bp is currboard now. */
-	if(bp->brdattr & BRD_CPLOG)
+	/* add cp log. bp is currboard now. nest.svc keeps every crosspost
+	 * as a record (CrosspostAddRecord(), listed with Q) instead. */
+	if((bp->brdattr & BRD_CPLOG) && !BOF_FILES_ARE_CACHE)
 	{
 	    char buf[PATHLEN], tail[STRLEN];
 	    char bname[STRLEN] = "";
@@ -2217,7 +2274,8 @@ cross_post(int ent, fileheader_t * fhdr, const char *direct)
 	    bp = getbcache(xbid);
 	}
 
-	PostAddRecord(xboard, &xfile, xfpath);
+	CrosspostAddRecord(xboard, &xfile, xfpath, currboard, fhdr->filename,
+			   exempt);
 	unlink(xfpath);
 	setbtotal(xbid);
 	outs("文章轉錄完成。(轉錄不增加文章數，敬請包涵)\n\n");
@@ -4416,21 +4474,99 @@ anon_display_id(const fileheader_t *fhdr, int bid, uint32_t *id)
     return true;
 }
 
+// The crossposts of the post fhdr at ent of direct (bof_list_crossposts(),
+// kept by nest.svc): how many there are in all (0 if none or not kept),
+// with up to max of them in cps and how many in *count.
 static int
-view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
-              const char *direct GCC_UNUSED, int crs_ln)
+list_crossposts(const char *direct, int ent, const fileheader_t *fhdr,
+                bof_crosspost_t *cps, int max, int *count)
+{
+    bof_actor_t me = mbbsd_user_actor();
+    bof_list_crossposts_t req = {
+        .post = bof_ref(direct, ent, fhdr), .limit = max,
+    };
+    bof_list_crossposts_response_t res = { .crossposts = cps };
+
+    if (count)
+        *count = 0;
+    if (bof_list_crossposts(&me, &req, &res) != BOF_OK)
+        return 0;
+    if (count)
+        *count = res.count;
+    return res.bbs_total;
+}
+
+// Shows the crossposts of the post fhdr (Q, then x): which boards it went
+// to, by whom and when; a board the user may not read is not named.
+static void
+show_crossposts(const char *direct, int ent, const fileheader_t *fhdr)
+{
+    enum { MAX_SHOWN = 200 };
+    bof_crosspost_t *cps = calloc(MAX_SHOWN, sizeof(*cps));
+    int count = 0, total, first, i;
+    // Below the title and the column names, above the message bar.
+    int rows = b_lines - 2 > 0 ? b_lines - 2 : 1;
+    char title[STRLEN], msg[STRLEN];
+
+    if (!cps)
+        return;
+    total = list_crossposts(direct, ent, fhdr, cps, MAX_SHOWN, &count);
+    for (first = 0; first < count; first += rows) {
+        int last = first + rows < count ? first + rows : count;
+
+        snprintf(title, sizeof(title), "轉錄記錄 (第 %d-%d 筆，共 %d 筆)",
+                 first + 1, last, total);
+        clear();
+        vs_hdr(title);
+        move(1, 0);
+        prints(ANSI_COLOR(1) "  %-14s %-14s %s" ANSI_RESET "\n",
+               "看板", "轉錄者", "時間");
+        for (i = first; i < last; i++) {
+            time4_t t = cps[i].published;
+            move(2 + i - first, 0);
+            prints("  %-14s %-14s %s\n",
+                   cps[i].community[0] ? cps[i].community : "(某隱形看板)",
+                   cps[i].creator, Cdatelite(&t));
+        }
+        // In the message bar, so a full page does not hide it.
+        if (last < count) {
+            if (vmsg("按任意鍵看下一頁，q 離開") == 'q')
+                break;
+        } else if (total > count) {
+            snprintf(msg, sizeof(msg), "共 %d 筆，只列出前 %d 筆",
+                     total, count);
+            vmsg(msg);
+        } else {
+            pressanykey();
+        }
+    }
+    free(cps);
+}
+
+static int
+view_postinfo(int ent, const fileheader_t * fhdr,
+              const char *direct, int crs_ln)
 {
     aidu_t aidu = 0;
     int l = crs_ln + 3;  /* line of cursor */
     int area_l = l + 1;
 #ifdef QUERY_ARTICLE_URL
-    const int area_lines = 5;
+    int area_lines = 5;
 #else
-    const int area_lines = 4;
+    int area_lines = 4;
 #endif
+    int crossposts = 0;
 
     if(!fhdr || fhdr->filename[0] == '.' || !fhdr->filename[0])
       return DONOTHING;
+
+    // The crossposts kept apart (nest.svc).
+    if (BOF_FILES_ARE_CACHE) {
+        bof_crosspost_t one;
+        crossposts = list_crossposts(direct, ent, fhdr, &one, 1, NULL);
+        if (crossposts > 0)
+            area_lines++;
+    }
 
     if((area_l + area_lines > b_lines) ||  /* 下面放不下 */
        (l >= (b_lines  * 2 / 3)))  /* 略超過畫面 2/3 */
@@ -4527,6 +4663,8 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
 
     }
     prints("\n");
+    if (crossposts > 0)
+        prints("│ 轉錄 %d 次 (按 x 查看轉錄記錄)\n", crossposts);
     prints("└──────────────────────── [再按 Q 切換價格列表]  ─┘\n");
 
     /* 印對話框的右邊界 */
@@ -4541,6 +4679,10 @@ view_postinfo(int ent GCC_UNUSED, const fileheader_t * fhdr,
     }
     {
         int r = pressanykey();
+        if (r == 'x' && crossposts > 0) {
+            show_crossposts(direct, ent, fhdr);
+            return FULLUPDATE;
+        }
         /* TODO: 多加一個 LISTMODE_AID？ */
 	/* QQ: enable money listing mode */
 	if (r == 'Q')

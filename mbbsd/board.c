@@ -1010,6 +1010,7 @@ bcfg_set_mask_content(cmd_ctx_t *ctx)
     return 0;
 }
 
+#if !BOF_FILES_ARE_CACHE
 static int
 bcfg_set_cplog(cmd_ctx_t *ctx)
 {
@@ -1019,6 +1020,7 @@ bcfg_set_cplog(cmd_ctx_t *ctx)
     ctx->reload = true;
     return 0;
 }
+#endif
 
 static int
 bcfg_set_cooldown(cmd_ctx_t *ctx)
@@ -1347,7 +1349,9 @@ static const BConfigItem bconfig_items[] = {
     { 'i', "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_COMMENT_SHOWIP, PERM_BM, NULL, bcfg_set_commentshowip },
     { 'a', "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
     { 'k', "板主刪除部份違規文字", ANSI_COLOR(1) "可" ANSI_RESET, "無法", BRD_BM_MASK_CONTENT, PERM_SYSGROUPOP, NULL, bcfg_set_mask_content },
+#if !BOF_FILES_ARE_CACHE  // nest.svc keeps every crosspost
     { 'x', "轉錄文章自動記錄", ANSI_COLOR(1) "會 (需發文權限)" ANSI_RESET, "不會", BRD_CPLOG, PERM_BM, NULL, bcfg_set_cplog },
+#endif
     { 'j', "冷靜模式", ANSI_COLOR(1;31) "已設為冷靜模式" ANSI_RESET, "未設定", BRD_COOLDOWN, PERM_POLICEOP, NULL, bcfg_set_cooldown },
     { 0,   "未滿十八歲進入", ANSI_COLOR(1) "禁止" ANSI_RESET, "允許", BRD_OVER18, PERM_BM, NULL, bcfg_set_over18 },
     { 0,   "[發文條件] 登入次數", NULL, NULL, 0, PERM_POSTLIMIT, bcfg_get_post_logins, bcfg_set_post_logins },

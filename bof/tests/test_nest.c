@@ -72,6 +72,22 @@ received(const char *prefix)
     return found;
 }
 
+// Whether a request starting with prefix and ending with suffix came.
+static int
+received_ending(const char *prefix, const char *suffix)
+{
+    int found = 0;
+
+    pthread_mutex_lock(&lock);
+    for (int i = 0; i < ngot && !found; i++) {
+        size_t n = strlen(got[i]), m = strlen(suffix);
+        found = strncmp(got[i], prefix, strlen(prefix)) == 0 && n >= m &&
+            strcmp(got[i] + n - m, suffix) == 0;
+    }
+    pthread_mutex_unlock(&lock);
+    return found;
+}
+
 static void *
 serve(void *arg GCC_UNUSED)
 {
@@ -213,7 +229,14 @@ test_create_post(void)
     reply("CROSSPOST", "OK");
     forget();
     EXPECT_OK(bof_create_post(&alice, &req, NULL));
-    EXPECT(received("CROSSPOST Other M.99.A.CCC " BOARD " M.101.A.BBB alice 42 "));
+    EXPECT(received_ending("CROSSPOST Other M.99.A.CCC " BOARD " M.101.A.BBB alice 42 ", " 0"));
+
+    // An exempt one says so.
+    strlcpy(fh.filename, "M.102.A.DDD", sizeof(fh.filename));
+    req.bbs_crosspost_exempt = 1;
+    forget();
+    EXPECT_OK(bof_create_post(&alice, &req, NULL));
+    EXPECT(received_ending("CROSSPOST Other M.99.A.CCC " BOARD " M.102.A.DDD alice 42 ", " 1"));
     unlink("draft.tmp");
 }
 
@@ -350,6 +373,133 @@ test_list_post_likes(void)
     // Votes kept with comments only: not in the files.
     bof_storage_set(&bof_storage_files, NULL);
     EXPECT_INT(bof_list_post_likes(&alice, &req, &res),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    bof_storage_set(&bof_storage_nest, NULL);
+}
+
+static void
+test_list_crossposts(void)
+{
+    fileheader_t fh = make_post("M.311.A.AAA"), recs[8];
+    int n = read_dir(recs, 8);
+    bof_crosspost_t cps[2];
+    bof_list_crossposts_t req = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = n,
+            .bbs_header = &fh,
+        },
+        .limit = 2,
+    };
+    bof_list_crossposts_response_t res = { .crossposts = cps };
+
+    forget();
+    reply("GET_CROSSPOSTS", "OK 3\n"
+          "Other\tM.1.A.AAA\talice\t1700000000\n"
+          "Third\tM.2.A.BBB\tbob\t1700000001\n"
+          "Other\tM.3.A.CCC\tcarol\t1700000002");
+    EXPECT_OK(bof_list_crossposts(&alice, &req, &res));
+    EXPECT(received("GET_CROSSPOSTS " BOARD " M.311.A.AAA"));
+    EXPECT_INT(res.bbs_total, 3);
+    EXPECT_INT(res.count, 2);
+    EXPECT_STR(cps[0].community, "Other");
+    EXPECT_STR(cps[0].bbs_file, "M.1.A.AAA");
+    EXPECT_STR(cps[0].creator, "alice");
+    EXPECT_INT(cps[0].published, 1700000000);
+    EXPECT_STR(cps[1].community, "Third");
+
+    req.page = 2;
+    EXPECT_OK(bof_list_crossposts(&alice, &req, &res));
+    EXPECT_INT(res.count, 1);
+    EXPECT_STR(cps[0].creator, "carol");
+
+    // The files backend notes crossposts in the article.
+    bof_storage_set(&bof_storage_files, NULL);
+    EXPECT_INT(bof_list_crossposts(&alice, &req, &res),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    bof_storage_set(&bof_storage_nest, NULL);
+}
+
+static void
+test_check_crosspost(void)
+{
+    fileheader_t fh = make_post("M.312.A.AAA"), recs[8];
+    int n = read_dir(recs, 8);
+    bof_check_crosspost_t req = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = n,
+            .bbs_header = &fh,
+        },
+        .community = "Other",
+    };
+    bof_check_crosspost_response_t res;
+    static const struct {
+        const char *resp;
+        bof_error_t err;
+        int limit;
+    } cases[] = {
+        { "OK", BOF_OK, 0 },
+        { "ERR bbs_already_crossposted", BOF_ERR_BBS_ALREADY_CROSSPOSTED, 0 },
+        { "ERR bbs_crosspost_back_to_origin",
+          BOF_ERR_BBS_CROSSPOST_BACK_TO_ORIGIN, 0 },
+        { "ERR bbs_crosspost_person_limit 5",
+          BOF_ERR_BBS_CROSSPOST_PERSON_LIMIT, 5 },
+        { "ERR bbs_crosspost_post_limit 20", BOF_ERR_BBS_CROSSPOST_POST_LIMIT,
+          20 },
+        { "ERR down", BOF_ERR_UNKNOWN, 0 },
+    };
+
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        forget();
+        reply("CHECK_CROSSPOST", cases[i].resp);
+        res.bbs_limit = -1;
+        EXPECT_INT(bof_check_crosspost(&alice, &req, &res), cases[i].err);
+        EXPECT_INT(res.bbs_limit, cases[i].limit);
+    }
+    EXPECT(received("CHECK_CROSSPOST " BOARD " M.312.A.AAA Other alice 42 0"));
+    req.bbs_exempt = 1;
+    forget();
+    EXPECT_INT(bof_check_crosspost(&alice, &req, NULL), BOF_ERR_UNKNOWN);
+    EXPECT(received("CHECK_CROSSPOST " BOARD " M.312.A.AAA Other alice 42 1"));
+
+    req.community = "bad board";
+    EXPECT_INT(bof_check_crosspost(&alice, &req, &res),
+               BOF_ERR_INVALID_BODY_FIELD);
+    req.community = "Other";
+
+    // The files keep no crossposts: mbbsd allows it.
+    bof_storage_set(&bof_storage_files, NULL);
+    EXPECT_INT(bof_check_crosspost(&alice, &req, &res),
+               BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
+    bof_storage_set(&bof_storage_nest, NULL);
+}
+
+static void
+test_crosspost_parent(void)
+{
+    fileheader_t fh = make_post("M.311.A.AAA"), recs[8];
+    int n = read_dir(recs, 8);
+    bof_get_crosspost_parent_t req = {
+        .post = {
+            .community = BOARD, .bbs_dir = DIRPATH, .bbs_index = n,
+            .bbs_header = &fh,
+        },
+    };
+    bof_post_key_t key;
+
+    forget();
+    reply("GET_CROSSPOST_PARENT",
+          "OK Other\tM.1.A.AAA\talice\ttitle\tbob\t1700000000");
+    EXPECT_OK(bof_get_crosspost_parent(&alice, &req, &key));
+    EXPECT(received("GET_CROSSPOST_PARENT " BOARD " M.311.A.AAA"));
+    EXPECT_STR(key.community, "Other");
+    EXPECT_STR(key.bbs_post_file, "M.1.A.AAA");
+
+    reply("GET_CROSSPOST_PARENT", "ERR not a crosspost");
+    EXPECT_INT(bof_get_crosspost_parent(&alice, &req, &key),
+               BOF_ERR_COULDNT_FIND_POST);
+
+    bof_storage_set(&bof_storage_files, NULL);
+    EXPECT_INT(bof_get_crosspost_parent(&alice, &req, &key),
                BOF_ERR_BBS_STORAGE_NOT_SUPPORTED);
     bof_storage_set(&bof_storage_nest, NULL);
 }
@@ -1264,6 +1414,9 @@ main(void)
     RUN(test_comments);
     RUN(test_votes);
     RUN(test_list_post_likes);
+    RUN(test_list_crossposts);
+    RUN(test_crosspost_parent);
+    RUN(test_check_crosspost);
     RUN(test_body_and_refresh);
     RUN(test_purge);
     RUN(test_delete_and_remove);
