@@ -31,7 +31,26 @@ typedef struct {
     uint64_t need_repair_trailing;
     uint64_t repaired_renamed;
     uint64_t repaired_trailing;
+
+    /* --rename: long names given the standard M.<time>.A.<hex> */
+    uint64_t need_shorten;
+    uint64_t shortened;
+    uint64_t shorten_aid_changed;
+    uint64_t shorten_skipped;
+    /* Records with bad names left alone, as a file has that name. */
+    uint64_t bad_name_file_exists;
+    /* Spare space: how many records have each byte of fileheader_t not 0
+     * (as read, before any repair), and the longest of the other strings. */
+    uint64_t byte_nz[sizeof(fileheader_t)];
+    int max_owner_len;
+    int max_date_len;
+    int max_title_len;
 } section_stats_t;
+
+/* The first record seen with each byte of fileheader_t not 0, as
+ * "path #idx", to show where the rare ones come from. */
+#define NZ_EXAMPLE_LEN 256
+static char nz_example[sizeof(fileheader_t)][NZ_EXAMPLE_LEN];
 
 typedef struct ino_node {
     dev_t dev;
@@ -84,23 +103,40 @@ static int opt_scan_mail = 0;
 static int opt_scan_man = 0;
 static int opt_include_backup = 0;
 static int opt_include_digest = 0;
+static int opt_rename = 0;
 static char opt_bbshome[MAX_SCAN_PATH] = "";
+
+/* --rename: the current .DIR's directory and the names its records use or
+ * were given, so no new name is taken twice. */
+static char cur_dirname[MAX_SCAN_PATH];
+static char (*cur_names)[FNLEN];
+static size_t cur_nnames, cur_cap;
 
 static void print_usage(const char *progname)
 {
     printf("Usage: %s [options] [path1 [path2 ...]]\n\n", progname);
-    printf("Scan BBS .DIR files to detect filename lengths and optionally repair invalid filenames.\n\n");
+    printf("Scan BBS .DIR files to detect filename lengths and optionally repair invalid filenames.\n");
+    printf("Also reports the spare space in fileheader_t: the bytes no record sets, and how\n");
+    printf("far filename[] could shrink; and warns of a legacy outgoing mail queue (out/.DIR).\n\n");
     printf("Options:\n");
     printf("  -b, --bbshome <dir>     Set BBS home directory (default: BBSHOME or auto-detect)\n");
     printf("  -t, --threshold <len>   Filename length threshold to check (default: 20)\n");
     printf("  -r, --repair            Apply repairs to .DIR files (default is dry-run inspection):\n");
-    printf("                            1. Bad path (., .., ./, ../, /...) -> rename to '.deleted'\n");
-    printf("                            2. Contains non-ASCII              -> rename to '.deleted'\n");
-    printf("                            3. Contains space                  -> rename to '.deleted'\n");
-    printf("                            4. Not NUL-terminated              -> rename to '.deleted'\n");
-    printf("                            5. 'non-exist' or 'non-xist'       -> rename to '.deleted'\n");
+    printf("                            1. Bad path (., .., ./, ../, /...) -> tombstone\n");
+    printf("                            2. Contains non-ASCII              -> tombstone\n");
+    printf("                            3. Contains space                  -> tombstone\n");
+    printf("                            4. Not NUL-terminated              -> tombstone\n");
+    printf("                            5. 'non-exist' or 'non-xist'       -> tombstone\n");
     printf("                            *  All trailing bytes in filename are zeroed out\n");
+    printf("                            A tombstone is what mbbsd leaves of a removed post: file\n");
+    printf("                            name '.deleted', owner '-', title '(removed) <owner>'.\n");
+    printf("                            2-5 are left alone (to fix by hand) if a file has that name.\n");
     printf("                            With nest.svc, the .DIR of boards (its cache) are not repaired\n");
+    printf("      --rename            With -r, give names longer than the threshold the standard\n");
+    printf("                            [MG].<time>.A.<hex> (the hex the AID already has), renaming\n");
+    printf("                            the file and fixing the record; another hex (a new AID) if\n");
+    printf("                            that name is taken. Other names are only reported.\n");
+    printf("                            Backups (.DIR.old, ...) keep the old names.\n");
     printf("      --boards            Scan only boards/ directory\n");
     printf("      --mail, --home      Scan only home/ (mailboxes) directory\n");
     printf("      --man, --announce   Scan only man/ and man/boards/ directory\n");
@@ -178,10 +214,24 @@ static void merge_stats(section_stats_t *dst, const section_stats_t *src)
     dst->need_repair_trailing += src->need_repair_trailing;
     dst->repaired_renamed += src->repaired_renamed;
     dst->repaired_trailing += src->repaired_trailing;
+    dst->need_shorten += src->need_shorten;
+    dst->shortened += src->shortened;
+    dst->shorten_aid_changed += src->shorten_aid_changed;
+    dst->shorten_skipped += src->shorten_skipped;
+    dst->bad_name_file_exists += src->bad_name_file_exists;
 
     for (int i = 0; i <= FNLEN; i++) {
         dst->len_hist[i] += src->len_hist[i];
     }
+    for (size_t i = 0; i < sizeof(fileheader_t); i++) {
+        dst->byte_nz[i] += src->byte_nz[i];
+    }
+    if (src->max_owner_len > dst->max_owner_len)
+        dst->max_owner_len = src->max_owner_len;
+    if (src->max_date_len > dst->max_date_len)
+        dst->max_date_len = src->max_date_len;
+    if (src->max_title_len > dst->max_title_len)
+        dst->max_title_len = src->max_title_len;
     if (src->max_len > dst->max_len) {
         dst->max_len = src->max_len;
         memcpy(dst->max_len_fn, src->max_len_fn, sizeof(dst->max_len_fn));
@@ -234,10 +284,134 @@ static int is_bad_leading_path(const char *fn, size_t len)
     return 0;
 }
 
+/* --rename: the names the records of the current .DIR use. */
+static int cur_names_has(const char *name)
+{
+    for (size_t i = 0; i < cur_nnames; i++) {
+        if (strncmp(cur_names[i], name, FNLEN) == 0)
+            return 1;
+    }
+    return 0;
+}
+
+static void cur_names_add(const char *name)
+{
+    if (cur_nnames == cur_cap) {
+        size_t cap = cur_cap ? cur_cap * 2 : 1024;
+        char (*more)[FNLEN] = realloc(cur_names, cap * FNLEN);
+        if (!more)
+            return;
+        cur_names = more;
+        cur_cap = cap;
+    }
+    strlcpy(cur_names[cur_nnames++], name, FNLEN);
+}
+
+static void cur_names_load(int fd)
+{
+    fileheader_t buf[CHUNK_RECORDS];
+    ssize_t n;
+    off_t off = 0;
+
+    cur_nnames = 0;
+    while ((n = pread(fd, buf, sizeof(buf), off)) > 0) {
+        size_t count = (size_t)n / sizeof(fileheader_t);
+        for (size_t i = 0; i < count; i++) {
+            char name[FNLEN];
+            memcpy(name, buf[i].filename, FNLEN);
+            name[FNLEN - 1] = '\0';
+            if (name[0])
+                cur_names_add(name);
+        }
+        off += n;
+    }
+}
+
+/* Names that could lead out of cur_dirname are never looked up. */
+static int cur_dir_has_file(const char *name)
+{
+    char path[MAX_SCAN_PATH];
+    struct stat st;
+
+    if (!name[0] || strchr(name, '/') || strcmp(name, ".") == 0 ||
+        strcmp(name, "..") == 0)
+        return 0;
+    snprintf(path, sizeof(path), "%s/%s", cur_dirname, name);
+    return lstat(path, &st) == 0;
+}
+
+/* [MG].<time>.A[.<any>] -> [MG].<time>.A.<hex>, keeping the AID's hex
+ * (get_fhdr_stamp_hex()) unless taken, else the next free one (the AID
+ * changes). Returns 0 if fn has another form or no hex is free. */
+static int short_name(const char *fn, char *out, size_t sz, int *aid_changed)
+{
+    char *end;
+
+    *aid_changed = 0;
+    if ((fn[0] != 'M' && fn[0] != 'G') || fn[1] != '.' ||
+        !isdigit((unsigned char)fn[2]))
+        return 0;
+    errno = 0;
+    unsigned long ts = strtoul(fn + 2, &end, 10);
+    if (errno || ts == 0 || ts > UINT32_MAX ||
+        strncmp(end, ".A", 2) != 0 || (end[2] != '\0' && end[2] != '.'))
+        return 0;
+
+    unsigned int hex = get_fhdr_stamp_hex(fn);
+    for (unsigned int i = 0; i <= 0xFFF; i++) {
+        unsigned int h = (hex + i) & 0xFFF;
+        snprintf(out, sz, "%c.%lu.A.%03X", fn[0], ts, h);
+        if (strcmp(out, fn) != 0 && !cur_names_has(out) &&
+            !cur_dir_has_file(out)) {
+            *aid_changed = i != 0;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int is_printable(const char *s, size_t n)
+{
+    for (size_t i = 0; i < n && s[i]; i++) {
+        if ((unsigned char)s[i] < 0x20 || (unsigned char)s[i] >= 0x7F)
+            return 0;
+    }
+    return 1;
+}
+
+/* Same tombstone as mbbsd's; an unprintable owner is kept out of the title. */
+static void make_tombstone(fileheader_t *fh)
+{
+    const char *title = NULL;
+
+    if (!is_printable(fh->owner, sizeof(fh->owner)) ||
+        !memchr(fh->owner, '\0', sizeof(fh->owner)))
+        title = STR_SAFEREMOVE_TITLE;
+    bof_files_set_tombstone(fh, title, "chkfnlen");
+}
+
 static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
                            int fd, off_t record_offset, section_stats_t *stats)
 {
     stats->total_records++;
+
+    /* Spare space, from the record as it is on disk. */
+    const unsigned char *raw = (const unsigned char *)fh;
+    for (size_t i = 0; i < sizeof(*fh); i++) {
+        if (!raw[i])
+            continue;
+        if (!stats->byte_nz[i]++ && !nz_example[i][0])
+            snprintf(nz_example[i], NZ_EXAMPLE_LEN, "%s #%d", dir_path, rec_idx);
+    }
+    int slen = (int)strnlen(fh->owner, sizeof(fh->owner));
+    if (slen > stats->max_owner_len)
+        stats->max_owner_len = slen;
+    slen = (int)strnlen(fh->date, sizeof(fh->date));
+    if (slen > stats->max_date_len)
+        stats->max_date_len = slen;
+    slen = (int)strnlen(fh->title, sizeof(fh->title));
+    if (slen > stats->max_title_len)
+        stats->max_title_len = slen;
 
     /* Save original filename for logging/diff */
     char orig_fn[FNLEN + 1];
@@ -301,15 +475,29 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
     int need_repair = (need_rename || cond5_dirty_trailing);
 
     const char *new_name = NULL;
+    /* A bad name with a file: the post may still be there, so fix by hand. */
+    int bad_name_has_file = need_rename && !cond1_bad_path &&
+                            !cond4_unterminated &&
+                            cur_dir_has_file(fh->filename);
+    if (need_rename && bad_name_has_file) {
+        stats->bad_name_file_exists++;
+        printf("[MANUAL] %s #%d\n", dir_path, rec_idx);
+        printf("      current: '%s' (len=%zu): a bad name, but %s/%s exists;"
+               " left alone\n\n", orig_escaped, len, cur_dirname, orig_escaped);
+        fflush(stdout);
+        need_rename = 0;
+        need_repair = cond5_dirty_trailing;
+    }
     if (need_rename) {
-        new_name = ".deleted";
+        new_name = FN_SAFEDEL;
+        fileheader_t orig = *fh;
 
+        make_tombstone(fh);
         if (opt_repair) {
-            memset(fh->filename, 0, FNLEN);
-            memcpy(fh->filename, new_name, strlen(new_name));
             if (pwrite(fd, fh, sizeof(*fh), record_offset) != (ssize_t)sizeof(*fh)) {
                 fprintf(stderr, "[ERROR] Write repair failed at %s #%d: %s\n",
                         dir_path, rec_idx, strerror(errno));
+                *fh = orig;
             } else {
                 stats->repaired_renamed++;
             }
@@ -338,20 +526,88 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
             strlcat(reasons, "'non-exist' placeholder", sizeof(reasons));
         }
 
+        char owner_escaped[sizeof(orig.owner) * 4 + 1];
+        escape_str(owner_escaped, sizeof(owner_escaped), orig.owner, sizeof(orig.owner));
         if (opt_repair) {
             printf("[REPAIRED] %s #%d\n", dir_path, rec_idx);
-            printf("      old: '%s' (len=%zu, reason: %s)\n", orig_escaped, len, reasons);
-            printf("      new: '%s' (trailing bytes zeroed)\n\n", new_name);
+            printf("      old: '%s' by '%s' (len=%zu, reason: %s)\n",
+                   orig_escaped, owner_escaped, len, reasons);
+            printf("      new: tombstone '%s' (owner '-', title of a removed post)\n\n",
+                   new_name);
         } else {
             printf("[NEED-REPAIR] %s #%d\n", dir_path, rec_idx);
-            printf("      current: '%s' (len=%zu, reason: %s)\n", orig_escaped, len, reasons);
-            printf("      action:  rename to '%s' (trailing bytes zeroed)\n\n", new_name);
+            printf("      current: '%s' by '%s' (len=%zu, reason: %s)\n",
+                   orig_escaped, owner_escaped, len, reasons);
+            printf("      action:  tombstone '%s' (owner '-', title of a removed post)\n\n",
+                   new_name);
         }
         fflush(stdout);
 
         /* After repair/rename, new len is length of new_name */
         len = strlen(new_name);
-    } else if (cond5_dirty_trailing) {
+    } else if (opt_rename && (int)len > opt_threshold && !cond4_unterminated &&
+               !bad_name_has_file) {
+        char short_fn[FNLEN];
+        int aid_changed = 0;
+
+        if (!short_name(fh->filename, short_fn, sizeof(short_fn), &aid_changed)) {
+            stats->shorten_skipped++;
+            printf("[NO-RENAME] %s #%d\n", dir_path, rec_idx);
+            printf("      current: '%s' (len=%zu): not [MG].<time>.A..., or no free"
+                   " name; fix by hand\n\n", orig_escaped, len);
+        } else {
+            char old_path[MAX_SCAN_PATH], new_path[MAX_SCAN_PATH];
+            int has_file = cur_dir_has_file(fh->filename);
+            int ok = 1;
+
+            snprintf(old_path, sizeof(old_path), "%s/%s", cur_dirname, fh->filename);
+            snprintf(new_path, sizeof(new_path), "%s/%s", cur_dirname, short_fn);
+            if (opt_repair) {
+                fileheader_t updated = *fh;
+                memset(updated.filename, 0, sizeof(updated.filename));
+                strlcpy(updated.filename, short_fn, sizeof(updated.filename));
+
+                /* The file first; it goes back if the record write fails. */
+                if (has_file && rename(old_path, new_path) != 0) {
+                    fprintf(stderr, "[ERROR] Cannot rename %s to %s: %s\n",
+                            old_path, new_path, strerror(errno));
+                    ok = 0;
+                } else if (pwrite(fd, &updated, sizeof(updated), record_offset) !=
+                           (ssize_t)sizeof(updated)) {
+                    fprintf(stderr, "[ERROR] Write rename failed at %s #%d: %s\n",
+                            dir_path, rec_idx, strerror(errno));
+                    if (has_file && rename(new_path, old_path) != 0)
+                        fprintf(stderr, "[ERROR] Cannot rename %s back to %s: %s\n",
+                                new_path, old_path, strerror(errno));
+                    ok = 0;
+                }
+                if (ok) {
+                    *fh = updated;
+                    stats->shortened++;
+                }
+            } else {
+                stats->need_shorten++;
+            }
+            if (ok) {
+                cur_names_add(short_fn);
+                if (aid_changed)
+                    stats->shorten_aid_changed++;
+                printf("[%s] %s #%d\n", opt_repair ? "RENAMED" : "NEED-RENAME",
+                       dir_path, rec_idx);
+                printf("      old: '%s' (len=%zu)%s\n", orig_escaped, len,
+                       has_file ? "" : " (no such file: record only)");
+                printf("      new: '%s'%s\n\n", short_fn,
+                       aid_changed ? " (name taken: the AID changes)" : "");
+                if (opt_repair) {
+                    len = strlen(short_fn);
+                    cond5_dirty_trailing = 0;   /* written whole */
+                }
+            }
+        }
+        need_repair = 1;    /* printed here */
+        fflush(stdout);
+    }
+    if (!need_rename && cond5_dirty_trailing) {
         if (opt_repair) {
             if (len > 0)
                 memset(fh->filename + len + 1, 0, FNLEN - len - 1);
@@ -480,6 +736,18 @@ static void scan_dir_file(const char *dir_path, section_stats_t *stats)
         opt_repair = saved_repair;
         return;
     }
+
+    snprintf(cur_dirname, sizeof(cur_dirname), "%s", dir_path);
+    char *slash = strrchr(cur_dirname, '/');
+    if (slash)
+        *slash = '\0';
+    else
+        snprintf(cur_dirname, sizeof(cur_dirname), ".");
+    /* Writers of .DIR (append_record) take flock; so does a repair. */
+    if (opt_repair && flock(fd, LOCK_EX) != 0)
+        fprintf(stderr, "[WARN] Cannot lock %s: %s\n", dir_path, strerror(errno));
+    if (opt_rename)
+        cur_names_load(fd);
 
     fileheader_t buf[CHUNK_RECORDS];
     ssize_t bytes_read;
@@ -663,17 +931,33 @@ static void print_summary_table(const section_stats_t *boards,
     if (total_issues > 0) {
         printf("Repair Statistics:\n");
         if (opt_repair) {
-            printf("  Renamed to '.deleted':        %14s\n", fmt_num(overall->repaired_renamed, b1));
+            printf("  Turned into tombstones:       %14s\n", fmt_num(overall->repaired_renamed, b1));
             printf("  Zeroed dirty trailing bytes:  %14s\n", fmt_num(overall->repaired_trailing, b2));
             printf("  Total records repaired:       %14s\n\n",
                    fmt_num(overall->repaired_renamed + overall->repaired_trailing, b3));
         } else {
-            printf("  Records needing rename:       %14s\n", fmt_num(overall->need_repair_renamed, b1));
+            printf("  Records needing tombstones:   %14s\n", fmt_num(overall->need_repair_renamed, b1));
             printf("  Records with dirty padding:   %14s\n", fmt_num(overall->need_repair_trailing, b2));
             printf("  Total records needing repair: %14s\n",
                    fmt_num(overall->need_repair_renamed + overall->need_repair_trailing, b3));
             printf("  NOTE: Run with -r or --repair to apply fixes to .DIR files.\n\n");
         }
+    }
+
+    if (overall->bad_name_file_exists > 0)
+        printf("Bad names left alone as a file has them ([MANUAL]): %s\n\n",
+               fmt_num(overall->bad_name_file_exists, b1));
+
+    if (opt_rename) {
+        printf("Rename (--rename, names longer than %d):\n", opt_threshold);
+        printf("  %-28s %14s\n", opt_repair ? "Renamed:" : "To rename:",
+               fmt_num(opt_repair ? overall->shortened : overall->need_shorten, b1));
+        printf("  %-28s %14s\n", "  of which the AID changes:",
+               fmt_num(overall->shorten_aid_changed, b2));
+        printf("  %-28s %14s\n\n", "Cannot rename ([NO-RENAME]):",
+               fmt_num(overall->shorten_skipped, b3));
+        if (opt_repair && overall->shortened)
+            printf("  NOTE: backups (.DIR.old, .DIR.bak, ...) still have the old names.\n\n");
     }
 
     if (overall->count_gt_threshold == 0 && overall->count_eq_threshold == 0) {
@@ -685,6 +969,195 @@ static void print_summary_table(const section_stats_t *boards,
                overall->count_eq_threshold, opt_threshold);
     }
     printf("================================================================================\n");
+}
+
+/* Spare space report: string bytes past the longest value and its NUL, if
+ * never set, could hold something else. */
+typedef struct {
+    const char *name;
+    size_t off, size;
+    int kind;           /* FIELD_* */
+} field_t;
+
+enum { FIELD_STRING, FIELD_NUMBER, FIELD_PAD };
+
+#define FIELD(m, k) { #m, offsetof(fileheader_t, m), \
+                      sizeof(((fileheader_t *)0)->m), k }
+
+static const field_t fhdr_fields[] = {
+    FIELD(filename, FIELD_STRING),
+    FIELD(modified, FIELD_NUMBER),
+    FIELD(score,    FIELD_NUMBER),
+    FIELD(owner,    FIELD_STRING),
+    FIELD(date,     FIELD_STRING),
+    FIELD(title,    FIELD_STRING),
+    FIELD(pad2,     FIELD_PAD),
+    FIELD(multi,    FIELD_NUMBER),
+    FIELD(filemode, FIELD_NUMBER),
+    FIELD(comments, FIELD_NUMBER),
+};
+
+static int field_max_len(const field_t *f, const section_stats_t *s)
+{
+    if (f->off == offsetof(fileheader_t, filename))
+        return s->max_len;
+    if (f->off == offsetof(fileheader_t, owner))
+        return s->max_owner_len;
+    if (f->off == offsetof(fileheader_t, date))
+        return s->max_date_len;
+    if (f->off == offsetof(fileheader_t, title))
+        return s->max_title_len;
+    return -1;
+}
+
+/* Prints never-set bytes in [from, to) as ranges; returns how many. */
+static size_t print_zero_ranges(const section_stats_t *s, size_t from, size_t to)
+{
+    size_t n = 0;
+    for (size_t i = from; i < to; i++) {
+        if (s->byte_nz[i])
+            continue;
+        size_t j = i;
+        while (j + 1 < to && !s->byte_nz[j + 1])
+            j++;
+        if (j == i)
+            printf(" [%zu]", i - from);
+        else
+            printf(" [%zu..%zu]", i - from, j - from);
+        n += j - i + 1;
+        i = j;
+    }
+    return n;
+}
+
+static void print_space_report(const section_stats_t *s)
+{
+    char b1[32], b2[32];
+    size_t spare_total = 0;
+
+    if (!s->total_records)
+        return;
+
+    printf("\n================================================================================\n");
+    printf("                     SPARE SPACE IN fileheader_t (%zu bytes)\n",
+           sizeof(fileheader_t));
+    printf("================================================================================\n");
+    printf("Bytes counted as read, before any repair (-r zeroes dirty filename tails).\n\n");
+    printf("%-9s %4s %4s %7s %6s  %s\n",
+           "Field", "Off", "Size", "MaxLen", "Spare", "Bytes never set (index in field)");
+    printf("--------------------------------------------------------------------------------\n");
+
+    for (size_t k = 0; k < sizeof(fhdr_fields) / sizeof(fhdr_fields[0]); k++) {
+        const field_t *f = &fhdr_fields[k];
+        int maxlen = field_max_len(f, s);
+        char maxlen_s[16] = "-";
+        size_t spare = 0;
+
+        if (f->kind == FIELD_STRING) {
+            snprintf(maxlen_s, sizeof(maxlen_s), "%d", maxlen);
+            /* The tail never set, after the longest value and its NUL. */
+            size_t keep = (size_t)maxlen + 1;
+            for (size_t i = f->size; i > keep && !s->byte_nz[f->off + i - 1]; i--)
+                spare++;
+        } else if (f->kind == FIELD_PAD) {
+            spare = 1;
+            for (size_t i = 0; i < f->size; i++) {
+                if (s->byte_nz[f->off + i]) {
+                    spare = 0;
+                    break;
+                }
+            }
+            if (spare)
+                spare = f->size;
+        }
+        spare_total += spare;
+
+        printf("%-9s %4zu %4zu %7s %6zu ", f->name, f->off, f->size, maxlen_s, spare);
+        if (!print_zero_ranges(s, f->off, f->off + f->size))
+            printf(" (none)");
+        if (f->kind == FIELD_NUMBER)
+            printf("  (a number: zero bytes only mean small values)");
+        printf("\n");
+    }
+    printf("--------------------------------------------------------------------------------\n");
+    printf("Spare bytes (string tails past the longest value + NUL, pads): %zu\n\n",
+           spare_total);
+
+    /* Bytes that are set, but rarely: maybe junk worth cleaning up. */
+    int rare = 0;
+    for (size_t k = 0; k < sizeof(fhdr_fields) / sizeof(fhdr_fields[0]); k++) {
+        const field_t *f = &fhdr_fields[k];
+        if (f->kind == FIELD_NUMBER)
+            continue;
+        int maxlen = field_max_len(f, s);
+        size_t from = f->kind == FIELD_STRING ? (size_t)maxlen + 1 : 0;
+        for (size_t i = from; i < f->size; i++) {
+            uint64_t nz = s->byte_nz[f->off + i];
+            if (!nz || nz * 1000 > s->total_records)
+                continue;
+            if (!rare++)
+                printf("Rarely set bytes past the values (< 0.1%% of records; junk?):\n");
+            printf("  %s[%zu]: %s records, e.g. %s\n", f->name, i, fmt_num(nz, b1),
+                   nz_example[f->off + i]);
+        }
+    }
+    if (rare)
+        printf("\n");
+
+    /* How far filename[] could shrink: a name needs its length + 1. */
+    printf("Shrinking filename[%d] to N bytes (names need len + 1):\n", FNLEN);
+    printf("  %4s %14s %12s\n", "N", "Not fitting", "Freed bytes");
+    for (int n = FNLEN - 2; n >= 16; n -= 2) {
+        uint64_t over = 0;
+        for (int len = n; len <= FNLEN; len++)
+            over += s->len_hist[len];
+        printf("  %4d %14s %12d%s\n", n, fmt_num(over, b2), FNLEN - n,
+               over ? "" : "  OK");
+    }
+    if (s->max_len >= 0) {
+        printf("  The longest name (%d) needs filename[%d]: up to %d bytes could be freed.\n",
+               s->max_len, s->max_len + 1, FNLEN - (s->max_len + 1));
+    }
+    printf("================================================================================\n");
+}
+
+/* A leftover pre-mail.svc queue (out/.DIR of MailQueue) holds filepath
+ * "out/M.<time>.<pid>.A" (up to 26 chars), which a shorter FNLEN breaks. */
+#define LEGACY_MAILQUEUE_SIZE 216   /* sizeof(MailQueue) on 64-bit */
+
+static int check_legacy_mailqueue(const char *bbshome)
+{
+    char path[MAX_SCAN_PATH];
+    struct stat st;
+
+    snprintf(path, sizeof(path), "%s/out/" FN_DIR, bbshome);
+    if (stat(path, &st) != 0 || st.st_size == 0)
+        return 0;
+
+    int fd = open(path, O_RDONLY);
+    if (fd < 0)
+        return 0;
+    int n = 0, maxlen = 0;
+    char rec[LEGACY_MAILQUEUE_SIZE], longest[FNLEN + 1] = "";
+    while (read(fd, rec, sizeof(rec)) == (ssize_t)sizeof(rec)) {
+        int len = (int)strnlen(rec, FNLEN);
+        n++;
+        if (len > maxlen) {
+            maxlen = len;
+            snprintf(longest, sizeof(longest), "%.*s", len, rec);
+        }
+    }
+    close(fd);
+
+    printf("\n[WARN] %s: %" PRIu64 " bytes, %d legacy outgoing mail queue records\n",
+           path, (uint64_t)st.st_size, n);
+    printf("       (MailQueue, not fileheader_t; size %d each%s).\n",
+           LEGACY_MAILQUEUE_SIZE,
+           st.st_size % LEGACY_MAILQUEUE_SIZE ? ", but the file is not a multiple" : "");
+    printf("       Longest filepath: %d bytes ('%s'). outmail is gone (mail.svc sends\n",
+           maxlen, longest);
+    printf("       mail now): send or remove these before shrinking FNLEN.\n");
+    return n;
 }
 
 int main(int argc, char **argv)
@@ -700,6 +1173,7 @@ int main(int argc, char **argv)
         {"announce",       no_argument,       0, 1003},
         {"include-backup", no_argument,       0, 1004},
         {"include-digest", no_argument,       0, 1005},
+        {"rename",         no_argument,       0, 1006},
         {"verbose",        no_argument,       0, 'v'},
         {"quiet",          no_argument,       0, 'q'},
         {"all",            no_argument,       0, 'a'},
@@ -737,6 +1211,9 @@ int main(int argc, char **argv)
             break;
         case 1005:
             opt_include_digest = 1;
+            break;
+        case 1006:
+            opt_rename = 1;
             break;
         case 'v':
             opt_verbose = 1;
@@ -865,6 +1342,9 @@ int main(int argc, char **argv)
     }
 
     print_summary_table(&boards_stats, &mail_stats, &man_stats, &custom_stats, &overall_stats);
+    print_space_report(&overall_stats);
+    if (optind >= argc)
+        check_legacy_mailqueue(opt_bbshome);
 
     if (overall_stats.count_gt_threshold > 0 ||
         overall_stats.need_repair_renamed > 0 ||
