@@ -1076,7 +1076,7 @@ func (e *Engine) AddComment(c *model.Comment) (added *model.Comment, err error) 
 			return nil, fmt.Errorf("update pebble comment failed: %w", err)
 		}
 
-		_ = e.AppendMergedCommentCache(c.PostID, c.Content)
+		_ = e.AppendMergedCommentCache(prev, c.Content)
 
 		prev.IsMerged = true
 		return prev, nil
@@ -2140,26 +2140,65 @@ func (e *Engine) WritePostCache(p *model.Post) error {
 	return os.WriteFile(path, data, 0644)
 }
 
-// FormatCommentBlock formats a comment into the structured pipe-delimited format:
-// Line 1:  |userid[modmark]|comment|ip time|[~]No
-// Line 2+: | comment
-func FormatCommentBlock(c *model.Comment) string {
+// IsSubmitter is Reddit's is_submitter: whether c is by the creator of p as
+// readers see it. Never for anonymous posts, whose creator_id is the real
+// account behind the nickname.
+func IsSubmitter(p *model.Post, c *model.Comment) bool {
+	if p == nil || c == nil || p.Filemode&model.FileAnonymous != 0 {
+		return false
+	}
+	return model.IsCreator(p.CreatorName, p.CreatorID, c.CreatorName, c.CreatorID)
+}
+
+// Marks of the comment lines FormatCommentBlock writes.
+const (
+	commentLineMark    = "\x1e" // opens every line: ASCII RS, which editors drop
+	commentOPMark      = "*"    // by the OP
+	commentDeletedMark = "-"    // deleted by its creator (Lemmy's deleted)
+	commentRemovedMark = "!"    // removed by a moderator (Lemmy's removed)
+)
+
+// commentMoreLine formats a further line of the comment by name, marked if
+// by the OP, so each line can be drawn alone and aligned with the first.
+func commentMoreLine(text, name string, op bool) string {
+	mark := ""
+	if op {
+		mark = commentOPMark
+	}
+	// Userids are ASCII: as many spaces as the name is wide.
+	return commentLineMark + mark + strings.Repeat(" ", len(name)) + "|" + text + "\n"
+}
+
+// FormatCommentBlock formats comment c of post p as PTT's own text form
+// (Lemmy and Reddit write no comment files); each line can be drawn alone:
+//
+//	Line 1:  RS[*][-|!]userid|[~]No|MM/DD/YYYY HH:MM|[ip]|comment
+//	Line 2+: RS[*]<spaces>|comment
+//
+// RS (0x1e) cannot be typed, so no article line is taken for a comment.
+// "*" is the OP (IsSubmitter; Reddit "[S]", Lemmy "OP"), "-" deleted, "!"
+// removed, "~" edited. The fields before the comment never have "|", so
+// readers parse them forward and print the comment as it comes. Further
+// lines have as many spaces as the userid is wide, to align with the first.
+func FormatCommentBlock(p *model.Post, c *model.Comment) string {
 	t := time.Unix(c.CreatedAt, 0).Format("01/02/2006 15:04")
-	var creation string
-	if c.IP != "" && c.IP != "-" {
-		creation = c.IP + " " + t
-	} else {
-		creation = t
+	ip := c.IP
+	if ip == "-" {
+		ip = ""
 	}
 
-	authorMark := c.CreatorName
-	if c.DeletedOrRemoved() {
-		authorMark = c.CreatorName + "!"
+	op := IsSubmitter(p, c)
+	marks := ""
+	if op {
+		marks = commentOPMark
 	}
-
 	modMark := ""
 	if c.ModifiedAt > 0 {
 		modMark = "~"
+	}
+	head := func(marks, text string) string {
+		return fmt.Sprintf("%s%s%s|%s%d|%s|%s|%s\n", commentLineMark, marks,
+			c.CreatorName, modMark, c.Sequence, t, ip, text)
 	}
 
 	if c.DeletedOrRemoved() {
@@ -2168,22 +2207,17 @@ func FormatCommentBlock(c *model.Comment) string {
 			cleanReason = big5uao.Decode([]byte(cleanReason))
 		}
 		cleanReason = strings.TrimSpace(cleanReason)
-		isSelf := c.Deleted || cleanReason == "自刪"
 		// Lemmy's words: deleted by its creator, removed by a moderator.
-		var msg string
-		if isSelf {
-			msg = "留言已刪除"
-		} else {
-			if cleanReason != "" {
-				cleanReason = strings.TrimRight(cleanReason, "\r\n")
-				cleanReason = strings.ReplaceAll(cleanReason, "--", "-")
-				cleanReason = strings.ReplaceAll(cleanReason, "|", "-")
-				msg = fmt.Sprintf("留言已移除 (%s)", cleanReason)
-			} else {
-				msg = "留言已移除"
-			}
+		if c.Deleted || cleanReason == "自刪" {
+			return head(marks+commentDeletedMark, "留言已刪除")
 		}
-		return fmt.Sprintf("|%s|%s|%s|%s%d\n", authorMark, msg, creation, modMark, c.Sequence)
+		msg := "留言已移除"
+		if cleanReason != "" {
+			cleanReason = strings.TrimRight(cleanReason, "\r\n")
+			cleanReason = strings.ReplaceAll(cleanReason, "--", "-")
+			msg = fmt.Sprintf("留言已移除 (%s)", cleanReason)
+		}
+		return head(marks+commentRemovedMark, msg)
 	}
 
 	rawLines := strings.Split(c.Content, "\n")
@@ -2205,9 +2239,9 @@ func FormatCommentBlock(c *model.Comment) string {
 	}
 
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("|%s|%s|%s|%s%d\n", authorMark, firstLine, creation, modMark, c.Sequence))
+	b.WriteString(head(marks, firstLine))
 	for i := 1; i < len(cleanLines); i++ {
-		b.WriteString("| " + cleanLines[i] + "\n")
+		b.WriteString(commentMoreLine(cleanLines[i], c.CreatorName, op))
 	}
 
 	return b.String()
@@ -2232,7 +2266,7 @@ func (e *Engine) AppendCommentCache(c *model.Comment) error {
 	}
 	defer f.Close()
 
-	formatted := FormatCommentBlock(c)
+	formatted := FormatCommentBlock(p, c)
 	var data []byte
 	if e.cfg.IsBig5() {
 		data = big5uao.Encode(formatted)
@@ -2250,7 +2284,10 @@ func (e *Engine) AppendCommentCache(c *model.Comment) error {
 	return err
 }
 
-func FormatMergedCommentLines(content string) string {
+// FormatMergedCommentLines formats content merged into floor of post p as
+// its further lines (see FormatCommentBlock).
+func FormatMergedCommentLines(p *model.Post, floor *model.Comment, content string) string {
+	op := IsSubmitter(p, floor)
 	rawLines := strings.Split(content, "\n")
 	var b strings.Builder
 	for _, l := range rawLines {
@@ -2259,15 +2296,17 @@ func FormatMergedCommentLines(content string) string {
 			clean := model.StripANSI(trimmed)
 			clean = strings.ReplaceAll(clean, "\t", "  ")
 			if clean != "" {
-				b.WriteString("| " + clean + "\n")
+				b.WriteString(commentMoreLine(clean, floor.CreatorName, op))
 			}
 		}
 	}
 	return b.String()
 }
 
-func (e *Engine) AppendMergedCommentCache(postID uint64, content string) error {
-	p, err := e.GetPost(postID)
+// AppendMergedCommentCache appends content merged into floor to the files
+// of its post.
+func (e *Engine) AppendMergedCommentCache(floor *model.Comment, content string) error {
+	p, err := e.GetPost(floor.PostID)
 	if err != nil {
 		return err
 	}
@@ -2278,7 +2317,7 @@ func (e *Engine) AppendMergedCommentCache(postID uint64, content string) error {
 		}
 	}
 
-	formatted := FormatMergedCommentLines(content)
+	formatted := FormatMergedCommentLines(p, floor, content)
 	if formatted == "" {
 		return nil
 	}
@@ -3421,7 +3460,7 @@ func RenderPostWithComments(p *model.Post, comments []*model.Comment, asBig5 boo
 	}
 
 	for _, c := range comments {
-		buf.WriteString(FormatCommentBlock(c))
+		buf.WriteString(FormatCommentBlock(p, c))
 	}
 
 	if asBig5 {

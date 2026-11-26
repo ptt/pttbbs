@@ -263,10 +263,12 @@ bof_files_write_post(const char *path, const char *author,
         return -1;
     if (!(fp = fopen(path, "w")))
         return -1;
-    // The header, a blank line, the body and the origin after "--".
+    // The header, a blank line, the body and the origin after "--". A
+    // client may not make comment lines: COMMENT_LINE_MARK is dropped.
     fprintf(fp, "%s\n", head);
-    if (blen)
-        fwrite(body, 1, blen, fp);
+    for (size_t i = 0; i < blen; i++)
+        if (body[i] != COMMENT_LINE_MARK)
+            fputc(body[i], fp);
     if (blen && body[blen - 1] != '\n')
         fputc('\n', fp);
     fprintf(fp, "\n--\n%s\n", origin);

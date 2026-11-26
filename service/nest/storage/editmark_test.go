@@ -32,7 +32,7 @@ func TestEditMark(t *testing.T) {
 		}
 	}
 	out := render()
-	if strings.Count(out, "※ 編輯") != 1 || !strings.Contains(out, "sig\n※ 編輯: alice (1.2.3.4), 11/27/2026 02:00:00\n|bob|hi|") {
+	if strings.Count(out, "※ 編輯") != 1 || !strings.Contains(out, "sig\n※ 編輯: alice (1.2.3.4), 11/27/2026 02:00:00\n\x1ebob|1|") {
 		t.Fatalf("rendered:\n%s", out)
 	}
 	if _, _, err := e.UpdatePost(p.ID, "", "body2\n", "alice", 0, 0); err != nil {

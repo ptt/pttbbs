@@ -43,17 +43,15 @@ comment_wait(int tries_left, void *ctx GCC_UNUSED)
     doupdate();
 }
 
-// With nest.svc, the cache shows comments in its own form (a block
-// "|user|text|from time|No" with "| more" lines), not as the line of the
-// BBS. Gets the lines it appended to path for the comment of the user
-// (from before to after), as readers of the file see them, if they are one
-// new block of the user's; 0 if not (e.g. merged into the previous one, or
-// with another comment meanwhile), and the caller publishes its line.
+// With nest.svc, the cache shows comments in its own form (a header line
+// and further lines, see comments.c). Gets the lines it
+// appended to path (before to after) if they are one new block of the
+// user's; 0 if not, and the caller publishes its own line.
 static int
 live_comment_lines(const char *path, off_t before, off_t after,
                    char *buf, size_t sz)
 {
-    char head[IDLEN + 3];
+    size_t idlen = strlen(cuser.userid);
     ssize_t len = after - before;
     int fd, blocks = 0;
 
@@ -71,12 +69,16 @@ live_comment_lines(const char *path, off_t before, off_t after,
     buf[len] = '\0';
     if (buf[len - 1] != '\n')
         return 0;
-    snprintf(head, sizeof(head), "|%s|", cuser.userid);
-    if (strncmp(buf, head, strlen(head)) != 0)
+    // "RS userid|" or, by the OP, "RS*userid|".
+    const char *user = buf + 1 + (buf[1] == '*');
+    if (buf[0] != COMMENT_LINE_MARK ||
+        strncmp(user, cuser.userid, idlen) != 0 || user[idlen] != '|')
         return 0;
+    // Headers; the other lines are "RS[*]<spaces>|text".
     for (const char *p = buf; *p; ) {
         const char *nl = strchr(p, '\n');
-        if (p[0] == '|' && p[1] != ' ')
+        const char *q = p + 1 + (p[1] == '*');
+        if (p[0] == COMMENT_LINE_MARK && *q != ' ')
             blocks++;
         p = nl ? nl + 1 : p + strlen(p);
     }

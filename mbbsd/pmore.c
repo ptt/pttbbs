@@ -469,9 +469,8 @@ typedef struct
     unsigned char
         *start, *end,   // file buffer
         *disps, *dispe, // displayed content start/end
-        *maxdisps,      // a very special pointer,
+        *maxdisps;      // a very special pointer,
                         //   consider as "disps of last page"
-        *comments_start;// start of comments section, or mf.end if none
     off_t len;          // file total length
     long  lineno,       // lineno of disps
           oldlineno,    // last drawn lineno, < 0 means full update
@@ -495,7 +494,7 @@ typedef struct
 } MmappedFile;
 
 MmappedFile mf = {
-    0, 0, 0, 0, 0, 0, 0L,
+    0, 0, 0, 0, 0, 0L,
     0, -1L, 0, 0, -1L, -1L, -1L, -1L,
     NULL // detachHandler
 };      // current file
@@ -598,10 +597,9 @@ typedef struct
     int lines;  // header lines
     unsigned char *headers[FH_HEADERS];
     unsigned char *floats [FH_FLOATS];
-    char op_author[IDLEN+1]; // pure author userid
 } MF_PrettyFormattedHeader;
 
-MF_PrettyFormattedHeader fh = { 0, {0,0,0,0}, {0, 0}, {0}};
+MF_PrettyFormattedHeader fh = { 0, {0,0,0,0}, {0, 0}};
 
 /* search records */
 typedef struct
@@ -1022,82 +1020,9 @@ mf_determinemaxdisps(int backlines, int update_by_offset)
         } else
             mf_backward(backlines);
     } else {
-        /* Single backward pass: find both maxdisps and comments_start */
-        unsigned char *p = mf.end - 1;
-        unsigned char *next_line = mf.end;
-        unsigned char *maxdisps_ptr = mf.start;
-        int found_comments = 0;
-        int lines_backed = 0;
-        int target_lines = (backlines > 0) ? (backlines + 1) : 1;
-        int real_moved = 0;
-        int saved_backlines = 0;
-
-        mf.comments_start = mf.end;
-
-        if (p >= mf.start && *p == '\n')
-            p--;
-
-        unsigned char *scan_end = (p >= mf.start) ? p + 1 : mf.start;
-        int stopped = 0;
-
-        while (scan_end > mf.start) {
-            p = memrchr(mf.start, '\n', scan_end - mf.start);
-            if (!p)
-                break;
-            {
-                unsigned char *line_start = p + 1;
-                real_moved++;
-
-                /* 1. Fast match: check [0] first, then strncmp */
-                if (!found_comments) {
-                    if (IS_POST_MARK(line_start)) {
-                        unsigned char *cstart = next_line;
-                        while (cstart < mf.end && (*cstart == '\n' || *cstart == '\r'))
-                            cstart++;
-                        mf.comments_start = cstart;
-                        found_comments = 1;
-                    }
-                }
-
-                /* 2. Track maxdisps (last page start) */
-                lines_backed++;
-                if (lines_backed == target_lines) {
-                    maxdisps_ptr = line_start;
-                    saved_backlines = (backlines > 0) ? (real_moved - 1) : 0;
-                }
-
-                /* If both determined, stop early! */
-                if (lines_backed >= target_lines && found_comments) {
-                    stopped = 1;
-                    break;
-                }
-
-                next_line = line_start;
-            }
-            scan_end = p;
-        }
-
-        if (!stopped) {
-            unsigned char *line_start = mf.start;
-            real_moved++;
-            if (!found_comments) {
-                if (IS_POST_MARK(line_start)) {
-                    unsigned char *cstart = next_line;
-                    while (cstart < mf.end && (*cstart == '\n' || *cstart == '\r'))
-                        cstart++;
-                    mf.comments_start = cstart;
-                    found_comments = 1;
-                }
-            }
-            if (lines_backed < target_lines) {
-                maxdisps_ptr = mf.start;
-                saved_backlines = (backlines > 0) ? (real_moved - 1) : 0;
-            }
-        }
-
-        mf.disps = maxdisps_ptr;
-        backlines = saved_backlines;
-        mf.lineno = 0;
+        mf.lineno = backlines;
+        mf.disps = mf.end - 1;
+        backlines = mf_backward(backlines);
     }
 
     if (mf.disps != mbak) {
@@ -1434,18 +1359,6 @@ mf_parseHeaders()
             }
         }
     }
-
-    if (fh.headers[0]) {
-        const char *src = (const char *)fh.headers[0];
-        int ulen = 0;
-        while (*src && ISSPACE(*src)) src++;
-        while (src[ulen] && !ISSPACE(src[ulen]) && src[ulen] != '(' && ulen < (int)sizeof(fh.op_author) - 1)
-            ulen++;
-        if (ulen > 0) {
-            memcpy(fh.op_author, src, ulen);
-            fh.op_author[ulen] = '\0';
-        }
-    }
 }
 
 /*
@@ -1699,19 +1612,12 @@ mf_display()
                                     (const char *)mf.start, (const char *)mf.end);
 
     mf_cmt_ctx = (comment_ctx_t){
-        .buf_start = mf.start,
         .buf_end = mf.end,
-        .comments_start = mf.comments_start,
-        .op_author = fh.op_author,
         .show_comment_ip = 1,
         .max_width = t_columns - 1,
         .theme = comment_pref_theme(),
         .cur_is_op = 0,
     };
-
-    /* Page starts in the middle of a comment: find its header. */
-    if (mf.disps >= mf.comments_start && strncmp((const char *)mf.disps, "| ", 2) == 0)
-        comment_init_op_state(&mf_cmt_ctx, mf.disps);
 
     while (lines < MFDISP_PAGE)
     {
@@ -1790,7 +1696,6 @@ mf_display()
         /* Is currentline visible? */
         if (lines < startline || lines > endline)
         {
-            comment_update_line_state(&mf_cmt_ctx, mf.dispe);
             MFDISP_SKIPCURLINE();
             newline = MFDISP_NEWLINE_SKIP;
         }
@@ -1873,7 +1778,9 @@ mf_display()
             outs(ANSI_RESET);
             MFDISP_SKIPCURLINE();
         }
-        else if (mf.dispe >= mf.comments_start && bpref.rawmode == MFDISP_RAW_NA &&
+        else if (mf.dispe < mf.end && *mf.dispe == COMMENT_LINE_MARK &&
+                 bpref.rawmode == MFDISP_RAW_NA &&
+                 (mf.dispe == mf.start || mf.dispe[-1] == '\n') &&
                  comment_render_header(&mf_cmt_ctx, mf.dispe, (const unsigned char **)&mf.dispe))
         {
             /* case 2.5, comment header */
@@ -1989,6 +1896,22 @@ mf_display()
 
                 } else {
 
+                    if (c == COMMENT_LINE_MARK)
+                    {
+                        // Not drawn as a comment: shown only raw, like ESC.
+                        mf.dispe++;
+                        if (bpref.rawmode == MFDISP_RAW_NOANSI && col < t_columns)
+                        {
+                            if (xprefix > 0)
+                                xprefix--;
+                            else
+                            {
+                                outs(ANSI_COLOR(1) "^" ANSI_RESET);
+                                col++;
+                            }
+                        }
+                        continue;
+                    }
                     if (c == ESC_CHR)
                     {
                         ansi_end = (const unsigned char *)skip_control_sequence((const char *)mf.dispe);
@@ -2660,8 +2583,8 @@ pmore_go_live(void)
     mf_goBottom();
     mf_display();
     comment_ctx_t cmt = mf_cmt_ctx;
-    cmt.buf_start = cmt.buf_end = cmt.comments_start = NULL;
-    mf_cb->on_live(mf_disprows, mf.len, &cmt, fh.op_author, mf_cb_ctx);
+    cmt.buf_end = NULL;
+    mf_cb->on_live(mf_disprows, mf.len, &cmt, mf_cb_ctx);
 }
 
 MFPROTO int

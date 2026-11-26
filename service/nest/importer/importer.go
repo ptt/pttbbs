@@ -185,12 +185,10 @@ var (
 	editMarkRegex          = regexp.MustCompile(`^※\s*編輯:`)
 
 	// The comments nest.svc writes into the articles (FormatCommentBlock in
-	// storage): a floor is "|userid[!]|text|[ip ]MM/DD/YYYY HH:MM|[~]No",
-	// its other lines "| text". "!" marks a deleted or removed floor, "~"
-	// an edited one. Articles of a board that nest.svc kept before (or
-	// rendered with --re-render) have them.
-	modernHeadRegex = regexp.MustCompile(`^\|([A-Za-z0-9_]+)(!?)\|(.*)\|(?:(\S+) )?(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\|(~?)(\d+)$`)
-	modernMoreRegex = regexp.MustCompile(`^\| (.*)$`)
+	// storage): a floor is "RS[*][-|!]userid|[~]No|MM/DD/YYYY HH:MM|[ip]|text",
+	// its other lines "RS[*]<spaces>|text"; the OP mark "*" is ignored here.
+	modernHeadRegex = regexp.MustCompile(`^\x1e\*?([-!]?)([A-Za-z0-9_]+)\|(~?)(\d+)\|(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\|([^|]*)\|(.*)$`)
+	modernMoreRegex = regexp.MustCompile(`^\x1e\*? +\|(.*)$`)
 )
 
 // spamCommentsRemovedNote is the line mbbsd leaves among the comments where
@@ -490,7 +488,7 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 	}
 
 	var comments []*ParsedComment
-	var floor *ParsedComment // the floor of nest.svc being read, for its "| " lines
+	var floor *ParsedComment // the floor of nest.svc being read, for its other lines
 
 	for _, l := range commentRawLines {
 		cleanTrimmed := strings.TrimSpace(model.StripANSI(l))
@@ -505,31 +503,28 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 				ts = t.Unix()
 			}
 			floor = &ParsedComment{
-				CreatorName: m[1],
-				Content:     m[3],
+				CreatorName: m[2],
+				Content:     m[7],
 				CTime:       ts,
 				LastCTime:   ts,
 				CommentType: "→",
 				LegacyType:  model.LegacyTypeArrow,
 				Floor:       true,
-				Edited:      m[6] == "~",
+				Edited:      m[3] == "~",
 			}
-			if isValidIP(m[4]) {
-				floor.IP = m[4]
+			if isValidIP(m[6]) {
+				floor.IP = m[6]
 			}
-			if m[2] == "!" {
-				// FormatCommentBlock: 留言已刪除, or 留言已移除 [(reason)]
-				// (留言已隱藏 before).
+			switch m[1] {
+			case "-":
 				floor.Content = ""
-				if strings.HasPrefix(m[3], "留言已刪除") {
-					floor.Deleted = true
-				} else {
-					floor.Removed = true
-					r := strings.TrimPrefix(strings.TrimPrefix(m[3], "留言已隱藏"), "留言已移除")
-					r = strings.TrimSpace(r)
-					r = strings.TrimSuffix(strings.TrimPrefix(r, "("), ")")
-					floor.Reason = r
-				}
+				floor.Deleted = true
+			case "!":
+				// FormatCommentBlock: 留言已移除 [(reason)]
+				floor.Content = ""
+				floor.Removed = true
+				r := strings.TrimSpace(strings.TrimPrefix(m[7], "留言已移除"))
+				floor.Reason = strings.TrimSuffix(strings.TrimPrefix(r, "("), ")")
 			}
 			comments = append(comments, floor)
 			if ts > lastTs {

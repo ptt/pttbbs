@@ -311,12 +311,12 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if strings.Contains(cacheStr, "\x1b") {
 		t.Fatalf("Cache file should not contain any ANSI escape characters, got: %q", cacheStr)
 	}
-	// Cache must contain floor header |commenter1|...|1
-	if !strings.Contains(cacheStr, "|commenter1|這是彩色推文第一行") || !strings.Contains(cacheStr, "192.168.1.1") || !strings.Contains(cacheStr, "|1") {
+	// Cache must contain the floor header of commenter1
+	if !strings.Contains(cacheStr, "\x1ecommenter1|1|") || !strings.Contains(cacheStr, "192.168.1.1") || !strings.Contains(cacheStr, "這是彩色推文第一行") {
 		t.Fatalf("Cache file header missing expected floor info, got: %s", cacheStr)
 	}
-	// Cache must contain continuation lines starting with '| '
-	if !strings.Contains(cacheStr, "| 第二行也是彩色\n") {
+	// Cache must contain further lines aligned by the userid
+	if !strings.Contains(cacheStr, "\x1e          |第二行也是彩色\n") {
 		t.Fatalf("Cache file comment lines not properly indented, got: %s", cacheStr)
 	}
 
@@ -329,7 +329,7 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if strings.Contains(renderedStr, "\x1b") {
 		t.Fatalf("RenderFullPostText should not contain ANSI escape codes, got: %q", renderedStr)
 	}
-	if !strings.Contains(renderedStr, "|commenter1|這是彩色推文第一行") || !strings.Contains(renderedStr, "| 第二行也是彩色\n") {
+	if !strings.Contains(renderedStr, "\x1ecommenter1|1|") || !strings.Contains(renderedStr, "\x1e          |第二行也是彩色\n") {
 		t.Fatalf("RenderFullPostText missing comment body: %s", renderedStr)
 	}
 	t.Logf("Cache file formatting and RenderFullPostText verified cleanly:\n%s", cacheStr)
@@ -1441,7 +1441,7 @@ func TestPostAndCommentDeletion(t *testing.T) {
 		t.Fatal(err)
 	}
 	rStr := string(rendered)
-	if !strings.Contains(rStr, "|commenter1|") || !strings.Contains(rStr, "|spammer!|") || !strings.Contains(rStr, "|commenter3|") {
+	if !strings.Contains(rStr, "\x1ecommenter1|") || !strings.Contains(rStr, "\x1e!spammer|") || !strings.Contains(rStr, "\x1ecommenter3|") {
 		t.Fatalf("rendered output broke comment sequence:\n%s", rStr)
 	}
 	if strings.Contains(rStr, "買點數卡") {
@@ -2363,27 +2363,27 @@ func TestCommentModifiedAndDeletedRendering(t *testing.T) {
 	rendered := string(storage.RenderPostWithComments(p, comments, false))
 
 	// Verify user1: standard IP and Date
-	if !strings.Contains(rendered, "|user1|未修改留言|1.1.1.1 11/15/2023 06:13|1\n") {
+	if !strings.Contains(rendered, "\x1euser1|1|11/15/2023 06:13|1.1.1.1|未修改留言\n") {
 		t.Errorf("user1 unedited format mismatch:\n%s", rendered)
 	}
 	// Verify user2: ~ IP DATE
-	if !strings.Contains(rendered, "|user2|已修改留言 (帶 IP)|2.2.2.2 11/15/2023 06:13|~2\n") {
+	if !strings.Contains(rendered, "\x1euser2|~2|11/15/2023 06:13|2.2.2.2|已修改留言 (帶 IP)\n") {
 		t.Errorf("user2 edited with IP format mismatch:\n%s", rendered)
 	}
 	// Verify user3: ~ DATE
-	if !strings.Contains(rendered, "|user3|已修改留言 (無 IP)|11/15/2023 06:13|~3\n") {
+	if !strings.Contains(rendered, "\x1euser3|~3|11/15/2023 06:13||已修改留言 (無 IP)\n") {
 		t.Errorf("user3 edited without IP format mismatch:\n%s", rendered)
 	}
-	// Verify user4: 自刪 -> "|user4!|留言已刪除|11/15/2023 06:13|4\n"
-	if !strings.Contains(rendered, "|user4!|留言已刪除|11/15/2023 06:13|4\n") {
+	// Verify user4: 自刪 -> "\x1e-user4|4|11/15/2023 06:13||留言已刪除\n"
+	if !strings.Contains(rendered, "\x1e-user4|4|11/15/2023 06:13||留言已刪除\n") {
 		t.Errorf("user4 self-deleted format mismatch:\n%s", rendered)
 	}
-	// Verify user5: custom reason -> "|user5!|留言已移除 (違規水桶)|11/15/2023 06:13|5\n"
-	if !strings.Contains(rendered, "|user5!|留言已移除 (違規水桶)|11/15/2023 06:13|5\n") {
+	// Verify user5: custom reason -> "\x1e!user5|5|11/15/2023 06:13||留言已移除 (違規水桶)\n"
+	if !strings.Contains(rendered, "\x1e!user5|5|11/15/2023 06:13||留言已移除 (違規水桶)\n") {
 		t.Errorf("user5 admin-deleted format mismatch:\n%s", rendered)
 	}
-	// Verify user6: admin deletion without reason -> "|user6!|留言已移除|11/15/2023 06:13|6\n"
-	if !strings.Contains(rendered, "|user6!|留言已移除|11/15/2023 06:13|6\n") {
+	// Verify user6: admin deletion without reason -> "\x1e!user6|6|11/15/2023 06:13||留言已移除\n"
+	if !strings.Contains(rendered, "\x1e!user6|6|11/15/2023 06:13||留言已移除\n") {
 		t.Errorf("user6 admin-deleted without reason format mismatch:\n%s", rendered)
 	}
 }
@@ -2599,13 +2599,13 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 		t.Fatalf("RenderFullPostText failed: %v", err)
 	}
 	rendered := string(renderedBytes)
-	if !strings.Contains(rendered, "|userA|第一句|1.1.1.1 11/15/2023 06:13|1\n| 第二句\n| 第三句\n") {
+	if !strings.Contains(rendered, "\x1euserA|1|11/15/2023 06:13|1.1.1.1|第一句\n\x1e     |第二句\n\x1e     |第三句\n") {
 		t.Fatalf("Rendered text mismatch for merged comment:\n%s", rendered)
 	}
-	if !strings.Contains(rendered, "|userB|路人甲插話|2.2.2.2 11/15/2023 06:16|2\n") {
+	if !strings.Contains(rendered, "\x1euserB|2|11/15/2023 06:16|2.2.2.2|路人甲插話\n") {
 		t.Fatalf("Rendered text mismatch for floor 2:\n%s", rendered)
 	}
-	if !strings.Contains(rendered, "|userA|我又來了|1.1.1.1 11/15/2023 06:17|3\n") {
+	if !strings.Contains(rendered, "\x1euserA|3|11/15/2023 06:17|1.1.1.1|我又來了\n") {
 		t.Fatalf("Rendered text mismatch for floor 3:\n%s", rendered)
 	}
 
@@ -2615,7 +2615,7 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 		t.Fatalf("ReadFile from BoardFilePath failed: %v", err)
 	}
 	diskContent := string(diskBytes)
-	if !strings.Contains(diskContent, "|userA|第一句|1.1.1.1 11/15/2023 06:13|1\n| 第二句\n| 第三句\n") {
+	if !strings.Contains(diskContent, "\x1euserA|1|11/15/2023 06:13|1.1.1.1|第一句\n\x1e     |第二句\n\x1e     |第三句\n") {
 		t.Fatalf("Disk file mismatch for merged comment:\n%s", diskContent)
 	}
 

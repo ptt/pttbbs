@@ -12,26 +12,29 @@ func TestParseModernFloors(t *testing.T) {
 	article := "作者: op (op) 看板: TestBoard\n標題: t\n時間: Sun Oct  4 21:00:00 2026\n\nbody\n\n--\n" +
 		"※ 發信站: 批踢踢實業坊(ptt.cc), 來自: 1.2.3.4\n" +
 		"※ 文章網址: https://www.ptt.cc/bbs/TestBoard/M.1791118800.A.001.html\n" +
-		"|alice|first|10/04/2026 21:27|1\n" +
-		"|bob|has a | inside|1.2.3.4 10/04/2026 21:30|2\n" +
-		"| second line\n" +
-		"| third line\n" +
-		"|carol!|留言已刪除|10/04/2026 21:31|3\n" +
-		"|dave!|留言已隱藏 (spam)|10/04/2026 21:32|4\n" +
-		"|alice|edited|10/04/2026 21:33|~5\n" +
-		"|erin!|留言已移除 (ad)|10/04/2026 21:33|6\n" +
-		"|alice|same author soon after|10/04/2026 21:34|7\n"
+		"\x1ealice|1|10/04/2026 21:27||first\n" +
+		"\x1ebob|2|10/04/2026 21:30|1.2.3.4|has a | inside\n" +
+		"\x1e   |second line\n" +
+		"\x1e   |third line\n" +
+		"\x1e-carol|3|10/04/2026 21:31||留言已刪除\n" +
+		"\x1e!dave|4|10/04/2026 21:32||留言已移除 (spam)\n" +
+		"\x1ealice|~5|10/04/2026 21:33||edited\n" +
+		"\x1e!erin|6|10/04/2026 21:33||留言已移除 (ad)\n" +
+		"\x1ealice|7|10/04/2026 21:34||same author soon after\n" +
+		"\x1e*op|8|10/04/2026 21:35||by the OP\n" +
+		"\x1e*  |more by the OP\n" +
+		"\x1e*-op|9|10/04/2026 21:36||留言已刪除\n"
 	base := time.Date(2026, 10, 4, 21, 0, 0, 0, time.Local).Unix()
 	parsed, err := ParseArticleText([]byte(article), "op", base, "TestBoard", "M.1791118800.A.001", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cs := parsed.Comments
-	if len(cs) != 7 {
+	if len(cs) != 9 {
 		for i, c := range cs {
 			t.Logf("%d: %+v", i, c)
 		}
-		t.Fatalf("got %d floors, want 7", len(cs))
+		t.Fatalf("got %d floors, want 9", len(cs))
 	}
 	if cs[0].CreatorName != "alice" || cs[0].Content != "first" {
 		t.Errorf("floor 1: %+v", cs[0])
@@ -57,7 +60,14 @@ func TestParseModernFloors(t *testing.T) {
 	if cs[6].Content != "same author soon after" {
 		t.Errorf("floor 7 merged or lost: %+v", cs[6])
 	}
-	for _, l := range []string{"|alice|", "| second line"} {
+	// The OP mark "*" is not part of the name.
+	if cs[7].CreatorName != "op" || cs[7].Content != "by the OP\nmore by the OP" {
+		t.Errorf("floor 8 of the OP: %+v", cs[7])
+	}
+	if cs[8].CreatorName != "op" || !cs[8].Deleted {
+		t.Errorf("floor 9 of the OP, deleted: %+v", cs[8])
+	}
+	for _, l := range []string{"alice|", "second line", "*op|", "more by"} {
 		if strings.Contains(parsed.BodyContent, l) {
 			t.Errorf("body still has %q:\n%s", l, parsed.BodyContent)
 		}

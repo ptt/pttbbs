@@ -1304,7 +1304,7 @@ test_create_with_content(void)
     strlcpy(fh.owner, "erin", sizeof(fh.owner));
     strlcpy(fh.title, "from the web", sizeof(fh.title));
     req.bbs_content_path = NULL;
-    req.body = "line one\nline two";
+    req.body = "line one\n\x1e" "line two";  // no comment lines from it
     req.bbs_nickname = "Erin";
     EXPECT_OK(bof_create_post(&me, &req, &res));
     snprintf(path, sizeof(path), BDIR "/%s", got.filename);

@@ -579,15 +579,13 @@ common_pager_start(void *ctx)
 /* pmore_go_live(): hand the last page over to the reader's live mode. */
 static void
 common_pager_on_live(int row, off_t shown, const comment_ctx_t *cmt,
-                     const char *op_author, void *ctx)
+                     void *ctx)
 {
     live_ctx_t *live = ((pager_run_t *)ctx)->hooks->live;
     live->entered = true;
     live->row = row;
     live->shown = shown;
-    strlcpy(live->op_author, op_author, sizeof(live->op_author));
     live->cmt = *cmt;
-    live->cmt.op_author = live->op_author;
 }
 
 int

@@ -38,16 +38,11 @@ typedef struct {
 
 /* Context passed for comment rendering */
 typedef struct comment_ctx {
-    const unsigned char *buf_start;     /* mf.start */
     const unsigned char *buf_end;       /* mf.end */
-    const unsigned char *comments_start;/* mf.comments_start */
-    const char *op_author;              /* fh.op_author */
     int show_comment_ip;                /* mf.show_comment_ip */
     int max_width;                      /* usually t_columns - 1 (e.g. 79) */
     int theme;                          /* bpref.comment_theme */
-    int cur_is_op;                      /* state: is current comment by OP */
-    int cur_header_width;               /* state: indentation width of current comment */
-    int cur_is_tombstone;               /* state: is current comment a tombstone */
+    int cur_is_op;                      /* state: is the line being drawn by OP */
 } comment_ctx_t;
 
 /* Theme info & preference helpers */
@@ -60,15 +55,7 @@ const char *comment_theme_menu_options(void);
 int comment_pref_theme(void);
 void comment_set_pref_theme(int theme_idx);
 
-/* Initialize OP state at page start if line_head is a comment body line */
-void comment_init_op_state(comment_ctx_t *ctx,
-                           const unsigned char *line_head);
-
-/* Updates OP state when skipping lines in pagers */
-void comment_update_line_state(comment_ctx_t *ctx,
-                               const unsigned char *line);
-
-/* Renders comment header ([N] author creation).
+/* Renders comment header "RS[*][-|!]userid|[~]No|date|[ip]|text".
  * If line is recognized and rendered:
  *   - outputs formatted line to screen
  *   - sets *next_line pointing to the newline at end of line
@@ -81,18 +68,18 @@ int comment_render_header(comment_ctx_t *ctx,
                           const unsigned char **next_line);
 
 /* Renders comment body indent prefix and sets text color.
- * Checks if line_head is a comment body line (starts with "  " in comment section).
- * Uses ctx->cur_is_op for OP-specific coloring without backward scans.
+ * Checks if line_head is a comment body line ("RS[*]<spaces>|text"), anywhere
+ * in the article; the line alone tells its OP state and indent.
  * If yes:
  *   - renders border prefix if *dispe == line_head
- *   - advances *dispe past the 2 indent spaces
+ *   - advances *dispe past the prefix up to the second '|'
  *   - updates *col with the rendered prefix width
- *   - outputs text color (OP vs non-OP)
+ *   - updates ctx->cur_is_op and outputs text color (OP vs non-OP)
  *   - sets *need_reset_color = 1
  *   - returns 1
  * If not a comment body line, returns 0.
  */
-int comment_render_body_prefix(const comment_ctx_t *ctx,
+int comment_render_body_prefix(comment_ctx_t *ctx,
                                const unsigned char *line_head,
                                unsigned char **dispe,
                                int *col,
@@ -110,9 +97,9 @@ int comment_match_ref(const unsigned char *p,
 const char *comment_get_body_color(const comment_ctx_t *ctx);
 
 /* Renders a standalone line (not in a pager buffer, e.g. live mode) in the
- * new comment format: a header "|userid|..." or a body line "| text".
- * The buffer fields of ctx are not used. The state (OP, indentation,
- * tombstone) carries over from the previous call, so pass lines in order.
+ * new comment format: a header "RS[*][-|!]userid|..." or a body line
+ * "RS[*]<spaces>|text". The buffer fields of ctx are not used, and each line
+ * is rendered on its own.
  * Returns 1 if the line was rendered, or 0 (nothing output, state reset) if
  * it is not a new format comment line.
  */

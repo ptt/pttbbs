@@ -251,6 +251,10 @@ is_post_mark(const char *s)
 #define IS_REF_MARK(s)      is_ref_mark((const char *)(s))
 #define IS_POST_MARK(s)     is_post_mark((const char *)(s))
 
+/* Opens every comment line nest.svc writes (see mbbsd/comments.c): ASCII
+ * RS, which cannot be typed, so no text is taken for a comment. */
+#define COMMENT_LINE_MARK   '\x1e'
+
 /* LONG MESSAGES */
 #define MSG_SELECT_BOARD ANSI_COLOR(7) "【 選擇看板 】" ANSI_RESET "\n" \
 			"請輸入看板名稱(按空白鍵自動搜尋): "

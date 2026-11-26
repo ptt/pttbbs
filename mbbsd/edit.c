@@ -357,7 +357,7 @@ line_col_to_pos(const textline_t *line, int col, bool strip_esc)
 	    break;
 	int w = mb_bytes(tmp);
 	int cw = mb_width(tmp);
-	if (!strip_esc && cw <= 0)
+	if ((!strip_esc || *tmp == COMMENT_LINE_MARK) && cw <= 0)
 	    cw = 1;
 	if (col < cw) {
 	    if (!mbcs_mode)
@@ -390,7 +390,7 @@ line_pos_to_col(const textline_t *line, int nx, bool strip_esc)
 	    break;
 	int w = mb_bytes(tmp);
 	int cw = mb_width(tmp);
-	if (!strip_esc && cw <= 0)
+	if ((!strip_esc || *tmp == COMMENT_LINE_MARK) && cw <= 0)
 	    cw = 1;
 	if (tmp + w > nxp) {
 	    col += (short)(nxp - tmp);
@@ -1452,7 +1452,8 @@ insert_tab(void)
 /**
  * Insert a string.
  *
- * All printable and ESC_CHR will be directly printed out.
+ * All printable and ESC_CHR will be directly printed out, and
+ * COMMENT_LINE_MARK at the start of a line.
  * '\t' will be printed to align every 8 byte.
  * '\n' will split the line.
  * The other character will be ignore.
@@ -1474,6 +1475,8 @@ insert_string(const char *str)
 	}
 	if (isprint2(ch) || ch == ESC_CHR)
 	    insert_char(ch);
+	else if (ch == COMMENT_LINE_MARK && curr_buf->currpnt == 0)
+	    insert_char(ch);    // a comment line copied in (e.g. a crosspost)
 	else if (ch == '\t')
 	    insert_tab();
 	else if (ch == '\n')
@@ -3099,6 +3102,11 @@ edit_outs_attr_n(const char *text, int n, int attr)
 	    }
 
 	}
+	else if(ch == COMMENT_LINE_MARK)
+	{
+	    outs(ANSI_COLOR(1) "^");
+	    outs(reset);
+	}
 	else if(ch == ESC_CHR)
 	{
 	    ansi_end = skip_control_sequence((const char *)(text - 1));
@@ -3288,6 +3296,8 @@ edit_ansi_outs_n(const char *str, int n, int attr GCC_UNUSED)
 	     * let's just display it as-is.
 	     */
 	    outc('*');
+	} else if (c == COMMENT_LINE_MARK) {
+	    outc('^');
 	} else {
 	    outc(c);
 	}

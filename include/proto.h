@@ -688,10 +688,10 @@ struct pmore_callbacks {
     int (*start)(void *ctx);        // once the file is attached: non-zero
                                     // leaves pmore at once, returning it
     // pmore_go_live(): the last page is shown; row is the screen row below
-    // its content, shown the file bytes shown, cmt the comment state at its
-    // end (without the buffer) and op_author the author of the post.
+    // its content, shown the file bytes shown and cmt the comment state at
+    // its end (without the buffer).
     void (*on_live)(int row, off_t shown, const struct comment_ctx *cmt,
-                    const char *op_author, void *ctx);
+                    void *ctx);
 };
 
 /* While pmore runs (e.g. from its key handler or start callback): shows the

@@ -17,7 +17,6 @@ typedef struct live_ctx {
     bool     entered;
     int      row;           // the screen row below the content of the last page
     off_t    shown;         // file bytes shown
-    char     op_author[IDLEN + 1];
     comment_ctx_t cmt;      // the comment state at the end of the last page
 } live_ctx_t;
 
