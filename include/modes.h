@@ -80,7 +80,7 @@ _Static_assert(RET_READ_AUTHOR_PREV <= RET_READ_MAX, "RET_READ_* overflow");
 #define GOPHER          46
 #define NEWS            47
 #define LOVE            48
-#define EDITEXP         49
+// #define EDITEXP         49
 #define IPREG           50
 #define NADM            51
 #define DRINK           52

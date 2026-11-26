@@ -502,7 +502,6 @@ edit_msg(void)
 	{ "^V", Ctrl('V') },
 	{ "^P", Ctrl('P') },
 	{ "^Q", Ctrl('Q') },
-	{ "^G", Ctrl('G') },
     };
 
     const cmd_t *rcmds[ARRAY_SIZE(right_btns)];
@@ -3965,7 +3964,6 @@ typedef struct {
     int destunum0;
     bool finished;
     int retval;
-    char trans_buffer[256];
 } edit_ctx_t;
 
 static int
@@ -4213,44 +4211,6 @@ edit_cmd_enter(cmd_ctx_t *ctx)
     }
 #endif
     split(curr_buf->currline, curr_buf->currpnt, indent_space());
-    return PSB_OK;
-}
-
-static int
-edit_cmd_editexp(cmd_ctx_t *ctx)
-{
-    edit_ctx_t *ec = (edit_ctx_t *)ctx->priv;
-    unsigned int currstat0 = currstat;
-    int mode0 = currutmp->mode;
-
-    setutmpmode(EDITEXP);
-    a_menu("編輯輔助器", "etc/editexp",
-           (HasUserPerm(PERM_SYSOP) ? SYSOP : NOBODY),
-           0,
-           ec->trans_buffer, NULL);
-    currstat = currstat0;
-    currutmp->mode = mode0;
-
-    if (ec->trans_buffer[0]) {
-        FILE *fp1;
-        if ((fp1 = fopen(ec->trans_buffer, "r"))) {
-            bool indent_mode0 = curr_buf->indent_mode;
-            char buf[WRAPMARGIN + 2];
-
-            curr_buf->indent_mode = false;
-            while (fgets(buf, sizeof(buf), fp1)) {
-                if (!strncmp(buf, "作者:", 5) ||
-                    !strncmp(buf, "標題:", 5) ||
-                    !strncmp(buf, "時間:", 5))
-                    continue;
-                insert_string(buf);
-            }
-            fclose(fp1);
-            curr_buf->indent_mode = indent_mode0;
-            edit_window_adjust();
-        }
-    }
-    curr_buf->redraw_everything = true;
     return PSB_OK;
 }
 
@@ -4537,7 +4497,6 @@ static const cmd_t edit_cmds[] = {
     { Ctrl('P'), "符號", "切換內建注音/符號輸入法", edit_cmd_phone_mode, 0, CMD_PRIO_HIGH },
     { Ctrl('Q'), "放棄", "放棄修改並離開編輯器", edit_cmd_abort, 0, CMD_PRIO_HIGH },
     { KEY_EDIT_ESC('q'), NULL, NULL, edit_cmd_abort },
-    { Ctrl('G'), "範本", "開啟編輯輔助器", edit_cmd_editexp, 0, CMD_PRIO_HIGH },
 
     /* Footer right: right-aligned tail (in order) */
     { KEY_EDIT_ESC('h'), "按鍵", "顯示編輯器按鍵列表", edit_cmd_keys_help, 0, CMD_PRIO_TOP },

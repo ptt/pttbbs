@@ -227,7 +227,6 @@ char           * const ModeTypeTable[MODE_MAX] = {
     [GOPHER]           = "打地鼠",
     [NEWS]             = "看News",
     [LOVE]             = "情書產生器",
-    [EDITEXP]          = "編輯輔助器",
     [IPREG]            = "申請IP位址",
     [NADM]             = "網管辦公中",
     [DRINK]            = "虛擬實業坊",

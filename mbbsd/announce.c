@@ -948,7 +948,7 @@ isvisible_man(const menu_t * me)
 	return 0;
     if (fhdr->filemode & FILE_HIDE)
     {
-	if (currstat == ANNOUNCE || currstat == EDITEXP ||
+	if (currstat == ANNOUNCE ||
 	    !is_hidden_board_friend(me->bid, currutmp->uid))
 	    return 0;
     }
@@ -1272,13 +1272,11 @@ announce_cmd_select(cmd_ctx_t *ctx)
         int more_result;
         while ((more_result = more_ex(fname, YEA, &hooks))) {
             if (cx->trans_buffer &&
-                (currstat == EDITEXP || currstat == OSONG)) {
+                currstat == OSONG) {
                 char ans[4];
                 move(22, 0);
                 clrtoeol();
                 getdata(22, 1,
-                        currstat == EDITEXP ?
-                        "要把範例加入到文章內嗎?[y/N]" :
                         "確定要選這篇嗎?[y/N]",
                         ans, sizeof(ans), LCECHO);
                 if (ans[0] == 'y') {

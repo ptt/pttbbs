@@ -176,14 +176,6 @@ static void initBoards() {
 	b.level = 0;
 	b.gid = 5;
 	newboard(fp, &b);
-	
-	STRLCPY(b.brdname, "EditExp");
-	STRLCPY(b.bclass, "嘰哩");
-	STRLCPY(b.desc, "範本精靈投稿區");
-	b.brdattr = 0;
-	b.level = 0;
-	b.gid = 5;
-	newboard(fp, &b);
 
 	STRLCPY(b.brdname, "ALLHIDPOST");
 	STRLCPY(b.bclass, "嘰哩");
@@ -251,7 +243,6 @@ static void initMan() {
 static void initSymLink() {
     symlink(BBSHOME "/man/boards/N/Note/SONGBOOK", BBSHOME "/etc/SONGBOOK");
     symlink(BBSHOME "/man/boards/N/Note/SONGO", BBSHOME "/etc/SONGO");
-    symlink(BBSHOME "/man/boards/E/EditExp", BBSHOME "/etc/editexp");
 }
 
 static void initHistory() {
