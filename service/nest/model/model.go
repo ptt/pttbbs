@@ -10,11 +10,64 @@ import (
 	"time"
 )
 
+// ansiRegex is what StripANSI removes (see ansiLen).
 var ansiRegex = regexp.MustCompile(`\x1b(\[[0-9;?]*[a-zA-Z]|].*?(\x07|\x1b\\)|[ -/]*[@-~])|\x1b`)
 
 // StripANSI strips all ANSI and terminal escape sequences from a string
+//
+// It removes what ansiRegex matches, scanning by hand: the regexp took a
+// third of the time to parse the articles of a board (every legacy comment
+// line has colors).
 func StripANSI(s string) string {
-	return ansiRegex.ReplaceAllString(s, "")
+	i := strings.IndexByte(s, 0x1b)
+	if i < 0 {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for i >= 0 {
+		b.WriteString(s[:i])
+		s = s[i+ansiLen(s[i:]):]
+		i = strings.IndexByte(s, 0x1b)
+	}
+	b.WriteString(s)
+	return b.String()
+}
+
+// ansiLen returns the length of the escape sequence at the start of s
+// (s[0] is ESC), as ansiRegex matches it (leftmost alternative first):
+// a CSI sequence, an OSC string ended by BEL or ST on the same line, or
+// intermediate bytes and a final byte; else the ESC alone.
+func ansiLen(s string) int {
+	if len(s) >= 2 {
+		switch s[1] {
+		case '[':
+			j := 2
+			for j < len(s) && (s[j] >= '0' && s[j] <= '9' || s[j] == ';' || s[j] == '?') {
+				j++
+			}
+			if j < len(s) && (s[j] >= 'a' && s[j] <= 'z' || s[j] >= 'A' && s[j] <= 'Z') {
+				return j + 1
+			}
+		case ']':
+			for j := 2; j < len(s) && s[j] != '\n'; j++ {
+				if s[j] == 0x07 {
+					return j + 1
+				}
+				if s[j] == 0x1b && j+1 < len(s) && s[j+1] == '\\' {
+					return j + 2
+				}
+			}
+		}
+	}
+	j := 1
+	for j < len(s) && s[j] >= ' ' && s[j] <= '/' {
+		j++
+	}
+	if j < len(s) && s[j] >= '@' && s[j] <= '~' {
+		return j + 1
+	}
+	return 1
 }
 
 // VoteType represents Reddit-style upvoting/downvoting
