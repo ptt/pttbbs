@@ -6,6 +6,7 @@
 #include "var.h"
 #include "cmbbs.h"
 #include "boardd.h"
+#include "gem.h"
 
 int
 is_valid_article_filename(const char *filename)
@@ -67,6 +68,66 @@ answer_file_errout:
     if (ret < 0)
 	return ret;
     return SELECT_EUNKNOWN;
+}
+
+// From mtime and size: what changes when a gem.svc article is edited.
+static void
+gem_cachekey(char *buf, size_t sz, const gem_entry_t *e)
+{
+    snprintf(buf, sz, "%llx", (unsigned long long)
+	     (((uint64_t)e->mtime << 20) ^ e->bytes) & 0xfffffffffffffULL);
+}
+
+static int
+is_gem_path(const char *path)
+{
+    char root[GEM_ROOT_SIZE], sub[PATHLEN];
+    return gem_path_parse(path, root, sizeof(root), sub, sizeof(sub));
+}
+
+static int
+answer_gem(struct evbuffer *buf, const char *path, gem_entry_t *e,
+	   const char *ck, int cklen, int offset, int maxlen)
+{
+    char root[GEM_ROOT_SIZE], sub[PATHLEN], ckbuf[32];
+    const char *dir, *name;
+    char *slash, *data;
+    size_t size;
+
+    if (!gem_path_parse(path, root, sizeof(root), sub, sizeof(sub)) || !*sub)
+	return SELECT_ENOTFOUND;
+    if ((slash = strrchr(sub, '/'))) {
+	*slash = '\0';
+	dir = sub;
+	name = slash + 1;
+    } else {
+	dir = "";
+	name = sub;
+    }
+    if (gem_entry(root, dir, -1, name, e, NULL, NULL, 0) < 0 ||
+	e->kind != GEM_KIND_FILE)
+	return SELECT_ENOTFOUND;
+    if (ck && cklen) {
+	gem_cachekey(ckbuf, sizeof(ckbuf), e);
+	if ((size_t) cklen != strlen(ckbuf) || strncmp(ck, ckbuf, cklen) != 0)
+	    return SELECT_ECHANGED;
+    }
+    if (!(data = gem_get(root, dir, -1, name, &size)))
+	return SELECT_EUNKNOWN;
+    if (offset < 0)
+	offset += size;
+    if (offset < 0)
+	offset = 0;
+    if ((size_t) offset > size) {
+	free(data);
+	return SELECT_ERANGE;
+    }
+    if (maxlen < 0 || (size_t) maxlen > size - offset)
+	maxlen = size - offset;
+    int ret = (maxlen == 0 || evbuffer_add(buf, data + offset, maxlen) == 0) ?
+	0 : SELECT_EUNKNOWN;
+    free(data);
+    return ret;
 }
 
 static int
@@ -170,9 +231,19 @@ select_article(struct evbuffer *buf, select_result_t *result, const select_spec_
     }
 
     struct stat st;
+    gem_entry_t ge;
     int ret;
-    if ((ret = answer_file(buf, spec->filename, &st, spec->cachekey,
-		           spec->cachekey_len, spec->offset, spec->maxlen)) < 0)
+    // With CONFIG_GEM the articles of the gem areas (mand) are in gem.svc;
+    // the posts of boards (boardd) stay files.
+    int in_gem = IS_ENABLED(CONFIG_GEM) && is_gem_path(spec->filename);
+    if (in_gem) {
+	if ((ret = answer_gem(buf, spec->filename, &ge, spec->cachekey,
+			      spec->cachekey_len, spec->offset,
+			      spec->maxlen)) < 0)
+	    return ret;
+    } else if ((ret = answer_file(buf, spec->filename, &st, spec->cachekey,
+		                  spec->cachekey_len, spec->offset,
+				  spec->maxlen)) < 0)
 	return ret;
 
     int sel_offset, sel_size;
@@ -182,7 +253,12 @@ select_article(struct evbuffer *buf, select_result_t *result, const select_spec_
 	evbuffer_slice(buf, sel_offset, sel_size) != 0)
 	return SELECT_EUNKNOWN;
 
-    if (result != NULL) {
+    if (result != NULL && in_gem) {
+	gem_cachekey(result->cachekey, sizeof(result->cachekey), &ge);
+	result->size = ge.bytes;
+	result->sel_offset = sel_offset;
+	result->sel_size = sel_size;
+    } else if (result != NULL) {
 	snprintf(result->cachekey, sizeof(result->cachekey), "%d-%d",
 		 (int)st.st_dev, (int)st.st_ino);
 	result->size = st.st_size;

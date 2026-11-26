@@ -74,7 +74,8 @@ Status ManServiceImpl::List(ServerContext *context GCC_UNUSED, const ListRequest
     r->set_board_name(p.BoardName());
     r->set_path(p.PathRelativeToBoard());
     r->set_title(e.Title());
-    r->set_is_dir(IsDirectory(p.FullPath()));
+    r->set_is_dir(IS_ENABLED(CONFIG_GEM) ? e.IsDir()
+                                         : IsDirectory(p.FullPath()));
   }
   rep->set_is_success(true);
   return Status::OK;

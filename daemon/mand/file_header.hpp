@@ -17,9 +17,13 @@ class FileHeader final {
   bool HasFlag(unsigned char flag) const {
     return (fhdr_.filemode & flag) == flag;
   }
+  // Whether it is a directory, when the lister knows (gem.svc).
+  bool IsDir() const { return is_dir_; }
+  void SetDir(bool is_dir) { is_dir_ = is_dir; }
 
  private:
   fileheader_t fhdr_;
+  bool is_dir_ = false;
 };
 
 #endif
