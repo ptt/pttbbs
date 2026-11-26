@@ -92,23 +92,27 @@ func (v VoteType) String() string {
 
 // Post represents a submission in a Community
 type Post struct {
-	ID            uint64   `json:"id"`
-	ParentID      uint64   `json:"parent_id"`    // 0: Root post, >0: Reply to ParentID (回文)
-	CommunityID   int64    `json:"community_id"` // ID in the community registry
-	Community     string   `json:"community"`    // Formerly Board; the current name of CommunityID
-	PostFile      string   `json:"post_file"`    // Legacy filename (e.g. M.1417074209.A.393)
-	Title         string   `json:"title"`        // UTF-8
-	CreatorName   string   `json:"creator_name"` // shown name of the OP (a nickname for anonymous posts)
-	CreatorID     PersonID `json:"creator_id"`   // who the OP really is
-	CreatedAt     int64    `json:"created_at"`
-	Modified      int64    `json:"modified"`
-	Filemode      int      `json:"filemode"`
-	Money         int      `json:"money,omitempty"` // fileheader_t.multi.money
-	Upvotes       int      `json:"upvotes"`         // Upvotes count
-	Downvotes     int      `json:"downvotes"`       // Downvotes count
-	NumComments   int      `json:"num_comments"`    // Total comments count
-	NumCrossposts int      `json:"num_crossposts"`  // Total crossposts count (shares)
-	Encoding      string   `json:"encoding"`        // Always "utf-8" in DB
+	ID          uint64   `json:"id"`
+	ParentID    uint64   `json:"parent_id"`    // 0: Root post, >0: Reply to ParentID (回文)
+	CommunityID int64    `json:"community_id"` // ID in the community registry
+	Community   string   `json:"community"`    // Formerly Board; the current name of CommunityID
+	PostFile    string   `json:"post_file"`    // Legacy filename (e.g. M.1417074209.A.393)
+	Title       string   `json:"title"`        // UTF-8
+	CreatorName string   `json:"creator_name"` // shown name of the OP (a nickname for anonymous posts)
+	CreatorID   PersonID `json:"creator_id"`   // who the OP really is
+	CreatedAt   int64    `json:"created_at"`
+	Modified    int64    `json:"modified"`
+	Filemode    int      `json:"filemode"`
+	Money       int      `json:"money,omitempty"` // fileheader_t.multi.money
+	// BBSEditMark is the line ("※ 編輯: ...") that the BBS shows after the
+	// body for the last edit, rendered rather than written into the body.
+	// Lemmy shows an edit by post.updated.
+	BBSEditMark   string `json:"bbs_edit_mark,omitempty"`
+	Upvotes       int    `json:"upvotes"`        // Upvotes count
+	Downvotes     int    `json:"downvotes"`      // Downvotes count
+	NumComments   int    `json:"num_comments"`   // Total comments count
+	NumCrossposts int    `json:"num_crossposts"` // Total crossposts count (shares)
+	Encoding      string `json:"encoding"`       // Always "utf-8" in DB
 	// Locked as Lemmy's post.locked: no new comments, and (as PTT locks
 	// posts) the content is not shown; see CanonicalPostFile.
 	Locked bool `json:"locked,omitempty"`
@@ -599,6 +603,9 @@ func EncodeRFC822Post(p *Post) []byte {
 	}
 	if p.Locked {
 		b.WriteString("Locked: true\n")
+	}
+	if p.BBSEditMark != "" {
+		b.WriteString(fmt.Sprintf("BBSEditMark: %s\n", HeaderValue(p.BBSEditMark)))
 	}
 	p.Deletion.writeRFC822(&b)
 	b.WriteString("\n")

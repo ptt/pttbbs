@@ -861,6 +861,10 @@ typedef struct bof_edit_post_t {
     int bbs_no_revision;
     /* PTT: for a change by moderators, as in bof_lock_post_t (no reason). */
     const struct bof_modlog_t *bbs_modlog;
+    /* PTT: the "edited by ..." line shown after the body (nest.svc), not
+     * written into it, so editing again leaves one; NULL keeps the last.
+     * Lemmy shows an edit by post.updated alone. */
+    const char *bbs_edit_mark;
 } bof_edit_post_t;
 
 bof_error_t bof_edit_post(const bof_actor_t *actor,

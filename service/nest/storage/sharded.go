@@ -508,6 +508,10 @@ func (s *ShardedEngine) UpdatePost(postID uint64, newTitle, newContent, editorNa
 	return s.GetEngineByPostID(postID).UpdatePost(postID, newTitle, newContent, editorName, editorID, expectedModified)
 }
 
+func (s *ShardedEngine) SetPostEditMarkByCommunityFile(community, postFile, mark string) error {
+	return s.GetEngineByCommunity(community).SetPostEditMarkByCommunityFile(community, postFile, mark)
+}
+
 func (s *ShardedEngine) UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editorName string, editorID model.PersonID, expectedModified int64) (uint32, int64, error) {
 	return s.GetEngineByCommunity(community).UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editorName, editorID, expectedModified)
 }

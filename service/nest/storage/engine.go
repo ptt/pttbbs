@@ -578,6 +578,7 @@ func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
 
 	meta, body := model.DecodeRFC822Post(val)
 	p.Content = body
+	p.BBSEditMark = meta["BBSEditMark"]
 	if !p.DeletedOrRemoved() {
 		p.Deletion = model.DeletionFromRFC822(meta)
 	}
@@ -3428,12 +3429,36 @@ func (e *Engine) writeImportedComments(batch []*ImportedPostData) error {
 	return errors.Join(errs...)
 }
 
+// SetPostEditMark sets the line the BBS shows after the body of post
+// postID for its last edit (model.Post.BBSEditMark).
+func (e *Engine) SetPostEditMark(postID uint64, mark string) error {
+	p, err := e.GetPost(postID)
+	if err != nil {
+		return err
+	}
+	p.BBSEditMark = mark
+	return e.postsDB.Set(model.EncodePostKey(p.ID), model.EncodeRFC822Post(p), pebble.NoSync)
+}
+
+// SetPostEditMarkByCommunityFile is SetPostEditMark for post postFile of
+// community.
+func (e *Engine) SetPostEditMarkByCommunityFile(community, postFile, mark string) error {
+	p, err := e.GetPostByCommunityFile(community, postFile)
+	if err != nil {
+		return err
+	}
+	return e.SetPostEditMark(p.ID, mark)
+}
+
 // RenderPostWithComments renders a post and its comments directly in memory
 func RenderPostWithComments(p *model.Post, comments []*model.Comment, asBig5 bool) []byte {
 	var buf bytes.Buffer
 	buf.WriteString(p.Content)
 	if len(p.Content) > 0 && p.Content[len(p.Content)-1] != '\n' {
 		buf.WriteByte('\n')
+	}
+	if p.BBSEditMark != "" {
+		buf.WriteString(p.BBSEditMark + "\n")
 	}
 
 	for _, c := range comments {
@@ -3611,6 +3636,9 @@ func RenderLegacyPostWithComments(p *model.Post, comments []*model.Comment, asBi
 	buf.WriteString(p.Content)
 	if len(p.Content) > 0 && p.Content[len(p.Content)-1] != '\n' {
 		buf.WriteByte('\n')
+	}
+	if p.BBSEditMark != "" {
+		buf.WriteString(p.BBSEditMark + "\n")
 	}
 
 	for _, c := range comments {

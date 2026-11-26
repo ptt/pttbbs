@@ -2433,15 +2433,11 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
     }
     else if (currstat == REEDIT)
     {
-	if (IS_ENABLED(CONFIG_ALL_REEDIT_LOG) || strcmp(currboard, BN_SYSOP) == 0)
-	{
-	    char sbuf[WRAPMARGIN];
-	    snprintf(sbuf, sizeof(sbuf),
-		     STR_POST_MARK "½s¿è: %s (%s%s%s), %s",
-		     cuser.userid, FROMHOST, from_cc[0] ? " " : "", from_cc,
-		     Cdatelite(&now));
+	// With nest.svc the line is shown after the body rather than
+	// written into it (see bof_edit_post_t.bbs_edit_mark).
+	char sbuf[WRAPMARGIN];
+	if (!BOF_FILES_ARE_CACHE && reedit_mark(sbuf, sizeof(sbuf)))
 	    edit_fprintf_line(fp, sbuf);
-	}
     }
 
     fclose(fp);
@@ -2453,6 +2449,17 @@ write_file(const char *fpath, int saveheader, char mytitle[STRLEN], int flags)
 	return KEEP_EDITING;
     }
     return 0;
+}
+
+int
+reedit_mark(char *buf, size_t sz)
+{
+    if (!IS_ENABLED(CONFIG_ALL_REEDIT_LOG) && strcmp(currboard, BN_SYSOP) != 0)
+	return 0;
+    snprintf(buf, sz, STR_POST_MARK "½s¿è: %s (%s%s%s), %s",
+	     cuser.userid, FROMHOST, from_cc[0] ? " " : "", from_cc,
+	     Cdatelite(&now));
+    return 1;
 }
 
 static bool

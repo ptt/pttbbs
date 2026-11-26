@@ -69,6 +69,7 @@ type Storage interface {
 	RenderCommunity(opts RenderCommunityOptions) (int, error)
 	UpdatePost(postID uint64, newTitle, newContent, editorName string, editorID model.PersonID, expectedModified int64) (uint32, int64, error)
 	UpdatePostByCommunityFile(community, postFile, newTitle, newContent, editorName string, editorID model.PersonID, expectedModified int64) (uint32, int64, error)
+	SetPostEditMarkByCommunityFile(community, postFile, mark string) error
 	UpdatePostTitle(postID uint64, newTitle, editorName string, editorID model.PersonID) (uint32, error)
 	UpdatePostTitleByCommunityFile(community, postFile, newTitle, editorName string, editorID model.PersonID) (uint32, error)
 	DeletePost(postID uint64, deleterName string, deleterID model.PersonID, reason string) (uint32, error)

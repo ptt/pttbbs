@@ -287,6 +287,9 @@ int dice_main(void);
 /* edit */
 int vedit(const char *fpath, int saveheader, char save_title[STRLEN]) EXCLUDES_ABORT_BLOCK;
 int vedit2(const char *fpath, int saveheader, char save_title[STRLEN], int flags) EXCLUDES_ABORT_BLOCK;
+// The "edited" line for an edit of a post by the user now, into buf, if
+// the board shows edits (SYSOP, or all with CONFIG_ALL_REEDIT_LOG): 1, or 0.
+int reedit_mark(char *buf, size_t sz);
 int veditfile(const char *fpath) EXCLUDES_ABORT_BLOCK;
 void write_header(FILE *fp, const char *mytitle, bool allow_anon) EXCLUDES_ABORT_BLOCK;
 void addsignature(FILE *fp, bool ifuseanony) EXCLUDES_ABORT_BLOCK;

@@ -534,7 +534,7 @@ nest_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     const bof_post_ref_t *post = &req->post;
     const fileheader_t *fh = post->bbs_header;
     const char *name = req->name && *req->name ? req->name : fh->title;
-    char path[PATHLEN], resp[128], hdr[512];
+    char path[PATHLEN], resp[128], hdr[1024];
     int32_t modified = req->bbs_modified;
     fileheader_t updated;
     bof_post_response_t res = { .bbs_header = &updated };
@@ -567,9 +567,22 @@ nest_edit_post(void *ctx GCC_UNUSED, const bof_actor_t *actor,
             free(body);
             goto failed;
         }
+        // The edit mark, as UTF-8 in hex (one word of the header).
+        char mark[2 * 3 * STRLEN + 1] = "-";
+        if (req->bbs_edit_mark && *req->bbs_edit_mark) {
+            char *m = to_svc(req->bbs_edit_mark);
+            size_t n = 0;
+            for (const unsigned char *c = (const unsigned char *)(m ? m : "");
+                 *c && n + 2 < sizeof(mark); c++, n += 2)
+                snprintf(mark + n, 3, "%02x", *c);
+            if (n == 0)
+                strcpy(mark, "-");
+            free(m);
+        }
         snprintf(hdr, sizeof(hdr), "EDIT_POST_FILE %s %s %s %" PRIu64
-                 " %lld %zu %zu\n", post->community, fh->filename, who(actor),
-                 uid(actor), (long long)expected, strlen(title), strlen(body));
+                 " %lld %zu %zu %s\n", post->community, fh->filename,
+                 who(actor), uid(actor), (long long)expected, strlen(title),
+                 strlen(body), mark);
         svc_ok(svc_call(hdr, title, strlen(title), body, strlen(body)), resp,
                sizeof(resp));
         free(title);

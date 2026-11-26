@@ -1845,10 +1845,15 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // substitute_ref_record(direct, fhdr, ent);
     bof_actor_t me = bof_me();
     int32_t money = fhdr->multi.money;
+    // With nest.svc the edit line is shown after the body, not written
+    // into it by the editor (see reedit_mark()).
+    char edit_mark[WRAPMARGIN];
     bof_edit_post_t req = {
         .post = bof_ref(direct, ent, fhdr), .name = save_title,
         .bbs_money = &money,
         .bbs_body_path = fpath, .bbs_body_version = &ver,
+        .bbs_edit_mark = BOF_FILES_ARE_CACHE &&
+            reedit_mark(edit_mark, sizeof(edit_mark)) ? edit_mark : NULL,
     };
     fileheader_t updated;
     bof_post_response_t res = { .bbs_header = &updated };

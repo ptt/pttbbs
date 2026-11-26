@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -1369,7 +1370,8 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 
 	case "EDIT_POST_FILE":
-		// EDIT_POST_FILE <community> <post_file> <editor_name> <editor_id> [<expected_modified>] <title_bytes> <content_bytes>\n<title><content>
+		// EDIT_POST_FILE <community> <post_file> <editor_name> <editor_id> [<expected_modified>] <title_bytes> <content_bytes> [<edit_mark>]\n<title><content>
+		// edit_mark: model.Post.BBSEditMark as hex UTF-8; "-" or none keeps it.
 		if len(parts) < 7 {
 			conn.Write([]byte("ERR invalid arguments for EDIT_POST_FILE\n"))
 			return
@@ -1418,6 +1420,11 @@ func (s *Server) handleIPC(conn net.Conn) {
 			}
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
+		}
+		if len(parts) >= 9 && parts[8] != "-" {
+			if mark, err := hex.DecodeString(parts[8]); err == nil {
+				_ = s.storage.SetPostEditMarkByCommunityFile(community, postFile, string(mark))
+			}
 		}
 		if rev == 0 {
 			conn.Write([]byte(fmt.Sprintf("OK 0 NO_CHANGE %d\n", newModified)))
