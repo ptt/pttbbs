@@ -82,10 +82,35 @@ mandex(const int level, const char *num_header, char *fpath)
     fclose(fp_dir);
 }
 
+// Removes the S... links to .index left by earlier runs, except keep.
+static void
+remove_index_links(const char *brdname, const char *keep)
+{
+    char apath[PATHLEN], path[PATHLEN], target[16];
+    struct dirent *de;
+    DIR *dir;
+    ssize_t n;
+
+    setapath(apath, brdname);
+    if (!(dir = opendir(apath)))
+	return;
+    while ((de = readdir(dir))) {
+	if (de->d_name[0] != 'S' || strcmp(de->d_name, keep) == 0)
+	    continue;
+	snprintf(path, sizeof(path), "%s/%s", apath, de->d_name);
+	if ((n = readlink(path, target, sizeof(target) - 1)) < 0)
+	    continue;
+	target[n] = '\0';
+	if (strcmp(target, fn_index) == 0)
+	    unlink(path);
+    }
+    closedir(dir);
+}
+
 void
 man_index(const char * brdname)
 {
-    char buf[PATHLEN], fpath[PATHLEN], *p;
+    char buf[PATHLEN], fpath[PATHLEN], keep[FNSIZE], *p;
     int i, index_pos = -1;
     FILE *fp_dir;
     struct stat st;
@@ -140,8 +165,10 @@ man_index(const char * brdname)
     while (fread(&fhdr, sizeof(fhdr), 1, fp_dir) == 1) {
 	if (strncmp(fhdr.title, index_title, strlen(index_title)) == 0) {
 	    index_pos = i;
+	    // Made again below; an entry naming a real file keeps it.
 	    setdirpath(buf, fpath, fhdr.filename);
-	    unlink(buf);
+	    if (dashl(buf))
+		unlink(buf);
 	    break;
 	}
 	i++;
@@ -149,11 +176,14 @@ man_index(const char * brdname)
     if (index_pos >= 0)
         filemode = fhdr.filemode;
 
+    // A link, not .index itself: a leading '.' marks a deleted record, and
+    // deleting the entry in the menu removes only the link.
     p = strrchr(buf, '/');
     *p = '\0';
     stamplink(buf, &fhdr);
     unlink(buf);
     symlink(fn_index, buf);
+    STRLCPY(keep, fhdr.filename);
     STRLCPY(fhdr.owner, "每天自動更新");
     SNPRINTF(fhdr.title, "%s (%.1fk)", index_title, st.st_size / 1024.);
     fhdr.filemode = filemode;
@@ -174,6 +204,8 @@ man_index(const char * brdname)
 
     fclose(fp_index);
     fclose(fp_dir);
+
+    remove_index_links(brdname, keep);
 }
 
 void
