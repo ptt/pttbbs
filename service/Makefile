@@ -1,4 +1,4 @@
-SUBDIRS:=	friend ipc mail nest rotatelog search stat utmp
+SUBDIRS:=	friend ipc mail gem nest rotatelog search stat utmp
 
 .PHONY: all clean install test $(SUBDIRS)
 

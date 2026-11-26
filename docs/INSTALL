@@ -97,6 +97,13 @@
 
  15.執行 /home/bbs/bin/shmctl init (*註1, *註2)
 
+    若 pttbbs.conf 開了 CONFIG_GEM (精華區由 gem.svc 保存), 第一次安裝時
+    在 shmctl init 啟動 gem.svc 之後, 請再執行一次
+        /home/bbs/bin/gem.ctl import-all
+    把 initbbs 建在 man/ 的精華區 (例如 Note 板的點歌歌本與動態看板)
+    匯入 gem.svc, 之後 man/ 就不再使用. 已有資料的站要改用 CONFIG_GEM,
+    請參考 service/gem/README.md.
+
  16.用 root 執行 /home/bbs/bin/mbbsd -p 23 -d (*註3)
     其中 -d 是指定 daemon mode. 若連線有問題需要方便測試時可以先不加 -d，
     用別窗直接進行連線以方便找出問題。

@@ -303,6 +303,7 @@ func copyIncremental(src, dst, prev string) (linked, copied int64, err error) {
 	if err := os.RemoveAll(tmp); err != nil {
 		return 0, 0, err
 	}
+	linkWarned := false
 	err = filepath.WalkDir(src, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -324,10 +325,17 @@ func copyIncremental(src, dst, prev string) (linked, copied int64, err error) {
 		}
 		if prev != "" && strings.HasSuffix(d.Name(), ".sst") {
 			old := filepath.Join(prev, rel)
-			if oi, err := os.Stat(old); err == nil && oi.Size() == info.Size() && oi.ModTime().Equal(info.ModTime()) {
-				if err := os.Link(old, target); err == nil {
+			// Whole seconds: NFS and other servers may keep mtimes coarser
+			// than the local file system.
+			if oi, err := os.Stat(old); err == nil && oi.Size() == info.Size() && oi.ModTime().Unix() == info.ModTime().Unix() {
+				err := os.Link(old, target)
+				if err == nil {
 					linked += info.Size()
 					return nil
+				}
+				if !linkWarned {
+					linkWarned = true
+					fmt.Fprintf(os.Stderr, "warning: cannot hard-link in %s (%v); copying in full instead\n", filepath.Dir(dst), err)
 				}
 			}
 		}
