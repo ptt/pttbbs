@@ -873,6 +873,123 @@ trim_blank(char *buf) {
     return *buf == 0;
 }
 
+// What the 'Z' search goes by.
+enum SCORE_SEARCH_KIND {
+    SCORE_SEARCH_COMMENTS = 0,  // C: comments (痙ē计) >= n
+    SCORE_SEARCH_SCORE,         // V: score (崩糔计) >= n, or <= n if n < 0
+};
+
+typedef struct {
+    int kind;       // SCORE_SEARCH_KIND
+    int next_kind;  // the hot key pressed, or -1
+    int can_score;  // whether the board rates posts
+} score_search_ctx_t;
+
+// Whether the number may be below 0 (a low score).
+static int
+score_search_negative(int kind)
+{
+    return kind != SCORE_SEARCH_COMMENTS && !IS_ENABLED(CONFIG_OLD_RECOMMEND);
+}
+
+static int
+score_search_kind_by_key(int key, const score_search_ctx_t *ctx)
+{
+    switch (key) {
+    case 'c': case 'C':
+        return SCORE_SEARCH_COMMENTS;
+    case 'v': case 'V':
+        return ctx->can_score ? SCORE_SEARCH_SCORE : -1;
+    }
+    return -1;
+}
+
+static int
+score_search_peek(int key, VGET_RUNTIME *prt, void *instance)
+{
+    score_search_ctx_t *ctx = (score_search_ctx_t *)instance;
+
+    if (key < ' ' || key > '~' || isdigit(key))
+        return VGETCB_NONE;
+    if (key == '-' && score_search_negative(ctx->kind) && prt->icurr == 0 &&
+        prt->buf[0] != '-')
+        return VGETCB_NONE;
+
+    int kind = score_search_kind_by_key(key, ctx);
+    if (kind < 0) {
+        bell();
+        return VGETCB_NEXT;
+    }
+    if (kind == ctx->kind)
+        return VGETCB_NEXT;
+    // Ask again for the new kind, keeping the number.
+    ctx->next_kind = kind;
+    return VGETCB_END;
+}
+
+// With CONFIG_RATING, asks for the number of the 'Z' search ('C', 'V' switch
+// what it goes by), starting with sr_mode (RS_SCORE or RS_COMMENTS).
+// Returns 0 if cancelled.
+static int
+ask_score_predicate(fileheader_predicate_t *pred, int sr_mode)
+{
+    // Highlighted, as the hot keys change it.
+    static const char * const names[] = {
+        ANSI_COLOR(1;33) "痙ē计" ANSI_RESET,
+        ANSI_COLOR(1;33) "崩糔计" ANSI_RESET,
+    };
+    static const char * const below_zero[] = {
+        "", " (<0玥) ",
+    };
+    char * const keyword = pred->keyword;
+    char buf[8] = "";
+    score_search_ctx_t ctx = {
+        (sr_mode & RS_COMMENTS) ? SCORE_SEARCH_COMMENTS : SCORE_SEARCH_SCORE,
+        -1, !board_lists_comments(currbid),
+    };
+    const VGET_CALLBACKS cb = { score_search_peek };
+    if (!ctx.can_score)
+        ctx.kind = SCORE_SEARCH_COMMENTS;
+
+    while (1) {
+        char prompt[STRLEN];
+        const char *hint = ctx.can_score ? " [C痙ē计 V崩糔计]: " : ": ";
+        if (currmode & MODE_SELECT)
+            snprintf(prompt, sizeof(prompt), "糤兵ン %s%s",
+                     names[ctx.kind], hint);
+        else
+            snprintf(prompt, sizeof(prompt), "穓碝%s蔼ぶ%sゅ彻%s",
+                     names[ctx.kind],
+                     score_search_negative(ctx.kind) ?
+                     below_zero[ctx.kind] : "", hint);
+
+        move(b_lines, 0);
+        clrtoeol();
+        outs(prompt);
+        ctx.next_kind = -1;
+        vgetstring(buf, 7, VGET_DEFAULT, buf, &cb, &ctx);
+        if (ctx.next_kind < 0)
+            break;
+        ctx.kind = ctx.next_kind;
+        if (!score_search_negative(ctx.kind) && buf[0] == '-')
+            memmove(buf, buf + 1, strlen(buf));
+    }
+
+    int n = atoi(buf);
+    if (n == 0 || (n < 0 && !score_search_negative(ctx.kind)))
+        return 0;
+    memset(keyword, 0, sizeof(pred->keyword));
+    if (ctx.kind == SCORE_SEARCH_COMMENTS) {
+        pred->mode = RS_COMMENTS;
+        pred->comments = pred->score = n;
+    } else {
+        pred->mode = RS_SCORE;
+        pred->score = n;
+    }
+    snprintf(keyword, sizeof(pred->keyword), "%d", pred->score);
+    return 1;
+}
+
 static int
 ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 		     const fileheader_t *fh, int *success)
@@ -904,6 +1021,10 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 	    vmsg("は穓碝(!)秈穓碝ㄏノ(ㄒ: ノ / 穓碝)");
 	    return READ_REDRAW;
 	}
+    } else if ((sr_mode & (RS_SCORE | RS_COMMENTS)) &&
+	       IS_ENABLED(CONFIG_RATING)) {
+	if (currstat == RMAIL || !ask_score_predicate(pred, sr_mode))
+	    return READ_REDRAW;
     } else if (sr_mode & RS_SCORE) {
 	if (currstat == RMAIL ||
 	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
@@ -971,6 +1092,8 @@ select_read(read_ctx_t *cx, int sr_mode)
     int ui_ret = ask_filter_predicate(&predicate, cx->sr_mode_mask, sr_mode, fh, &success);
     if (!success)
         return ui_ret;
+    // 'Z' may have switched between the score and the comments.
+    sr_mode = predicate.mode;
 
     if (!site_can_search(predicate.keyword, sr_mode))
         return READ_REDRAW;
@@ -1424,7 +1547,8 @@ static int
 read_cmd_search_comment(cmd_ctx_t *ctx) {
     read_ctx_t *cx = (read_ctx_t *)ctx->priv;
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
-    // As the list shows them: the score or the number of comments.
+    // As the list shows them: the score or the number of comments. 'C' and
+    // 'V' switch it while asking (ask_score_predicate()).
     read_apply_mode(cx, ctx, select_read(cx, board_lists_comments(currbid) ?
                                          RS_COMMENTS : RS_SCORE));
     return 0;
