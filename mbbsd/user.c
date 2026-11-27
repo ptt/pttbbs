@@ -1,6 +1,7 @@
 #define PWCU_IMPL
 #include "bbs.h"
 #include "psb.h"
+#include "comments.h"
 
 void
 ban_usermail(const userec_t *u, const char *reason) {
@@ -492,6 +493,17 @@ static int GCC_UNUSED angel_setter(int flag GCC_UNUSED)
     return 0;
 }
 
+static const char *comment_theme_getter(int flag GCC_UNUSED)
+{
+    return comment_theme_name(comment_pref_theme());
+}
+
+static int comment_theme_setter(int flag GCC_UNUSED)
+{
+    comment_set_pref_theme((comment_pref_theme() + 1) % comment_theme_count());
+    return 0;
+}
+
 static const char *Getter(const CustomItem *item)
 {
     assert(item->flag || item->getter);
@@ -549,6 +561,10 @@ static const CustomItem items[] = { {
     }, {
         .desc = "PAGER      使用OFO水球模式",
         .flag =  UF_WMSG_OFO,
+    }, {
+        .desc = "COMMENT    留言色彩主題",
+        .getter = comment_theme_getter,
+        .setter = comment_theme_setter,
     }, {
         .desc = "ANGEL      小天使神諭呼叫器: ",
         .perm = PERM_ANGEL,

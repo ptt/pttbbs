@@ -327,23 +327,30 @@ comment_theme_name(int theme_idx)
 const char *
 comment_theme_menu_options(void)
 {
-    return "經典醒目\t單純易讀\t對齊顯示";
+    return "單純易讀\t對齊顯示\t經典醒目";
 }
 
-static int s_comment_pref_theme = COMMENT_THEME_CLASSIC;
+static int s_comment_pref_theme = COMMENT_THEME_SIMPLE;
 
 int
 comment_pref_theme(void)
 {
-    return s_comment_pref_theme;
+    int theme = HasUserPerm(PERM_BASIC) ? cuser.comment_theme
+                                        : s_comment_pref_theme;
+    if (theme < 0 || theme >= COMMENT_THEMES)
+        theme = COMMENT_THEME_SIMPLE;
+    return theme;
 }
 
 void
 comment_set_pref_theme(int theme_idx)
 {
     if (theme_idx < 0 || theme_idx >= COMMENT_THEMES)
-        theme_idx = COMMENT_THEME_CLASSIC;
-    s_comment_pref_theme = theme_idx;
+        theme_idx = COMMENT_THEME_SIMPLE;
+    if (HasUserPerm(PERM_BASIC))
+        pwcuSetCommentTheme(theme_idx);
+    else
+        s_comment_pref_theme = theme_idx;
 }
 
 static void

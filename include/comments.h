@@ -14,9 +14,9 @@
 #endif
 
 enum {
-    COMMENT_THEME_CLASSIC = 0,
-    COMMENT_THEME_SIMPLE,
+    COMMENT_THEME_SIMPLE = 0,
     COMMENT_THEME_ALIGNED,
+    COMMENT_THEME_CLASSIC,
     COMMENT_THEMES
 };
 
@@ -51,7 +51,7 @@ const char *comment_theme_name(int theme_idx);
 int comment_theme_count(void);
 const char *comment_theme_menu_options(void);
 
-/* The comment theme the user chose (e.g. in the pager options), per session. */
+/* User's preferred comment theme (persisted in cuser.comment_theme). */
 int comment_pref_theme(void);
 void comment_set_pref_theme(int theme_idx);
 

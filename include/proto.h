@@ -1153,6 +1153,7 @@ int pwcuToggleFriendList(void);
 int pwcuToggleUserFlag	(unsigned int mask);	// not saved until pwcuSaveUserFlags
 int pwcuToggleUserFlag2	(unsigned int mask);	// not saved until pwcuSaveUserFlags
 int pwcuSet2FA		(uint8_t val);
+int pwcuSetCommentTheme	(uint8_t theme);
 
 // session management
 int pwcuLoginSave	(void);

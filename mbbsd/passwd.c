@@ -410,6 +410,14 @@ pwcuSet2FA(uint8_t val)
 }
 
 int
+pwcuSetCommentTheme(uint8_t theme)
+{
+    PWCU_START();
+    cuser.comment_theme = u.comment_theme = theme;
+    PWCU_END();
+}
+
+int
 pwcuToggleSortBoard ()
 {
     // XXX if this is executed too often,
