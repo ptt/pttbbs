@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -856,6 +857,7 @@ type ImportStats struct {
 	CrosspostsLogged int
 	DeletedImported  int // safe-deleted .DIR records imported as deleted posts
 	DeletedMarked    int // existing posts marked deleted as .DIR has them safe-deleted
+	MissingFiles     int // records whose article file is gone, skipped
 	Errors           int
 	ErrorDetails     []string
 	Elapsed          time.Duration
@@ -1130,11 +1132,17 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 			if !ok {
 				goto finished
 			}
-			stats.ValidPosts++
+			missing := errors.Is(res.err, ErrMissingFile)
+			if !missing {
+				stats.ValidPosts++
+			}
 			if res.marked {
 				stats.DeletedMarked++
 			}
-			if res.err != nil {
+			if missing {
+				stats.MissingFiles++
+				pending[res.seq] = nil
+			} else if res.err != nil {
 				stats.Errors++
 				pending[res.seq] = nil
 				if len(stats.ErrorDetails) < 20 {

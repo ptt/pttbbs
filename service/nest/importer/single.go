@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -21,6 +22,9 @@ import (
 // ErrPostNotFound is returned by ImportPost for a post that is neither in
 // the board's .DIR nor on disk (or that .DIR has safe-deleted).
 var ErrPostNotFound = errors.New("post not found")
+
+// ErrMissingFile is a .DIR record whose article file is gone: skipped.
+var ErrMissingFile = errors.New("article file missing")
 
 // recordJob is a .DIR record to import. fhdr.Filename is the name nest.svc
 // keeps the post under (M.<stamp>, see model.CanonicalPostFile).
@@ -153,6 +157,9 @@ func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserReso
 		return importSafeDeleted(engine, opts, users, fhdr)
 	}
 	rawBytes, err := ReadArticleFile(job.articlePath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, false, fmt.Errorf("%w: %s", ErrMissingFile, job.articlePath)
+	}
 	if err != nil {
 		return nil, false, err
 	}
@@ -409,6 +416,9 @@ func importPost(engine storage.Storage, opts ImportBoardOptions, postFile string
 		return nil, fmt.Errorf("%w: %s/%s is deleted", ErrPostNotFound, opts.Board, postFile)
 	}
 	data, _, err := buildRecord(engine, opts, NewCachedResolver(opts.Users), nil, job)
+	if errors.Is(err, ErrMissingFile) {
+		return nil, fmt.Errorf("%w: %s/%s has no file", ErrPostNotFound, opts.Board, postFile)
+	}
 	if err != nil {
 		return nil, err
 	}

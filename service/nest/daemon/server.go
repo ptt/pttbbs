@@ -1070,9 +1070,9 @@ func (s *Server) handleIPC(conn net.Conn) {
 		for _, errStr := range stats.ErrorDetails {
 			conn.Write([]byte(fmt.Sprintf("ERR_DETAIL %s\n", errStr)))
 		}
-		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %.2f %d %d\n",
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %.2f %d %d %d\n",
 			stats.PostsImported, stats.CommentsImported, stats.CrosspostsLogged, stats.Errors, stats.Elapsed.Seconds(),
-			stats.DeletedImported, stats.DeletedMarked)))
+			stats.DeletedImported, stats.DeletedMarked, stats.MissingFiles)))
 
 	case "SET_META_FILE":
 		// SET_META_FILE <community> <post_file> <filemode> <money>

@@ -67,6 +67,7 @@ type importBoardResult struct {
 	posts, comments, crossposts, errors string
 	seconds                             string
 	deletedImported, deletedMarked      string
+	missingFiles                        string
 	details                             []string // ERR_DETAIL lines, when not shown as they came
 }
 
@@ -130,6 +131,9 @@ func runImportBoard(header, prefix string, out io.Writer) (*importBoardResult, e
 			if len(parts) >= 8 {
 				r.deletedImported, r.deletedMarked = parts[6], parts[7]
 			}
+			if len(parts) >= 9 {
+				r.missingFiles = parts[8]
+			}
 			return r, nil
 		case strings.HasPrefix(line, "ERR"):
 			newline()
@@ -152,6 +156,9 @@ func printImportBoardResult(w io.Writer, r *importBoardResult, dryRun bool) {
 	}
 	if r.deletedImported != "" {
 		fmt.Fprintf(w, "    Deleted posts:      %s imported, %s marked deleted\n", r.deletedImported, r.deletedMarked)
+	}
+	if r.missingFiles != "" && r.missingFiles != "0" {
+		fmt.Fprintf(w, "    Without a file:     %s records skipped\n", r.missingFiles)
 	}
 }
 

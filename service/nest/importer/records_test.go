@@ -148,6 +148,33 @@ func TestEmptyOwnerAndDeletedTitle(t *testing.T) {
 	}
 }
 
+// A record whose file is gone is skipped, and not counted as an error.
+func TestMissingFileSkipped(t *testing.T) {
+	tempDir := t.TempDir()
+	const (
+		kept = "M.1700000001.A.001"
+		gone = "M.1700000002.A.002"
+	)
+	recs := [][]byte{
+		dirFixture{filename: kept, owner: "userA", title: "here", modified: 1700000001}.record(),
+		dirFixture{filename: gone, owner: "userB", title: "gone", modified: 1700000002}.record(),
+	}
+	writeDir(t, tempDir, "Lost", recs, map[string][]byte{kept: legacyArticle("userA", "here")})
+	engine := openImportEngine(t, tempDir)
+	opts := ImportBoardOptions{BBSHome: tempDir, Board: "Lost", IsBig5: true}
+	stats, err := ImportBoard(engine, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.PostsImported != 1 || stats.MissingFiles != 1 || stats.Errors != 0 {
+		t.Errorf("imported %d, missing %d, errors %d; want 1, 1, 0",
+			stats.PostsImported, stats.MissingFiles, stats.Errors)
+	}
+	if _, err := ImportPost(engine, opts, gone); !errors.Is(err, ErrPostNotFound) {
+		t.Errorf("ImportPost(%s): %v, want ErrPostNotFound", gone, err)
+	}
+}
+
 // A community imported from a board is dated from its oldest post, also
 // when fixed afterwards; a later post leaves the date as it is.
 func TestCommunityPublished(t *testing.T) {
