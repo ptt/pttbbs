@@ -804,6 +804,9 @@
 #undef CONFIG_RATING
 #define CONFIG_RATING 1
 #endif
+#if IS_ENABLED(CONFIG_RATING) && IS_ENABLED(CONFIG_OLD_RECOMMEND)
+#error "CONFIG_RATING conflicts with OLDRECOMMEND / CONFIG_OLD_RECOMMEND"
+#endif
 
 /* CONFIG_COMMENT_EDIT is always on with CONFIG_NEST too: nest.svc keeps
  * each comment (a floor of several lines) with its revisions, so people
