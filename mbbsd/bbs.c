@@ -15,6 +15,7 @@ static int comment(int ent, fileheader_t * fhdr, const char *direct);
 // The lines of a comment with nest.svc (its MaxCommentLines); else one.
 #define COMMENT_MAX_LINES (IS_ENABLED(CONFIG_NEST) ? 15 : 1)
 static int vote_post(int ent, fileheader_t * fhdr, const char *direct);
+static int view_post_votes(int ent, const fileheader_t *fhdr, const char *direct);
 static int view_postinfo(int ent, const fileheader_t * fhdr,
                          const char *direct, int crs_ln);
 
@@ -3303,25 +3304,30 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 // Ratings (CONFIG_RATING): pushes and boos apart from comments, one per
 // person (Lemmy's CreatePostLike), on boards that rate posts (BRD_SCORE).
 typedef struct {
-    const bof_post_like_t *votes;
+    bof_post_like_t *votes;
+    int count;
     int up_count;
     int down_count;
     int show_ip;    // where the votes came from: for sysops only
+    int ent;
+    fileheader_t fhdr;
+    const char *direct;
 } vote_view_ctx_t;
+
+static int vote_post_prompt(int ent, fileheader_t *fhdr, const char *direct,
+                            bool allow_details);
 
 static int
 vote_view_header(PSB_CTX *ctx)
 {
     vote_view_ctx_t *cx = (vote_view_ctx_t *)ctx->cmd.priv;
     char sub[128];
-    snprintf(sub, sizeof(sub), "推: " ANSI_COLOR(1;33) "%d" ANSI_RESET
-                               " 噓: " ANSI_COLOR(1;31) "%d" ANSI_RESET
-                               " 淨分: %+d (共 %d 筆)",
+    snprintf(sub, sizeof(sub), "推:%d 噓:%d 淨分:%+d (共 %d 筆)",
              cx->up_count, cx->down_count, cx->up_count - cx->down_count,
              ctx->cmd.total);
     vs_draw_hdr2("文章評分明細", sub);
     move(1, 0);
-    prints(ANSI_COLOR(1;37) "  編號   評分時間             評分值        評分者         來源 IP" ANSI_RESET "\n");
+    prints(ANSI_COLOR(1;37) "  編號   評分時間             評分值     評分者        來源 IP" ANSI_RESET "\n");
     return 0;
 }
 
@@ -3349,54 +3355,83 @@ vote_view_renderer(int idx, PSB_CTX *ctx)
     return 0;
 }
 
-static const cmd_t vote_view_cmds[] = {
-    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE },
-};
-
 static int
-view_post_votes(int ent, const fileheader_t *fhdr, const char *direct)
+vote_view_load(vote_view_ctx_t *cx)
 {
     // Lemmy's ListPostLikes, through BoF: how many first, then all of them.
     bof_actor_t me = bof_me();
     bof_post_like_t one, *votes = NULL;
-    bof_list_post_likes_t req = { .post = bof_ref(direct, ent, fhdr), .limit = 1 };
+    bof_list_post_likes_t req = {
+        .post = bof_ref(cx->direct, cx->ent, &cx->fhdr),
+        .limit = 1,
+    };
     bof_list_post_likes_response_t res = { .post_likes = &one };
     int count = 0;
 
-    if (bof_list_post_likes(&me, &req, &res) != BOF_OK) {
-        vmsg("無法取得評分資料");
-        return FULLUPDATE;
-    }
+    if (bof_list_post_likes(&me, &req, &res) != BOF_OK)
+        return -1;
     if (res.bbs_total > 0 && (votes = calloc(res.bbs_total, sizeof(*votes)))) {
         req.limit = res.bbs_total;
         res.post_likes = votes;
         if (bof_list_post_likes(&me, &req, &res) == BOF_OK)
             count = res.count;
     }
-    if (count <= 0 || !votes) {
-        free(votes);
+    free(cx->votes);
+    cx->votes = votes;
+    cx->count = count;
+    cx->up_count = 0;
+    cx->down_count = 0;
+    for (int i = 0; i < count; i++) {
+        if (votes[i].score > 0)
+            cx->up_count++;
+        else if (votes[i].score < 0)
+            cx->down_count++;
+    }
+    return count;
+}
+
+static int
+vote_view_cmd_rate(cmd_ctx_t *ctx)
+{
+    vote_view_ctx_t *cx = (vote_view_ctx_t *)ctx->priv;
+    vote_post_prompt(cx->ent, &cx->fhdr, cx->direct, false);
+    if (vote_view_load(cx) >= 0) {
+        ctx->total = cx->count;
+        if (ctx->curr >= ctx->total)
+            ctx->curr = ctx->total > 0 ? ctx->total - 1 : 0;
+    }
+    ctx->redraw = true;
+    return 0;
+}
+
+static const cmd_t vote_view_cmds[] = {
+    { '%', "評分", "對此文章評分(推/噓/取消)", vote_view_cmd_rate, 0, CMD_PRIO_HIGH },
+    { 0, NULL, NULL, NULL, 0, CMD_PRIO_NONE },
+};
+
+static int
+view_post_votes(int ent, const fileheader_t *fhdr, const char *direct)
+{
+    vote_view_ctx_t cx = {
+        .show_ip = HasUserPerm(PERM_SYSOP),
+        .ent = ent,
+        .fhdr = *fhdr,
+        .direct = direct,
+    };
+    int rc = vote_view_load(&cx);
+    if (rc < 0) {
+        vmsg("無法取得評分資料");
+        return FULLUPDATE;
+    }
+    if (rc == 0) {
+        free(cx.votes);
         vmsg("此文章尚無評分紀錄");
         return FULLUPDATE;
     }
 
-    int up = 0, down = 0;
-    for (int i = 0; i < count; i++) {
-        if (votes[i].score > 0)
-            up++;
-        else if (votes[i].score < 0)
-            down++;
-    }
-
-    vote_view_ctx_t cx = {
-        .votes = votes,
-        .up_count = up,
-        .down_count = down,
-        .show_ip = HasUserPerm(PERM_SYSOP),
-    };
-
     PSB_CTX ctx = {
         .cmd = {
-            .total = count,
+            .total = cx.count,
             .priv = &cx,
             .caption = " 評分明細 ",
         },
@@ -3409,12 +3444,13 @@ view_post_votes(int ent, const fileheader_t *fhdr, const char *direct)
 
     psb_main(&ctx);
 
-    free(votes);
+    free(cx.votes);
     return FULLUPDATE;
 }
 
 static int
-vote_post(int ent, fileheader_t * fhdr, const char *direct)
+vote_post_prompt(int ent, fileheader_t * fhdr, const char *direct,
+                 bool allow_details)
 {
     boardheader_t *bp;
     int vote = 0;
@@ -3428,10 +3464,10 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
     if (!bp)
 	return DONOTHING;
 
-    // Boards that do not rate posts take a comment instead.
-    if (!(bp->brdattr & BRD_SCORE))
-        return comment(ent, fhdr, direct);
-
+    if (!(bp->brdattr & BRD_SCORE)) {
+	vmsg("本板未開放評分");
+	return FULLUPDATE;
+    }
     if (currmode & MODE_DIGEST) {
 	vmsg("文摘無法評分");
 	return FULLUPDATE;
@@ -3471,11 +3507,12 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
 	outs(ANSI_COLOR(1;31) "2." ANSI_RESET "不喜歡(噓) ");
     }
     outs(ANSI_COLOR(1;37) "0." ANSI_RESET "取消評分 ");
-    outs(ANSI_COLOR(1;36) "V." ANSI_RESET "評分明細 ");
+    if (allow_details)
+	outs(ANSI_COLOR(1;36) "V." ANSI_RESET "評分明細 ");
     outs("[1]? ");
 
     int ch = vkey();
-    if (ch == 'v' || ch == 'V' || ch == '3') {
+    if (allow_details && (ch == 'v' || ch == 'V' || ch == '3')) {
         return view_post_votes(ent, fhdr, direct);
     } else if (ch == '1' || ch == '\r' || ch == '\n' || ch == ' ') {
 	vote = 1;
@@ -3517,6 +3554,25 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
 	vmsg("已取消評分");
 
     return FULLUPDATE;
+}
+
+static int
+vote_post(int ent, fileheader_t * fhdr, const char *direct)
+{
+    boardheader_t *bp;
+
+    if (!fhdr || !fhdr->filename[0] || currstat == RMAIL || currbid <= 0)
+	return DONOTHING;
+    assert(0 <= currbid - 1 && currbid - 1 < MAX_BOARD);
+    bp = getbcache(currbid);
+    if (!bp)
+	return DONOTHING;
+
+    // Boards that do not rate posts take a comment instead.
+    if (!(bp->brdattr & BRD_SCORE))
+        return comment(ent, fhdr, direct);
+
+    return vote_post_prompt(ent, fhdr, direct, true);
 }
 
 // Why del_range() skips a record, or NULL to delete it.
@@ -4757,12 +4813,17 @@ view_postinfo(int ent, const fileheader_t * fhdr,
         if (IS_ENABLED(CONFIG_RATING)) {
             cmd_t cmds[8];
             int n = 0;
-            cmds[n++] = (cmd_t){ 'Q', "價格列表", "切換文章列表顯示價格或日期",
+            int show_money = (currlistmode == LISTMODE_MONEY);
+            int by_comments = post_list_shows_comments();
+            cmds[n++] = (cmd_t){ 'Q', show_money ? "日期列表" : "價格列表",
+                                 "切換文章列表顯示價格或日期",
                                  NULL, 0, CMD_PRIO_HIGH };
-            cmds[n++] = (cmd_t){ 'C', "留言數",   "文章列表改為顯示留言數",
+            cmds[n++] = (cmd_t){ 'C', by_comments ? "推噓列表" : "留言數列表",
+                                 "切換文章列表顯示留言數或推噓分數",
                                  NULL, 0, CMD_PRIO_HIGH };
-            cmds[n++] = (cmd_t){ 'V', "推噓分數", "文章列表改為顯示推噓分數 (推 - 噓)",
-                                 NULL, 0, CMD_PRIO_HIGH };
+            if (BOF_FILES_ARE_CACHE)
+                cmds[n++] = (cmd_t){ 'V', "推噓明細", "查看本文章的評分明細",
+                                     NULL, 0, CMD_PRIO_HIGH };
             if (crossposts > 0)
                 cmds[n++] = (cmd_t){ 'X', "轉錄記錄", "查看本文章的轉錄記錄",
                                      NULL, 0, CMD_PRIO_HIGH };
@@ -4783,19 +4844,24 @@ view_postinfo(int ent, const fileheader_t * fhdr,
             show_crossposts(direct, ent, fhdr);
             return FULLUPDATE;
         }
+        if (IS_ENABLED(CONFIG_RATING) && BOF_FILES_ARE_CACHE && r == 'V') {
+            return view_post_votes(ent, fhdr, direct);
+        }
         /* TODO: 多加一個 LISTMODE_AID？ */
-	/* QQ: enable money listing mode; QC/QV: score column mode */
+	/* QQ: toggle money/date list; QC: toggle score/comments list */
 	if (r == 'Q') {
 	    currlistmode = (currlistmode == LISTMODE_MONEY) ?
 		LISTMODE_DATE : LISTMODE_MONEY;
 	    vmsg((currlistmode == LISTMODE_MONEY) ?
 		    "開啟文章價格列表模式" : "停止列出文章價格");
 	} else if (IS_ENABLED(CONFIG_RATING) && r == 'C') {
-	    currscorelistmode = SCORE_LISTMODE_COMMENTS;
-	    vmsg("文章列表改為顯示留言數");
-	} else if (IS_ENABLED(CONFIG_RATING) && r == 'V') {
-	    currscorelistmode = SCORE_LISTMODE_SCORE;
-	    vmsg("文章列表改為顯示推噓分數 (推 - 噓)");
+	    if (post_list_shows_comments()) {
+	        currscorelistmode = SCORE_LISTMODE_SCORE;
+	        vmsg("文章列表改為顯示推噓分數 (推 - 噓)");
+	    } else {
+	        currscorelistmode = SCORE_LISTMODE_COMMENTS;
+	        vmsg("文章列表改為顯示留言數");
+	    }
 	}
      }
 
