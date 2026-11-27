@@ -10,7 +10,7 @@
 #include "ansi.h"
 
 #ifndef COMMENT_LINE_LEN
-#define COMMENT_LINE_LEN 65
+#define COMMENT_LINE_LEN 64     /* chars of a comment line, without NUL */
 #endif
 
 enum {

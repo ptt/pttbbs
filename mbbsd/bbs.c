@@ -4,6 +4,7 @@
 #include "activity.h"
 #include "content.h"
 #include "livepost.h"
+#include "comments.h"
 #include <arpa/inet.h>
 
 #define WHEREAMI_LEVEL	16
@@ -3109,14 +3110,20 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     clrtoeol();
 
     if (IS_ENABLED(CONFIG_NEST_SVC)) {
-        // nest.svc keeps a comment of several lines, as one floor.
-        char prompt[STRLEN * 2];
-        snprintf(prompt, sizeof(prompt), "%s" ANSI_COLOR(1;36)
-                 "(可多行，按 TAB 加行，Backspace 刪空行，Ctrl-C 取消)"
-                 ANSI_RESET, buf);
+        // nest.svc keeps a comment of several lines, as one floor, laid out
+        // as the article shows it: "userid: text", further lines under it.
+        const comment_theme_t *thm = comment_get_theme(comment_pref_theme());
+        char prefix[STRLEN];
+        int idlen = strlen(myid);
+        while (idlen > 0 && myid[idlen - 1] == ' ')
+            idlen--;    // aligncmt pads it; the article does its own
+        snprintf(prefix, sizeof(prefix), "%s%.*s" ANSI_RESET ":",
+                 thm->color_commenter, idlen, myid);
         msg[0] = '\0';
         if (v_multiline_text(msg, sizeof(msg), COMMENT_MAX_LINES,
-                             maxlength - 1, prompt, " 留言 ", NULL,
+                             COMMENT_LINE_LEN, ANSI_COLOR(1;36)
+                             "請輸入留言 (可多行，按 TAB 加行，Backspace 刪空行，Ctrl-C 取消)"
+                             ANSI_RESET, " 留言 ", prefix,
                              VMULTI_NO_SCROLL) <= 0 || !msg[0])
             return FULLUPDATE;  // (it asks to confirm itself)
     } else if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
