@@ -23,7 +23,14 @@ type Storage interface {
 	ListDeletedPosts(community string, limit, offset int) ([]*model.Post, error)
 	GetReplies(parentID uint64, limit, offset int) ([]*model.Post, error)
 	GetThread(rootID uint64) ([]*model.Post, error)
-	AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64) (*model.CrosspostRecord, int, error)
+	// AddCrosspost records a crosspost with the original of the source;
+	// exempt ones are not counted by CheckCrosspost.
+	AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64, exempt bool) (*model.CrosspostRecord, int, error)
+	// CheckCrosspost returns a *CrosspostLimitError if the crosspost may
+	// not be made.
+	CheckCrosspost(req CrosspostCheck, lim CrosspostLimits) error
+	// CrosspostRoot returns the original of a post (itself if none).
+	CrosspostRoot(community, postFile string) (string, string, error)
 	GetCrossposts(community, postFile string) ([]*model.CrosspostRecord, error)
 	GetOriginPost(targetCommunity, targetPostFile string) (*model.Post, *model.CrosspostRecord, error)
 	AddComment(c *model.Comment) (*model.Comment, error)

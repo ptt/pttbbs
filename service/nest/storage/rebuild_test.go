@@ -152,9 +152,9 @@ func TestRebuildReproducesLiveSQLite(t *testing.T) {
 
 	// Crossposts.
 	src := create("M.1.A.008", "crossposted", "author")
-	_, _, err = e.AddCrosspost("board", src.PostFile, "other", "M.9.A.001", "op", 0, now)
+	_, _, err = e.AddCrosspost("board", src.PostFile, "other", "M.9.A.001", "op", 0, now, false)
 	must(err)
-	_, _, err = e.AddCrosspost("board", src.PostFile, "other2", "M.9.A.002", "op", 0, now)
+	_, _, err = e.AddCrosspost("board", src.PostFile, "other2", "M.9.A.002", "op", 0, now, false)
 	must(err)
 
 	// Purged posts disappear from both stores.

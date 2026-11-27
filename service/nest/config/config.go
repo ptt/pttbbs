@@ -31,6 +31,14 @@ type ServiceConfig struct {
 	// all (0: no limit); 51,200 by default, about what 5 MiB held before.
 	MaxPostCommentLines int `json:"max_post_comment_lines"`
 	ImportWorkers       int `json:"import_workers"`
+	// Crosspost limits (see storage/crosspostlimit.go): within a rolling
+	// window, how many boards a person may crosspost an original to, and
+	// how often it may be crossposted in all (0: no limit); originals in
+	// the exempt boards are not limited.
+	CrosspostWindowSec    int      `json:"crosspost_window_sec"`
+	CrosspostPersonMax    int      `json:"crosspost_person_max"`
+	CrosspostPostMax      int      `json:"crosspost_post_max"`
+	CrosspostExemptBoards []string `json:"crosspost_exempt_boards,omitempty"`
 	// SiteURL (e.g. https://www.ptt.cc) makes the ActivityPub IDs (ap_id,
 	// actor_id) in the Lemmy API.
 	SiteURL string `json:"site_url,omitempty"`
@@ -80,6 +88,9 @@ func DefaultConfig(bbshome string) *ServiceConfig {
 		ImportWorkers:  8,
 
 		MaxPostCommentLines: DefaultMaxPostCommentLines,
+		CrosspostWindowSec:  86400,
+		CrosspostPersonMax:  5,
+		CrosspostPostMax:    20,
 		Engines: []EngineLocation{
 			{
 				Index:    0,
@@ -235,6 +246,25 @@ func LoadConfigFile(path string, bbshome string) (*ServiceConfig, error) {
 			case "max_post_comment_lines":
 				if n, err := strconv.Atoi(val); err == nil && n >= 0 {
 					cfg.MaxPostCommentLines = n
+				}
+			case "crosspost_window_sec":
+				if n, err := strconv.Atoi(val); err == nil && n >= 0 {
+					cfg.CrosspostWindowSec = n
+				}
+			case "crosspost_person_max":
+				if n, err := strconv.Atoi(val); err == nil && n >= 0 {
+					cfg.CrosspostPersonMax = n
+				}
+			case "crosspost_post_max":
+				if n, err := strconv.Atoi(val); err == nil && n >= 0 {
+					cfg.CrosspostPostMax = n
+				}
+			case "crosspost_exempt_boards":
+				cfg.CrosspostExemptBoards = nil
+				for _, b := range strings.Split(val, ",") {
+					if b = strings.TrimSpace(b); b != "" {
+						cfg.CrosspostExemptBoards = append(cfg.CrosspostExemptBoards, b)
+					}
 				}
 			case "workers", "import_workers":
 				if n, err := strconv.Atoi(val); err == nil && n > 0 {

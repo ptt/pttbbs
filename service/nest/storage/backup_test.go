@@ -239,7 +239,7 @@ func TestVerifyDataDir(t *testing.T) {
 		e.AddComment(&model.Comment{PostID: p.ID, CreatorName: "a", Content: "c", CreatedAt: 1727800001})
 		e.VotePost(p.ID, "a", 0, model.VoteUp, 1727800002, "")
 	}
-	e.AddCrosspost("board", "M.1.A.001", "other", "M.9.A.001", "op", 0, 1727800003)
+	e.AddCrosspost("board", "M.1.A.001", "other", "M.9.A.001", "op", 0, 1727800003, false)
 	e.DeleteComment(2, 1, "mod", 0, "spam")
 	// The new title goes to Pebble too.
 	if _, err := e.UpdatePostTitle(3, "new title", "author", 0); err != nil {

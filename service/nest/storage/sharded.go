@@ -319,12 +319,22 @@ func (s *ShardedEngine) GetThread(rootID uint64) ([]*model.Post, error) {
 	return s.GetEngineByPostID(rootID).GetThread(rootID)
 }
 
-// AddCrosspost records a crosspost with its source post, in the engine of
-// the source community: the record is keyed by the source post (whose
-// crosspost count it raises) and names the target by community and post
-// file, which may be in any engine.
-func (s *ShardedEngine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64) (*model.CrosspostRecord, int, error) {
-	return s.GetEngineByCommunity(srcCommunity).AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName, creatorID, createdAt)
+// AddCrosspost records a crosspost with its original post, in the engine
+// of the original: the record is keyed by that post (whose crosspost count
+// it raises) and names the target by community and post file, which may be
+// in any engine.
+func (s *ShardedEngine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64, exempt bool) (*model.CrosspostRecord, int, error) {
+	return addCrosspost(s, srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName, creatorID, createdAt, exempt)
+}
+
+// CheckCrosspost tells whether a crosspost may be made (see checkCrosspost).
+func (s *ShardedEngine) CheckCrosspost(req CrosspostCheck, lim CrosspostLimits) error {
+	return checkCrosspost(s, req, lim)
+}
+
+// CrosspostRoot returns the original of a post (itself if it is none).
+func (s *ShardedEngine) CrosspostRoot(community, postFile string) (string, string, error) {
+	return crosspostRoot(s, community, postFile)
 }
 
 // GetCrossposts lists the crossposts of a post, kept with it.

@@ -99,7 +99,7 @@ func TestCopyCompletesCplogRecord(t *testing.T) {
 	check("rebuilt")
 
 	// A live crosspost takes a free sequence number: no record is lost.
-	if _, _, err := e.AddCrosspost("Src", "M.1700000000.A.001", "Live", "M.1700009999.A.003", "userB", 0, t0+9999); err != nil {
+	if _, _, err := e.AddCrosspost("Src", "M.1700000000.A.001", "Live", "M.1700009999.A.003", "userB", 0, t0+9999, false); err != nil {
 		t.Fatal(err)
 	}
 	if cps := crosspostsOf(t, e, "Src", "M.1700000000.A.001"); len(cps) != 4 {

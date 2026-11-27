@@ -38,6 +38,8 @@ type ServerConfig struct {
 	// SyncBoardsAtStart mirrors all of $BBSHOME/.BRD when the server
 	// starts, for what changed while it was down (see SyncBoards).
 	SyncBoardsAtStart bool
+	// Crosspost limits the crossposts that CHECK_CROSSPOST allows.
+	Crosspost storage.CrosspostLimits
 }
 
 func (c ServerConfig) IsBig5() bool {
@@ -2358,8 +2360,34 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write(contentB)
 		}
 
+	case "CHECK_CROSSPOST":
+		// CHECK_CROSSPOST <src_community> <src_file> <target_community> <creator_name> <creator_id> <exempt:0|1>
+		// Replies OK, or ERR <bbs_ name> [limit] (see storage.CheckCrosspost).
+		if len(parts) < 7 {
+			conn.Write([]byte("ERR invalid arguments for CHECK_CROSSPOST\n"))
+			return
+		}
+		if !s.ensurePost(conn, parts[1], parts[2]) {
+			return
+		}
+		err := s.storage.CheckCrosspost(storage.CrosspostCheck{
+			SourceCommunity: parts[1],
+			SourcePostFile:  parts[2],
+			TargetCommunity: parts[3],
+			CreatorName:     parts[4],
+			CreatorID:       model.ParsePersonID(parts[5]),
+			Exempt:          parts[6] == "1",
+		}, s.crosspostLimits())
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte("OK\n"))
+
 	case "CROSSPOST":
-		// CROSSPOST <src_community> <src_file> <target_community> <target_file> <creator_name> <creator_id> [ctime]
+		// CROSSPOST <src_community> <src_file> <target_community> <target_file> <creator_name> <creator_id> [ctime] [exempt:0|1]
+		// Records the crosspost with the original of the source, whatever
+		// the limits: the copy is made already.
 		if len(parts) < 7 {
 			conn.Write([]byte("ERR invalid arguments for CROSSPOST\n"))
 			return
@@ -2378,7 +2406,13 @@ func (s *Server) handleIPC(conn net.Conn) {
 		if !s.ensurePost(conn, srcComm, srcFile) {
 			return
 		}
-		rec, count, err := s.storage.AddCrosspost(srcComm, srcFile, targetComm, targetFile, operator, creatorID, ctime)
+		exempt := len(parts) >= 9 && parts[8] == "1"
+		if !exempt {
+			if root, _, err := s.storage.CrosspostRoot(srcComm, srcFile); err == nil {
+				exempt = s.crosspostLimits().ExemptBoard(root)
+			}
+		}
+		rec, count, err := s.storage.AddCrosspost(srcComm, srcFile, targetComm, targetFile, operator, creatorID, ctime, exempt)
 		if err != nil {
 			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
 			return
@@ -2435,6 +2469,11 @@ func (s *Server) handleIPC(conn net.Conn) {
 	default:
 		conn.Write([]byte(fmt.Sprintf("ERR unknown command: %s\n", cmd)))
 	}
+}
+
+// crosspostLimits returns the crosspost limits of the configuration.
+func (s *Server) crosspostLimits() storage.CrosspostLimits {
+	return s.cfg.Crosspost
 }
 
 // postCreator tells whether name / id (the person ID resolved from name

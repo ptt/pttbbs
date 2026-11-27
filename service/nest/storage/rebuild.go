@@ -190,8 +190,8 @@ func (e *Engine) fillMetaDB(db *sql.DB) (postCount int, commentCount int, err er
 // rebuildCrossposts fills the crossposts table from the 'x' records and
 // returns the number of crossposts of each source post.
 func (e *Engine) rebuildCrossposts(tx *sql.Tx) (map[uint64]int, error) {
-	stmt, err := tx.Prepare(`INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.Prepare(`INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at, bbs_exempt)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (e *Engine) rebuildCrossposts(tx *sql.Tx) (map[uint64]int, error) {
 		if err != nil {
 			continue
 		}
-		if _, err := stmt.Exec(x.SourcePostID, x.TargetCommunityID, x.TargetPostFile, x.CreatorName, x.CreatorID, x.CreatedAt); err != nil {
+		if _, err := stmt.Exec(x.SourcePostID, x.TargetCommunityID, x.TargetPostFile, x.CreatorName, x.CreatorID, x.CreatedAt, boolToInt(x.BBSExempt)); err != nil {
 			return nil, err
 		}
 		counts[x.SourcePostID]++

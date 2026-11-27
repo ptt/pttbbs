@@ -278,8 +278,8 @@ func (e *Engine) ensureCrosspostRow(rec *model.CrosspostRecord, count int) error
 	err := e.metaDB.QueryRow(`SELECT 1 FROM crossposts WHERE source_post_id = ? AND target_community_id = ? AND target_post_file = ? LIMIT 1`,
 		rec.SourcePostID, rec.TargetCommunityID, rec.TargetPostFile).Scan(&one)
 	if errors.Is(err, sql.ErrNoRows) {
-		_, err = e.metaDB.Exec(`INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
-			VALUES (?, ?, ?, ?, ?, ?)`, rec.SourcePostID, rec.TargetCommunityID, rec.TargetPostFile, rec.CreatorName, rec.CreatorID, rec.CreatedAt)
+		_, err = e.metaDB.Exec(`INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at, bbs_exempt)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`, rec.SourcePostID, rec.TargetCommunityID, rec.TargetPostFile, rec.CreatorName, rec.CreatorID, rec.CreatedAt, boolToInt(rec.BBSExempt))
 	}
 	if err != nil {
 		return err

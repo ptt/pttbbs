@@ -131,6 +131,10 @@ type CrosspostRecord struct {
 	CreatorName       string   `json:"creator_name"`
 	CreatorID         PersonID `json:"creator_id"`
 	CreatedAt         int64    `json:"created_at"`
+	// BBSExempt: not counted against the crosspost limits (by a moderator
+	// of the target board, of a post by the site staff, or from an exempt
+	// board).
+	BBSExempt bool `json:"bbs_exempt,omitempty"`
 }
 
 // CrosspostOrigin is where a copy (轉錄) says it was copied from (its
@@ -960,7 +964,11 @@ func EncodeRFC822Crosspost(x *CrosspostRecord) []byte {
 	b.WriteString(fmt.Sprintf("TargetPostFile: %s\n", HeaderValue(x.TargetPostFile)))
 	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(x.CreatorName)))
 	b.WriteString(fmt.Sprintf("CreatorID: %d\n", x.CreatorID))
-	b.WriteString(fmt.Sprintf("CreatedAt: %d\n\n", x.CreatedAt))
+	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", x.CreatedAt))
+	if x.BBSExempt {
+		b.WriteString("BBSExempt: true\n")
+	}
+	b.WriteString("\n")
 	return []byte(b.String())
 }
 
@@ -988,6 +996,8 @@ func DecodeRFC822Crosspost(val []byte) (*CrosspostRecord, error) {
 				rec.CreatorID = ParsePersonID(v)
 			case "CreatedAt":
 				rec.CreatedAt, _ = strconv.ParseInt(v, 10, 64)
+			case "BBSExempt":
+				rec.BBSExempt = v == "true"
 			}
 		}
 	}

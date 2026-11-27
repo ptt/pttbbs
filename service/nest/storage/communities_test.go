@@ -142,7 +142,7 @@ func TestRenameCommunity(t *testing.T) {
 	if _, err := e.AddComment(&model.Comment{PostID: p.ID, CreatorName: "c1", Content: "push"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := e.AddCrosspost("OldName", "M.1.A.001", "OldName", "M.1.A.002", "op", 0, 0); err != nil {
+	if _, _, err := e.AddCrosspost("OldName", "M.1.A.001", "OldName", "M.1.A.002", "op", 0, 0, false); err != nil {
 		t.Fatal(err)
 	}
 	cacheFile := filepath.Join(dir, "cache", strconv.FormatInt(p.CommunityID, 10), "M.1.A.001")
@@ -236,7 +236,7 @@ func TestMergeCommunity(t *testing.T) {
 	}
 	colliding := mustCreatePost(t, e, "From", "M.1.A.002", "colliding post")
 	kept := mustCreatePost(t, e, "To", "M.1.A.002", "target post")
-	if _, _, err := e.AddCrosspost("To", "M.1.A.002", "From", "M.1.A.001", "op", 0, 0); err != nil {
+	if _, _, err := e.AddCrosspost("To", "M.1.A.002", "From", "M.1.A.001", "op", 0, 0, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -795,7 +795,7 @@ func TestShardedMoveCommunity(t *testing.T) {
 		t.Fatal(err)
 	}
 	copied := mustCreatePost(t, s, "Board", "M.1.A.003", "crosspost of the post")
-	if _, _, err := s.AddCrosspost("Board", "M.1.A.001", "Board", "M.1.A.003", "sharer", 0, 0); err != nil {
+	if _, _, err := s.AddCrosspost("Board", "M.1.A.001", "Board", "M.1.A.003", "sharer", 0, 0, false); err != nil {
 		t.Fatal(err)
 	}
 	other := mustCreatePost(t, s, "Other", "M.1.A.001", "stays")
@@ -875,7 +875,7 @@ func TestShardedCrosspostAcrossEngines(t *testing.T) {
 	s, _ := openTestSharded(t, 2, map[string]int{"Src": 0, "Dst": 1})
 	src := mustCreatePost(t, s, "Src", "M.1.A.001", "original")
 	mustCreatePost(t, s, "Dst", "M.2.A.001", "copy")
-	rec, n, err := s.AddCrosspost("Src", "M.1.A.001", "Dst", "M.2.A.001", "sharer", 0, 0)
+	rec, n, err := s.AddCrosspost("Src", "M.1.A.001", "Dst", "M.2.A.001", "sharer", 0, 0, false)
 	if err != nil || n != 1 || rec.SourcePostID != src.ID {
 		t.Fatalf("AddCrosspost = %+v, %d, %v", rec, n, err)
 	}

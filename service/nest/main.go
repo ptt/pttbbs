@@ -272,6 +272,12 @@ func main() {
 		Users:          users,
 		// The communities follow .BRD: what changed while nest.svc was down.
 		SyncBoardsAtStart: true,
+		Crosspost: storage.CrosspostLimits{
+			Window:       int64(svcConf.CrosspostWindowSec),
+			PersonMax:    svcConf.CrosspostPersonMax,
+			PostMax:      svcConf.CrosspostPostMax,
+			ExemptBoards: svcConf.CrosspostExemptBoards,
+		},
 	}, st)
 
 	if err := srv.Start(); err != nil {

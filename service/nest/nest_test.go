@@ -1256,7 +1256,7 @@ func TestCrosspostTracking(t *testing.T) {
 	}
 
 	// 2. Add crosspost to "Test"
-	rec1, count1, err := engine.AddCrosspost("Gossiping", "M.1727800000.A.001", "Test", "M.1727800000.A.002", "bob", 12345, 1727800100)
+	rec1, count1, err := engine.AddCrosspost("Gossiping", "M.1727800000.A.001", "Test", "M.1727800000.A.002", "bob", 12345, 1727800100, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1265,7 +1265,7 @@ func TestCrosspostTracking(t *testing.T) {
 	}
 
 	// 3. Add second crosspost to "HatePolitics"
-	rec2, count2, err := engine.AddCrosspost("Gossiping", "M.1727800000.A.001", "HatePolitics", "M.1727800000.A.003", "charlie", 67890, 1727800200)
+	rec2, count2, err := engine.AddCrosspost("Gossiping", "M.1727800000.A.001", "HatePolitics", "M.1727800000.A.003", "charlie", 67890, 1727800200, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3025,5 +3025,74 @@ func TestServerSyncBoards(t *testing.T) {
 	}
 	if resp := ipc("EDIT_COMMUNITY x"); !strings.HasPrefix(resp, "ERR") {
 		t.Fatalf("EDIT_COMMUNITY x: %s", resp)
+	}
+}
+
+// CHECK_CROSSPOST tells mbbsd whether a crosspost may be made; CROSSPOST
+// records it with the original, exempt if asked or if the original is in
+// an exempt board.
+func TestServerCrosspostLimits(t *testing.T) {
+	tmpDir := t.TempDir()
+	st, err := storage.OpenEngine(storage.Config{
+		DataDir:     filepath.Join(tmpDir, "data"),
+		CacheDir:    filepath.Join(tmpDir, "cache"),
+		CacheSizeMB: 16,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	for _, p := range []*model.Post{
+		{Community: "Src", PostFile: "M.1.A.001", Title: "t", CreatorName: "op", Content: "x"},
+		{Community: "Free", PostFile: "M.1.A.001", Title: "t", CreatorName: "op", Content: "x"},
+		{Community: "A", PostFile: "M.2.A.001", Title: "t", CreatorName: "alice", Content: "x"},
+	} {
+		if _, err := st.CreatePost(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sockPath := filepath.Join(tmpDir, "nest.sock")
+	srv := daemon.NewServer(daemon.ServerConfig{
+		BBSHome: tmpDir, UnixSocket: sockPath,
+		Crosspost: storage.CrosspostLimits{Window: 86400, PersonMax: 1, PostMax: 2, ExemptBoards: []string{"Free"}},
+	}, st)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+	ipc := func(cmd string) string {
+		t.Helper()
+		conn, err := net.Dial("unix", sockPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Close()
+		conn.Write([]byte(cmd + "\n"))
+		line, _ := bufio.NewReader(conn).ReadString('\n')
+		return strings.TrimSpace(line)
+	}
+	now := time.Now().Unix()
+	for _, tc := range []struct{ cmd, want string }{
+		{"CHECK_CROSSPOST Src M.1.A.001 A alice 0 0", "OK"},
+		{fmt.Sprintf("CROSSPOST Src M.1.A.001 A M.2.A.001 alice 0 %d 0", now), "OK 1 1"},
+		{"CHECK_CROSSPOST Src M.1.A.001 A bob 0 1", "ERR bbs_already_crossposted"},
+		{"CHECK_CROSSPOST A M.2.A.001 Src bob 0 0", "ERR bbs_crosspost_back_to_origin"},
+		{"CHECK_CROSSPOST A M.2.A.001 B alice 0 0", "ERR bbs_crosspost_person_limit 1"},
+		{"CHECK_CROSSPOST A M.2.A.001 B alice 0 1", "OK"},
+		// A crosspost of the copy is recorded with the original.
+		{fmt.Sprintf("CROSSPOST A M.2.A.001 B M.3.A.001 bob 0 %d", now), "OK 2 2"},
+		{"CHECK_CROSSPOST Src M.1.A.001 C carol 0 0", "ERR bbs_crosspost_post_limit 2"},
+		{"CHECK_CROSSPOST Src M.9.A.009 C carol 0 0", "ERR"},
+		// Originals in an exempt board are not limited, and not counted.
+		{fmt.Sprintf("CROSSPOST Free M.1.A.001 A M.4.A.001 alice 0 %d", now), "OK 3 1"},
+		{"CHECK_CROSSPOST Free M.1.A.001 B alice 0 0", "OK"},
+	} {
+		if got := ipc(tc.cmd); got != tc.want && !(tc.want == "ERR" && strings.HasPrefix(got, "ERR")) {
+			t.Errorf("%s: %q, want %q", tc.cmd, got, tc.want)
+		}
+	}
+	cps, _ := st.GetCrossposts("Free", "M.1.A.001")
+	if len(cps) != 1 || !cps[0].BBSExempt {
+		t.Fatalf("crosspost of an exempt board: %+v", cps)
 	}
 }

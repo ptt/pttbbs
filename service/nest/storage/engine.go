@@ -343,7 +343,8 @@ func initSQLiteSchema(db sqlExecer) error {
 		target_post_file TEXT NOT NULL,
 		creator_name TEXT NOT NULL,
 		creator_id INTEGER NOT NULL DEFAULT 0,
-		created_at INTEGER NOT NULL
+		created_at INTEGER NOT NULL,
+		bbs_exempt INTEGER NOT NULL DEFAULT 0
 	);
 	CREATE INDEX IF NOT EXISTS idx_crossposts_source ON crossposts(source_post_id);
 	CREATE INDEX IF NOT EXISTS idx_crossposts_target ON crossposts(target_community_id, target_post_file);
@@ -362,7 +363,16 @@ func initSQLiteSchema(db sqlExecer) error {
 	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
-	return nil
+	return addColumn(db, "crossposts", "bbs_exempt", "INTEGER NOT NULL DEFAULT 0")
+}
+
+// addColumn adds a column to a table of an older database.
+func addColumn(db sqlExecer, table, column, decl string) error {
+	_, err := db.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + decl)
+	if err != nil && strings.Contains(err.Error(), "duplicate column") {
+		return nil
+	}
+	return err
 }
 
 func (e *Engine) Close() error {
@@ -891,13 +901,16 @@ func (e *Engine) GetThread(rootID uint64) ([]*model.Post, error) {
 // Crossposts (Shares / 轉錄追蹤)
 // -----------------------------------------------------------------------------
 
-// AddCrosspost records that a post was cross-posted to a target community
-func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64) (*model.CrosspostRecord, int, error) {
-	srcPost, err := e.GetPostByCommunityFile(srcCommunity, srcPostFile)
-	if err != nil {
-		return nil, 0, fmt.Errorf("source post not found: %w", err)
-	}
+// AddCrosspost records that a post was cross-posted to a target community.
+// The record is kept with the original: a crosspost of a crosspost is one
+// of the original (see resolveCrosspostRoot).
+func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64, exempt bool) (*model.CrosspostRecord, int, error) {
+	return addCrosspost(e, srcCommunity, srcPostFile, targetCommunity, targetPostFile, creatorName, creatorID, createdAt, exempt)
+}
 
+// addCrosspostAt records a crosspost of post srcID of this engine and
+// returns it with the crosspost count of the post.
+func (e *Engine) addCrosspostAt(srcID uint64, targetCommunity, targetPostFile, creatorName string, creatorID model.PersonID, createdAt int64, exempt bool) (*model.CrosspostRecord, int, error) {
 	if createdAt == 0 {
 		createdAt = time.Now().Unix()
 	}
@@ -910,14 +923,14 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 	// 1. Insert into SQLite crossposts table
 	e.metaWriteMu.Lock()
 	defer e.metaWriteMu.Unlock()
-	existing, err := e.crosspostEntries(srcPost.ID)
+	existing, err := e.crosspostEntries(srcID)
 	if err != nil {
 		return nil, 0, err
 	}
 	res, err := e.metaDB.Exec(`
-		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, srcPost.ID, targetID, targetPostFile, creatorName, creatorID, createdAt)
+		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at, bbs_exempt)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, srcID, targetID, targetPostFile, creatorName, creatorID, createdAt, boolToInt(exempt))
 	if err != nil {
 		return nil, 0, fmt.Errorf("insert crosspost failed: %w", err)
 	}
@@ -927,28 +940,28 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 	}
 
 	// 2. Increment num_crossposts in posts table
-	if _, err := e.metaDB.Exec(`UPDATE posts SET num_crossposts = num_crossposts + 1 WHERE id = ?`, srcPost.ID); err != nil {
+	if _, err := e.metaDB.Exec(`UPDATE posts SET num_crossposts = num_crossposts + 1 WHERE id = ?`, srcID); err != nil {
 		return nil, 0, fmt.Errorf("update num_crossposts failed: %w", err)
 	}
 
 	var newCount int
-	_ = e.metaDB.QueryRow(`SELECT num_crossposts FROM posts WHERE id = ?`, srcPost.ID).Scan(&newCount)
-	srcPost.NumCrossposts = newCount
+	_ = e.metaDB.QueryRow(`SELECT num_crossposts FROM posts WHERE id = ?`, srcID).Scan(&newCount)
 
 	rec := &model.CrosspostRecord{
 		ID:                uint64(id),
-		SourcePostID:      srcPost.ID,
+		SourcePostID:      srcID,
 		TargetCommunityID: targetID,
 		TargetCommunity:   e.reg.Name(targetID),
 		TargetPostFile:    targetPostFile,
 		CreatorName:       creatorName,
 		CreatorID:         creatorID,
 		CreatedAt:         createdAt,
+		BBSExempt:         exempt,
 	}
 
 	// 3. Write to Pebble (Source of truth), after the last record: the
 	// count is not a free sequence number once records are merged.
-	cKey := model.EncodeCrosspostKey(srcPost.ID, lastCrosspostSeq(existing)+1)
+	cKey := model.EncodeCrosspostKey(srcID, lastCrosspostSeq(existing)+1)
 	cVal := model.EncodeRFC822Crosspost(rec)
 	if err := e.postsDB.Set(cKey, cVal, pebble.Sync); err != nil {
 		return nil, 0, fmt.Errorf("set pebble crosspost failed: %w", err)
@@ -965,7 +978,7 @@ func (e *Engine) GetCrossposts(community, postFile string) ([]*model.CrosspostRe
 	}
 
 	rows, err := e.metaDB.Query(`
-		SELECT id, source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at
+		SELECT id, source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at, bbs_exempt
 		FROM crossposts WHERE source_post_id = ? ORDER BY id ASC
 	`, post.ID)
 	if err != nil {
@@ -976,7 +989,7 @@ func (e *Engine) GetCrossposts(community, postFile string) ([]*model.CrosspostRe
 	var records []*model.CrosspostRecord
 	for rows.Next() {
 		var r model.CrosspostRecord
-		if err := rows.Scan(&r.ID, &r.SourcePostID, &r.TargetCommunityID, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt); err != nil {
+		if err := rows.Scan(&r.ID, &r.SourcePostID, &r.TargetCommunityID, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt, &r.BBSExempt); err != nil {
 			return nil, err
 		}
 		r.TargetCommunity = e.reg.Name(r.TargetCommunityID)
@@ -993,9 +1006,9 @@ func (e *Engine) GetOriginPost(targetCommunity, targetPostFile string) (*model.P
 	}
 	var r model.CrosspostRecord
 	err := e.metaDB.QueryRow(`
-		SELECT id, source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at
+		SELECT id, source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at, bbs_exempt
 		FROM crossposts WHERE target_community_id = ? AND target_post_file = ?
-	`, targetID, model.CanonicalPostFile(targetPostFile)).Scan(&r.ID, &r.SourcePostID, &r.TargetCommunityID, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt)
+	`, targetID, model.CanonicalPostFile(targetPostFile)).Scan(&r.ID, &r.SourcePostID, &r.TargetCommunityID, &r.TargetPostFile, &r.CreatorName, &r.CreatorID, &r.CreatedAt, &r.BBSExempt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, nil
@@ -3151,8 +3164,8 @@ func (e *Engine) importPostBatch(batch []*ImportedPostData, renderTarget string,
 	defer tx.Rollback()
 
 	stmtCP, err := tx.Prepare(`
-		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at, bbs_exempt)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return fmt.Errorf("prepare insert crosspost failed: %w", err)
@@ -3213,7 +3226,7 @@ func (e *Engine) importPostBatch(batch []*ImportedPostData, renderTarget string,
 			if knownCrosspost(existing, cp) {
 				continue
 			}
-			cpRes, cpErr := stmtCP.Exec(p.ID, cp.TargetCommunityID, cp.TargetPostFile, cp.CreatorName, cp.CreatorID, cp.CreatedAt)
+			cpRes, cpErr := stmtCP.Exec(p.ID, cp.TargetCommunityID, cp.TargetPostFile, cp.CreatorName, cp.CreatorID, cp.CreatedAt, boolToInt(cp.BBSExempt))
 			if cpErr == nil {
 				cpID, _ := cpRes.LastInsertId()
 				cp.ID = uint64(cpID)
