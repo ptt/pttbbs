@@ -32,7 +32,7 @@
 #define UF_CURSOR_STANDOUT  0x01000000	// true to standout entire cursor line.
 // #define UF_CURSOR_ASCII  0x02000000  // DEPRECATED. Was default true.
 #define UF_CURSOR_LEGACY    0x04000000	// true to use the legacy style cursor.
-// #define UF_???	    0x08000000	// reserved
+#define UF_LEGACY_RECOMMEND 0x08000000	// true to vote+comment together on X/%
 // #define UF_???	    0x10000000	// reserved
 // #define UF_???	    0x20000000	// reserved
 // #define UF_???	    0x40000000	// reserved

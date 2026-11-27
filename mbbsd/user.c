@@ -565,6 +565,11 @@ static const CustomItem items[] = { {
         .desc = "COMMENT    留言色彩主題",
         .getter = comment_theme_getter,
         .setter = comment_theme_setter,
+#if IS_ENABLED(CONFIG_RATING)
+    }, {
+        .desc = "COMMENT    傳統推文模式",
+        .flag = UF_LEGACY_RECOMMEND,
+#endif
     }, {
         .desc = "ANGEL      小天使神諭呼叫器: ",
         .perm = PERM_ANGEL,

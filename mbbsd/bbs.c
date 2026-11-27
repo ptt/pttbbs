@@ -2937,6 +2937,48 @@ edit_title(int ent, fileheader_t * fhdr, const char *direct)
 }
 
 
+static bool
+has_voted_post(int ent, const fileheader_t *fhdr, const char *direct)
+{
+    if (!BOF_FILES_ARE_CACHE || (fhdr->upvote == 0 && fhdr->downvote == 0))
+        return false;
+
+    bof_actor_t me = bof_me();
+    bof_post_like_t one, *votes = NULL;
+    bof_list_post_likes_t req = { .post = bof_ref(direct, ent, fhdr), .limit = 1 };
+    bof_list_post_likes_response_t res = { .post_likes = &one };
+    if (bof_list_post_likes(&me, &req, &res) != BOF_OK || res.bbs_total <= 0)
+        return false;
+
+    int count = res.count;
+    const bof_post_like_t *list = &one;
+    if (res.bbs_total > 1) {
+        votes = calloc(res.bbs_total, sizeof(*votes));
+        if (!votes)
+            return false;
+        req.limit = res.bbs_total;
+        res.post_likes = votes;
+        res.count = 0;
+        if (bof_list_post_likes(&me, &req, &res) != BOF_OK) {
+            free(votes);
+            return false;
+        }
+        count = res.count;
+        list = votes;
+    }
+
+    bool voted = false;
+    for (int i = 0; i < count; i++) {
+        if (list[i].score != 0 &&
+            strcasecmp(list[i].creator, cuser.userid) == 0) {
+            voted = true;
+            break;
+        }
+    }
+    free(votes);
+    return voted;
+}
+
 int
 comment(int ent, fileheader_t * fhdr, const char *direct)
 {
@@ -2958,7 +3000,8 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 		       "給它噓聲",
 		       "只加→註解",
 		   };
-    int             type, maxlength;
+    int             type, maxlength, legacy_vote = 0;
+    bool            already_voted = false;
     boardheader_t  *bp;
     static time4_t  lastcomment = 0;
     static char lastcomment_fname[FNSIZE] = "";
@@ -3094,10 +3137,39 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     // has new recommends or not.
     // so, make them happy here.
     if (IS_ENABLED(CONFIG_RATING)) {
-	// With ratings (CONFIG_RATING, always on with nest.svc), a comment
-	// only comments (no vote: RECTYPE_ARROW): pushes and boos are the
-	// ratings of '%' (vote_post()). nest.svc shows it as a plain comment.
+	// With ratings (CONFIG_RATING), comments stay plain (RECTYPE_ARROW).
+	// Under UF_LEGACY_RECOMMEND, ask 1/2/3 first and apply 1/2 via
+	// VotePostRecord() after the comment is saved.
 	type = RECTYPE_ARROW;
+	if ((cuser.uflag & UF_LEGACY_RECOMMEND) &&
+	    (bp->brdattr & BRD_SCORE) && !(currmode & MODE_DIGEST)) {
+	    if (has_voted_post(ent, fhdr, direct)) {
+	        already_voted = true;
+	        if (!IS_ENABLED(CONFIG_NEST)) {
+	            move(ymsg--, 0); clrtoeol();
+	            outs("已評分過，使用留言方式\n");
+	        }
+	    } else {
+	        move(b_lines, 0); clrtoeol();
+	        outs(ANSI_COLOR(1) "您覺得這篇文章 ");
+	        outs(ANSI_COLOR(1;33) "1.值得推薦 ");
+	        if (!(bp->brdattr & BRD_NO_DOWNVOTE))
+	            outs(ANSI_COLOR(1;31) "2.給它噓聲 ");
+	        outs(ANSI_COLOR(1;37) "3.只留言 ");
+	        prints(ANSI_RESET "[%d]? ", RECTYPE_DEFAULT + 1);
+
+	        int ch = vkey();
+	        move(b_lines, 0); clrtoeol();
+	        if (ch == Ctrl('C') || ch == KEY_ESC)
+	            return FULLUPDATE;
+	        if (ch == '2' && !(bp->brdattr & BRD_NO_DOWNVOTE))
+	            legacy_vote = -1;
+	        else if (ch == '3')
+	            legacy_vote = 0;
+	        else
+	            legacy_vote = 1;
+	    }
+	}
     }
     // no matter it is first time or not; with CONFIG_OLD_RECOMMEND the
     // old format is one way counter, so let's relax.
@@ -3232,10 +3304,16 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
         snprintf(prefix, sizeof(prefix), "%s%.*s" ANSI_RESET ":",
                  thm->color_commenter, idlen, myid);
         msg[0] = '\0';
+        const char *prompt = already_voted ?
+            ANSI_COLOR(1;33) "已評分過，使用留言方式" ANSI_RESET "\n"
+            ANSI_COLOR(1;36)
+            "請輸入留言 (可多行，按 TAB 加行，Backspace 刪空行，Ctrl-C 取消)"
+            ANSI_RESET :
+            ANSI_COLOR(1;36)
+            "請輸入留言 (可多行，按 TAB 加行，Backspace 刪空行，Ctrl-C 取消)"
+            ANSI_RESET;
         if (v_multiline_text(msg, sizeof(msg), COMMENT_MAX_LINES,
-                             COMMENT_LINE_LEN, ANSI_COLOR(1;36)
-                             "請輸入留言 (可多行，按 TAB 加行，Backspace 刪空行，Ctrl-C 取消)"
-                             ANSI_RESET, " 留言 ", prefix,
+                             COMMENT_LINE_LEN, prompt, " 留言 ", prefix,
                              VMULTI_NO_SCROLL) <= 0 || !msg[0])
             return FULLUPDATE;  // (it asks to confirm itself)
     } else if (!getdata(b_lines, 0, buf, msg, maxlength, DOECHO))
@@ -3287,6 +3365,9 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     if (CommentAddRecord(bp->brdname, direct, fhdr, ent, type, msg, buf) < 0)
         return DIRCHANGED;
+
+    if (legacy_vote != 0)
+        VotePostRecord(bp->brdname, direct, fhdr, ent, legacy_vote);
 
     if (forced) {
 	bof_modlog_t log;
@@ -3568,8 +3649,8 @@ vote_post(int ent, fileheader_t * fhdr, const char *direct)
     if (!bp)
 	return DONOTHING;
 
-    // Boards that do not rate posts take a comment instead.
-    if (!(bp->brdattr & BRD_SCORE))
+    // Boards that do not rate posts (or users in legacy mode) comment instead.
+    if (!(bp->brdattr & BRD_SCORE) || (cuser.uflag & UF_LEGACY_RECOMMEND))
         return comment(ent, fhdr, direct);
 
     return vote_post_prompt(ent, fhdr, direct, true);
