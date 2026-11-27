@@ -2464,7 +2464,7 @@ func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) 
 			paths = matches
 		}
 		for _, pth := range paths {
-			if b, rErr := readArticleFileLimited(pth); rErr == nil && len(b) > 0 {
+			if b, rErr := ReadArticleFile(pth); rErr == nil && len(b) > 0 {
 				if e.cfg.IsBig5() && !utf8.Valid(b) {
 					p.Content = big5uao.DecodeSGR66(b)
 				} else {
@@ -3569,10 +3569,15 @@ func RenderPostWithComments(p *model.Post, comments []*model.Comment, asBig5 boo
 	return buf.Bytes()
 }
 
-const maxArticleFileSize = 32 * 1024 * 1024 // 32MB
+// MaxArticleFileSize is the most of an article file that is read: above
+// mbbsd's EDIT_SIZE_LIMIT (32MB) of Big5 even in UTF-8, and a guard against
+// corrupted files (sparse ones claim tens of GiB).
+const MaxArticleFileSize = 50 * 1024 * 1024
 
-// readArticleFileLimited reads an article file with sparse detection, NUL truncation, and 32MB limit.
-func readArticleFileLimited(path string) ([]byte, error) {
+// ReadArticleFile reads an article file: only the blocks a sparse file
+// has, up to the first NUL, and at most MaxArticleFileSize, cut at the end
+// of a line.
+func ReadArticleFile(path string) ([]byte, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -3581,15 +3586,15 @@ func readArticleFileLimited(path string) ([]byte, error) {
 	maxRead := fi.Size()
 	if stat, ok := fi.Sys().(*unix.Stat_t); ok {
 		allocated := int64(stat.Blocks) * 512
+		// allocated 0 with a small size may be ext4 inline data.
 		if allocated < maxRead && !(allocated == 0 && maxRead <= 4096) {
 			maxRead = allocated
 		}
 	}
-
-	if maxRead > maxArticleFileSize {
-		maxRead = maxArticleFileSize
+	capped := maxRead > MaxArticleFileSize
+	if capped {
+		maxRead = MaxArticleFileSize
 	}
-
 	if maxRead <= 0 {
 		return []byte{}, nil
 	}
@@ -3604,11 +3609,15 @@ func readArticleFileLimited(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if idx := bytes.IndexByte(rawBytes, 0); idx >= 0 {
 		rawBytes = rawBytes[:idx]
+	} else if capped {
+		// Cut after the last newline, so no character is cut.
+		if i := bytes.LastIndexByte(rawBytes, '\n'); i >= 0 {
+			rawBytes = rawBytes[:i+1]
+		}
+		log.Printf("[nest.svc] %s: %d bytes, truncated to %d", path, fi.Size(), len(rawBytes))
 	}
-
 	return rawBytes, nil
 }
 

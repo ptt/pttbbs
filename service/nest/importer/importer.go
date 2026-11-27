@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -26,65 +25,17 @@ import (
 	"pttbbs/nest/storage"
 )
 
-// MaxArticleFileSize is the absolute upper limit for article file size,
-// aligned with mbbsd/edit.c EDIT_SIZE_LIMIT (32MB).
 const (
-	FileHeaderSize     = 128
-	MaxArticleFileSize = 32 * 1024 * 1024 // 32MB
+	FileHeaderSize = 128
 
 	// Filemode flags in legacy announce (.DIR)
 	FileHide uint16 = 0x0020 // FILE_HIDE: hide, in announce
 	FileBM   uint16 = 0x0040 // FILE_BM: BM only, in announce
 )
 
-// ReadArticleFile reads an article file safely according to PTT BBS rules:
-// (1) Sparse file detection: if allocated blocks * 512 is less than claimed size, cap read to allocated size.
-// (2) NUL truncation: BBS text files never contain NUL bytes; if NUL is found, discard everything from NUL onward.
-// (3) Absolute limit: cap maximum read size to 32MB (EDIT_SIZE_LIMIT).
+// ReadArticleFile reads an article file safely; see storage.ReadArticleFile.
 func ReadArticleFile(path string) ([]byte, error) {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	maxRead := fi.Size()
-	// Rule 1: Sparse file detection
-	if stat, ok := fi.Sys().(*syscall.Stat_t); ok {
-		allocated := int64(stat.Blocks) * 512
-		if allocated < maxRead {
-			// If allocated == 0 and size <= 4096, it could be ext4 inline data
-			if !(allocated == 0 && maxRead <= 4096) {
-				maxRead = allocated
-			}
-		}
-	}
-
-	// Rule 3: 32MB absolute limit
-	if maxRead > MaxArticleFileSize {
-		maxRead = MaxArticleFileSize
-	}
-
-	if maxRead <= 0 {
-		return []byte{}, nil
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	rawBytes, err := io.ReadAll(io.LimitReader(f, maxRead))
-	if err != nil {
-		return nil, err
-	}
-
-	// Rule 2: Truncate at first NUL byte
-	if idx := bytes.IndexByte(rawBytes, 0); idx >= 0 {
-		rawBytes = rawBytes[:idx]
-	}
-
-	return rawBytes, nil
+	return storage.ReadArticleFile(path)
 }
 
 // FileHeader represents the 128-byte BBS fileheader_t
