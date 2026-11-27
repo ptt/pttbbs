@@ -1,7 +1,7 @@
 #include "bbs.h"
 
 #define MAX_ITEM	8	//程 眒ㄩ兜ヘ(item) 计
-#define MAX_ITEM_LEN	30	//程 –兜ヘ
+#define MAX_ITEM_SIZE	30	//程 –兜ヘ
 #define MAX_ITEM_INPUT_LEN  9   //程 –兜ヘ(も笆块)
 #define MAX_SUBJECT_LEN 650	//8*81 = 648 程 肈
 #define NARROW_ITEM_WIDTH   8   // old (narrow) item width
@@ -53,7 +53,7 @@ parse_ticket_header(const char *line, unsigned *gen)
  * or 0 if there is none to buy into or draw. *price gets its price, 0 if
  * ticket.items was read but is broken, or -1 if it could not be opened. */
 static int
-show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
+show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_SIZE],
                  const char *direct, int *price, unsigned *pgen,
                  const boardheader_t * bh)
 {
@@ -95,7 +95,7 @@ show_ticket_data(char betname[MAX_ITEM][MAX_ITEM_LEN],
 	return 0;
     }
     for (count = 0; count < MAX_ITEM; count++) {
-	if (!fgets(betname[count], MAX_ITEM_LEN, fp))
+	if (!fgets(betname[count], MAX_ITEM_SIZE, fp))
 	    break;
 	chomp(betname[count]);
     }
@@ -326,7 +326,7 @@ ticket(int bid)
     int             ch, end = 0;
     int	            n, price, count; /* 潦禦眎计虫基匡兜计 */
     char            path[128], fn_ticket[PATHLEN];
-    char            betname[MAX_ITEM][MAX_ITEM_LEN];
+    char            betname[MAX_ITEM][MAX_ITEM_SIZE];
     boardheader_t  *bh = NULL;
     unsigned        paid_gen = 0;
 
@@ -425,7 +425,7 @@ openticket(int bid)
         return 0;
     char            path[PATHLEN], buf[PATHLEN], outcome[PATHLEN];
     boardheader_t  *bh = getbcache(bid);
-    char            betname[MAX_ITEM][MAX_ITEM_LEN];
+    char            betname[MAX_ITEM][MAX_ITEM_SIZE];
     int             bet, price;
     bignum_t        count;
 

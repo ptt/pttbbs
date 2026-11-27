@@ -34,7 +34,7 @@
 
 typedef struct {
     uint64_t fsize;     // article size after this comment (0: unknown)
-    char     text[IPC_TEXT_LEN];
+    char     text[IPC_TEXT_SIZE];
 } live_comment_t;
 
 typedef struct {
@@ -213,7 +213,7 @@ live_print_banner(live_view_t *v)
 static void
 live_print_text(live_view_t *v, const char *text)
 {
-    char buf[IPC_TEXT_LEN];
+    char buf[IPC_TEXT_SIZE];
     STRLCPY(buf, text);
 
     char *line = buf;

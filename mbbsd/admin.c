@@ -1027,7 +1027,7 @@ m_mod_board(char *bname)
     }
     assert(0<=bid-1 && bid-1<MAX_BOARD);
     vs_hdr("看板設定");
-    char cur_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    char cur_bm[BOARD_MODERATORS_FORMAT_SIZE];
     board_format_moderators(&bh, cur_bm, sizeof(cur_bm));
     prints("看板名稱：%s %s\n看板說明：%s [%s]\n看板bid：%d\n看板GID：%d\n"
 	   "有效板主名單：%s\n"
@@ -1188,8 +1188,8 @@ m_mod_board(char *bname)
 		sort_bcache();
 		log_usies("SetBoard", newbh.brdname);
 
-		char bm_buf1[BOARD_MODERATORS_FORMAT_MAX_LEN];
-		char bm_buf2[BOARD_MODERATORS_FORMAT_MAX_LEN];
+		char bm_buf1[BOARD_MODERATORS_FORMAT_SIZE];
+		char bm_buf2[BOARD_MODERATORS_FORMAT_SIZE];
 		board_format_moderators(&bh, bm_buf1, sizeof(bm_buf1));
 		board_format_moderators(&newbh, bm_buf2, sizeof(bm_buf2));
 		bof_modlog_t log;
@@ -1680,7 +1680,7 @@ m_newbrd(int whatclass, int recover)
     setup_man(&newboard, NULL);
     board_enable_moderator_perms(&newboard);
     outs("\n新板成立");
-    char nb_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    char nb_bm[BOARD_MODERATORS_FORMAT_SIZE];
     board_format_moderators(&newboard, nb_bm, sizeof(nb_bm));
     post_newboard(TEMPFORMAT(STRLEN, "%s %s", newboard.bclass, newboard.desc), newboard.brdname, nb_bm);
     log_usies("NewBoard", newboard.desc);

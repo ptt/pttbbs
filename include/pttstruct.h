@@ -217,7 +217,7 @@ _Static_assert(sizeof(user_t) == 8, "user_t size mismatch");
 
 // TODO(hungte): Increase to 5 when possible.
 #define MAX_BMs         4   /* Up to 4 moderators per board */
-#define BOARD_MODERATORS_FORMAT_MAX_LEN (BRDNAME_SIZE * MAX_BMs)
+#define BOARD_MODERATORS_FORMAT_SIZE (BRDNAME_SIZE * MAX_BMs)
 
 /* TODO 動態更新的欄位不應該跟要寫入檔案的混在一起,
  * 至少用個 struct 包起來之類 */

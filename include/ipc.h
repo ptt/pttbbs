@@ -8,9 +8,9 @@
 #define IPC_MAGIC           0x49504356  /* 'IPCV' */
 #define IPC_VERSION         1
 
-#define IPC_USERID_LEN      16
+#define IPC_USERID_SIZE      16
 #define IPC_TOPIC_LEN       64
-#define IPC_TEXT_LEN        128
+#define IPC_TEXT_SIZE        128
 
 #ifndef IPC_XCHAT_SOCK_PATH
 #define IPC_XCHAT_SOCK_PATH (BBSHOME "/run/xchat.ipc.sock")
@@ -71,7 +71,7 @@ typedef struct {
 
 /* Register payload (IPC_TYPE_REGISTER) */
 typedef struct {
-    char     userid[IPC_USERID_LEN];
+    char     userid[IPC_USERID_SIZE];
     uint32_t pid;
     int32_t  uslot;
 } __attribute__((packed)) ipc_register_t;
@@ -84,13 +84,13 @@ typedef struct {
 
 /* wmsg payload (IPC_TYPE_WMSG_SEND, IPC_TYPE_WMSG_DELIVER) */
 typedef struct {
-    char     from_userid[IPC_USERID_LEN];
-    char     to_userid[IPC_USERID_LEN];
+    char     from_userid[IPC_USERID_SIZE];
+    char     to_userid[IPC_USERID_SIZE];
     uint32_t from_pid;
     int32_t  from_uslot;
     int32_t  msgmode;
     uint32_t timestamp;
-    char     text[IPC_TEXT_LEN];
+    char     text[IPC_TEXT_SIZE];
 } __attribute__((packed)) ipc_wmsg_t;
 
 /* PubSub payload (IPC_TYPE_SUB, IPC_TYPE_UNSUB, IPC_TYPE_PUB, IPC_TYPE_LIVE_COMMENT) */
@@ -98,7 +98,7 @@ typedef struct {
     uint32_t bid;
     uint32_t timestamp;
     aidu_t   aid;
-    char     text[IPC_TEXT_LEN];
+    char     text[IPC_TEXT_SIZE];
     uint64_t fsize;         /* PUB/LIVE_COMMENT: article size right after this
                              * comment was appended (0: unknown). Lets live
                              * readers skip comments they already read from
@@ -107,8 +107,8 @@ typedef struct {
 
 /* Talk payload (IPC_TYPE_TALK_REQ) */
 typedef struct {
-    char     to_userid[IPC_USERID_LEN];
-    char     from_userid[IPC_USERID_LEN];
+    char     to_userid[IPC_USERID_SIZE];
+    char     from_userid[IPC_USERID_SIZE];
     uint32_t from_pid;
     int32_t  from_uslot;
     int32_t  sig;
@@ -119,17 +119,17 @@ typedef struct {
 /* Chat payload (IPC_TYPE_CHAT_MSG) */
 typedef struct {
     char     room[32];
-    char     userid[IPC_USERID_LEN];
-    char     chatid[IPC_USERID_LEN];
+    char     userid[IPC_USERID_SIZE];
+    char     chatid[IPC_USERID_SIZE];
     uint32_t timestamp;
-    char     text[IPC_TEXT_LEN];
+    char     text[IPC_TEXT_SIZE];
 } __attribute__((packed)) ipc_chat_t;
 
 /* Session payload (IPC_TYPE_SESSION_*) */
 typedef struct {
     uint32_t session_id;
-    char     from_userid[IPC_USERID_LEN];
-    char     to_userid[IPC_USERID_LEN];
+    char     from_userid[IPC_USERID_SIZE];
+    char     to_userid[IPC_USERID_SIZE];
     uint16_t session_type;          /* e.g. 1=TALK, 2=CHC, 3=GOMO */
     uint16_t data_len;
     char     data[256];
@@ -137,9 +137,9 @@ typedef struct {
 
 /* Broadcast payload (IPC_TYPE_SYS_BROADCAST) */
 typedef struct {
-    char     from_userid[IPC_USERID_LEN];
+    char     from_userid[IPC_USERID_SIZE];
     uint32_t timestamp;
-    char     text[IPC_TEXT_LEN];
+    char     text[IPC_TEXT_SIZE];
 } __attribute__((packed)) ipc_broadcast_t;
 
 /* Service stats payload (IPC_TYPE_STATS_RESP) */

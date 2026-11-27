@@ -5,7 +5,7 @@
 #include "bbs.h"
 
 #define MAX_ITEM          8
-#define MAX_ITEM_LEN      30
+#define MAX_ITEM_SIZE      30
 #define NARROW_ITEM_WIDTH 10
 typedef long long bignum_t;
 
@@ -22,7 +22,7 @@ int sendalert_uid(int uid, int alert)
 // a line each: "<time> <board> <userid> <count> <item name>". They used to
 // be posted to Security, which only admins read; the board has the result.
 static void
-archive_bets(const char *brdname, char betname[MAX_ITEM][MAX_ITEM_LEN],
+archive_bets(const char *brdname, char betname[MAX_ITEM][MAX_ITEM_SIZE],
              int count, time4_t now)
 {
     char path[PATHLEN], userid[IDLEN + 1];
@@ -103,7 +103,7 @@ static int send_winner_mail(const char *userid, const char *title, const char *b
     return home_mail_end(&hm, BBSMNAME "±m¨é", title, FILE_READ);
 }
 
-static int load_ticket_items_data(const char *direct, char betname[MAX_ITEM][MAX_ITEM_LEN], int *pPrice)
+static int load_ticket_items_data(const char *direct, char betname[MAX_ITEM][MAX_ITEM_SIZE], int *pPrice)
 {
     char genbuf[PATHLEN];
     FILE *fp;
@@ -115,7 +115,7 @@ static int load_ticket_items_data(const char *direct, char betname[MAX_ITEM][MAX
     if ((fp = fopen(genbuf, "r"))) {
         if (fgets(genbuf, sizeof(genbuf), fp) && *genbuf)
             *pPrice = atoi(genbuf);
-        for (i = 0; i < MAX_ITEM && fgets(betname[i], MAX_ITEM_LEN, fp); i++) {
+        for (i = 0; i < MAX_ITEM && fgets(betname[i], MAX_ITEM_SIZE, fp); i++) {
             chomp(betname[i]);
             count++;
         }
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
     char path[PATHLEN];
     setbpath(path, brdname);
 
-    char betname[MAX_ITEM][MAX_ITEM_LEN] = {{0}};
+    char betname[MAX_ITEM][MAX_ITEM_SIZE] = {{0}};
     int price = 100;
     int count = load_ticket_items_data(path, betname, &price);
     if (count <= 0) {

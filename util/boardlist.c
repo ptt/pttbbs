@@ -62,7 +62,7 @@ void dumpdetail(void)
 	printf("$db{'%d.title'} = '%s';\n", bid, skipEscape(bptr->desc));
 	printf("$db{'%d.over18'} = '%d';\n",
 	       bid, (bptr->brdattr & BRD_OVER18) ? 1 : 0);
-	char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
 	board_format_moderators(bptr, bm_buf, sizeof(bm_buf));
 	for( p = bm_buf ; *p != 0 ; ++p )
 	    if( !isalpha(*p) && !isdigit(*p) )

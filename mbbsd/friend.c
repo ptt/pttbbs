@@ -28,7 +28,7 @@ static const char * const friend_list[FRIEND_MAX] = {
 };
 
 /* sized in screen width */
-#define MAX_DESCLEN (40)
+#define MAX_DESC_SIZE (40)
 #define MAX_EXPIRE_MONTH (800)
 
 void
@@ -82,7 +82,7 @@ user_list_add(const char *fpath, const char *uident, const char *des,
 	return 0;
 
     if ((uident[0] > ' ') && !file_exist_entry(fpath, uident)) {
-	char buf[MAX_DESCLEN] = "", buf2[STRLEN];
+	char buf[MAX_DESC_SIZE] = "", buf2[STRLEN];
 	char t_uident[IDLEN + 1];
 
 	/* Thor: avoid uident run away when get data */
@@ -115,8 +115,8 @@ user_list_editdesc(const char *fn, const char *uident, const char *desc_prompt)
 	    if ((genbuf[0] > ' ') && strncmp(genbuf, uident, length))
 		fputs(genbuf, nfp);
 	    else if (!strncmp(genbuf, uident, length)) {
-		char buf[MAX_DESCLEN];
-		getdata(2, 0, desc_prompt, buf, MAX_DESCLEN, DOECHO);
+		char buf[MAX_DESC_SIZE];
+		getdata(2, 0, desc_prompt, buf, MAX_DESC_SIZE, DOECHO);
 		fprintf(nfp, "%-13s%s\n", uident, buf);
 	    }
 	}
@@ -449,7 +449,7 @@ int
 select_special_list(void)
 {
     char genbuf[STRLEN];
-    char title[MAX_DESCLEN];
+    char title[MAX_DESC_SIZE];
 
     for (int i = 0; i < MAX_SPECIAL_LIST; i++) {
 	title[0] = '\0';
@@ -582,7 +582,7 @@ edit_special_list(void)
     char fpath[PATHLEN];
     special_list_path(fpath, idx);
 
-    char list_title[MAX_DESCLEN] = "";
+    char list_title[MAX_DESC_SIZE] = "";
     special_list_get_title(idx, list_title, sizeof(list_title));
 
     char title_buf[64];

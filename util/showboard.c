@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 		"     看板名稱     板主                     類別   中文敘述\n"
 		"     ------------------------------------------------------------------------\n");
 	for (i = 0; i < count; i++) {
-            char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+            char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
             board_format_moderators(&allbrd[i], bm_buf, sizeof(bm_buf));
             printf("%4d %-13s%-24.24s %4.4s %-35.35s\n", i+1, allbrd[i].brdname,
                     bm_buf,
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 	/* print details */
 	boardheader_t b = allbrd[detail_i - 1];
 	printf("brdname(bid):\t%s\n", b.brdname);
-	char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
 	printf("BM:\t%s\n", board_format_moderators(&b, bm_buf, sizeof(bm_buf)));
 	if (b.moderator_notes[0])
 	    printf("moderator_notes:\t%s\n", b.moderator_notes);
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
 	printf("---- children: ---- \n");
 	for (i = 0; i < count; i++) {
 	    if(allbrd[i].gid == detail_i) {
-		char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+		char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
 		board_format_moderators(&allbrd[i], bm_buf, sizeof(bm_buf));
 		printf("%4d %-13s%-5.5s %-25.25s%s\n", 
 			i+1, allbrd[i].brdname, 

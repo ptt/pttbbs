@@ -234,7 +234,7 @@ set_board(void)
 	/* calculate with other title information */
 	int l = 0;
 
-	char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
 	board_format_moderators(&bh, bm_buf, sizeof(bm_buf));
 	if (bh.moderator_notes[0])
 	    SNPRINTF(currBM, "ªO¥D:%s/%s", bm_buf, bh.moderator_notes);
@@ -751,7 +751,7 @@ whereami(void)
          i++)
 	p[i + 1] = getbcache(p[i]->parent);
     j = i;
-    char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
     prints("§Ú¦b­þ?\n%-40.40s %.13s\n", p[j]->desc, board_format_moderators(p[j], bm_buf, sizeof(bm_buf)));
     for (j--; j >= 0; j--)
 	prints("%*s %-13.13s %-37.37s %.13s\n", (i - j) * 2, "",

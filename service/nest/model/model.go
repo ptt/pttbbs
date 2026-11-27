@@ -176,7 +176,7 @@ const (
 // comments merged into it (same author within 3 minutes). PTT-specific:
 // Lemmy, Reddit and Discourse limit a comment by characters (10,000 or more)
 // and merge nothing. 15 keeps a floor within two thirds of a screen (and
-// within what bof and mbbsd hold: BOF_COMMENT_CONTENT_LEN, v_multiline_text)
+// within what bof and mbbsd hold: BOF_COMMENT_CONTENT_SIZE, v_multiline_text)
 // while one floor still takes 99.8% of the runs of comments of 2+ lines on
 // C_Chat and Marginalman.
 const MaxCommentLines = 15

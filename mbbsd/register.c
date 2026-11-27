@@ -1887,7 +1887,7 @@ int regform_estimate_queuesize()
 /////////////////////////////////////////////////////////////////////////////
 
 #define REJECT_REASONS	(5)
-#define REASON_LEN	(60)
+#define REASON_SIZE	(60)
 static const char *reasonstr[REJECT_REASONS] = {
     "請輸入真實姓名",
     "請詳填最高學歷(含入學年度)或服務單位(含單位所在縣市及職稱)",
@@ -2104,7 +2104,7 @@ resolve_reason(char *s, int y, int force)
     outs(reason_prompt); outs("\n");
 
     do {
-	getdata(y+1, 0, "退回原因: ", s, REASON_LEN, DOECHO);
+	getdata(y+1, 0, "退回原因: ", s, REASON_SIZE, DOECHO);
 
 	// convert abbrev reasons (format: single digit, or multiple digites)
 	if (REASON_IN_ABBREV(s[0]))
@@ -2112,7 +2112,7 @@ resolve_reason(char *s, int y, int force)
 	    if (s[1] == 0) // simple replace ment
 	    {
 		strlcpy(s, REASON_EXPANDABBREV(s[0]),
-			REASON_LEN);
+			REASON_SIZE);
 	    } else {
 		// strip until all digites
 		char *p = s;
@@ -2123,7 +2123,7 @@ resolve_reason(char *s, int y, int force)
 		    p++;
 		}
 		strip_blank(s, s);
-		strlcat(s, " [多重原因]", REASON_LEN);
+		strlcat(s, " [多重原因]", REASON_SIZE);
 	    }
 	}
 
@@ -2433,7 +2433,7 @@ ui_display_regform_single(
 	    outs("\n\n\n"); // preserved for prompt
 
 	    getdata(3+2+REJECT_REASONS+1, 0,"退回原因: ",
-		    reason, REASON_LEN, DOECHO);
+		    reason, REASON_SIZE, DOECHO);
 	    if (reason[0] == 0)
 		continue;
 	    // interprete reason
@@ -2457,7 +2457,7 @@ regform2_validate_single(const char *xuid)
     int lfd = 0;
     int tid = 0;
     char uid[IDLEN+1];
-    char rsn[REASON_LEN];
+    char rsn[REASON_SIZE];
     FILE *fpregq = regq_init_pull();
     RegformEntry re;
 
@@ -2543,7 +2543,7 @@ regform2_validate_single(const char *xuid)
 typedef struct {
     RegformEntry *forms;
     char *ans;
-    char (*rejects)[REASON_LEN];
+    char (*rejects)[REASON_SIZE];
     int cforms;
     int *ci;
     int yMsg;
@@ -2604,7 +2604,7 @@ static int
 reg_cmd_next_page(cmd_ctx_t *ctx)
 {
     regform_ctx_t *cx = (regform_ctx_t *)ctx->priv;
-    char rsn[REASON_LEN] = "";
+    char rsn[REASON_SIZE] = "";
     int blanks = 0;
     int i;
 
@@ -2633,7 +2633,7 @@ reg_cmd_next_page(cmd_ctx_t *ctx)
                 continue;
             cx->ans[i] = fill;
             if (fill == 'n')
-                strlcpy(cx->rejects[i], rsn, REASON_LEN);
+                strlcpy(cx->rejects[i], rsn, REASON_SIZE);
         }
     }
 
@@ -2759,7 +2759,7 @@ prompt_regform_ui(void)
 
 static void
 regform_draw_page(const RegformEntry forms[], const char ans[],
-                  const char rejects[][REASON_LEN], int cforms,
+                  const char rejects[][REASON_SIZE], int cforms,
                   int tid, int dryrun, int ci, int yMsg)
 {
     clear();
@@ -2814,7 +2814,7 @@ regform2_validate_page(int dryrun)
     RegformEntry forms [MAX_FORMS_IN_PAGE];
     char ans	[MAX_FORMS_IN_PAGE];
     int  lfds	[MAX_FORMS_IN_PAGE];
-    char rejects[MAX_FORMS_IN_PAGE][REASON_LEN];	// reject reason length
+    char rejects[MAX_FORMS_IN_PAGE][REASON_SIZE];	// reject reason length
     int cforms = 0,	// current loaded forms
 	ci = 0, // cursor index
 	ch = 0,	// input key

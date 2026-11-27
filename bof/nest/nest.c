@@ -1587,7 +1587,7 @@ nest_get_comment_revisions(void *ctx GCC_UNUSED,
     }
     strtok_r(r, "\n", &save);
     while ((line = strtok_r(NULL, "\n", &save)) && out->count < req->limit) {
-        char *f[64], text[BOF_COMMENT_CONTENT_LEN * 3] = "";
+        char *f[64], text[BOF_COMMENT_CONTENT_SIZE * 3] = "";
         int nf = 0, start = 3;
         f[nf++] = line;
         for (char *p = line; *p && nf < 64; p++)

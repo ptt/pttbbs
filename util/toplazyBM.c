@@ -185,7 +185,7 @@ int main(void)
                 memcpy(&allbrd[i], bp, sizeof(boardheader_t));
             }
 
-	    char old_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	    char old_bm[BOARD_MODERATORS_FORMAT_SIZE];
 	    board_format_moderators(bp, old_bm, sizeof(old_bm));
 
 	    // Remove lazy BMs from moderators array
@@ -211,7 +211,7 @@ int main(void)
 		memset(&allbrd[i].moderators[mod_idx], 0, sizeof(user_t));
 	    }
 
-	    char new_bm[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	    char new_bm[BOARD_MODERATORS_FORMAT_SIZE];
 	    board_format_moderators(&allbrd[i], new_bm, sizeof(new_bm));
             printf("board %s: %s -> %s\n",
                     allbrd[i].brdname, old_bm, new_bm);

@@ -809,9 +809,9 @@ user_browse_bm(const char *userid)
 	    prints(" %3d. %-13s [%-4.4s] ", i + 1, bp->brdname, bp->bclass);
 	    vfill(30, VFILL_NO_BORDER, bp->desc);
 	    outc(' ');
-	    char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	    char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
 	    board_format_moderators(bp, bm_buf, sizeof(bm_buf));
-	    char full_bm[BOARD_MODERATORS_FORMAT_MAX_LEN + sizeof(bp->moderator_notes) + 1];
+	    char full_bm[BOARD_MODERATORS_FORMAT_SIZE + sizeof(bp->moderator_notes) + 1];
 	    if (bm_buf[0] && bp->moderator_notes[0])
 		snprintf(full_bm, sizeof(full_bm), "%s/%s", bm_buf, bp->moderator_notes);
 	    else if (bm_buf[0])

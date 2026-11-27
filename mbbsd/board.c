@@ -1652,7 +1652,7 @@ bconfig_header(PSB_CTX *ctx) {
 
     vs_draw_hdr2("看板設定與管理", mode);
 
-    char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
     board_format_moderators(bp, bm_buf, sizeof(bm_buf));
     prints("名稱: " ANSI_COLOR(1;33) "%s" ANSI_RESET
            "  板主: ", bp->brdname);
@@ -2422,9 +2422,9 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
         int d_off = stream_col_offset(40, mb_desc, &d_cols);
         strlcpy(t_desc, mb_desc, d_off + 1);
 
-        char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+        char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
         board_format_moderators(&bh, bm_buf, sizeof(bm_buf));
-        char full_bm[BOARD_MODERATORS_FORMAT_MAX_LEN + sizeof(bh.moderator_notes) + 1];
+        char full_bm[BOARD_MODERATORS_FORMAT_SIZE + sizeof(bh.moderator_notes) + 1];
         if (bm_buf[0] && bh.moderator_notes[0])
             snprintf(full_bm, sizeof(full_bm), "%s/%s", bm_buf, bh.moderator_notes);
         else if (bm_buf[0])
@@ -2520,9 +2520,9 @@ brdlist_renderer(int idx, PSB_CTX *ctx)
     else
         SNPRINTF(col_nuser, ANSI_COLOR(1;31) "%2d" ANSI_RESET " ", bh.nuser);
 
-    char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+    char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
     board_format_moderators(&bh, bm_buf, sizeof(bm_buf));
-    char full_bm[BOARD_MODERATORS_FORMAT_MAX_LEN + sizeof(bh.moderator_notes) + 1];
+    char full_bm[BOARD_MODERATORS_FORMAT_SIZE + sizeof(bh.moderator_notes) + 1];
     if (bm_buf[0] && bh.moderator_notes[0])
         snprintf(full_bm, sizeof(full_bm), "%s/%s", bm_buf, bh.moderator_notes);
     else if (bm_buf[0])

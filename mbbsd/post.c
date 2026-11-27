@@ -134,7 +134,7 @@ CommentAddRecord(const char *board, const char *direct, fileheader_t *fhdr,
         if (bid <= 0 && board && *board)
             bid = get_board_bid(board);
         if (bid > 0 && aid > 0) {
-            char buf[IPC_TEXT_LEN];
+            char buf[IPC_TEXT_SIZE];
             if (!BOF_FILES_ARE_CACHE || res.bbs_merged ||
                 !live_comment_lines(fpath, before, fsize, buf, sizeof(buf)))
                 STRLCPY(buf, formatted);

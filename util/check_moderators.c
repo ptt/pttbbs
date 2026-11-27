@@ -135,7 +135,7 @@ static void scan_and_clean_boards(uint8_t *user_roles, board_stats_t *stats,
         int board_changed = 0;
         int mods_removed_in_board = 0;
 
-        char old_bm[BOARD_MODERATORS_FORMAT_MAX_LEN] = "";
+        char old_bm[BOARD_MODERATORS_FORMAT_SIZE] = "";
         format_moderators_array(bh.moderators, old_bm, sizeof(old_bm));
 
         for (int m = 0; m < MAX_BMs; m++) {
@@ -200,7 +200,7 @@ static void scan_and_clean_boards(uint8_t *user_roles, board_stats_t *stats,
         if (board_changed) {
             stats->boards_cleaned++;
 
-            char new_bm[BOARD_MODERATORS_FORMAT_MAX_LEN] = "";
+            char new_bm[BOARD_MODERATORS_FORMAT_SIZE] = "";
             format_moderators_array(new_mods, new_bm, sizeof(new_bm));
 
             if (!quiet && mods_removed_in_board > 0) {

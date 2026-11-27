@@ -1027,7 +1027,7 @@ bof_error_t bof_create_comment(const bof_actor_t *actor,
  * part). Comments in files have no IDs: they are numbered by their floor,
  * the order among the comments of the post (counting removed ones, whose
  * lines note it), as nest.svc keys them by (post, floor). */
-#define BOF_COMMENT_CONTENT_LEN (1024)
+#define BOF_COMMENT_CONTENT_SIZE (1024)
 
 typedef struct bof_comment_t {
     int bbs_floor;           /* 1-based */
@@ -1036,7 +1036,7 @@ typedef struct bof_comment_t {
     char creator[16];        /* BBS userid */
     /* Without the padding. One line in files; backends that keep comments
      * apart (nest.svc) may give several, separated by '\n'. */
-    char content[BOF_COMMENT_CONTENT_LEN];
+    char content[BOF_COMMENT_CONTENT_SIZE];
     char bbs_tail[64];       /* what follows: where from and when */
     int bbs_width;           /* the room for the content in the line */
     /* Edited (Lemmy's updated is a time; a line keeps only the mark of an
@@ -1151,7 +1151,7 @@ typedef struct bof_comment_revision_t {
     char editor[16];         /* who changed it */
     int deleted;             /* the change took it out (deleted, removed) */
     char reason[64];         /* why, if it was taken out */
-    char content[BOF_COMMENT_CONTENT_LEN];  /* what it said then */
+    char content[BOF_COMMENT_CONTENT_SIZE];  /* what it said then */
 } bof_comment_revision_t;
 
 typedef struct bof_get_comment_revisions_t {

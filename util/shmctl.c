@@ -149,7 +149,7 @@ int listbrd(int argc, char **argv)
 	printf("brdname(bid):\t%s\n", b.brdname);
 	printf("bclass:\t%s\n", b.bclass);
 	printf("desc:\t%s\n", b.desc);
-	char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+	char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
 	printf("BM:\t%s\n", board_format_moderators(&b, bm_buf, sizeof(bm_buf)));
 	if (b.moderator_notes[0])
 	    printf("moderator_notes:\t%s\n", b.moderator_notes);
@@ -207,7 +207,7 @@ int listbrd(int argc, char **argv)
         for (i = 0; i < MAX_BOARD; i++)
         {
             if(bcache[i].gid == di && bcache[i].brdname[0]) {
-                char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+                char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
                 board_format_moderators(&bcache[i], bm_buf, sizeof(bm_buf));
                 printf("%4d %-13s%-5.5s %-25.25s%s\n",
                         i+1, bcache[i].brdname, bcache[i].bclass,
@@ -218,7 +218,7 @@ int listbrd(int argc, char **argv)
     for( i = 0 ; i < MAX_BOARD ; ++i )
     {
 	if(bcache[i].brdname[0]) {
-            char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+            char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
             board_format_moderators(&bcache[i], bm_buf, sizeof(bm_buf));
 	    printf("%03d %-13s%-5.5s %-25.25s%s\n", i+1, bcache[i].brdname, bcache[i].bclass, bm_buf, bcache[i].desc);
         }

@@ -86,7 +86,7 @@ Board AsBoard(int bid, const boardheader_t *bp) {
   b.set_name(strings::b2u(bp->brdname));
   b.set_title(strings::b2u(bp->desc));
   b.set_bclass(strings::b2u(bp->bclass));
-  char bm_buf[BOARD_MODERATORS_FORMAT_MAX_LEN];
+  char bm_buf[BOARD_MODERATORS_FORMAT_SIZE];
   b.set_raw_moderators(strings::b2u(board_format_moderators(bp, bm_buf, sizeof(bm_buf))));
   b.set_parent(bp->parent);
   b.set_num_users(bp->nuser);
