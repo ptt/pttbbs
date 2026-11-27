@@ -79,8 +79,11 @@ type Engine struct {
 	historyDB   *pebble.DB
 	metaDB      *sql.DB
 	metaWriteMu sync.Mutex
-	reg         *CommunityRegistry
-	ownsReg     bool
+	// voteMu makes reading and writing a vote atomic, or two concurrent
+	// votes of one person would both count.
+	voteMu  sync.Mutex
+	reg     *CommunityRegistry
+	ownsReg bool
 
 	// In-memory atomic sequence counters per post
 	seqMu    sync.RWMutex
@@ -1886,6 +1889,8 @@ func (e *Engine) removePostRecord(p *model.Post, keepIncoming, keepCache bool) e
 // known person takes over the vote recorded under its name for an unknown
 // person (legacy votes imported without resolving their voters).
 func (e *Engine) VotePost(postID uint64, personName string, personID model.PersonID, newVote model.VoteType, createdAt int64, ip string) (upDelta, downDelta int, err error) {
+	e.voteMu.Lock()
+	defer e.voteMu.Unlock()
 	key := model.EncodeVoteKey(postID, personID, personName)
 	val, closer, err := e.votesDB.Get(key)
 	var legacyKey []byte
@@ -2001,6 +2006,8 @@ func (e *Engine) GetVotesByCommunityFile(community, postFile string) ([]*model.V
 
 // ResetVotes clears all user votes and resets upvotes and downvotes to 0
 func (e *Engine) ResetVotes(postID uint64) error {
+	e.voteMu.Lock()
+	defer e.voteMu.Unlock()
 	vPrefix := model.EncodeVotePrefix(postID)
 	iter, err := e.votesDB.NewIter(&pebble.IterOptions{
 		LowerBound: vPrefix,
