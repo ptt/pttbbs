@@ -723,7 +723,7 @@ typedef struct {
     int (*selected)(const fileheader_t *fh, int index, void *ctx);
     void (*removed)(const fileheader_t *fh, void *ctx);
     void *ctx;
-    char (*failed)[FNLEN];
+    char (*failed)[FNSIZE];
     int nfailed;
 } kept_posts_t;
 
@@ -733,7 +733,7 @@ select_dropped(const fileheader_t *fh, int index, void *vctx)
     const kept_posts_t *k = vctx;
 
     for (int i = 0; i < k->nfailed; i++)
-        if (strncmp(fh->filename, k->failed[i], FNLEN) == 0)
+        if (strncmp(fh->filename, k->failed[i], FNSIZE) == 0)
             return 0;
     return k->selected(fh, index, k->ctx);
 }
@@ -750,12 +750,12 @@ removed_dropped(const fileheader_t *fh, void *vctx)
 static void
 keep_post(kept_posts_t *k, const fileheader_t *fh)
 {
-    char (*more)[FNLEN] = realloc(k->failed,
+    char (*more)[FNSIZE] = realloc(k->failed,
                                   (k->nfailed + 1) * sizeof(*k->failed));
     if (!more)
         return;
     k->failed = more;
-    strlcpy(k->failed[k->nfailed++], fh->filename, FNLEN);
+    strlcpy(k->failed[k->nfailed++], fh->filename, FNSIZE);
 }
 
 static bof_error_t

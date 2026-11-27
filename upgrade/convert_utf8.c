@@ -520,9 +520,9 @@ convert_dir_index_to(const char *src_dir_file, const char *dst_dir_file,
     int rc = 0;
     fileheader_t fh;
     while (read(fd, &fh, sizeof(fh)) == (ssize_t)sizeof(fh)) {
-        char fn[FNLEN + 1];
-        memcpy(fn, fh.filename, FNLEN);
-        fn[FNLEN] = '\0';
+        char fn[FNSIZE + 1];
+        memcpy(fn, fh.filename, FNSIZE);
+        fn[FNSIZE] = '\0';
 
         convert_fileheader(&fh);
         if (buf_append(&dir_out, &fh, sizeof(fh)) < 0) {

@@ -414,7 +414,7 @@ char *aidu2aidc(char *buf, const aidu_t orig_aidu)
 }
 
 /* IMPORTANT:
- *   size of fn must be at least FNLEN bytes
+ *   size of fn must be at least FNSIZE bytes
  */
 char *aidu2fn(char *fn, const aidu_t aidu)
 {
@@ -424,7 +424,7 @@ char *aidu2fn(char *fn, const aidu_t aidu)
 
   if(fn == NULL)
     return NULL;
-  snprintf(fn, FNLEN, "%c.%d.A.%03X", ((type == 0) ? 'M' : 'G'), (unsigned int)v1, (unsigned int)v2);
+  snprintf(fn, FNSIZE, "%c.%d.A.%03X", ((type == 0) ? 'M' : 'G'), (unsigned int)v1, (unsigned int)v2);
   return fn;
 }
 

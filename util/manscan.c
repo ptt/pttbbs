@@ -36,7 +36,7 @@ typedef struct {
 } board_t;
 
 typedef struct {
-    char filename[FNLEN];
+    char filename[FNSIZE];
     char title[TTLEN + 1];
     uint64_t dirs;      /* the empty directory itself included */
     int depth;
@@ -160,7 +160,7 @@ static int drop_records(const char *path, empty_t *list, int n)
         idx++;
         for (i = 0; i < n; i++) {
             if (list[i].filename[0] &&
-                !strncmp(fh.filename, list[i].filename, FNLEN)) {
+                !strncmp(fh.filename, list[i].filename, FNSIZE)) {
                 drop = 1;
                 break;
             }
@@ -259,11 +259,11 @@ static void scan(const char *path, int depth, tree_t *t)
             continue;
         /* Bad names (".", "..", ".DIR", "a/b") would loop or point at
          * index files: neither files nor directories. */
-        if (fh.filename[0] == '.' || memchr(fh.filename, '/', FNLEN)) {
+        if (fh.filename[0] == '.' || memchr(fh.filename, '/', FNSIZE)) {
             cur.bad++;
             continue;
         }
-        if (snprintf(sub, sizeof(sub), "%s/%.*s", path, FNLEN, fh.filename)
+        if (snprintf(sub, sizeof(sub), "%s/%.*s", path, FNSIZE, fh.filename)
             >= (int)sizeof(sub)) {
             t->unknown = 1;
             continue;
@@ -313,7 +313,7 @@ static void scan(const char *path, int depth, tree_t *t)
                 exit(1);
             }
         }
-        strlcpy(empty[nempty].filename, fh.filename, FNLEN);
+        strlcpy(empty[nempty].filename, fh.filename, FNSIZE);
         strlcpy(empty[nempty].title, fh.title, sizeof(empty[nempty].title));
         empty[nempty].dirs = child.dirs + 1;
         empty[nempty].depth = child.depth + 1;

@@ -103,7 +103,7 @@ bof_bbs_valid_post_file(const char *name)
         if (!isalnum(ch) && ch != '.' && ch != '_' && ch != '-')
             return 0;
     }
-    return n < FNLEN;
+    return n <= FNLEN;
 }
 
 // Whether a file name given by any caller cannot leave its list: no '/',
@@ -114,7 +114,7 @@ safe_post_file(const char *name)
 {
     if (strcmp(name, FN_SAFEDEL) == 0)
         return 1;
-    return !strchr(name, '/') && name[0] != '.' && strlen(name) < FNLEN;
+    return !strchr(name, '/') && name[0] != '.' && strlen(name) <= FNLEN;
 }
 
 // Whether path has no way up ("..").

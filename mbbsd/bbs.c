@@ -2848,7 +2848,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     int             type, maxlength;
     boardheader_t  *bp;
     static time4_t  lastcomment = 0;
-    static char lastcomment_fname[FNLEN] = "";
+    static char lastcomment_fname[FNSIZE] = "";
     int logIP = 0;
     int ymsg = b_lines -1;
     const char *reason = "Åv­­¤£¨¬";

@@ -8,7 +8,7 @@
 /* ----------------------------------------------------- */
 struct TagItem {
     // TODO use aid_t
-    char filename[FNLEN];
+    char filename[FNSIZE];
 };
 
 static struct TagItem *TagList = NULL;	/* ascending list */

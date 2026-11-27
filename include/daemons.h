@@ -211,7 +211,7 @@ typedef struct CommentBodyReq {
 
 typedef struct CommentKeyReq {
     char board[BRDNAME_SIZE];
-    char file[FNLEN + 1];
+    char file[LEGACY_FNSIZE + 1];  /* as older binaries send it */
 } PACKSTRUCT CommentKeyReq;
 
 typedef struct {

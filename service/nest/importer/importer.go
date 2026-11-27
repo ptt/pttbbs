@@ -114,7 +114,7 @@ func UnpackFileHeader(buf []byte) (*FileHeader, error) {
 	if len(buf) < FileHeaderSize {
 		return nil, io.ErrUnexpectedEOF
 	}
-	fn := cString(buf[0:28])
+	fn := cString(buf[0:22]) // FNSIZE; 22..28 are reserved
 	mod := binary.LittleEndian.Uint32(buf[28:32])
 	score := int16(binary.LittleEndian.Uint16(buf[32:34]))
 	downvote := buf[32]

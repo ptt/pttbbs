@@ -2269,7 +2269,7 @@ pvrb_renderer(int i, PSB_CTX *ctx) {
 static int
 pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
     fileheader_t *fh;
-    static char search_str[FNLEN] = "";
+    static char search_str[FNSIZE] = "";
     static char search_cmd = 0;
     const char *prompt = "";
     const char *aid_str = NULL;
@@ -2297,9 +2297,9 @@ pvrb_search(char key, int curr, int total, pvrb_ctx *cx) {
         return PSB_NA;
     }
 
-    assert(sizeof(search_str) >= FNLEN);
+    assert(sizeof(search_str) >= FNSIZE);
     if (need_input &&
-        getdata(b_lines-1, 0, prompt, search_str, FNLEN, DOECHO) < 1)
+        getdata(b_lines-1, 0, prompt, search_str, FNSIZE, DOECHO) < 1)
         return PSB_NA;
 
     // cache for next cache.

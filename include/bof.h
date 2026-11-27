@@ -490,8 +490,8 @@ typedef struct bof_post_key_t {
 } bof_post_key_t;
 
 /* PTT: whether name can be the file name of a post (as the BBS names
- * them: a letter, then letters, digits, '.', '_' or '-', shorter than
- * FNLEN), e.g. for a key from a gateway. */
+ * them: a letter, then letters, digits, '.', '_' or '-', up to FNLEN
+ * long), e.g. for a key from a gateway. */
 int bof_bbs_valid_post_file(const char *name);
 
 /* The ID of a post (Lemmy's post.id). Errors: couldnt_find_post,

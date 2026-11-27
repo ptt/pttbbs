@@ -22,7 +22,7 @@ import (
 // Layout of fileheader_t (include/pttstruct.h).
 const (
 	fhdrOffFilename = 0
-	fhdrLenFilename = 28 // FNLEN
+	fhdrLenFilename = 22 // FNSIZE; then 6 reserved bytes, to LEGACY_FNSIZE (28)
 	fhdrOffModified = 28
 	fhdrOffScore    = 32
 	fhdrOffOwner    = 34

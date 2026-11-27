@@ -55,7 +55,7 @@ void cleanSR(char *brdname)
 
 // The posts expire() purges, by their file names (sorted).
 typedef struct {
-    char (*names)[FNLEN];
+    char (*names)[FNSIZE];
     int n;
 } purge_set_t;
 
@@ -69,13 +69,13 @@ static int
 purge_selected(const fileheader_t *fh, int index GCC_UNUSED, void *ctx)
 {
     const purge_set_t *set = ctx;
-    char name[FNLEN];
+    char name[FNSIZE];
 
     // Marked (or pinned) since it was picked: kept, as when picking.
     if (fh->owner[0] != '-' && (fh->filemode & (FILE_MARKED | FILE_BOTTOM)))
         return 0;
     strlcpy(name, fh->filename, sizeof(name));
-    return bsearch(name, set->names, set->n, FNLEN, cmp_name) != NULL;
+    return bsearch(name, set->names, set->n, FNSIZE, cmp_name) != NULL;
 }
 
 void expire(life_t *brd)
@@ -113,7 +113,7 @@ void expire(life_t *brd)
     fseek(fp, 0, SEEK_END);
     total = ftell(fp) / sizeof(head);
     rewind(fp);
-    set.names = calloc(total > 0 ? total : 1, FNLEN);
+    set.names = calloc(total > 0 ? total : 1, FNSIZE);
     if (!set.names) {
 	fclose(fp);
 	return;
@@ -139,7 +139,7 @@ void expire(life_t *brd)
 	    continue;
 	}
 	++nDelete;
-	strlcpy(set.names[set.n++], head.filename, FNLEN);
+	strlcpy(set.names[set.n++], head.filename, FNSIZE);
 	if (checkmode && head.filename[0]) {
 	    setbfile(fpath, brd->bname, head.filename);
 	    callrm(fpath);
@@ -154,7 +154,7 @@ void expire(life_t *brd)
 	    .bbs_selected = purge_selected, .bbs_ctx = &set, .reason = "expire",
 	};
 	int n = 0;
-	qsort(set.names, set.n, FNLEN, cmp_name);
+	qsort(set.names, set.n, FNSIZE, cmp_name);
 	if (bof_purge_posts(&sys, &req, &n) == BOF_OK) {
 	    nDelete = n;
 	    touchbtotal(bid);

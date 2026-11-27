@@ -798,7 +798,7 @@ setbtotal(int bid)
 
     if (num > 0) {
 	lseek(fd, (off_t) (num - 1) * sizeof(fileheader_t), SEEK_SET);
-	if (read(fd, genbuf, FNLEN) >= 0) {
+	if (read(fd, genbuf, FNSIZE) >= 0) {
 	    SHM->lastposttime[bid - 1] = get_fhdr_stamp_ts(genbuf);
 	}
     } else

@@ -200,9 +200,9 @@ process_dir_file(const char *dirpath_file, upgrade_file_handler_fn handler)
 
     fileheader_t fh;
     while (read(fd, &fh, sizeof(fh)) == (ssize_t)sizeof(fh)) {
-        char fn[FNLEN + 1];
-        memcpy(fn, fh.filename, FNLEN);
-        fn[FNLEN] = '\0';
+        char fn[FNSIZE + 1];
+        memcpy(fn, fh.filename, FNSIZE);
+        fn[FNSIZE] = '\0';
 
         if (fn[0] == '\0' || strcmp(fn, ".") == 0 || strcmp(fn, "..") == 0)
             continue;

@@ -125,7 +125,7 @@ should_remove(const char *index_path, int index, const fileheader_t *fh,
 
 // The posts to remove, by their file names (sorted).
 typedef struct {
-    char (*names)[FNLEN];
+    char (*names)[FNSIZE];
     int n;
 } remove_set_t;
 
@@ -139,10 +139,10 @@ static int
 is_selected(const fileheader_t *fh, int index GCC_UNUSED, void *ctx)
 {
     const remove_set_t *set = ctx;
-    char name[FNLEN];
+    char name[FNSIZE];
 
     strlcpy(name, fh->filename, sizeof(name));
-    return bsearch(name, set->names, set->n, FNLEN, cmp_name) != NULL;
+    return bsearch(name, set->names, set->n, FNSIZE, cmp_name) != NULL;
 }
 
 // Picks the posts to remove (and prints them). Returns how many, or -1.
@@ -162,7 +162,7 @@ pick(const char *index_path, remove_set_t *set, int *pkeep)
     total = ftell(fin) / sizeof(fh);
     rewind(fin);
     set->n = 0;
-    set->names = calloc(total > 0 ? total : 1, FNLEN);
+    set->names = calloc(total > 0 ? total : 1, FNSIZE);
     if (!set->names) {
         fclose(fin);
         return -1;
@@ -180,10 +180,10 @@ pick(const char *index_path, remove_set_t *set, int *pkeep)
         printf("%s: %lld[%s] %s\n", file_path,
                (long long)time4_to_time(fh.modified),
                Cdate_mdHMS(&fh.modified), fh.title);
-        strlcpy(set->names[set->n++], fh.filename, FNLEN);
+        strlcpy(set->names[set->n++], fh.filename, FNSIZE);
     }
     fclose(fin);
-    qsort(set->names, set->n, FNLEN, cmp_name);
+    qsort(set->names, set->n, FNSIZE, cmp_name);
     return set->n;
 }
 

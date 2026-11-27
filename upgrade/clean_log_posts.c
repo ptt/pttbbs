@@ -138,7 +138,7 @@ usage(const char *prog)
 
 // A post picked to move.
 typedef struct {
-    char filename[FNLEN];
+    char filename[FNSIZE];
     const log_kind_t *kind;
     int archived;
 } item_t;
@@ -299,8 +299,8 @@ static int
 prune_dir(const char *board, const char *dir_path, const item_t *items,
           int nitems)
 {
-    char (*names)[FNLEN] = calloc(nitems ? nitems : 1, FNLEN);
-    char lock_path[PATHLEN], path[PATHLEN], name[FNLEN];
+    char (*names)[FNSIZE] = calloc(nitems ? nitems : 1, FNSIZE);
+    char lock_path[PATHLEN], path[PATHLEN], name[FNSIZE];
     fileheader_t *recs = NULL;
     int n = 0, nrecs, kept = 0, removed = 0, fd = -1, lock_fd = -1;
     struct stat st;
@@ -309,12 +309,12 @@ prune_dir(const char *board, const char *dir_path, const item_t *items,
         return -1;
     for (int i = 0; i < nitems; i++)
         if (items[i].archived)
-            strlcpy(names[n++], items[i].filename, FNLEN);
+            strlcpy(names[n++], items[i].filename, FNSIZE);
     if (!n) {
         free(names);
         return 0;
     }
-    qsort(names, n, FNLEN, cmp_name);
+    qsort(names, n, FNSIZE, cmp_name);
 
     snprintf(lock_path, sizeof(lock_path), "%s.lock", dir_path);
     if ((lock_fd = OpenCreate(lock_path, O_RDWR | O_APPEND)) < 0 ||
@@ -334,7 +334,7 @@ prune_dir(const char *board, const char *dir_path, const item_t *items,
     }
     for (int i = 0; i < nrecs; i++) {
         strlcpy(name, recs[i].filename, sizeof(name));
-        if (bsearch(name, names, n, FNLEN, cmp_name)) {
+        if (bsearch(name, names, n, FNSIZE, cmp_name)) {
             setbfile(path, board, name);
             unlink(path);
             removed++;
@@ -497,7 +497,7 @@ main(int argc, char **argv)
                 return 1;
             }
             items[nitems] = (item_t){ .kind = kind };
-            strlcpy(items[nitems].filename, fh.filename, FNLEN);
+            strlcpy(items[nitems].filename, fh.filename, FNSIZE);
             nitems++;
         }
         close(fd);

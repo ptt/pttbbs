@@ -2119,7 +2119,7 @@ static int
 unread_position(char *dirfile, boardstat_t * ptr)
 {
     fileheader_t    fh;
-    char            fname[FNLEN];
+    char            fname[FNSIZE + 1] = "";  /* read() leaves the NUL */
     register int    num, fd, step, total;
 
     total = B_TOTAL(ptr);
@@ -2133,7 +2133,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
 	    step = 4;
 	    while (num > 0) {
 		lseek(fd, (off_t) (num * sizeof(fh)), SEEK_SET);
-		if (read(fd, fname, FNLEN) <= 0 ||
+		if (read(fd, fname, FNSIZE) <= 0 ||
 		    !brc_unread(ptr->bid, fname, 0))
 		    break;
 		num -= step;
@@ -2144,7 +2144,7 @@ unread_position(char *dirfile, boardstat_t * ptr)
 		num = 0;
 	    while (num < total) {
 		lseek(fd, (off_t) (num * sizeof(fh)), SEEK_SET);
-		if (read(fd, fname, FNLEN) <= 0 ||
+		if (read(fd, fname, FNSIZE) <= 0 ||
 		    brc_unread(ptr->bid, fname, 0))
 		    break;
 		num++;

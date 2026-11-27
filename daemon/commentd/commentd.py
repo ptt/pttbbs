@@ -13,7 +13,7 @@ import plyvel
 
 # Ref: ../../include/pttstruct.h
 IDLEN = 12
-FNLEN = 28
+LEGACY_FNSIZE = 28  # fileheader_t.filename was FNSIZE (28); IPC keeps it
 COMMENTLEN = 80
 
 
@@ -23,9 +23,9 @@ Request = collections.namedtuple('Request', 'cb operation')
 CommentFormatString = "IIII%ds%ds" % (IDLEN + 1, COMMENTLEN + 1)
 Comment = collections.namedtuple('Comment',
         'time ipv4 userref type userid msg')
-CommentKeyFormatString = '%ds%ds' % (IDLEN + 1, FNLEN + 1)
+CommentKeyFormatString = '%ds%ds' % (IDLEN + 1, LEGACY_FNSIZE + 1)
 CommentKey = collections.namedtuple('CommentKey', 'board file')
-QueryFormatString = 'I%ds%ds' % (IDLEN + 1, FNLEN + 1)
+QueryFormatString = 'I%ds%ds' % (IDLEN + 1, LEGACY_FNSIZE + 1)
 Query = collections.namedtuple('Query', 'start board file')
 REQ_ADD = 1
 REQ_QUERY_COUNT = 2

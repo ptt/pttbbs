@@ -160,12 +160,14 @@ BRD_RATING             = 0x20000000      # 開放評分
 BRD_COMMENT_READONLY   = 0x40000000      # 禁刪改留言
 
 
-FNLEN = 28  # Length of filename
+FNSIZE = 22  # Size of filename, with its NUL
+LEGACY_FNSIZE = 28  # filename was this long; the rest is reserved
 TTLEN = 64  # Length of title
 DISP_TTLEN = 46
 
 FILEHEADER_FMT = (
-        ("filename", "%ds" % FNLEN),
+        ("filename", "%ds" % FNSIZE),
+        ("reserved", "%ds" % (LEGACY_FNSIZE - FNSIZE)),
         ("modified", "I"),
         ("rating", "h"),
         ("owner", "%ds" % (IDLEN + 2)),

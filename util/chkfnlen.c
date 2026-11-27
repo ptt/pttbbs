@@ -13,6 +13,12 @@
 #define MAX_SCAN_PATH 4096
 #define CHUNK_RECORDS 64
 
+/* Names are checked over all that fileheader_t.filename was (LEGACY_FNSIZE:
+ * filename, then reserved): older binaries may still write names that long,
+ * and reserved must stay zero for them. */
+#define NAME_SPAN LEGACY_FNSIZE
+#define FH_NAME(fh) ((char *)(fh)->filename)
+
 typedef struct {
     uint64_t total_dirs;
     uint64_t empty_dirs;
@@ -20,9 +26,9 @@ typedef struct {
     uint64_t invalid_size_dirs;
     uint64_t count_gt_threshold;
     uint64_t count_eq_threshold;
-    uint64_t len_hist[FNLEN + 1];
+    uint64_t len_hist[NAME_SPAN + 1];
     int max_len;
-    char max_len_fn[FNLEN + 1];
+    char max_len_fn[NAME_SPAN + 1];
     char max_len_path[MAX_SCAN_PATH];
     int max_len_idx;
 
@@ -37,6 +43,10 @@ typedef struct {
     uint64_t shortened;
     uint64_t shorten_aid_changed;
     uint64_t shorten_skipped;
+    /* --clear-reserved: records with reserved not 0 */
+    uint64_t need_clear_reserved;
+    uint64_t cleared_reserved;
+    uint64_t reserved_long;     /* the name runs into reserved */
     /* Records with bad names left alone, as a file has that name. */
     uint64_t bad_name_file_exists;
     /* --prune-missing: announce and mail records without their file */
@@ -96,7 +106,7 @@ static void mark_visited_dir(dev_t dev, ino_t ino)
     ino_hash_table[idx] = node;
 }
 
-static int opt_threshold = 20;
+static int opt_threshold = FNLEN;   /* longest name that fits */
 static int opt_verbose = 0;
 static int opt_quiet = 0;
 static int opt_all = 0;
@@ -108,6 +118,7 @@ static int opt_include_backup = 0;
 static int opt_include_digest = 0;
 static int opt_rename = 0;
 static int opt_prune_missing = 0;
+static int opt_clear_reserved = 0;
 static char opt_bbshome[MAX_SCAN_PATH] = "";
 
 /* --rename: the current .DIR's directory and the names its records use or
@@ -116,7 +127,7 @@ static char cur_dirname[MAX_SCAN_PATH];
 /* Whether the .DIR being scanned may be pruned: an announce list or a
  * mailbox, where entries are deleted rather than left as tombstones. */
 static int cur_prunable;
-static char (*cur_names)[FNLEN];
+static char (*cur_names)[NAME_SPAN];
 static size_t cur_nnames, cur_cap;
 
 static void print_usage(const char *progname)
@@ -127,7 +138,8 @@ static void print_usage(const char *progname)
     printf("far filename[] could shrink; and warns of a legacy outgoing mail queue (out/.DIR).\n\n");
     printf("Options:\n");
     printf("  -b, --bbshome <dir>     Set BBS home directory (default: BBSHOME or auto-detect)\n");
-    printf("  -t, --threshold <len>   Filename length threshold to check (default: 20)\n");
+    printf("  -t, --threshold <len>   Filename length threshold, without the NUL (default: %d,\n", FNLEN);
+    printf("                            FNLEN; up to %d, LEGACY_FNSIZE)\n", LEGACY_FNSIZE);
     printf("  -r, --repair            Apply repairs to .DIR files (default is dry-run inspection):\n");
     printf("                            1. Bad path (., .., ./, ../, /...) -> tombstone\n");
     printf("                            2. Contains non-ASCII              -> tombstone\n");
@@ -152,6 +164,11 @@ static void print_usage(const char *progname)
     printf("                            not NUL-terminated), as the announce menu and the mailbox\n");
     printf("                            delete entries; instead of tombstones or renames.\n");
     printf("                            Boards are not pruned. Run mandex after.\n");
+    printf("      --clear-reserved    Only zero fileheader_t.reserved (the %d bytes after\n",
+           LEGACY_FNSIZE - FNSIZE);
+    printf("                            filename, which older binaries read as the end of the\n");
+    printf("                            name), nothing else; writes with -r. A name running\n");
+    printf("                            into reserved is reported: rename it with --rename.\n");
     printf("      --boards            Scan only boards/ directory\n");
     printf("      --mail, --home      Scan only home/ (mailboxes) directory\n");
     printf("      --man, --announce   Scan only man/ and man/boards/ directory\n");
@@ -229,6 +246,9 @@ static void merge_stats(section_stats_t *dst, const section_stats_t *src)
     dst->need_repair_trailing += src->need_repair_trailing;
     dst->repaired_renamed += src->repaired_renamed;
     dst->repaired_trailing += src->repaired_trailing;
+    dst->need_clear_reserved += src->need_clear_reserved;
+    dst->cleared_reserved += src->cleared_reserved;
+    dst->reserved_long += src->reserved_long;
     dst->need_shorten += src->need_shorten;
     dst->shortened += src->shortened;
     dst->shorten_aid_changed += src->shorten_aid_changed;
@@ -237,7 +257,7 @@ static void merge_stats(section_stats_t *dst, const section_stats_t *src)
     dst->need_prune += src->need_prune;
     dst->pruned += src->pruned;
 
-    for (int i = 0; i <= FNLEN; i++) {
+    for (int i = 0; i <= NAME_SPAN; i++) {
         dst->len_hist[i] += src->len_hist[i];
     }
     for (size_t i = 0; i < sizeof(fileheader_t); i++) {
@@ -305,7 +325,7 @@ static int is_bad_leading_path(const char *fn, size_t len)
 static int cur_names_has(const char *name)
 {
     for (size_t i = 0; i < cur_nnames; i++) {
-        if (strncmp(cur_names[i], name, FNLEN) == 0)
+        if (strncmp(cur_names[i], name, NAME_SPAN) == 0)
             return 1;
     }
     return 0;
@@ -315,13 +335,13 @@ static void cur_names_add(const char *name)
 {
     if (cur_nnames == cur_cap) {
         size_t cap = cur_cap ? cur_cap * 2 : 1024;
-        char (*more)[FNLEN] = realloc(cur_names, cap * FNLEN);
+        char (*more)[NAME_SPAN] = realloc(cur_names, cap * NAME_SPAN);
         if (!more)
             return;
         cur_names = more;
         cur_cap = cap;
     }
-    strlcpy(cur_names[cur_nnames++], name, FNLEN);
+    strlcpy(cur_names[cur_nnames++], name, NAME_SPAN);
 }
 
 static void cur_names_load(int fd)
@@ -334,9 +354,9 @@ static void cur_names_load(int fd)
     while ((n = pread(fd, buf, sizeof(buf), off)) > 0) {
         size_t count = (size_t)n / sizeof(fileheader_t);
         for (size_t i = 0; i < count; i++) {
-            char name[FNLEN];
-            memcpy(name, buf[i].filename, FNLEN);
-            name[FNLEN - 1] = '\0';
+            char name[NAME_SPAN];
+            memcpy(name, FH_NAME(&buf[i]), NAME_SPAN);
+            name[NAME_SPAN - 1] = '\0';
             if (name[0])
                 cur_names_add(name);
         }
@@ -396,6 +416,19 @@ static int is_printable(const char *s, size_t n)
     return 1;
 }
 
+/* Whether name is made of what the BBS names files of (as
+ * bof_bbs_valid_post_file(), but any length: long names are --rename's). */
+static int is_bbs_name(const char *name)
+{
+    if (!isalpha((unsigned char)name[0]))
+        return 0;
+    for (const char *p = name; *p; p++) {
+        if (!isalnum((unsigned char)*p) && *p != '.' && *p != '_' && *p != '-')
+            return 0;
+    }
+    return 1;
+}
+
 /* Same tombstone as mbbsd's; an unprintable owner is kept out of the title. */
 static void make_tombstone(fileheader_t *fh)
 {
@@ -404,6 +437,7 @@ static void make_tombstone(fileheader_t *fh)
     if (!is_printable(fh->owner, sizeof(fh->owner)) ||
         !memchr(fh->owner, '\0', sizeof(fh->owner)))
         title = STR_SAFEREMOVE_TITLE;
+    memset(FH_NAME(fh), 0, NAME_SPAN);  /* reserved too */
     bof_files_set_tombstone(fh, title, "chkfnlen");
 }
 
@@ -470,12 +504,12 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
         stats->max_title_len = slen;
 
     /* Save original filename for logging/diff */
-    char orig_fn[FNLEN + 1];
-    memcpy(orig_fn, fh->filename, FNLEN);
-    orig_fn[FNLEN] = '\0';
+    char orig_fn[NAME_SPAN + 1];
+    memcpy(orig_fn, FH_NAME(fh), NAME_SPAN);
+    orig_fn[NAME_SPAN] = '\0';
 
-    char orig_escaped[FNLEN * 4 + 1];
-    escape_str(orig_escaped, sizeof(orig_escaped), fh->filename, FNLEN);
+    char orig_escaped[NAME_SPAN * 4 + 1];
+    escape_str(orig_escaped, sizeof(orig_escaped), FH_NAME(fh), NAME_SPAN);
 
     /* Check validity according to repair rules */
     int cond1_bad_path = 0;
@@ -486,23 +520,51 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
     int cond6_non_exist = 0;
     int cond7_bad_chars = 0;
 
-    const char *nul_ptr = memchr(fh->filename, '\0', FNLEN);
+    const char *nul_ptr = memchr(FH_NAME(fh), '\0', NAME_SPAN);
     size_t len = 0;
 
     if (!nul_ptr) {
         cond4_unterminated = 1;
-        len = FNLEN;
+        len = NAME_SPAN;
     } else {
-        len = (size_t)(nul_ptr - fh->filename);
+        len = (size_t)(nul_ptr - FH_NAME(fh));
+    }
+
+    int need_repair = 0;
+
+    // --clear-reserved does only this; other problems are left alone.
+    if (opt_clear_reserved) {
+        int dirty = 0;
+        for (size_t i = FNSIZE; i < NAME_SPAN && !dirty; i++)
+            dirty = FH_NAME(fh)[i] != '\0';
+        if (dirty && len > FNLEN) {
+            stats->reserved_long++;
+            printf("[NEED-RENAME] %s #%d: '%s' (len=%zu) runs into reserved\n",
+                   dir_path, rec_idx, orig_escaped, len);
+            fflush(stdout);
+        } else if (dirty && opt_repair) {
+            memset(FH_NAME(fh) + FNSIZE, 0, NAME_SPAN - FNSIZE);
+            if (pwrite(fd, fh, sizeof(*fh), record_offset) != (ssize_t)sizeof(*fh))
+                fprintf(stderr, "[ERROR] Clearing reserved failed at %s #%d: %s\n",
+                        dir_path, rec_idx, strerror(errno));
+            else
+                stats->cleared_reserved++;
+        } else if (dirty) {
+            stats->need_clear_reserved++;
+        }
+        if (dirty && len <= FNLEN && opt_verbose)
+            printf("[%s] %s #%d: '%s'\n", opt_repair ? "CLEARED-RESERVED" :
+                   "NEED-CLEAR-RESERVED", dir_path, rec_idx, orig_escaped);
+        goto record_stats;
     }
 
     if (len > 0) {
-        cond1_bad_path = is_bad_leading_path(fh->filename, len);
-        if (strcmp(fh->filename, "non-exist") == 0 || strcmp(fh->filename, "non-xist") == 0)
+        cond1_bad_path = is_bad_leading_path(FH_NAME(fh), len);
+        if (strcmp(FH_NAME(fh), "non-exist") == 0 || strcmp(FH_NAME(fh), "non-xist") == 0)
             cond6_non_exist = 1;
 
         for (size_t i = 0; i < len; i++) {
-            unsigned char c = (unsigned char)fh->filename[i];
+            unsigned char c = (unsigned char)FH_NAME(fh)[i];
             if (c < 0x20 || c >= 0x7F)
                 cond2_non_ascii = 1;
             if (c == ' ')
@@ -514,25 +576,25 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
          * Tombstones (.deleted, sync-dir's .d<stamp>) are names too. */
         if (!cond1_bad_path && !cond2_non_ascii && !cond3_has_space &&
             !cond4_unterminated && !cond6_non_exist &&
-            !bof_bbs_valid_post_file(fh->filename) &&
-            strcmp(fh->filename, FN_SAFEDEL) != 0 &&
-            !(fh->filename[0] == '.' && fh->filename[1] == 'd' &&
-              isdigit((unsigned char)fh->filename[2])))
+            !is_bbs_name(FH_NAME(fh)) &&
+            strcmp(FH_NAME(fh), FN_SAFEDEL) != 0 &&
+            !(FH_NAME(fh)[0] == '.' && FH_NAME(fh)[1] == 'd' &&
+              isdigit((unsigned char)FH_NAME(fh)[2])))
             cond7_bad_chars = 1;
 
         /* Check if bytes after '\0' are dirty */
         if (!cond4_unterminated) {
-            for (size_t i = len + 1; i < FNLEN; i++) {
-                if (fh->filename[i] != '\0') {
+            for (size_t i = len + 1; i < NAME_SPAN; i++) {
+                if (FH_NAME(fh)[i] != '\0') {
                     cond5_dirty_trailing = 1;
                     break;
                 }
             }
         }
     } else {
-        /* Empty filename: check if bytes 1..FNLEN-1 have non-zero garbage */
-        for (size_t i = 1; i < FNLEN; i++) {
-            if (fh->filename[i] != '\0') {
+        /* Empty filename: check if bytes 1..NAME_SPAN-1 have non-zero garbage */
+        for (size_t i = 1; i < NAME_SPAN; i++) {
+            if (FH_NAME(fh)[i] != '\0') {
                 cond5_dirty_trailing = 1;
                 break;
             }
@@ -541,13 +603,13 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
 
     int need_rename = (cond1_bad_path || cond2_non_ascii || cond3_has_space || cond4_unterminated || cond6_non_exist ||
                        cond7_bad_chars);
-    int need_repair = (need_rename || cond5_dirty_trailing);
+    need_repair = (need_rename || cond5_dirty_trailing);
 
     /* Dropped as the announce menu and the mailbox delete entries: no
      * tombstones there. Any name, as long as there is no such file. */
     if (opt_prune_missing && cur_prunable && len > 0 &&
         (cond1_bad_path || cond4_unterminated ||
-         !cur_dir_has_file(fh->filename))) {
+         !cur_dir_has_file(FH_NAME(fh)))) {
         char title[sizeof(fh->title) * 4 + 1];
         escape_str(title, sizeof(title), fh->title, sizeof(fh->title));
         *drop = 1;
@@ -568,7 +630,7 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
     /* A bad name with a file: the post may still be there, so fix by hand. */
     int bad_name_has_file = need_rename && !cond1_bad_path &&
                             !cond4_unterminated &&
-                            cur_dir_has_file(fh->filename);
+                            cur_dir_has_file(FH_NAME(fh));
     if (need_rename && bad_name_has_file) {
         stats->bad_name_file_exists++;
         printf("[MANUAL] %s #%d\n", dir_path, rec_idx);
@@ -641,24 +703,24 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
         len = strlen(new_name);
     } else if (opt_rename && (int)len > opt_threshold && !cond4_unterminated &&
                !bad_name_has_file) {
-        char short_fn[FNLEN];
+        char short_fn[FNSIZE];
         int aid_changed = 0;
 
-        if (!short_name(fh->filename, short_fn, sizeof(short_fn), &aid_changed)) {
+        if (!short_name(FH_NAME(fh), short_fn, sizeof(short_fn), &aid_changed)) {
             stats->shorten_skipped++;
             printf("[NO-RENAME] %s #%d\n", dir_path, rec_idx);
             printf("      current: '%s' (len=%zu): not [MG].<time>.A..., or no free"
                    " name; fix by hand\n\n", orig_escaped, len);
         } else {
             char old_path[MAX_SCAN_PATH], new_path[MAX_SCAN_PATH];
-            int has_file = cur_dir_has_file(fh->filename);
+            int has_file = cur_dir_has_file(FH_NAME(fh));
             int ok = 1;
 
-            snprintf(old_path, sizeof(old_path), "%s/%s", cur_dirname, fh->filename);
+            snprintf(old_path, sizeof(old_path), "%s/%s", cur_dirname, FH_NAME(fh));
             snprintf(new_path, sizeof(new_path), "%s/%s", cur_dirname, short_fn);
             if (opt_repair) {
                 fileheader_t updated = *fh;
-                memset(updated.filename, 0, sizeof(updated.filename));
+                memset(FH_NAME(&updated), 0, NAME_SPAN);
                 strlcpy(updated.filename, short_fn, sizeof(updated.filename));
 
                 /* The file first; it goes back if the record write fails. */
@@ -704,9 +766,9 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
     if (!need_rename && cond5_dirty_trailing) {
         if (opt_repair) {
             if (len > 0)
-                memset(fh->filename + len + 1, 0, FNLEN - len - 1);
+                memset(FH_NAME(fh) + len + 1, 0, NAME_SPAN - len - 1);
             else
-                memset(fh->filename + 1, 0, FNLEN - 1);
+                memset(FH_NAME(fh) + 1, 0, NAME_SPAN - 1);
 
             if (pwrite(fd, fh, sizeof(*fh), record_offset) != (ssize_t)sizeof(*fh)) {
                 fprintf(stderr, "[ERROR] Write repair trailing bytes failed at %s #%d: %s\n",
@@ -725,16 +787,17 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
         }
     }
 
+record_stats: ;
     /* Record statistics for filename length */
-    int final_null_term = (len < FNLEN);
-    if (len <= FNLEN)
+    int final_null_term = (len < NAME_SPAN);
+    if (len <= NAME_SPAN)
         stats->len_hist[len]++;
     else
-        stats->len_hist[FNLEN]++;
+        stats->len_hist[NAME_SPAN]++;
 
     if ((int)len > stats->max_len) {
         stats->max_len = (int)len;
-        snprintf(stats->max_len_fn, sizeof(stats->max_len_fn), "%.*s", (int)FNLEN, fh->filename);
+        snprintf(stats->max_len_fn, sizeof(stats->max_len_fn), "%.*s", (int)NAME_SPAN, FH_NAME(fh));
         snprintf(stats->max_len_path, sizeof(stats->max_len_path), "%s", dir_path);
         stats->max_len_idx = rec_idx;
     }
@@ -749,8 +812,8 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
 
     /* If not already printed by repair and matches threshold/all */
     if (!need_repair && (is_gt || is_eq || opt_all)) {
-        char fn_escaped[sizeof(fh->filename) * 4 + 1];
-        escape_str(fn_escaped, sizeof(fn_escaped), fh->filename, sizeof(fh->filename));
+        char fn_escaped[NAME_SPAN * 4 + 1];
+        escape_str(fn_escaped, sizeof(fn_escaped), FH_NAME(fh), NAME_SPAN);
 
         char owner[sizeof(fh->owner) + 1];
         snprintf(owner, sizeof(owner), "%.*s", (int)sizeof(fh->owner), fh->owner);
@@ -1037,7 +1100,7 @@ static void print_summary_table(const section_stats_t *boards,
     printf("\nFilename Length Distribution:\n");
     printf("  Length          Count     Percentage\n");
     printf("  ------------------------------------\n");
-    for (int i = 0; i <= FNLEN; i++) {
+    for (int i = 0; i <= NAME_SPAN; i++) {
         if (overall->len_hist[i] > 0) {
             double pct = overall->total_records ?
                 ((double)overall->len_hist[i] * 100.0 / (double)overall->total_records) : 0.0;
@@ -1065,6 +1128,20 @@ static void print_summary_table(const section_stats_t *boards,
                    fmt_num(overall->need_repair_renamed + overall->need_repair_trailing, b3));
             printf("  NOTE: Run with -r or --repair to apply fixes to .DIR files.\n\n");
         }
+    }
+
+    if (opt_clear_reserved) {
+        printf("Reserved (--clear-reserved, the %d bytes after filename):\n",
+               LEGACY_FNSIZE - FNSIZE);
+        printf("  %-28s %14s\n", opt_repair ? "Cleared:" : "To clear:",
+               fmt_num(opt_repair ? overall->cleared_reserved :
+                       overall->need_clear_reserved, b1));
+        printf("  %-28s %14s\n\n", "Names running into it:",
+               fmt_num(overall->reserved_long, b2));
+        if (!opt_repair && overall->need_clear_reserved)
+            printf("  NOTE: Run with -r to clear them.\n\n");
+        if (overall->reserved_long)
+            printf("  NOTE: Rename those first (--rename -r), then clear.\n\n");
     }
 
     if (overall->bad_name_file_exists > 0)
@@ -1117,6 +1194,7 @@ enum { FIELD_STRING, FIELD_NUMBER, FIELD_PAD };
 
 static const field_t fhdr_fields[] = {
     FIELD(filename, FIELD_STRING),
+    FIELD(reserved, FIELD_PAD),
     FIELD(modified, FIELD_NUMBER),
     FIELD(score,    FIELD_NUMBER),
     FIELD(owner,    FIELD_STRING),
@@ -1235,25 +1313,26 @@ static void print_space_report(const section_stats_t *s)
     if (rare)
         printf("\n");
 
-    /* How far filename[] could shrink: a name needs its length + 1. */
-    printf("Shrinking filename[%d] to N bytes (names need len + 1):\n", FNLEN);
+    /* Names in N bytes (their length + 1), of the LEGACY_FNSIZE they took. */
+    printf("Names in N of the %d bytes filename[] was (names need len + 1;"
+           " FNSIZE is %d):\n", NAME_SPAN, FNSIZE);
     printf("  %4s %14s %12s\n", "N", "Not fitting", "Freed bytes");
-    for (int n = FNLEN - 2; n >= 16; n -= 2) {
+    for (int n = NAME_SPAN - 2; n >= 16; n -= 2) {
         uint64_t over = 0;
-        for (int len = n; len <= FNLEN; len++)
+        for (int len = n; len <= NAME_SPAN; len++)
             over += s->len_hist[len];
-        printf("  %4d %14s %12d%s\n", n, fmt_num(over, b2), FNLEN - n,
-               over ? "" : "  OK");
+        printf("  %4d %14s %12d%s%s\n", n, fmt_num(over, b2), NAME_SPAN - n,
+               over ? "" : "  OK", n == FNSIZE ? "  <- FNSIZE" : "");
     }
     if (s->max_len >= 0) {
         printf("  The longest name (%d) needs filename[%d]: up to %d bytes could be freed.\n",
-               s->max_len, s->max_len + 1, FNLEN - (s->max_len + 1));
+               s->max_len, s->max_len + 1, NAME_SPAN - (s->max_len + 1));
     }
     printf("================================================================================\n");
 }
 
 /* A leftover pre-mail.svc queue (out/.DIR of MailQueue) holds filepath
- * "out/M.<time>.<pid>.A" (up to 26 chars), which a shorter FNLEN breaks. */
+ * "out/M.<time>.<pid>.A" (up to 26 chars), which a shorter FNSIZE broke. */
 #define LEGACY_MAILQUEUE_SIZE 216   /* sizeof(MailQueue) on 64-bit */
 
 static int check_legacy_mailqueue(const char *bbshome)
@@ -1269,9 +1348,9 @@ static int check_legacy_mailqueue(const char *bbshome)
     if (fd < 0)
         return 0;
     int n = 0, maxlen = 0;
-    char rec[LEGACY_MAILQUEUE_SIZE], longest[FNLEN + 1] = "";
+    char rec[LEGACY_MAILQUEUE_SIZE], longest[LEGACY_FNSIZE + 1] = "";
     while (read(fd, rec, sizeof(rec)) == (ssize_t)sizeof(rec)) {
-        int len = (int)strnlen(rec, FNLEN);
+        int len = (int)strnlen(rec, LEGACY_FNSIZE);
         n++;
         if (len > maxlen) {
             maxlen = len;
@@ -1287,7 +1366,7 @@ static int check_legacy_mailqueue(const char *bbshome)
            st.st_size % LEGACY_MAILQUEUE_SIZE ? ", but the file is not a multiple" : "");
     printf("       Longest filepath: %d bytes ('%s'). outmail is gone (mail.svc sends\n",
            maxlen, longest);
-    printf("       mail now): send or remove these before shrinking FNLEN.\n");
+    printf("       mail now): send or remove them; FNSIZE (%d) cannot hold them.\n", FNSIZE);
     return n;
 }
 
@@ -1306,6 +1385,7 @@ int main(int argc, char **argv)
         {"include-digest", no_argument,       0, 1005},
         {"rename",         no_argument,       0, 1006},
         {"prune-missing",  no_argument,       0, 1007},
+        {"clear-reserved", no_argument,       0, 1008},
         {"verbose",        no_argument,       0, 'v'},
         {"quiet",          no_argument,       0, 'q'},
         {"all",            no_argument,       0, 'a'},
@@ -1321,8 +1401,8 @@ int main(int argc, char **argv)
             break;
         case 't':
             opt_threshold = atoi(optarg);
-            if (opt_threshold < 1 || opt_threshold > FNLEN) {
-                fprintf(stderr, "Error: threshold must be between 1 and %d\n", FNLEN);
+            if (opt_threshold < 1 || opt_threshold > NAME_SPAN) {
+                fprintf(stderr, "Error: threshold must be between 1 and %d\n", NAME_SPAN);
                 return 2;
             }
             break;
@@ -1349,6 +1429,9 @@ int main(int argc, char **argv)
             break;
         case 1007:
             opt_prune_missing = 1;
+            break;
+        case 1008:
+            opt_clear_reserved = 1;
             break;
         case 'v':
             opt_verbose = 1;

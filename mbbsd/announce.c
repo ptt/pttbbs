@@ -301,7 +301,7 @@ a_newitem(menu_t * pm, int mode)
     fileheader_t    item;
 
     STRLCPY(fpath, pm->path);
-    if (strlen(pm->path) + FNLEN*2 >= PATHLEN)
+    if (strlen(pm->path) + FNSIZE*2 >= PATHLEN)
 	return;
 
     switch (mode) {
@@ -1706,7 +1706,7 @@ a_menu_rec(const char *maintitle, const char *path,
     assert(sess);
 
     // prevent deep resursive directories
-    if (strlen(path) + FNLEN >= PATHLEN)
+    if (strlen(path) + FNSIZE >= PATHLEN)
     {
 	// it is not save to enter such directory.
 	return returnvalue;

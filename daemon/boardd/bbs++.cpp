@@ -16,8 +16,8 @@ const std::regex filename_regex{"[MG]\\.\\d+\\.A(?:\\.[0-9A-F]+)?"};
 
 bool IsValidFilename(const std::string &filename) {
   // libstdc++'s std::regex recurses for each character matched, so a long
-  // name can overflow the stack. A valid name always fits in FNLEN.
-  if (filename.size() >= FNLEN) {
+  // name can overflow the stack. A valid name is up to FNLEN long.
+  if (filename.size() > FNLEN) {
     return false;
   }
   return std::regex_match(filename, filename_regex);

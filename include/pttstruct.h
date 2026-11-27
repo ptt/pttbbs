@@ -306,14 +306,20 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 #define CBRD_IS_GROUP_LEAD()    (HasUserPerm(PERM_SYSOP | PERM_BOARDS) || (currmode & MODE_GROUP_LEAD))
 
 #define TTLEN      64             /* Length of title */
-#define FNLEN      28             /* Length of filename */
+#define FNSIZE     22             /* Size of filename, with its NUL */
+#define FNLEN      (FNSIZE - 1)   /* Length of filename, without NUL */
+/* What fileheader_t.filename was; the rest of it is reserved, and still the
+ * file name to older binaries: keep it zero until they are all gone. Also
+ * the length of file names in formats shared with them (IPC). */
+#define LEGACY_FNSIZE 28
 
 // Prefix of str_reply and str_forward usually needs longer.
 // In artitlcle list, the normal length is (80-34)=46.
 #define DISP_TTLEN  46
 
 typedef struct fileheader_t { /* 128 bytes */
-    char    filename[FNLEN];         /* M.1120582370.A.1EA [19+1], create time */
+    char    filename[FNSIZE];        /* M.1120582370.A.1EA [18+1], create time */
+    char    reserved[LEGACY_FNSIZE - FNSIZE]; /* 0; was the end of filename */
     time4_t modified;		     /* last modified time */
     int16_t score;                   /* net votes (upvotes - downvotes); was pad + recommend */
     char    owner[IDLEN + 2];        /* uid[.] */
@@ -332,6 +338,10 @@ typedef struct fileheader_t { /* 128 bytes */
     uint16_t  filemode;         /* was uint8_t, must be last field @ boards.c */
     uint16_t comments;
 } PACKSTRUCT fileheader_t;
+_Static_assert(sizeof(fileheader_t) == 128, "fileheader_t size mismatch");
+_Static_assert(sizeof(((fileheader_t *)0)->filename) +
+               sizeof(((fileheader_t *)0)->reserved) == LEGACY_FNSIZE,
+               "fileheader_t.modified moved");
 
 #define FILE_LOCAL      0x0001  /* local saved,  non-mail */
 #define FILE_READ       0x0001  /* already read, mail only */
