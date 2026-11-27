@@ -257,6 +257,7 @@ int start_services()
         CONDITIONAL_SVC(CONTENT, "content")
         CONDITIONAL_SVC(UQUERY, "uquery")
         CONDITIONAL_SVC(TRACKMAIL, "trackmail")
+        IF_ENABLED(CONFIG_NEST, "nest",)
         IF_ENABLED(CONFIG_GEM, "gem",)
     };
 
