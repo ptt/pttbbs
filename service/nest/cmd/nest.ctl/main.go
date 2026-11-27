@@ -183,28 +183,38 @@ func resolveToCommunityFile(target *postTarget) error {
 }
 
 func main() {
+	svcctl.Exit(run())
+}
+
+// fail prints the message with log and returns exit code 1.
+func fail(format string, a ...any) int {
+	log.Printf(format, a...)
+	return 1
+}
+
+func run() int {
 	flag.Parse()
 	args := flag.Args()
 
 	if len(args) == 0 {
 		printUsage()
-		return
+		return 0
 	}
 
 	cmd := args[0]
 	switch cmd {
 	case "restart":
-		os.Exit(svcctl.Main(svcctl.Options{Name: "nest.svc", Socket: getSocketPath(), Ping: ping}, args[1:]))
+		return svcctl.Main(svcctl.Options{Name: "nest.svc", Socket: getSocketPath(), Ping: ping}, args[1:])
 
 	case "ping":
 		resp, _, err := sendCmd("PING\n", nil)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		fmt.Printf("Ping response: %s\n", resp)
 
 	case "daily-backup", "inc-backup":
-		os.Exit(dailyBackup(args[1:]))
+		return dailyBackup(args[1:])
 
 	case "backup":
 		// nest.ctl backup [name | dir]
@@ -218,16 +228,16 @@ func main() {
 		if strings.Contains(dest, "/") {
 			abs, err := filepath.Abs(dest)
 			if err != nil {
-				log.Fatalf("Error: %v", err)
+				return fail("Error: %v", err)
 			}
 			dest = abs
 		}
 		resp, payload, err := sendCmd(strings.TrimRight("BACKUP "+dest, " ")+"\n", nil)
 		if err != nil {
-			log.Fatalf("backup failed: %v", err)
+			return fail("backup failed: %v", err)
 		}
 		if !strings.HasPrefix(resp, "OK") {
-			log.Fatalf("backup failed: %s", resp)
+			return fail("backup failed: %s", resp)
 		}
 		ms := 0
 		if parts := strings.Fields(resp); len(parts) >= 2 {
@@ -242,7 +252,7 @@ func main() {
 
 	case "add-file":
 		if len(args) < 5 {
-			log.Fatalf("Usage: nest.ctl add-file <community> <post_file> <author> <title> [creator_id]")
+			return fail("Usage: nest.ctl add-file <community> <post_file> <author> <title> [creator_id]")
 		}
 		var uid uint64
 		if len(args) >= 6 {
@@ -253,13 +263,13 @@ func main() {
 		header := fmt.Sprintf("CREATE_POST_FILE %s %s %s %d 0 0 %d %d\n", args[1], args[2], args[3], uid, time.Now().Unix(), len(titleB))
 		resp, _, err := sendCmd(header, titleB)
 		if err != nil {
-			log.Fatalf("add-file failed: %v", err)
+			return fail("add-file failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "add":
 		if len(args) < 5 {
-			log.Fatalf("Usage: nest.ctl add <community> <author> <title> <content>")
+			return fail("Usage: nest.ctl add <community> <author> <title> <content>")
 		}
 		titleB := []byte(args[3])
 		contentB := []byte(args[4])
@@ -267,21 +277,21 @@ func main() {
 		payload := append(titleB, contentB...)
 		resp, _, err := sendCmd(header, payload)
 		if err != nil {
-			log.Fatalf("add failed: %v", err)
+			return fail("add failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "comment":
 		if len(args) < 4 {
-			log.Fatalf("Usage: nest.ctl comment <post> <author> <content> [ip] [creator_id]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl comment <post> <author> <content> [ip] [creator_id]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx+1 {
-			log.Fatalf("Usage: nest.ctl comment <post> <author> <content> [ip] [creator_id]")
+			return fail("Usage: nest.ctl comment <post> <author> <content> [ip] [creator_id]")
 		}
 		author := args[nextIdx]
 		contentB := []byte(args[nextIdx+1])
@@ -300,19 +310,19 @@ func main() {
 			legType = uint8(val)
 		}
 		if err := resolveToCommunityFile(&target); err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		header := fmt.Sprintf("CREATE_COMMENT %s %s %s %d %s %d %d %d\n", target.community, target.postFile, author, uid, ip, time.Now().Unix(), len(contentB), legType)
 		resp, _, err := sendCmd(header, contentB)
 		if err != nil {
-			log.Fatalf("comment failed: %v", err)
+			return fail("comment failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "api":
 		// Lemmy's API, e.g. nest.ctl api GetPosts '{"community_name":"Test"}'
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl api <method> [json]")
+			return fail("Usage: nest.ctl api <method> [json]")
 		}
 		req := []byte("{}")
 		if len(args) > 2 {
@@ -320,42 +330,42 @@ func main() {
 		}
 		resp, payload, err := sendCmd(fmt.Sprintf("API %s %d\n", args[1], len(req)), req)
 		if err != nil {
-			log.Fatalf("api failed: %v", err)
+			return fail("api failed: %v", err)
 		}
 		if !strings.HasPrefix(resp, "OK") {
-			log.Fatalf("api failed: %s", resp)
+			return fail("api failed: %s", resp)
 		}
 		fmt.Println(string(payload))
 
 	case "get-comment":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl get-comment <comment_id>")
+			return fail("Usage: nest.ctl get-comment <comment_id>")
 		}
 		if _, err := strconv.ParseUint(args[1], 10, 64); err != nil {
-			log.Fatalf("Invalid comment ID: %s", args[1])
+			return fail("Invalid comment ID: %s", args[1])
 		}
 		resp, payload, err := sendCmd(fmt.Sprintf("GET_COMMENT %s\n", args[1]), nil)
 		if err != nil {
-			log.Fatalf("get-comment failed: %v", err)
+			return fail("get-comment failed: %v", err)
 		}
 		parts := strings.Fields(resp)
 		if len(parts) < 3 || parts[0] != "OK" {
-			log.Fatalf("get-comment failed: %s", resp)
+			return fail("get-comment failed: %s", resp)
 		}
 		fmt.Printf("Comment #%s is floor %s of post %s:\n", args[1], parts[2], parts[1])
 		fmt.Print(string(payload))
 
 	case "vote", "vote-file":
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl vote <post> <user> [1|-1|0] [creator_id] [ip] [ctime]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl vote <post> <user> [1|-1|0] [creator_id] [ip] [ctime]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: nest.ctl vote <post> <user> [1|-1|0] [creator_id] [ip] [ctime]")
+			return fail("Usage: nest.ctl vote <post> <user> [1|-1|0] [creator_id] [ip] [ctime]")
 		}
 		user := args[nextIdx]
 		voteVal := 1
@@ -397,17 +407,17 @@ func main() {
 		}
 		resp, _, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("vote failed: %v", err)
+			return fail("vote failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "votes", "votes-file":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl votes <post>\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl votes <post>\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, _, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		var header string
 		if target.isFile {
@@ -417,27 +427,27 @@ func main() {
 		}
 		conn, err := connectDaemon()
 		if err != nil {
-			log.Fatalf("connect daemon failed: %v", err)
+			return fail("connect daemon failed: %v", err)
 		}
 		defer conn.Close()
 
 		if _, err := conn.Write([]byte(header)); err != nil {
-			log.Fatalf("send votes cmd failed: %v", err)
+			return fail("send votes cmd failed: %v", err)
 		}
 		reader := bufio.NewReader(conn)
 		statusLine, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatalf("read response failed: %v", err)
+			return fail("read response failed: %v", err)
 		}
 		statusLine = strings.TrimSpace(statusLine)
 		if !strings.HasPrefix(statusLine, "OK") {
-			log.Fatalf("votes failed: %s", statusLine)
+			return fail("votes failed: %s", statusLine)
 		}
 		var total int
 		fmt.Sscanf(statusLine, "OK %d", &total)
 		if total == 0 {
 			fmt.Println("No votes")
-			return
+			return 0
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		fmt.Fprintln(w, "USER\tTOKEN\tVOTE\tTIME\tIP")
@@ -466,11 +476,11 @@ func main() {
 
 	case "get", "get-post":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl get <post>\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl get <post>\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, _, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		var header string
 		if target.isFile {
@@ -480,7 +490,7 @@ func main() {
 		}
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		fmt.Println(resp)
 		if len(payload) > 0 {
@@ -489,7 +499,7 @@ func main() {
 
 	case "purge-comments":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl purge-comments <author> [days=7]")
+			return fail("Usage: nest.ctl purge-comments <author> [days=7]")
 		}
 		author := args[1]
 		days := 7
@@ -499,13 +509,13 @@ func main() {
 		header := fmt.Sprintf("PURGE_PERSON_COMMENTS %s %d\n", author, days)
 		resp, _, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("purge-comments failed: %v", err)
+			return fail("purge-comments failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "purge-posts":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl purge-posts <author> [days=7]")
+			return fail("Usage: nest.ctl purge-posts <author> [days=7]")
 		}
 		author := args[1]
 		days := 7
@@ -515,13 +525,13 @@ func main() {
 		header := fmt.Sprintf("PURGE_PERSON_POSTS %s %d\n", author, days)
 		resp, _, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("purge-posts failed: %v", err)
+			return fail("purge-posts failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "list":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl list <community> [count [start]]")
+			return fail("Usage: nest.ctl list <community> [count [start]]")
 		}
 		comm := args[1]
 		count := 20
@@ -543,10 +553,10 @@ func main() {
 		header := fmt.Sprintf("GET_POSTS %s %d %d %s\n", comm, count, start, filterMode)
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("List failed: %v", err)
+			return fail("List failed: %v", err)
 		}
 		if !strings.HasPrefix(resp, "OK") {
-			log.Fatalf("List failed: %s", resp)
+			return fail("List failed: %s", resp)
 		}
 
 		respParts := strings.Fields(resp)
@@ -561,7 +571,7 @@ func main() {
 
 		if returnedCount == 0 {
 			fmt.Printf("No posts found in %s\n", comm)
-			return
+			return 0
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
@@ -592,11 +602,11 @@ func main() {
 
 	case "render", "render-file":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl render <post> [output] [--legacy-format]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl render <post> [output] [--legacy-format]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		outPath := "-"
 		legacyFormat := false
@@ -625,10 +635,10 @@ func main() {
 		}
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("Render failed: %v", err)
+			return fail("Render failed: %v", err)
 		}
 		if !strings.HasPrefix(resp, "OK") {
-			log.Fatalf("Render failed: %s", resp)
+			return fail("Render failed: %s", resp)
 		}
 
 		if outPath == "-" {
@@ -643,7 +653,7 @@ func main() {
 
 	case "import-board":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl import-board <board>|--all [render_target] [--overwrite] [--dry-run] [--workers N] [--jobs N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
+			return fail("Usage: nest.ctl import-board <board>|--all [render_target] [--overwrite] [--dry-run] [--workers N] [--jobs N] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH]")
 		}
 		comm := args[1]
 		renderTarget := "-"
@@ -767,11 +777,11 @@ func main() {
 			// Every board in .BRD, one after another, e.g. before
 			// switching the backend to nest.svc.
 			if renderTarget != "-" && renderTarget != "boards" && renderTarget != "cache" {
-				log.Fatalf("import-board --all: the render target must be boards or cache (one directory per board), not %s", renderTarget)
+				return fail("import-board --all: the render target must be boards or cache (one directory per board), not %s", renderTarget)
 			}
 			boards, skipped, err := boardsToImport(bbs.BBSHome(), filepath.Join(bbs.BBSHome(), ".BRD"))
 			if err != nil {
-				log.Fatalf("import-board --all: read .BRD failed: %v", err)
+				return fail("import-board --all: read .BRD failed: %v", err)
 			}
 			fmt.Printf("[*] Importing %d boards from .BRD (%d without .DIR skipped)...\n", len(boards), len(skipped))
 			printMode()
@@ -792,7 +802,7 @@ func main() {
 			}
 			if len(failed) > 0 {
 				fmt.Printf("    Failed: %s\n", strings.Join(failed, " "))
-				os.Exit(1)
+				return 1
 			}
 			break
 		}
@@ -801,7 +811,7 @@ func main() {
 		printMode()
 		r, err := runImportBoard(mkHeader(comm), "", os.Stdout)
 		if err != nil {
-			log.Fatalf("[!] Migration failed: %v", err)
+			return fail("[!] Migration failed: %v", err)
 		}
 		printImportBoardResult(os.Stdout, r, dryRun)
 
@@ -810,7 +820,7 @@ func main() {
 		//   boards: into the board directories, the cache that mbbsd reads.
 		//   cache (the default for one community): $BBSHOME/cache/<community>.
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl render-community <community>|--all [output_dir|boards|cache] [--legacy-format] [--jobs N]")
+			return fail("Usage: nest.ctl render-community <community>|--all [output_dir|boards|cache] [--legacy-format] [--jobs N]")
 		}
 		comm := args[1]
 		target := ""
@@ -864,11 +874,11 @@ func main() {
 			// Every board in .BRD that has a .DIR, e.g. after import-board
 			// --all and sync-dir --all when switching to nest.svc.
 			if target != "boards" && target != "cache" {
-				log.Fatalf("render-community --all: the target must be boards or cache (one directory per board), not %q", target)
+				return fail("render-community --all: the target must be boards or cache (one directory per board), not %q", target)
 			}
 			boards, skipped, err := boardsToImport(bbs.BBSHome(), filepath.Join(bbs.BBSHome(), ".BRD"))
 			if err != nil {
-				log.Fatalf("render-community --all: read .BRD failed: %v", err)
+				return fail("render-community --all: read .BRD failed: %v", err)
 			}
 			fmt.Printf("[*] Rendering %d boards from .BRD into %s (format: %s; %d without .DIR skipped)...\n", len(boards), target, fmtStr, len(skipped))
 			if jobs > 1 {
@@ -878,7 +888,7 @@ func main() {
 			fmt.Printf("[+] %d boards done, %d failed\n", len(boards)-len(failed), len(failed))
 			if len(failed) > 0 {
 				fmt.Printf("    Failed: %s\n", strings.Join(failed, " "))
-				os.Exit(1)
+				return 1
 			}
 			break
 		}
@@ -886,21 +896,21 @@ func main() {
 		fmt.Printf("[*] Rendering community '%s' into %s (format: %s)...\n", comm, outDir(comm), fmtStr)
 		report, err := render(comm, "", os.Stdout)
 		if err != nil {
-			log.Fatalf("[!] Render failed: %v", err)
+			return fail("[!] Render failed: %v", err)
 		}
 		report(os.Stdout)
 
 	case "update", "update-file", "edit", "edit-file":
 		if len(args) < 4 {
-			log.Fatalf("Usage: nest.ctl update <post> <title> <content> [editor]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl update <post> <title> <content> [editor]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) < nextIdx+2 {
-			log.Fatalf("Usage: nest.ctl update <post> <title> <content> [editor]")
+			return fail("Usage: nest.ctl update <post> <title> <content> [editor]")
 		}
 		titleB := []byte(args[nextIdx])
 		contentB := []byte(args[nextIdx+1])
@@ -916,21 +926,21 @@ func main() {
 		}
 		resp, _, err := sendCmd(header, append(titleB, contentB...))
 		if err != nil {
-			log.Fatalf("update failed: %v", err)
+			return fail("update failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "update-title", "update-title-file", "edit-title", "edit-title-file":
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl update-title <post> <title> [editor]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl update-title <post> <title> [editor]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: nest.ctl update-title <post> <title> [editor]")
+			return fail("Usage: nest.ctl update-title <post> <title> [editor]")
 		}
 		titleB := []byte(args[nextIdx])
 		editor := "sysop"
@@ -945,17 +955,17 @@ func main() {
 		}
 		resp, _, err := sendCmd(header, titleB)
 		if err != nil {
-			log.Fatalf("update-title failed: %v", err)
+			return fail("update-title failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "comments", "comments-file":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl comments <post> [start [limit]]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl comments <post> [start [limit]]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		start := 1
@@ -978,21 +988,21 @@ func main() {
 		}
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("comments failed: %v", err)
+			return fail("comments failed: %v", err)
 		}
 		printCommentsTable(resp, payload)
 
 	case "update-comment", "update-comment-file", "edit-comment", "edit-comment-file":
 		if len(args) < 4 {
-			log.Fatalf("Usage: nest.ctl update-comment <post> <seq> <content> [editor]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl update-comment <post> <seq> <content> [editor]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx+1 {
-			log.Fatalf("Usage: nest.ctl update-comment <post> <seq> <content> [editor]")
+			return fail("Usage: nest.ctl update-comment <post> <seq> <content> [editor]")
 		}
 		seq := args[nextIdx]
 		contentB := []byte(args[nextIdx+1])
@@ -1001,22 +1011,22 @@ func main() {
 			editor = args[nextIdx+2]
 		}
 		if err := resolveToCommunityFile(&target); err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		header := fmt.Sprintf("EDIT_COMMENT_FILE %s %s %s %s 0 %d\n", target.community, target.postFile, seq, editor, len(contentB))
 		resp, _, err := sendCmd(header, contentB)
 		if err != nil {
-			log.Fatalf("update-comment failed: %v", err)
+			return fail("update-comment failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "history", "history-file", "post-history", "post-history-file":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl history <post> [rev]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl history <post> [rev]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		rev := 0
@@ -1031,21 +1041,23 @@ func main() {
 		}
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("history failed: %v", err)
+			return fail("history failed: %v", err)
 		}
-		printPostHistory(resp, payload, rev)
+		if err := printPostHistory(resp, payload, rev); err != nil {
+			return fail("%v", err)
+		}
 
 	case "comment-history", "comment-history-file":
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl comment-history <post> <seq> [rev]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl comment-history <post> <seq> [rev]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: nest.ctl comment-history <post> <seq> [rev]")
+			return fail("Usage: nest.ctl comment-history <post> <seq> [rev]")
 		}
 		seq := args[nextIdx]
 		rev := 0
@@ -1053,26 +1065,28 @@ func main() {
 			rev, _ = strconv.Atoi(args[nextIdx+1])
 		}
 		if err := resolveToCommunityFile(&target); err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		header := fmt.Sprintf("GET_COMMENT_REVISIONS_FILE %s %s %s %d\n", target.community, target.postFile, seq, rev)
 		resp, payload, err := sendCmd(header, nil)
 		if err != nil {
-			log.Fatalf("comment-history failed: %v", err)
+			return fail("comment-history failed: %v", err)
 		}
-		printCommentHistory(resp, payload, rev)
+		if err := printCommentHistory(resp, payload, rev); err != nil {
+			return fail("%v", err)
+		}
 
 	case "crosspost", "share":
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl crosspost <src_post> <target_post> <operator> [person_id]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl crosspost <src_post> <target_post> <operator> [person_id]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		srcTarget, srcConsumed, srcErr := parsePostArg(args, 1)
 		if srcErr != nil {
-			log.Fatalf("Error parsing src_post: %v", srcErr)
+			return fail("Error parsing src_post: %v", srcErr)
 		}
 		tgtTarget, tgtConsumed, tgtErr := parsePostArg(args, 1+srcConsumed)
 		if tgtErr != nil {
-			log.Fatalf("Error parsing target_post: %v", tgtErr)
+			return fail("Error parsing target_post: %v", tgtErr)
 		}
 		_ = resolveToCommunityFile(&srcTarget)
 		_ = resolveToCommunityFile(&tgtTarget)
@@ -1090,41 +1104,41 @@ func main() {
 			srcTarget.community, srcTarget.postFile, tgtTarget.community, tgtTarget.postFile, operator, token, now)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("crosspost failed: %v", err)
+			return fail("crosspost failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "link-crossposts":
 		if err := linkCrossposts(); err != nil {
-			log.Fatalf("link-crossposts failed: %v", err)
+			return fail("link-crossposts failed: %v", err)
 		}
 
 	case "fix-published":
 		if err := fixCommunityPublished(args[1:]...); err != nil {
-			log.Fatalf("fix-published failed: %v", err)
+			return fail("fix-published failed: %v", err)
 		}
 
 	case "crossposts", "shares", "list-crossposts":
 		if len(args) < 2 {
 			fmt.Fprintf(os.Stderr, "Usage: nest.ctl crossposts <post>\n  <post>: <post_id> or <post_file>@<community>\n")
-			os.Exit(1)
+			return 1
 		}
 		target, _, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		if err := resolveToCommunityFile(&target); err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		cmd := fmt.Sprintf("GET_CROSSPOSTS %s %s\n", target.community, target.postFile)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("get crossposts failed: %v", err)
+			return fail("get crossposts failed: %v", err)
 		}
 		lines := strings.Split(strings.TrimRight(resp, "\n"), "\n")
 		if len(lines) == 0 || !strings.HasPrefix(lines[0], "OK") {
 			fmt.Println(resp)
-			return
+			return 0
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
 		fmt.Fprintf(w, "COMMUNITY\tPOST_FILE\tOPERATOR\tCREATED_AT\n")
@@ -1142,23 +1156,23 @@ func main() {
 	case "origin", "source":
 		if len(args) < 2 {
 			fmt.Fprintf(os.Stderr, "Usage: nest.ctl origin <post>\n  <post>: <post_id> or <post_file>@<community>\n")
-			os.Exit(1)
+			return 1
 		}
 		target, _, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		if err := resolveToCommunityFile(&target); err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		cmd := fmt.Sprintf("GET_CROSSPOST_PARENT %s %s\n", target.community, target.postFile)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("get origin failed: %v", err)
+			return fail("get origin failed: %v", err)
 		}
 		if !strings.HasPrefix(resp, "OK ") {
 			fmt.Print(resp)
-			return
+			return 0
 		}
 		cols := strings.Split(strings.TrimPrefix(strings.TrimRight(resp, "\n"), "OK "), "\t")
 		if len(cols) >= 6 {
@@ -1177,30 +1191,30 @@ func main() {
 	case "fetch", "fetch-file", "pull", "pull-file":
 		if len(args) < 3 {
 			fmt.Fprintf(os.Stderr, "Usage: nest.ctl fetch <post> <output_path>\n  <post>: <post_id> or <post_file>@<community>\n")
-			os.Exit(1)
+			return 1
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: nest.ctl fetch <post> <output_path>")
+			return fail("Usage: nest.ctl fetch <post> <output_path>")
 		}
 		outPath := args[nextIdx]
 		if err := resolveToCommunityFile(&target); err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		cmd := fmt.Sprintf("FETCH_POST_FILE %s %s %s\n", target.community, target.postFile, outPath)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("fetch failed: %v", err)
+			return fail("fetch failed: %v", err)
 		}
 		fmt.Println(resp)
 
 	case "sync-dir":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl sync-dir <board>|--all [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]")
+			return fail("Usage: nest.ctl sync-dir <board>|--all [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]")
 		}
 		comm := args[1]
 		dryRun := false
@@ -1220,7 +1234,7 @@ func main() {
 			case "rebuild":
 				modes = append(modes, "rebuild")
 			default:
-				log.Fatalf("sync-dir: unknown argument: %s", arg)
+				return fail("sync-dir: unknown argument: %s", arg)
 			}
 		}
 		dryStr := "0"
@@ -1237,7 +1251,7 @@ func main() {
 		if comm == "--all" || comm == "-all" {
 			boards, _, err := boardsToImport(bbs.BBSHome(), filepath.Join(bbs.BBSHome(), ".BRD"))
 			if err != nil {
-				log.Fatalf("sync-dir --all: read .BRD failed: %v", err)
+				return fail("sync-dir --all: read .BRD failed: %v", err)
 			}
 			var failed []string
 			for i, b := range boards {
@@ -1248,19 +1262,19 @@ func main() {
 				}
 			}
 			if len(failed) > 0 {
-				log.Fatalf("sync-dir --all: %d board(s) failed: %s", len(failed), strings.Join(failed, " "))
+				return fail("sync-dir --all: %d board(s) failed: %s", len(failed), strings.Join(failed, " "))
 			}
 			break
 		}
 		if err := syncDir(comm, dryRun, dryStr, modeStr); err != nil {
-			log.Fatalf("sync-dir failed: %v", err)
+			return fail("sync-dir failed: %v", err)
 		}
 
 	case "remove-community":
 		// Lemmy's RemoveCommunity, by the system (mod 0), as mbbsd does
 		// when a board is deleted.
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl remove-community <community> [reason]")
+			return fail("Usage: nest.ctl remove-community <community> [reason]")
 		}
 		comm := args[1]
 		reason := strings.Join(args[2:], " ")
@@ -1270,11 +1284,11 @@ func main() {
 		}
 		resp, _, err := sendCmd(cmdLine+"\n", nil)
 		if err != nil {
-			log.Fatalf("remove-community failed: %v", err)
+			return fail("remove-community failed: %v", err)
 		}
 		parts := strings.Fields(resp)
 		if len(parts) < 2 || parts[0] != "OK" {
-			log.Fatalf("remove-community failed: %s", resp)
+			return fail("remove-community failed: %s", resp)
 		}
 		if parts[1] == "0" {
 			fmt.Printf("Community '%s' is unknown to nest.svc; nothing removed.\n", comm)
@@ -1284,30 +1298,30 @@ func main() {
 
 	case "purge-community":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl purge-community <community>|#<id>")
+			return fail("Usage: nest.ctl purge-community <community>|#<id>")
 		}
 		ref := args[1]
 		resp, _, err := sendCmd(fmt.Sprintf("PURGE_COMMUNITY %s\n", ref), nil)
 		if err != nil {
-			log.Fatalf("purge-community failed: %v", err)
+			return fail("purge-community failed: %v", err)
 		}
 		parts := strings.Fields(resp)
 		if len(parts) < 4 || parts[0] != "OK" {
-			log.Fatalf("purge-community failed: %s", resp)
+			return fail("purge-community failed: %s", resp)
 		}
 		fmt.Printf("Community '%s' (#%s) purged: %s posts and %s comments removed.\n", ref, parts[1], parts[2], parts[3])
 
 	case "rename-community":
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl rename-community <old> <new>")
+			return fail("Usage: nest.ctl rename-community <old> <new>")
 		}
 		resp, _, err := sendCmd(fmt.Sprintf("RENAME_COMMUNITY %s %s\n", args[1], args[2]), nil)
 		if err != nil {
-			log.Fatalf("rename-community failed: %v", err)
+			return fail("rename-community failed: %v", err)
 		}
 		parts := strings.Fields(resp)
 		if len(parts) < 2 || parts[0] != "OK" {
-			log.Fatalf("rename-community failed: %s", resp)
+			return fail("rename-community failed: %s", resp)
 		}
 		if parts[1] == "0" {
 			fmt.Printf("Community '%s' is unknown to nest.svc; nothing renamed.\n", args[1])
@@ -1317,15 +1331,15 @@ func main() {
 
 	case "merge-community":
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl merge-community <from> <to>")
+			return fail("Usage: nest.ctl merge-community <from> <to>")
 		}
 		resp, _, err := sendCmd(fmt.Sprintf("MERGE_COMMUNITY %s %s\n", args[1], args[2]), nil)
 		if err != nil {
-			log.Fatalf("merge-community failed: %v", err)
+			return fail("merge-community failed: %v", err)
 		}
 		parts := strings.Fields(resp)
 		if len(parts) < 3 || parts[0] != "OK" {
-			log.Fatalf("merge-community failed: %s", resp)
+			return fail("merge-community failed: %s", resp)
 		}
 		fmt.Printf("Moved %s posts from '%s' to '%s'.\n", parts[1], args[1], args[2])
 		if parts[2] != "0" {
@@ -1334,25 +1348,25 @@ func main() {
 
 	case "move-community":
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl move-community <community> <engine>")
+			return fail("Usage: nest.ctl move-community <community> <engine>")
 		}
 		resp, _, err := sendCmd(fmt.Sprintf("MOVE_COMMUNITY %s %s\n", args[1], args[2]), nil)
 		if err != nil {
-			log.Fatalf("move-community failed: %v", err)
+			return fail("move-community failed: %v", err)
 		}
 		parts := strings.Fields(resp)
 		if len(parts) < 2 || parts[0] != "OK" {
-			log.Fatalf("move-community failed: %s", resp)
+			return fail("move-community failed: %s", resp)
 		}
 		fmt.Printf("Moved '%s' with %s posts to engine %s.\n", args[1], parts[1], args[2])
 
 	case "communities", "list-communities":
 		resp, payload, err := sendCmd("LIST_COMMUNITIES\n", nil)
 		if err != nil {
-			log.Fatalf("communities failed: %v", err)
+			return fail("communities failed: %v", err)
 		}
 		if !strings.HasPrefix(resp, "OK") {
-			log.Fatalf("communities failed: %s", resp)
+			return fail("communities failed: %s", resp)
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
 		fmt.Fprintf(w, "ID\tNAME\tCATEGORY\tFLAGS\tCREATED\tDELETED\tMODERATORS\tTITLE\n")
@@ -1375,14 +1389,14 @@ func main() {
 
 	case "community", "get-community":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl community <community>|#<id>")
+			return fail("Usage: nest.ctl community <community>|#<id>")
 		}
 		resp, payload, err := sendCmd(fmt.Sprintf("GET_COMMUNITY %s\n", args[1]), nil)
 		if err != nil {
-			log.Fatalf("community failed: %v", err)
+			return fail("community failed: %v", err)
 		}
 		if !strings.HasPrefix(resp, "OK") {
-			log.Fatalf("community failed: %s", resp)
+			return fail("community failed: %s", resp)
 		}
 		os.Stdout.Write(payload)
 		if len(payload) > 0 && payload[len(payload)-1] != '\n' {
@@ -1397,7 +1411,7 @@ func main() {
 		}
 		first, rest, err := sendCmd(fmt.Sprintf("IMPORT_BOARDS %s\n", dryStr), nil)
 		if err != nil {
-			log.Fatalf("import-boards failed: %v", err)
+			return fail("import-boards failed: %v", err)
 		}
 		// ERR_DETAIL lines (boards that failed) come before the result.
 		var resp string
@@ -1410,7 +1424,7 @@ func main() {
 		}
 		parts := strings.Fields(resp)
 		if len(parts) < 5 || parts[0] != "OK" {
-			log.Fatalf("import-boards failed: %s", resp)
+			return fail("import-boards failed: %s", resp)
 		}
 		verb := "Imported"
 		if dryRun {
@@ -1420,11 +1434,11 @@ func main() {
 
 	case "purge", "purge-post", "purge-post-file":
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl purge <post>\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl purge <post>\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, _, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		var cmd string
 		if target.isFile {
@@ -1434,7 +1448,7 @@ func main() {
 		}
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("purge failed: %v", err)
+			return fail("purge failed: %v", err)
 		}
 		fmt.Print(resp)
 
@@ -1442,11 +1456,11 @@ func main() {
 		// Lemmy's RemovePost, as the site's operator (or mod): nest.svc
 		// keeps the post as removed, with the reason.
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl remove <post> [mod] [reason]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl remove <post> [mod] [reason]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		mod := "sysop"
@@ -1465,18 +1479,18 @@ func main() {
 		}
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("remove failed: %v", err)
+			return fail("remove failed: %v", err)
 		}
 		fmt.Print(resp)
 
 	case "recover", "recover-post":
 		// Puts a deleted or removed post back (Discourse's recover).
 		if len(args) < 2 {
-			log.Fatalf("Usage: nest.ctl recover <post>\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl recover <post>\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, _, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		var cmd string
 		if target.isFile {
@@ -1486,22 +1500,22 @@ func main() {
 		}
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("recover failed: %v", err)
+			return fail("recover failed: %v", err)
 		}
 		fmt.Print(resp)
 
 	case "remove-comment":
 		// Lemmy's RemoveComment, as the site's operator (or mod).
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl remove-comment <post> <seq> [mod] [reason]\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl remove-comment <post> <seq> [mod] [reason]\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: nest.ctl remove-comment <post> <seq> [mod] [reason]")
+			return fail("Usage: nest.ctl remove-comment <post> <seq> [mod] [reason]")
 		}
 		seq := args[nextIdx]
 		mod := "sysop"
@@ -1513,41 +1527,42 @@ func main() {
 			reason = strings.Join(args[nextIdx+2:], " ")
 		}
 		if err := resolveToCommunityFile(&target); err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		cmd := fmt.Sprintf("REMOVE_COMMENT_FILE %s %s %s %s 0 %s\n", target.community, target.postFile, seq, mod, reason)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("remove-comment failed: %v", err)
+			return fail("remove-comment failed: %v", err)
 		}
 		fmt.Print(resp)
 
 	case "recover-comment":
 		if len(args) < 3 {
-			log.Fatalf("Usage: nest.ctl recover-comment <post> <seq>\n  <post>: <post_id> or <post_file>@<community>")
+			return fail("Usage: nest.ctl recover-comment <post> <seq>\n  <post>: <post_id> or <post_file>@<community>")
 		}
 		target, consumed, err := parsePostArg(args, 1)
 		if err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		nextIdx := 1 + consumed
 		if len(args) <= nextIdx {
-			log.Fatalf("Usage: nest.ctl recover-comment <post> <seq>")
+			return fail("Usage: nest.ctl recover-comment <post> <seq>")
 		}
 		seq := args[nextIdx]
 		if err := resolveToCommunityFile(&target); err != nil {
-			log.Fatalf("Error: %v", err)
+			return fail("Error: %v", err)
 		}
 		cmd := fmt.Sprintf("RECOVER_COMMENT_FILE %s %s %s\n", target.community, target.postFile, seq)
 		resp, _, err := sendCmd(cmd, nil)
 		if err != nil {
-			log.Fatalf("recover-comment failed: %v", err)
+			return fail("recover-comment failed: %v", err)
 		}
 		fmt.Print(resp)
 
 	default:
 		printUsage()
 	}
+	return 0
 }
 
 func printUsage() {
@@ -1666,9 +1681,9 @@ func printCommentsTable(resp string, payload []byte) {
 	fmt.Printf("(Showing %d of %d comments)\n", count, total)
 }
 
-func printPostHistory(resp string, payload []byte, rev int) {
+func printPostHistory(resp string, payload []byte, rev int) error {
 	if !strings.HasPrefix(resp, "OK") {
-		log.Fatalf("History failed: %s", resp)
+		return fmt.Errorf("History failed: %s", resp)
 	}
 	if rev == 0 {
 		w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
@@ -1703,11 +1718,12 @@ func printPostHistory(resp string, payload []byte, rev int) {
 				parts[2], parts[4], dateStr, string(tBytes), string(cBytes))
 		}
 	}
+	return nil
 }
 
-func printCommentHistory(resp string, payload []byte, rev int) {
+func printCommentHistory(resp string, payload []byte, rev int) error {
 	if !strings.HasPrefix(resp, "OK") {
-		log.Fatalf("Comment history failed: %s", resp)
+		return fmt.Errorf("Comment history failed: %s", resp)
 	}
 	if rev == 0 {
 		w := tabwriter.NewWriter(os.Stdout, 0, 8, 2, ' ', 0)
@@ -1740,6 +1756,7 @@ func printCommentHistory(resp string, payload []byte, rev int) {
 				parts[2], parts[4], dateStr, string(cBytes))
 		}
 	}
+	return nil
 }
 
 // syncDir sends SYNC_DIR for board comm (dryStr "0" or "1", modeStr the

@@ -377,6 +377,7 @@ static void scan_board(const char *bname)
 int main(int argc, char *argv[])
 {
     int c, i;
+    struct timespec t0, t1;
 
     while ((c = getopt(argc, argv, "lrm:t:h")) != -1) {
         switch (c) {
@@ -405,6 +406,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     nice(10);
+    clock_gettime(CLOCK_MONOTONIC, &t0);
 
     if (argc > 0) {
         for (i = 0; i < argc; i++)
@@ -449,5 +451,8 @@ int main(int argc, char *argv[])
     if (opt_remove)
         printf("# removed %" PRIu64 " trees, %" PRIu64 " dirs\n",
                total.removed_trees, total.removed_dirs);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    printf("# took %.1f seconds\n",
+           (t1.tv_sec - t0.tv_sec) + (t1.tv_nsec - t0.tv_nsec) / 1e9);
     return 0;
 }

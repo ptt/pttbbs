@@ -61,7 +61,9 @@ func ping(socket string) error {
 	return nil
 }
 
-func main() {
+func main() { svcctl.Exit(run()) }
+
+func run() int {
 	bbsHome := bbs.BBSHome()
 	defaultSocket := filepath.Join(bbsHome, "run", "stat.svc.sock")
 
@@ -73,12 +75,12 @@ func main() {
 	args := flag.Args()
 	if len(args) == 0 {
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	action := args[0]
 	if action == "restart" {
-		os.Exit(svcctl.Main(svcctl.Options{Name: "stat.svc", Socket: *socketPath, Ping: ping}, args[1:]))
+		return svcctl.Main(svcctl.Options{Name: "stat.svc", Socket: *socketPath, Ping: ping}, args[1:])
 	}
 
 	var req model.Request
@@ -91,28 +93,28 @@ func main() {
 	case "get":
 		if len(args) < 2 {
 			fmt.Println("Usage: stat.ctl get <userid>")
-			os.Exit(1)
+			return 1
 		}
 		parseUserTarget(args[1], &req)
 
 	case "inc_post":
 		if len(args) < 2 {
 			fmt.Println("Usage: stat.ctl inc_post <userid>")
-			os.Exit(1)
+			return 1
 		}
 		parseUserTarget(args[1], &req)
 
 	case "inc_song":
 		if len(args) < 2 {
 			fmt.Println("Usage: stat.ctl inc_song <userid>")
-			os.Exit(1)
+			return 1
 		}
 		parseUserTarget(args[1], &req)
 
 	case "add_mail":
 		if len(args) < 2 {
 			fmt.Println("Usage: stat.ctl add_mail <userid> [count]")
-			os.Exit(1)
+			return 1
 		}
 		parseUserTarget(args[1], &req)
 		count := 1
@@ -126,14 +128,14 @@ func main() {
 	case "set":
 		if len(args) < 4 {
 			fmt.Println("Usage: stat.ctl set <userid> <post_count> <mail_count>")
-			os.Exit(1)
+			return 1
 		}
 		parseUserTarget(args[1], &req)
 		p, err1 := strconv.Atoi(args[2])
 		m, err2 := strconv.Atoi(args[3])
 		if err1 != nil || err2 != nil {
 			fmt.Println("Error: post_count and mail_count must be integers")
-			os.Exit(1)
+			return 1
 		}
 		p32 := int32(p)
 		m32 := int32(m)
@@ -143,7 +145,7 @@ func main() {
 	case "reset":
 		if len(args) < 2 {
 			fmt.Println("Usage: stat.ctl reset <userid>")
-			os.Exit(1)
+			return 1
 		}
 		parseUserTarget(args[1], &req)
 		req.Action = "set"
@@ -160,24 +162,24 @@ func main() {
 	default:
 		fmt.Printf("Unknown action: %s\n\n", action)
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	resp, err := sendRequest(*socketPath, req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	if *jsonOutput {
 		out, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(out))
-		return
+		return 0
 	}
 
 	if !resp.Success {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Error)
-		os.Exit(1)
+		return 1
 	}
 
 	switch action {
@@ -217,4 +219,5 @@ func main() {
 			fmt.Println("Success")
 		}
 	}
+	return 0
 }

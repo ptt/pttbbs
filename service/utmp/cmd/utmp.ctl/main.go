@@ -122,7 +122,9 @@ func ping(socket string) error {
 	return nil
 }
 
-func main() {
+func main() { svcctl.Exit(run()) }
+
+func run() int {
 	bbsHome := os.Getenv("BBSHOME")
 	if bbsHome == "" {
 		bbsHome = bbs.BBSHome()
@@ -137,12 +139,12 @@ func main() {
 	args := flag.Args()
 	if len(args) == 0 {
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	action := args[0]
 	if action == "restart" {
-		os.Exit(svcctl.Main(svcctl.Options{Name: "utmp.svc", Socket: *socketPath, Ping: ping}, args[1:]))
+		return svcctl.Main(svcctl.Options{Name: "utmp.svc", Socket: *socketPath, Ping: ping}, args[1:])
 	}
 
 	var req daemon.Request
@@ -170,7 +172,7 @@ func main() {
 	case "kick":
 		if len(args) < 2 {
 			fmt.Println("Usage: utmp.ctl kick <userid|pid>")
-			os.Exit(1)
+			return 1
 		}
 		req.Action = "kick"
 		req.Target = args[1]
@@ -181,7 +183,7 @@ func main() {
 	default:
 		fmt.Printf("Unknown action: %s\n\n", action)
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	resp, err := sendRequest(*socketPath, req)
@@ -192,14 +194,14 @@ func main() {
 			resp = directResp
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: %v (direct SHM fallback failed: %v)\n", err, directErr)
-			os.Exit(1)
+			return 1
 		}
 	}
 
 	if *jsonOutput {
 		out, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(out))
-		return
+		return 0
 	}
 
 	// Human-readable formatting matching traditional shmctl output
@@ -263,7 +265,8 @@ func main() {
 			fmt.Println(resp.Message)
 		} else {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Error)
-			os.Exit(1)
+			return 1
 		}
 	}
+	return 0
 }

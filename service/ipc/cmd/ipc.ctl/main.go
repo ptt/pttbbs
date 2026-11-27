@@ -16,7 +16,9 @@ import (
 	"pttbbs/svcctl"
 )
 
-func main() {
+func main() { svcctl.Exit(run()) }
+
+func run() int {
 	bbsHome := os.Getenv("BBSHOME")
 	if bbsHome == "" {
 		bbsHome = bbs.BBSHome()
@@ -29,25 +31,26 @@ func main() {
 	args := flag.Args()
 	if len(args) == 0 {
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
+	var err error
 	cmd := args[0]
 	switch cmd {
 	case "restart":
-		os.Exit(svcctl.Main(svcctl.Options{Name: "ipc.svc", Socket: *sockPath, Ping: ping}, args[1:]))
+		return svcctl.Main(svcctl.Options{Name: "ipc.svc", Socket: *sockPath, Ping: ping}, args[1:])
 	case "ping":
-		doPing(*sockPath)
+		err = doPing(*sockPath)
 	case "wmsg":
 		if len(args) < 3 {
 			fmt.Fprintf(os.Stderr, "Usage: ipc.ctl wmsg <to_userid> <message>\n")
-			os.Exit(1)
+			return 1
 		}
-		doWmsg(*sockPath, args[1], args[2])
+		err = doWmsg(*sockPath, args[1], args[2])
 	case "talk":
 		if len(args) < 2 {
 			fmt.Fprintf(os.Stderr, "Usage: ipc.ctl talk <to_userid> [sig]\n")
-			os.Exit(1)
+			return 1
 		}
 		sig := 1
 		if len(args) >= 3 {
@@ -55,16 +58,15 @@ func main() {
 				sig = s
 			}
 		}
-		doTalk(*sockPath, args[1], sig)
+		err = doTalk(*sockPath, args[1], sig)
 	case "live-pub":
 		if len(args) < 3 {
 			fmt.Fprintf(os.Stderr, "Usage: ipc.ctl live-pub <board:file|bid:aid> <comment> OR ipc.ctl live-pub <board|bid> <file|aid> <comment>\n")
-			os.Exit(1)
+			return 1
 		}
 		var bid uint32
 		var aid uint64
 		var comment string
-		var err error
 		if len(args) >= 4 {
 			bid, aid, err = resolveBidAndAid(args[1], args[2])
 			comment = args[3]
@@ -74,17 +76,16 @@ func main() {
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
-		doLivePub(*sockPath, bid, aid, comment)
+		err = doLivePub(*sockPath, bid, aid, comment)
 	case "live-sub":
 		if len(args) < 2 {
 			fmt.Fprintf(os.Stderr, "Usage: ipc.ctl live-sub <board:file|bid:aid> OR ipc.ctl live-sub <board|bid> <file|aid>\n")
-			os.Exit(1)
+			return 1
 		}
 		var bid uint32
 		var aid uint64
-		var err error
 		if len(args) >= 3 {
 			bid, aid, err = resolveBidAndAid(args[1], args[2])
 		} else {
@@ -92,18 +93,24 @@ func main() {
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
-		doLiveSub(*sockPath, bid, aid)
+		err = doLiveSub(*sockPath, bid, aid)
 	case "conns", "connections", "clients":
-		doConns(*sockPath)
+		err = doConns(*sockPath)
 	case "status":
-		doStatus(*sockPath)
+		err = doStatus(*sockPath)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", cmd)
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
+	if err != nil {
+		// do* errors carry the complete message.
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	return 0
 }
 
 func printUsage() {
@@ -122,17 +129,19 @@ func printUsage() {
 	fmt.Printf("  -socket <path>              UNIX socket path (default: $BBSHOME/run/ipc.svc.sock)\n")
 }
 
-func connect(sockPath string) net.Conn {
+func connect(sockPath string) (net.Conn, error) {
 	conn, err := net.Dial("unix", sockPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: cannot connect to ipc.svc at %s: %v\n", sockPath, err)
-		os.Exit(1)
+		return nil, fmt.Errorf("Error: cannot connect to ipc.svc at %s: %w", sockPath, err)
 	}
-	return conn
+	return conn, nil
 }
 
-func doPing(sockPath string) {
-	conn := connect(sockPath)
+func doPing(sockPath string) error {
+	conn, err := connect(sockPath)
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
 	hdr := &daemon.Header{
@@ -143,14 +152,12 @@ func doPing(sockPath string) {
 		Len:     0,
 	}
 	if _, err := conn.Write(hdr.Encode()); err != nil {
-		fmt.Fprintf(os.Stderr, "Write error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Write error: %w", err)
 	}
 
 	respHdr, err := daemon.ReadHeader(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Read error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Read error: %w", err)
 	}
 
 	if respHdr.Type == daemon.IPCTypePong {
@@ -158,6 +165,7 @@ func doPing(sockPath string) {
 	} else {
 		fmt.Printf("Received unexpected response type: 0x%04x\n", respHdr.Type)
 	}
+	return nil
 }
 
 // ping sends an IPC ping and expects a pong.
@@ -186,8 +194,11 @@ func ping(sockPath string) error {
 	return nil
 }
 
-func doWmsg(sockPath string, toUser, msg string) {
-	conn := connect(sockPath)
+func doWmsg(sockPath string, toUser, msg string) error {
+	conn, err := connect(sockPath)
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
 	// 1. Register as ctl
@@ -201,13 +212,11 @@ func doWmsg(sockPath string, toUser, msg string) {
 		Len:     uint32(len(reg.Encode())),
 	}).Encode(), reg.Encode()...)
 	if _, err := conn.Write(regPkt); err != nil {
-		fmt.Fprintf(os.Stderr, "Register error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Register error: %w", err)
 	}
 	ackHdr, err := daemon.ReadHeader(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Register ACK read error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Register ACK read error: %w", err)
 	}
 	ackBuf := make([]byte, ackHdr.Len)
 	_, _ = io.ReadFull(conn, ackBuf)
@@ -233,14 +242,12 @@ func doWmsg(sockPath string, toUser, msg string) {
 	}).Encode(), wmsgEncoded...)
 
 	if _, err := conn.Write(wmsgPkt); err != nil {
-		fmt.Fprintf(os.Stderr, "Send wmsg error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Send wmsg error: %w", err)
 	}
 
 	respHdr, err := daemon.ReadHeader(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Read response error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Read response error: %w", err)
 	}
 
 	payload := make([]byte, respHdr.Len)
@@ -251,10 +258,14 @@ func doWmsg(sockPath string, toUser, msg string) {
 	} else {
 		fmt.Printf("Failed: Code=%d, Message=%s\n", ack.Code, ack.MessageString())
 	}
+	return nil
 }
 
-func doTalk(sockPath string, toUser string, sig int) {
-	conn := connect(sockPath)
+func doTalk(sockPath string, toUser string, sig int) error {
+	conn, err := connect(sockPath)
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
 	// 1. Register as ctl
@@ -268,13 +279,11 @@ func doTalk(sockPath string, toUser string, sig int) {
 		Len:     uint32(len(reg.Encode())),
 	}).Encode(), reg.Encode()...)
 	if _, err := conn.Write(regPkt); err != nil {
-		fmt.Fprintf(os.Stderr, "Register error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Register error: %w", err)
 	}
 	ackHdr, err := daemon.ReadHeader(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Register ACK read error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Register ACK read error: %w", err)
 	}
 	ackBuf := make([]byte, ackHdr.Len)
 	_, _ = io.ReadFull(conn, ackBuf)
@@ -299,14 +308,12 @@ func doTalk(sockPath string, toUser string, sig int) {
 	}).Encode(), talkEncoded...)
 
 	if _, err := conn.Write(talkPkt); err != nil {
-		fmt.Fprintf(os.Stderr, "Send talk error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Send talk error: %w", err)
 	}
 
 	respHdr, err := daemon.ReadHeader(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Read response error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Read response error: %w", err)
 	}
 
 	payload := make([]byte, respHdr.Len)
@@ -317,6 +324,7 @@ func doTalk(sockPath string, toUser string, sig int) {
 	} else {
 		fmt.Printf("Failed: Code=%d, Message=%s\n", ack.Code, ack.MessageString())
 	}
+	return nil
 }
 
 func parseTarget(targetStr string) (uint32, uint64, error) {
@@ -359,8 +367,11 @@ func resolveBidAndAid(boardStr, fileStr string) (uint32, uint64, error) {
 	return bid, aid, nil
 }
 
-func doLivePub(sockPath string, bid uint32, aid uint64, comment string) {
-	conn := connect(sockPath)
+func doLivePub(sockPath string, bid uint32, aid uint64, comment string) error {
+	conn, err := connect(sockPath)
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
 	comment = strings.TrimRight(comment, "\r\n")
@@ -382,14 +393,12 @@ func doLivePub(sockPath string, bid uint32, aid uint64, comment string) {
 	}).Encode(), psEncoded...)
 
 	if _, err := conn.Write(pkt); err != nil {
-		fmt.Fprintf(os.Stderr, "Publish error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Publish error: %w", err)
 	}
 
 	respHdr, err := daemon.ReadHeader(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Read response error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Read response error: %w", err)
 	}
 	payload := make([]byte, respHdr.Len)
 	_, _ = io.ReadFull(conn, payload)
@@ -399,10 +408,14 @@ func doLivePub(sockPath string, bid uint32, aid uint64, comment string) {
 	} else {
 		fmt.Printf("Failed: Code=%d, Message=%s\n", ack.Code, ack.MessageString())
 	}
+	return nil
 }
 
-func doLiveSub(sockPath string, bid uint32, aid uint64) {
-	conn := connect(sockPath)
+func doLiveSub(sockPath string, bid uint32, aid uint64) error {
+	conn, err := connect(sockPath)
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
 	// 1. Register as subscriber
@@ -416,8 +429,7 @@ func doLiveSub(sockPath string, bid uint32, aid uint64) {
 		Len:     uint32(len(reg.Encode())),
 	}).Encode(), reg.Encode()...)
 	if _, err := conn.Write(regPkt); err != nil {
-		fmt.Fprintf(os.Stderr, "Register error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Register error: %w", err)
 	}
 	ackHdr, _ := daemon.ReadHeader(conn)
 	ackBuf := make([]byte, ackHdr.Len)
@@ -438,13 +450,11 @@ func doLiveSub(sockPath string, bid uint32, aid uint64) {
 	}).Encode(), psEncoded...)
 
 	if _, err := conn.Write(pkt); err != nil {
-		fmt.Fprintf(os.Stderr, "Subscribe error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Subscribe error: %w", err)
 	}
 	respHdr, err := daemon.ReadHeader(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Subscribe ACK error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Subscribe ACK error: %w", err)
 	}
 	subAckBuf := make([]byte, respHdr.Len)
 	_, _ = io.ReadFull(conn, subAckBuf)
@@ -456,12 +466,12 @@ func doLiveSub(sockPath string, bid uint32, aid uint64) {
 		hdr, err := daemon.ReadHeader(conn)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Connection closed: %v\n", err)
-			return
+			return nil
 		}
 		payload := make([]byte, hdr.Len)
 		if _, err := io.ReadFull(conn, payload); err != nil {
 			fmt.Fprintf(os.Stderr, "Read payload error: %v\n", err)
-			return
+			return nil
 		}
 		if hdr.Type == daemon.IPCTypeLiveComment {
 			comment, err := daemon.DecodePubSubPayload(payload)
@@ -523,28 +533,33 @@ func formatDuration(sec uint32) string {
 	return fmt.Sprintf("%02dm %02ds", mins, s)
 }
 
-func doConns(sockPath string) {
-	conn := connect(sockPath)
+func doConns(sockPath string) error {
+	conn, err := connect(sockPath)
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
 	stats, err := queryStats(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error querying stats: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Error querying stats: %w", err)
 	}
 
 	fmt.Printf("Active connections: %d (registered sessions: %d, unique users: %d)\n",
 		stats.ActiveClients, stats.ActiveSessions, stats.RegisteredUsers)
+	return nil
 }
 
-func doStatus(sockPath string) {
-	conn := connect(sockPath)
+func doStatus(sockPath string) error {
+	conn, err := connect(sockPath)
+	if err != nil {
+		return err
+	}
 	defer conn.Close()
 
 	stats, err := queryStats(conn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to query stats from service: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("Failed to query stats from service: %w", err)
 	}
 
 	xchatSock := filepath.Join(filepath.Dir(sockPath), "xchat.ipc.sock")
@@ -562,4 +577,5 @@ func doStatus(sockPath string) {
 	fmt.Printf("  Total live comments:   %d\n", stats.TotalLive)
 	fmt.Printf("xchat bridge is active on %s (backend: xchatd)\n", xchatSock)
 	fmt.Printf("chess service is active on %s\n", chessSock)
+	return nil
 }

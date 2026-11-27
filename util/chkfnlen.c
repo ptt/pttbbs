@@ -1460,6 +1460,9 @@ int main(int argc, char **argv)
     init_stats(&custom_stats);
     init_stats(&overall_stats);
 
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     if (optind < argc) {
         /* Scan specific paths passed by the user */
         for (int i = optind; i < argc; i++) {
@@ -1563,6 +1566,9 @@ int main(int argc, char **argv)
     print_space_report(&overall_stats);
     if (optind >= argc)
         check_legacy_mailqueue(opt_bbshome);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    printf("Scan took %.1f seconds.\n",
+           (t1.tv_sec - t0.tv_sec) + (t1.tv_nsec - t0.tv_nsec) / 1e9);
 
     if (overall_stats.count_gt_threshold > 0 ||
         overall_stats.need_repair_renamed > 0 ||

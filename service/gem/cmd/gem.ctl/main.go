@@ -83,9 +83,9 @@ the bytes of the BBS (Big5).
 
 var cl *client.Client
 
-func die(err error) {
+func fail(err error) int {
 	fmt.Fprintf(os.Stderr, "gem.ctl: %v\n", err)
-	os.Exit(1)
+	return 1
 }
 
 func ping(socket string) error {
@@ -102,14 +102,6 @@ func splitEntry(s string) ([]string, string, error) {
 		return nil, "", fmt.Errorf("%q names no entry", s)
 	}
 	return p[:len(p)-1], p[len(p)-1], nil
-}
-
-func mustPath(s string) []string {
-	p, err := storage.SplitPath(s)
-	if err != nil {
-		die(err)
-	}
-	return p
 }
 
 // termUTF8 tells whether the terminal takes UTF-8: -encoding, else the
@@ -145,7 +137,9 @@ func fromTerm(s string) []byte {
 
 func title(h *storage.Header) string { return toTerm(h.Title()) }
 
-func main() {
+func main() { svcctl.Exit(run()) }
+
+func run() int {
 	bbsHome := os.Getenv("BBSHOME")
 	if bbsHome == "" {
 		bbsHome = bbs.BBSHome()
@@ -157,7 +151,7 @@ func main() {
 	args := flag.Args()
 	if len(args) == 0 {
 		flag.Usage()
-		os.Exit(2)
+		return 2
 	}
 	switch strings.ToLower(*encoding) {
 	case "auto", "":
@@ -167,36 +161,37 @@ func main() {
 	case "big5", "raw":
 		termUTF8 = false
 	default:
-		die(fmt.Errorf("unknown -encoding %q", *encoding))
+		return fail(fmt.Errorf("unknown -encoding %q", *encoding))
 	}
 	cl = &client.Client{Socket: *socket}
 	cmd, args := args[0], args[1:]
-	need := func(n int) {
+	need := func(n int) bool {
 		if len(args) < n {
 			flag.Usage()
-			os.Exit(2)
+			return false
 		}
+		return true
 	}
 
 	switch cmd {
 	case "restart":
-		os.Exit(svcctl.Main(svcctl.Options{Name: "gem.svc", Socket: *socket, Ping: ping}, args))
+		return svcctl.Main(svcctl.Options{Name: "gem.svc", Socket: *socket, Ping: ping}, args)
 
 	case "ping":
 		if err := cl.Ping(); err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Println("PONG")
 
 	case "roots":
 		r, err := cl.Do("ROOTS")
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		lines, err := r.Lines(int(r.Int(0)))
 		r.Close()
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		sort.Strings(lines)
 		for _, l := range lines {
@@ -204,30 +199,40 @@ func main() {
 		}
 
 	case "stat":
-		need(1)
+		if !need(1) {
+			return 2
+		}
 		w, err := cl.Simple("STAT " + args[0])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Printf("files=%s dirs=%s links=%s missing=%s bytes=%s depth=%s nodes=%s\n", w[0], w[1], w[2], w[3], w[4], w[5], w[6])
 
 	case "quota":
-		need(1)
+		if !need(1) {
+			return 2
+		}
 		w, err := cl.Simple("QUOTA " + args[0])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Printf("nodes=%s dirs=%s bytes=%s width=%s depth=%s copy=%s\n", w[0], w[1], w[2], w[3], w[4], w[5])
 
 	case "ls":
-		need(1)
+		if !need(1) {
+			return 2
+		}
 		var path []string
 		if len(args) > 1 {
-			path = mustPath(args[1])
+			p, err := storage.SplitPath(args[1])
+			if err != nil {
+				return fail(err)
+			}
+			path = p
 		}
 		l, err := cl.List(args[0], path, 0, -1)
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		for i, r := range l.Records {
 			size := fmt.Sprint(r.Bytes)
@@ -247,14 +252,16 @@ func main() {
 			l.Count, t.Files, t.Dirs, t.Links, t.Missing, t.Bytes, t.Depth)
 
 	case "cat":
-		need(2)
+		if !need(2) {
+			return 2
+		}
 		path, name, err := splitEntry(args[1])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		data, err := cl.Get(args[0], path, -1, name)
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		os.Stdout.Write(data)
 
@@ -265,7 +272,7 @@ func main() {
 		fs.Parse(args)
 		if fs.NArg() == 0 || (*dir != "" && fs.NArg() != 1) {
 			flag.Usage()
-			os.Exit(2)
+			return 2
 		}
 		failed := false
 		for _, b := range fs.Args() {
@@ -276,7 +283,7 @@ func main() {
 			if *dir != "" {
 				abs, err := filepath.Abs(*dir)
 				if err != nil {
-					die(err)
+					return fail(err)
 				}
 				line += " " + abs
 			}
@@ -289,7 +296,7 @@ func main() {
 			fmt.Printf("%s: %s (%sms)\n", b, strings.Join(w[1:], " "), w[0])
 		}
 		if failed {
-			os.Exit(1)
+			return 1
 		}
 
 	case "import-all":
@@ -303,7 +310,7 @@ func main() {
 		if code == 0 && !*noResolve {
 			code = resolveLinks(nil)
 		}
-		os.Exit(code)
+		return code
 
 	case "resolve-links":
 		fs := flag.NewFlagSet("resolve-links", flag.ExitOnError)
@@ -313,28 +320,36 @@ func main() {
 		if *olds != "" {
 			homes = strings.Split(*olds, ",")
 		}
-		os.Exit(resolveLinks(homes))
+		return resolveLinks(homes)
 
 	case "export":
-		need(2)
+		if !need(2) {
+			return 2
+		}
 		abs, err := filepath.Abs(args[1])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		w, err := cl.Simple("EXPORT " + args[0] + " " + abs)
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Println(strings.Join(w, " "))
 
 	case "mkdir":
-		need(3)
+		if !need(3) {
+			return 2
+		}
 		var h storage.Header
 		h.SetTitle(fromTerm(args[2]))
 		h.SetOwner("SYSOP")
-		rec, at, err := cl.Add("dir", args[0], mustPath(args[1]), -1, h, nil)
+		path, err := storage.SplitPath(args[1])
 		if err != nil {
-			die(err)
+			return fail(err)
+		}
+		rec, at, err := cl.Add("dir", args[0], path, -1, h, nil)
+		if err != nil {
+			return fail(err)
 		}
 		fmt.Printf("%d %s\n", at, rec.Header.Name())
 
@@ -345,18 +360,18 @@ func main() {
 		a := fs.Args()
 		if len(a) < 4 {
 			flag.Usage()
-			os.Exit(2)
+			return 2
 		}
 		path, name, err := splitEntry(a[1])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		src := storage.Ref{Root: a[0], Path: path, Index: -1, Name: name}
 		var hp *storage.Header
 		if *newName != "" {
 			rec, _, _, err := cl.Entry(a[0], path, -1, name)
 			if err != nil {
-				die(err)
+				return fail(err)
 			}
 			h := rec.Header
 			h.SetName(*newName)
@@ -366,20 +381,26 @@ func main() {
 		if cmd == "mv" {
 			verb = "MOVE"
 		}
-		rec, at, err := cl.CopyOrMove(verb, src, a[2], mustPath(a[3]), -1, hp)
+		to, err := storage.SplitPath(a[3])
 		if err != nil {
-			die(err)
+			return fail(err)
+		}
+		rec, at, err := cl.CopyOrMove(verb, src, a[2], to, -1, hp)
+		if err != nil {
+			return fail(err)
 		}
 		fmt.Printf("%d %s\n", at, rec.Header.Name())
 
 	case "rm":
-		need(2)
+		if !need(2) {
+			return 2
+		}
 		path, name, err := splitEntry(args[1])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		if _, err := cl.Simple(fmt.Sprintf("REMOVE %s %s -1 %s", args[0], protocol.Path(path), name)); err != nil {
-			die(err)
+			return fail(err)
 		}
 
 	case "delete":
@@ -388,28 +409,30 @@ func main() {
 		fs.Parse(args)
 		if fs.NArg() != 2 {
 			flag.Usage()
-			os.Exit(2)
+			return 2
 		}
 		path, name, err := splitEntry(fs.Arg(1))
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		w, err := cl.Simple(fmt.Sprintf("DELETE %s %s -1 %s %s", fs.Arg(0), protocol.Path(path), name, *by))
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Printf("in the trash as %s\n", w[0])
 
 	case "trash":
-		need(1)
+		if !need(1) {
+			return 2
+		}
 		r, err := cl.Do("TRASH " + args[0])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		lines, err := r.Lines(int(r.Int(0)))
 		r.Close()
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		for _, l := range lines {
 			// <name> <kind> <at> <by> <index> <name it had> <path>\t<title>
@@ -430,22 +453,24 @@ func main() {
 		}
 
 	case "restore":
-		need(2)
+		if !need(2) {
+			return 2
+		}
 		r, err := cl.Do("RESTORE " + args[0] + " " + args[1])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		lines, err := r.Lines(1)
 		r.Close()
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Printf("restored to %s/%s (#%d)\n", lines[0], r.Words[1], r.Int(0))
 
 	case "purge":
 		if len(args) == 2 && !strings.HasPrefix(args[0], "-") {
 			if _, err := cl.Simple("PURGE " + args[0] + " " + args[1]); err != nil {
-				die(err)
+				return fail(err)
 			}
 			fmt.Println("purged 1")
 			break
@@ -455,7 +480,7 @@ func main() {
 		fs.Parse(args)
 		w, err := cl.Simple(fmt.Sprintf("PURGE %d", *days))
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Printf("purged %s\n", w[0])
 
@@ -465,37 +490,43 @@ func main() {
 		fs.Parse(args)
 		if fs.NArg() != 2 {
 			flag.Usage()
-			os.Exit(2)
+			return 2
 		}
 		w, err := cl.Simple(fmt.Sprintf("EXPIRE %s %s %d", fs.Arg(0), fs.Arg(1), *days))
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Printf("expired %s\n", w[0])
 
 	case "rename-root":
-		need(2)
+		if !need(2) {
+			return 2
+		}
 		if _, err := cl.Simple("RENAME_ROOT " + args[0] + " " + args[1]); err != nil {
-			die(err)
+			return fail(err)
 		}
 
 	case "delete-root":
-		need(1)
+		if !need(1) {
+			return 2
+		}
 		if _, err := cl.Simple("DELETE_ROOT " + args[0]); err != nil {
-			die(err)
+			return fail(err)
 		}
 
 	case "index":
-		need(1)
+		if !need(1) {
+			return 2
+		}
 		r, err := cl.Do("INDEX " + args[0])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		text := make([]byte, r.Int(0))
 		_, err = io.ReadFull(r.R, text)
 		r.Close()
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		os.Stdout.WriteString(toTerm(text))
 
@@ -506,12 +537,12 @@ func main() {
 		}
 		r, err := cl.Do(line)
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		problems, err := r.Lines(int(r.Int(6)))
 		r.Close()
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Printf("listings=%d blobs=%d entries=%d stored_bytes=%d pending=%d\n", r.Int(1), r.Int(2), r.Int(3), r.Int(4), r.Int(5))
 		for _, p := range problems {
@@ -519,14 +550,14 @@ func main() {
 		}
 		if r.Int(0) != 1 {
 			fmt.Println("PROBLEMS FOUND")
-			os.Exit(1)
+			return 1
 		}
 		fmt.Println("OK")
 
 	case "metrics":
 		r, err := cl.Do("METRICS")
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		io.CopyN(os.Stdout, r.R, r.Int(0))
 		r.Close()
@@ -534,28 +565,32 @@ func main() {
 	case "pending":
 		w, err := cl.Simple("PENDING")
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Println(w[0])
 
 	case "daily-backup":
-		os.Exit(dailyBackup(args))
+		return dailyBackup(args)
 
 	case "sharing":
-		need(1)
+		if !need(1) {
+			return 2
+		}
 		if err := sharing(args[0]); err != nil {
-			die(err)
+			return fail(err)
 		}
 
 	case "verify-backup":
-		need(1)
+		if !need(1) {
+			return 2
+		}
 		ok, err := verifyBackup(args[0])
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		if !ok {
 			fmt.Println("PROBLEMS FOUND")
-			os.Exit(1)
+			return 1
 		}
 		fmt.Println("OK")
 
@@ -566,14 +601,15 @@ func main() {
 		}
 		w, err := cl.Simple(line)
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		fmt.Println(strings.Join(w, " "))
 
 	default:
 		flag.Usage()
-		os.Exit(2)
+		return 2
 	}
+	return 0
 }
 
 // isDir tells whether path is a directory, following symbolic links.
@@ -696,7 +732,7 @@ func resolveLinks(oldHomes []string) int {
 	for _, h := range oldHomes {
 		abs, err := filepath.Abs(h)
 		if err != nil {
-			die(err)
+			return fail(err)
 		}
 		line += " " + abs
 	}
@@ -708,7 +744,7 @@ func resolveLinks(oldHomes []string) int {
 	problems, err := r.Lines(int(r.Int(5)))
 	r.Close()
 	if err != nil {
-		die(err)
+		return fail(err)
 	}
 	for _, p := range problems {
 		fmt.Println("  " + toTerm([]byte(p)))
@@ -724,7 +760,7 @@ func importAll(bbsHome string, jobs int, replace, users bool) int {
 	var boards []string
 	letters, err := os.ReadDir(filepath.Join(bbsHome, "man", "boards"))
 	if err != nil {
-		die(err)
+		return fail(err)
 	}
 	for _, l := range letters {
 		// man/boards/<c> and the boards in it may be symbolic links to

@@ -42,7 +42,9 @@ func ping(socket string) error {
 	return nil
 }
 
-func main() {
+func main() { svcctl.Exit(run()) }
+
+func run() int {
 	bbsHome := os.Getenv("BBSHOME")
 	if bbsHome == "" {
 		bbsHome = bbs.BBSHome()
@@ -66,12 +68,12 @@ func main() {
 		fmt.Println("  logout <userid> <pid>")
 		fmt.Println("  reload <userid>")
 		fmt.Println("  " + svcctl.Usage)
-		os.Exit(1)
+		return 1
 	}
 
 	action := args[0]
 	if action == "restart" {
-		os.Exit(svcctl.Main(svcctl.Options{Name: "friend.svc", Socket: *socketPath, Ping: ping}, args[1:]))
+		return svcctl.Main(svcctl.Options{Name: "friend.svc", Socket: *socketPath, Ping: ping}, args[1:])
 	}
 	var req daemon.Request
 	req.Action = action
@@ -83,14 +85,14 @@ func main() {
 	case "query", "user", "info":
 		if len(args) < 2 {
 			fmt.Println("Usage: friend.ctl query <userid>")
-			os.Exit(1)
+			return 1
 		}
 		req.UserID = args[1]
 
 	case "hbfl", "hbfl_board":
 		if len(args) < 2 {
 			fmt.Println("Usage: friend.ctl hbfl <bid|brdname>")
-			os.Exit(1)
+			return 1
 		}
 		if n, err := fmt.Sscanf(args[1], "%d", &req.BID); err != nil || n != 1 {
 			req.BrdName = args[1]
@@ -99,7 +101,7 @@ func main() {
 	case "hbfl_user":
 		if len(args) < 2 {
 			fmt.Println("Usage: friend.ctl hbfl_user <uid|userid>")
-			os.Exit(1)
+			return 1
 		}
 		if n, err := fmt.Sscanf(args[1], "%d", &req.UID); err != nil || n != 1 {
 			req.UserID = args[1]
@@ -115,7 +117,7 @@ func main() {
 	case "login":
 		if len(args) < 4 {
 			fmt.Println("Usage: friend.ctl login <userid> <pid> <sid>")
-			os.Exit(1)
+			return 1
 		}
 		req.UserID = args[1]
 		_, _ = fmt.Sscanf(args[2], "%d", &req.PID)
@@ -124,7 +126,7 @@ func main() {
 	case "friend_sync":
 		if len(args) < 5 {
 			fmt.Println("Usage: friend.ctl friend_sync <userid> <uid> <pid> <sid>")
-			os.Exit(1)
+			return 1
 		}
 		req.UserID = args[1]
 		_, _ = fmt.Sscanf(args[2], "%d", &req.UID)
@@ -134,7 +136,7 @@ func main() {
 	case "logout":
 		if len(args) < 3 {
 			fmt.Println("Usage: friend.ctl logout <userid> <pid>")
-			os.Exit(1)
+			return 1
 		}
 		req.UserID = args[1]
 		_, _ = fmt.Sscanf(args[2], "%d", &req.PID)
@@ -142,21 +144,22 @@ func main() {
 	case "reload":
 		if len(args) < 2 {
 			fmt.Println("Usage: friend.ctl reload <userid>")
-			os.Exit(1)
+			return 1
 		}
 		req.UserID = args[1]
 
 	default:
 		fmt.Printf("Unknown action: %s\n", action)
-		os.Exit(1)
+		return 1
 	}
 
 	resp, err := sendRequest(*socketPath, req)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	out, _ := json.MarshalIndent(resp, "", "  ")
 	fmt.Println(string(out))
+	return 0
 }

@@ -87,7 +87,7 @@ func formatTimeAgo(t time.Time) string {
 	return fmt.Sprintf("%dh ago", int(d.Hours()))
 }
 
-func handleTop(socketPath string, args []string) {
+func handleTop(socketPath string, args []string) int {
 	limit := 20
 	sortBy := "misses"
 	jsonOutput := false
@@ -123,29 +123,29 @@ func handleTop(socketPath string, args []string) {
 	resp, err := sendControlRequest(socketPath, req, 10*time.Second)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if resp.Status != "ok" {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Message)
-		os.Exit(1)
+		return 1
 	}
 
 	if jsonOutput {
 		out, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(out))
-		return
+		return 0
 	}
 
 	dataBytes, _ := json.Marshal(resp.Data)
 	var items []daemon.BoardStats
 	if err := json.Unmarshal(dataBytes, &items); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing response: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	if len(items) == 0 {
 		fmt.Println("No board activity or cached entries yet.")
-		return
+		return 0
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
@@ -178,9 +178,10 @@ func handleTop(socketPath string, args []string) {
 		}
 	}
 	w.Flush()
+	return 0
 }
 
-func handleSources(socketPath string, args []string) {
+func handleSources(socketPath string, args []string) int {
 	limit := 50
 	jsonOutput := false
 	var filterBoard string
@@ -205,7 +206,7 @@ func handleSources(socketPath string, args []string) {
 	statusResp, err := sendControlRequest(socketPath, statusReq, 5*time.Second)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching status: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	topReq := daemon.ControlRequest{
@@ -216,7 +217,7 @@ func handleSources(socketPath string, args []string) {
 	topResp, err := sendControlRequest(socketPath, topReq, 10*time.Second)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error fetching top boards: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	if jsonOutput {
@@ -226,7 +227,7 @@ func handleSources(socketPath string, args []string) {
 		}
 		out, _ := json.MarshalIndent(combined, "", "  ")
 		fmt.Println(string(out))
-		return
+		return 0
 	}
 
 	var stats daemon.ServiceStats
@@ -297,20 +298,21 @@ func handleSources(socketPath string, args []string) {
 		rank++
 	}
 	w2.Flush()
+	return 0
 }
 
-func handleBacktrack(socketPath string, args []string) {
+func handleBacktrack(socketPath string, args []string) int {
 	req := daemon.ControlRequest{
 		Action: "backtrack",
 	}
 	resp, err := sendControlRequest(socketPath, req, 10*time.Second)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if resp.Status != "ok" {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Message)
-		os.Exit(1)
+		return 1
 	}
 
 	jsonOutput := false
@@ -326,19 +328,19 @@ func handleBacktrack(socketPath string, args []string) {
 	if jsonOutput {
 		out, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(out))
-		return
+		return 0
 	}
 
 	dataBytes, _ := json.Marshal(resp.Data)
 	var items []daemon.BoardBacktrackInfo
 	if err := json.Unmarshal(dataBytes, &items); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing response: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	if len(items) == 0 {
 		fmt.Println("No board backtrack info cached yet.")
-		return
+		return 0
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
@@ -354,9 +356,10 @@ func handleBacktrack(socketPath string, args []string) {
 			item.MaxBacktrack, tdiffStr, timeAgo)
 	}
 	w.Flush()
+	return 0
 }
 
-func handleEntries(socketPath string, args []string) {
+func handleEntries(socketPath string, args []string) int {
 	limit := 50
 	jsonOutput := false
 	var filterBoard string
@@ -386,29 +389,29 @@ func handleEntries(socketPath string, args []string) {
 	resp, err := sendControlRequest(socketPath, req, 10*time.Second)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if resp.Status != "ok" {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Message)
-		os.Exit(1)
+		return 1
 	}
 
 	if jsonOutput {
 		out, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(out))
-		return
+		return 0
 	}
 
 	dataBytes, _ := json.Marshal(resp.Data)
 	var items []daemon.CachedEntryInfo
 	if err := json.Unmarshal(dataBytes, &items); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing response: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	if len(items) == 0 {
 		fmt.Println("No cached search entries found.")
-		return
+		return 0
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
@@ -419,9 +422,10 @@ func handleEntries(socketPath string, args []string) {
 			item.Board, item.Bid, item.Matches, item.ScannedRecs, ageStr, item.Predicates)
 	}
 	w.Flush()
+	return 0
 }
 
-func handleVerbose(socketPath string, args []string) {
+func handleVerbose(socketPath string, args []string) int {
 	req := daemon.ControlRequest{
 		Action: "verbose",
 	}
@@ -437,17 +441,17 @@ func handleVerbose(socketPath string, args []string) {
 	resp, err := sendControlRequest(socketPath, req, 5*time.Second)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if resp.Status != "ok" {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Message)
-		os.Exit(1)
+		return 1
 	}
 
 	if jsonOutput {
 		out, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(out))
-		return
+		return 0
 	}
 
 	dataMap, _ := resp.Data.(map[string]interface{})
@@ -463,12 +467,13 @@ func handleVerbose(socketPath string, args []string) {
 	} else {
 		fmt.Printf("Current verbose level: %d\n", currentLevel)
 	}
+	return 0
 }
 
-func handlePprof(socketPath string, args []string) {
+func handlePprof(socketPath string, args []string) int {
 	if len(args) == 0 {
 		fmt.Println("Usage: search.ctl pprof <cpu|heap|goroutine|block|mutex> [seconds] [-out file] [-debug 0|1|2]")
-		os.Exit(1)
+		return 1
 	}
 
 	profileType := args[0]
@@ -508,31 +513,31 @@ func handlePprof(socketPath string, args []string) {
 	resp, err := sendControlRequest(socketPath, req, timeout)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if resp.Status != "ok" {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", resp.Message)
-		os.Exit(1)
+		return 1
 	}
 
 	dataBytes, _ := json.Marshal(resp.Data)
 	var res daemon.PprofResult
 	if err := json.Unmarshal(dataBytes, &res); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing pprof response: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	if res.IsText {
 		if outFile != "" {
 			if err := os.WriteFile(outFile, []byte(res.Text), 0644); err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to write %s: %v\n", outFile, err)
-				os.Exit(1)
+				return 1
 			}
 			fmt.Printf("Saved %s dump to %s\n", profileType, outFile)
 		} else {
 			fmt.Print(res.Text)
 		}
-		return
+		return 0
 	}
 
 	if outFile == "" {
@@ -541,9 +546,10 @@ func handlePprof(socketPath string, args []string) {
 
 	if err := os.WriteFile(outFile, res.Bytes, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write %s: %v\n", outFile, err)
-		os.Exit(1)
+		return 1
 	}
 	fmt.Printf("Saved %s profile to %s (analyze with: go tool pprof %s)\n", profileType, outFile, outFile)
+	return 0
 }
 
 func ping(socket string) error {
@@ -573,7 +579,9 @@ func printUsage() {
 	fmt.Println("  " + svcctl.Usage)
 }
 
-func main() {
+func main() { svcctl.Exit(run()) }
+
+func run() int {
 	bbsHome := os.Getenv("BBSHOME")
 	if bbsHome == "" {
 		bbsHome = bbs.BBSHome()
@@ -586,7 +594,7 @@ func main() {
 	args := flag.Args()
 	if len(args) == 0 {
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	action := args[0]
@@ -594,19 +602,19 @@ func main() {
 
 	switch action {
 	case "restart":
-		os.Exit(svcctl.Main(svcctl.Options{Name: "search.svc", Socket: *socketPath, Ping: ping}, subArgs))
+		return svcctl.Main(svcctl.Options{Name: "search.svc", Socket: *socketPath, Ping: ping}, subArgs)
 
 	case "status", "stats":
 		req := daemon.ControlRequest{Action: action}
 		resp, err := sendControlRequest(*socketPath, req, 5*time.Second)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		out, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(out))
 		if resp.Status != "ok" {
-			os.Exit(1)
+			return 1
 		}
 
 	case "flush":
@@ -620,38 +628,39 @@ func main() {
 		resp, err := sendControlRequest(*socketPath, req, 5*time.Second)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
+			return 1
 		}
 		out, _ := json.MarshalIndent(resp, "", "  ")
 		fmt.Println(string(out))
 		if resp.Status != "ok" {
-			os.Exit(1)
+			return 1
 		}
 
 	case "sources":
-		handleSources(*socketPath, subArgs)
+		return handleSources(*socketPath, subArgs)
 
 	case "top":
-		handleTop(*socketPath, subArgs)
+		return handleTop(*socketPath, subArgs)
 
 	case "entries":
-		handleEntries(*socketPath, subArgs)
+		return handleEntries(*socketPath, subArgs)
 
 	case "backtrack":
-		handleBacktrack(*socketPath, subArgs)
+		return handleBacktrack(*socketPath, subArgs)
 
 	case "verbose":
-		handleVerbose(*socketPath, subArgs)
+		return handleVerbose(*socketPath, subArgs)
 
 	case "pprof":
-		handlePprof(*socketPath, subArgs)
+		return handlePprof(*socketPath, subArgs)
 
 	case "diag", "report", "bundle":
-		handleDiag(*socketPath, subArgs)
+		return handleDiag(*socketPath, subArgs)
 
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown action: %s\n", action)
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }

@@ -559,7 +559,7 @@ func runDiag(socketPath string, seconds int, outFile string, collectPprof bool) 
 	return outFile, livePreview.String(), nil
 }
 
-func handleDiag(socketPath string, args []string) {
+func handleDiag(socketPath string, args []string) int {
 	seconds := 10
 	outFile := ""
 	collectPprof := true
@@ -584,11 +584,12 @@ func handleDiag(socketPath string, args []string) {
 	savedPath, preview, err := runDiag(socketPath, seconds, outFile, collectPprof)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error collecting diagnostics: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 	if preview != "" {
 		fmt.Println()
 		fmt.Print(preview)
 	}
 	fmt.Printf("\nSaved diagnostic bundle to: %s\n", savedPath)
+	return 0
 }
