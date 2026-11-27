@@ -202,6 +202,28 @@ static int currlistmode = LISTMODE_DATE;
 	(currlistmode == LISTMODE_MONEY || \
 	 ((currmode & MODE_SELECT) && (currsrmode & RS_MONEY)))
 
+/* What the score column of the post list shows: the board default
+ * (board_lists_comments()), the score (V), or the number of comments (C).
+ * Kept for the session like currlistmode, switched from Q. */
+enum SCORE_LISTMODES {
+    SCORE_LISTMODE_DEFAULT = 0,
+    SCORE_LISTMODE_SCORE,
+    SCORE_LISTMODE_COMMENTS,
+};
+static int currscorelistmode = SCORE_LISTMODE_DEFAULT;
+
+int
+post_list_shows_comments(void)
+{
+    if (!IS_ENABLED(CONFIG_RATING))
+        return 0;
+    if (currscorelistmode == SCORE_LISTMODE_COMMENTS)
+        return 1;
+    if (currscorelistmode == SCORE_LISTMODE_SCORE)
+        return 0;
+    return board_lists_comments(currbid);
+}
+
 static time4_t  *board_note_time = NULL;
 
 void
@@ -449,7 +471,31 @@ int CheckPostRestriction(int bid) {
 
 
 // Kept const to stay in .rodata / .data.rel.ro and avoid dirtying .data RSS.
+#if IS_ENABLED(CONFIG_RATING)
+#define BBS_COL_SCORE "  推"
+#else
+#define BBS_COL_SCORE "    "
+#endif
 static const VCOL bbs_coldefs[] = {
+    {"", 1, 1, 100},
+    {"  編號", 6, 6, 20},
+    {BBS_COL_SCORE, 4, 4, 90},
+    {"日 期", 6, 6, 70},
+    {"作  者       ", 13, 13, 80},
+    {"文  章  標  題", 16, TTLEN + 1, 100},
+    {0},
+};
+static const VCOL bbs_coldefs_money[] = {
+    {"", 1, 1, 100},
+    {"  編號", 6, 6, 20},
+    {BBS_COL_SCORE, 4, 4, 90},
+    {"價 格", 6, 6, 70},
+    {"作  者       ", 13, 13, 80},
+    {"文  章  標  題", 16, TTLEN + 1, 100},
+    {0},
+};
+// When the score column shows the number of comments.
+static const VCOL bbs_coldefs_comments[] = {
     {"", 1, 1, 100},
     {"  編號", 6, 6, 20},
     {"    ", 4, 4, 90},
@@ -458,7 +504,7 @@ static const VCOL bbs_coldefs[] = {
     {"文  章  標  題", 16, TTLEN + 1, 100},
     {0},
 };
-static const VCOL bbs_coldefs_money[] = {
+static const VCOL bbs_coldefs_money_comments[] = {
     {"", 1, 1, 100},
     {"  編號", 6, 6, 20},
     {"    ", 4, 4, 90},
@@ -490,7 +536,12 @@ readtitle(PSB_CTX *ctx)
     move(vs_row_line(VS_COL_HEADER), 0);
     if (ctx) {
         ctx->cols = BBS_COLS;
-        ctx->vcols = IS_LISTING_MONEY ? bbs_coldefs_money : bbs_coldefs;
+        int by_comments = post_list_shows_comments();
+        if (IS_LISTING_MONEY)
+            ctx->vcols = by_comments ? bbs_coldefs_money_comments :
+                                       bbs_coldefs_money;
+        else
+            ctx->vcols = by_comments ? bbs_coldefs_comments : bbs_coldefs;
         ctx->col_paddings = 1;
         if (bp->brdattr & BRD_COOLDOWN) {
             SNPRINTF(ctx->col_header_right, "[靜] ");
@@ -646,8 +697,8 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     isonline = query_online(ent->owner);
 
-    // The score, or the number of comments (board_lists_comments()).
-    int by_comments = board_lists_comments(currbid);
+    // The score, or the number of comments (post_list_shows_comments()).
+    int by_comments = post_list_shows_comments();
     int score = FHDR_SCORE(ent);
     if (title_type == SUBJECT_LOCKED)
         STRLCPY(recom, "0m--");
@@ -4545,6 +4596,16 @@ show_crossposts(const char *direct, int ent, const fileheader_t *fhdr)
 }
 
 static int
+postinfo_cmd_help(cmd_ctx_t *ctx)
+{
+    screen_backup_t old_screen;
+    scr_dump(&old_screen);
+    int sel_key = cmd_show_help_layers(ctx->caption, ctx->active_layers);
+    scr_restore(&old_screen);
+    return sel_key > 0 && sel_key != ctx->key ? sel_key : 'h';
+}
+
+static int
 view_postinfo(int ent, const fileheader_t * fhdr,
               const char *direct, int crs_ln)
 {
@@ -4565,8 +4626,6 @@ view_postinfo(int ent, const fileheader_t * fhdr,
     if (BOF_FILES_ARE_CACHE) {
         bof_crosspost_t one;
         crossposts = list_crossposts(direct, ent, fhdr, &one, 1, NULL);
-        if (crossposts > 0)
-            area_lines++;
     }
 
     if((area_l + area_lines > b_lines) ||  /* 下面放不下 */
@@ -4657,16 +4716,31 @@ view_postinfo(int ent, const fileheader_t * fhdr,
     } else {
 	int m = query_file_money(fhdr);
 
-	if(m < 0)
+	if (IS_ENABLED(CONFIG_RATING)) {
+	    int up = fhdr->upvote, down = fhdr->downvote;
+	    if (up < 0 && down == 0) {
+	        down = -up;
+	        up = 0;
+	    }
+	    if (m < 0)
+	        prints("│ 價值:無");
+	    else
+	        prints("│ 價值:%d " MONEYNAME, m);
+	    prints("  留言:%u  推:%d  噓:%d", (unsigned)fhdr->comments,
+	           up, down);
+	    if (BOF_FILES_ARE_CACHE)
+	        prints("  轉錄:%d", crossposts);
+	} else if (m < 0) {
 	    prints("│ 特殊文章，無價格記錄");
-	else
+	} else {
 	    prints("│ 這一篇文章值 %d " MONEYNAME, m);
-
+	}
     }
     prints("\n");
-    if (crossposts > 0)
-        prints("│ 轉錄 %d 次 (按 x 查看轉錄記錄)\n", crossposts);
-    prints("└──────────────────────── [再按 Q 切換價格列表]  ─┘\n");
+    if (IS_ENABLED(CONFIG_RATING))
+        prints("└─────────────────────────────────────┘\n");
+    else
+        prints("└──────────────────────── [再按 Q 切換價格列表]  ─┘\n");
 
     /* 印對話框的右邊界 */
     {
@@ -4679,19 +4753,49 @@ view_postinfo(int ent, const fileheader_t * fhdr,
       }
     }
     {
-        int r = pressanykey();
-        if (r == 'x' && crossposts > 0) {
+        int r;
+        if (IS_ENABLED(CONFIG_RATING)) {
+            cmd_t cmds[8];
+            int n = 0;
+            cmds[n++] = (cmd_t){ 'Q', "價格列表", "切換文章列表顯示價格或日期",
+                                 NULL, 0, CMD_PRIO_HIGH };
+            cmds[n++] = (cmd_t){ 'C', "留言數",   "文章列表改為顯示留言數",
+                                 NULL, 0, CMD_PRIO_HIGH };
+            cmds[n++] = (cmd_t){ 'V', "推噓分數", "文章列表改為顯示推噓分數 (推 - 噓)",
+                                 NULL, 0, CMD_PRIO_HIGH };
+            if (crossposts > 0)
+                cmds[n++] = (cmd_t){ 'X', "轉錄記錄", "查看本文章的轉錄記錄",
+                                     NULL, 0, CMD_PRIO_HIGH };
+            cmds[n++] = (cmd_t){ 'h', "說明", "顯示操作說明",
+                                 postinfo_cmd_help, 0, CMD_PRIO_USAGE };
+            cmds[n++] = (cmd_t){ '?', NULL, NULL,
+                                 postinfo_cmd_help, 0, CMD_PRIO_NONE };
+            cmds[n++] = (cmd_t){ KEY_LEFT, "離開", "關閉文章資訊",
+                                 NULL, 0, CMD_PRIO_QUIT };
+            cmds[n] = (cmd_t){ 0 };
+            do {
+                r = cmd_footer_select_cmd("文章資訊", cmds, NULL);
+            } while (r == 'h');
+        } else {
+            r = pressanykey();
+        }
+        if (r == 'X' && crossposts > 0) {
             show_crossposts(direct, ent, fhdr);
             return FULLUPDATE;
         }
         /* TODO: 多加一個 LISTMODE_AID？ */
-	/* QQ: enable money listing mode */
-	if (r == 'Q')
-	{
+	/* QQ: enable money listing mode; QC/QV: score column mode */
+	if (r == 'Q') {
 	    currlistmode = (currlistmode == LISTMODE_MONEY) ?
 		LISTMODE_DATE : LISTMODE_MONEY;
 	    vmsg((currlistmode == LISTMODE_MONEY) ?
 		    "開啟文章價格列表模式" : "停止列出文章價格");
+	} else if (IS_ENABLED(CONFIG_RATING) && r == 'C') {
+	    currscorelistmode = SCORE_LISTMODE_COMMENTS;
+	    vmsg("文章列表改為顯示留言數");
+	} else if (IS_ENABLED(CONFIG_RATING) && r == 'V') {
+	    currscorelistmode = SCORE_LISTMODE_SCORE;
+	    vmsg("文章列表改為顯示推噓分數 (推 - 噓)");
 	}
      }
 

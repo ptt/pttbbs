@@ -1549,7 +1549,7 @@ read_cmd_search_comment(cmd_ctx_t *ctx) {
     cx->locmem->crs_ln = read_view_v2p(&cx->view, ctx->curr);
     // As the list shows them: the score or the number of comments. 'C' and
     // 'V' switch it while asking (ask_score_predicate()).
-    read_apply_mode(cx, ctx, select_read(cx, board_lists_comments(currbid) ?
+    read_apply_mode(cx, ctx, select_read(cx, post_list_shows_comments() ?
                                          RS_COMMENTS : RS_SCORE));
     return 0;
 }
