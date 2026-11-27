@@ -1185,6 +1185,34 @@ func postModified(fhdr *FileHeader, ctime int64) int64 {
 	return ctime
 }
 
+// minSaneTime is before any post of PTT (1995-01-01 UTC).
+const minSaneTime = 788918400
+
+// repairRecord clears what is garbage in a damaged .DIR record and tells
+// whether it was one: its modified is before minSaneTime or after now
+// (records of 2002 and of 2003-12 to 2004-02 have values such as 56 or
+// 2936015393). Their filemode and multi are garbage too (FILE_ANONYMOUS
+// gave posts to the wrong users), so the post is the owner's, with no
+// marks or money. A stamp after now (clocks gone wrong) is no damage.
+func repairRecord(fhdr *FileHeader, postCtime, now int64) bool {
+	m := int64(fhdr.Modified)
+	if m == 0 || (m >= minSaneTime && (m <= now || postCtime > now)) {
+		return false
+	}
+	fhdr.Modified, fhdr.Filemode, fhdr.Multi = 0, 0, 0
+	return true
+}
+
+// isDeletedTitle tells whether title is one that mbbsd gives deleted posts
+// (see parseDeletedTitle): "(本文已被刪除) [author]", "(本文已被移除)
+// <author>", or the old default "(已被<moderator>刪除) <author>".
+func isDeletedTitle(title string) bool {
+	return strings.HasPrefix(title, safeDelTitle) || strings.HasPrefix(title, safeRemoveTitle) ||
+		oldDeletedTitleRegex.MatchString(title)
+}
+
+var oldDeletedTitleRegex = regexp.MustCompile(`^\(已被[A-Za-z0-9_]+(?:刪除|移除)\) <`)
+
 // parseDeletedTitle recovers who wrote and who deleted a post from the title
 // that mbbsd gave its safe-deleted .DIR record (see DeletedTitle). A title
 // in none of the standard forms was entered by the moderator who deleted the

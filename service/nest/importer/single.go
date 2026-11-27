@@ -148,7 +148,8 @@ func decodeRecord(fhdr *FileHeader, isBig5 bool) {
 func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserResolver, commentDB *leveldb.DB, job *recordJob) (data *storage.ImportedPostData, marked bool, err error) {
 	fhdr := job.fhdr
 	decodeRecord(fhdr, opts.IsBig5)
-	if job.deleted {
+	// Also records that old mbbsd marked deleted but left the file of.
+	if job.deleted || isDeletedTitle(fhdr.Title) {
 		return importSafeDeleted(engine, opts, users, fhdr)
 	}
 	rawBytes, err := ReadArticleFile(job.articlePath)
@@ -156,6 +157,19 @@ func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserReso
 		return nil, false, err
 	}
 	postCtime := postCtimeOf(fhdr, job.articlePath)
+	if repairRecord(fhdr, postCtime, time.Now().Unix()) {
+		fhdr.Date = ""
+	}
+	if fhdr.Owner == "" || fhdr.Title == "" {
+		// e.g. PttDigest: from the headers of the article.
+		owner, title := ArticleHeader(rawBytes, opts.IsBig5)
+		if fhdr.Owner == "" {
+			fhdr.Owner = owner
+		}
+		if fhdr.Title == "" {
+			fhdr.Title = title
+		}
+	}
 
 	parsed, err := parseArticle(rawBytes, articleInfo{
 		defaultAuthor: fhdr.Owner,
@@ -186,6 +200,9 @@ func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserReso
 
 	var crossposts []*model.CrosspostRecord
 	for _, cp := range parsed.Crossposts {
+		if !boardExists(engine, opts.BBSHome, cp.TargetBoard) {
+			continue
+		}
 		crossposts = append(crossposts, &model.CrosspostRecord{
 			TargetCommunity: cp.TargetBoard,
 			TargetPostFile:  cp.TargetFile,
@@ -394,6 +411,9 @@ func importPost(engine storage.Storage, opts ImportBoardOptions, postFile string
 	data, _, err := buildRecord(engine, opts, NewCachedResolver(opts.Users), nil, job)
 	if err != nil {
 		return nil, err
+	}
+	if data == nil {
+		return nil, fmt.Errorf("%w: %s/%s is deleted", ErrPostNotFound, opts.Board, postFile)
 	}
 	if opts.DryRun {
 		return data.Post, nil

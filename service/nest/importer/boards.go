@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 	"unicode/utf8"
 
 	"pttbbs/big5uao"
@@ -267,4 +269,51 @@ func importBoardHeader(st storage.Storage, bbsHome, board string, users UserReso
 		}
 	}
 	return nil
+}
+
+// brdNames caches the names of the boards in a .BRD, for boardExists.
+var brdNames struct {
+	sync.Mutex
+	path  string
+	mtime time.Time
+	size  int64
+	names map[string]bool // lower case; nil if .BRD cannot be read
+}
+
+// boardNamesInBRD returns the names (in lower case) of the boards in
+// $BBSHOME/.BRD, or nil if it cannot be read.
+func boardNamesInBRD(bbsHome string) map[string]bool {
+	path := filepath.Join(bbsHome, ".BRD")
+	fi, err := os.Stat(path)
+	brdNames.Lock()
+	defer brdNames.Unlock()
+	if err != nil {
+		return nil
+	}
+	if brdNames.path == path && brdNames.mtime.Equal(fi.ModTime()) && brdNames.size == fi.Size() {
+		return brdNames.names
+	}
+	headers, err := ReadBoardHeaders(path)
+	var names map[string]bool
+	if err == nil {
+		names = make(map[string]bool, len(headers))
+		for _, bh := range headers {
+			if bh.IsCommunity() {
+				names[strings.ToLower(bh.Name)] = true
+			}
+		}
+	}
+	brdNames.path, brdNames.mtime, brdNames.size, brdNames.names = path, fi.ModTime(), fi.Size(), names
+	return names
+}
+
+// boardExists tells whether name is a board: in .BRD, or a community
+// mirrored from it. Without a .BRD every name is taken as one.
+func boardExists(st storage.Storage, bbsHome, name string) bool {
+	names := boardNamesInBRD(bbsHome)
+	if names == nil || names[strings.ToLower(name)] {
+		return true
+	}
+	c, ok := st.Communities().GetByName(name)
+	return ok && c.BID != 0
 }
