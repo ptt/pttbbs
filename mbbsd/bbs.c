@@ -2978,7 +2978,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     {
 	/* I'm BM or SYSOP. */
     }
-    else if (bp->brdattr & BRD_NO_FAST_COMMENT)
+    else if (!IS_ENABLED(CONFIG_RATING) && (bp->brdattr & BRD_NO_FAST_COMMENT))
     {
 	int64_t el = time4_diff(now, lastcomment);
 	int d = (time4_is_valid(lastcomment) && el < bp->fastcomment_pause) ?
@@ -5041,6 +5041,7 @@ b_mark_read_unread(int ent GCC_UNUSED, const fileheader_t * fhdr,
     return FULLUPDATE;
 }
 
+#if !IS_ENABLED(CONFIG_COMMENT_EDIT)
 static int
 mask_post_content(int ent, fileheader_t * fhdr,
                   const char *direct) {
@@ -5151,13 +5152,15 @@ mask_post_content(int ent, fileheader_t * fhdr,
     vmsg("違規文字已刪除。");
     return FULLUPDATE;
 }
+#endif
 
 static int
 manage_post(int ent, fileheader_t * fhdr, const char *direct) {
     int ans;
     char prompt[STRLEN];
 
-    snprintf(prompt, sizeof(prompt), "[Y]推數歸零 [E]鎖定/解除 [M]刪特定文字%s%s:",
+    snprintf(prompt, sizeof(prompt), "[Y]推數歸零 [E]鎖定/解除%s%s%s:",
+             IS_ENABLED(CONFIG_COMMENT_EDIT) ? "" : " [M]刪特定文字",
              IS_ENABLED(CONFIG_SUSPICIOUS_MARK) ? " [S]標記待證" : "",
 #ifdef USE_COMMENTD
              " [V]留言管理");
@@ -5189,9 +5192,11 @@ manage_post(int ent, fileheader_t * fhdr, const char *direct) {
             lock_post(ent, fhdr, direct);
             break;
 
+#if !IS_ENABLED(CONFIG_COMMENT_EDIT)
         case 'm':
             mask_post_content(ent, fhdr, direct);
             break;
+#endif
 
         case 's':
             if (IS_ENABLED(CONFIG_SUSPICIOUS_MARK))

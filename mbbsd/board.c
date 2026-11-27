@@ -663,6 +663,7 @@ bcfg_get_no_downvote(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED
 }
 #endif
 
+#if !IS_ENABLED(CONFIG_RATING)
 static const char *
 bcfg_get_fastrecmd(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
                    char *buf, size_t sz)
@@ -681,6 +682,7 @@ bcfg_get_fastrecmd(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
         strlcpy(buf, "開放", sz);
     return buf;
 }
+#endif
 
 static const char *
 bcfg_get_edit_entry(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
@@ -943,6 +945,7 @@ bcfg_set_no_downvote(cmd_ctx_t *ctx)
 }
 #endif
 
+#if !IS_ENABLED(CONFIG_RATING)
 static int
 bcfg_set_fastrecmd(cmd_ctx_t *ctx)
 {
@@ -970,14 +973,19 @@ bcfg_set_fastrecmd(cmd_ctx_t *ctx)
     }
     return 0;
 }
+#endif
 
 static int
 bcfg_set_commentshowip(cmd_ctx_t *ctx)
 {
     bconfig_ctx_t *cx = (bconfig_ctx_t *)ctx->priv;
     boardheader_t *bp = cx->bp;
-    char ans[2];
     ctx->reload = true;
+#if IS_ENABLED(CONFIG_RATING)
+    bp->brdattr ^= BRD_COMMENT_SHOWIP;
+    cx->touched = 1;
+#else
+    char ans[2];
     move(b_lines - 2, 0); clrtobot();
     if (getdata(b_lines - 1, 0, (bp->brdattr & BRD_COMMENT_SHOWIP) ?
             ANSI_COLOR(1;32) " --- 確定要停止記錄推文 IP 嗎?" ANSI_RESET " [y/N]: " :
@@ -987,9 +995,11 @@ bcfg_set_commentshowip(cmd_ctx_t *ctx)
     bp->brdattr ^= BRD_COMMENT_SHOWIP;
     cx->touched = 1;
     vmsg((bp->brdattr & BRD_COMMENT_SHOWIP) ? " 注意: 開始記錄推文IP" : " 注意: 已停止記錄推文IP");
+#endif
     return 0;
 }
 
+#if !IS_ENABLED(CONFIG_RATING)
 static int
 bcfg_set_alignedcmt(cmd_ctx_t *ctx)
 {
@@ -999,7 +1009,9 @@ bcfg_set_alignedcmt(cmd_ctx_t *ctx)
     ctx->reload = true;
     return 0;
 }
+#endif
 
+#if !IS_ENABLED(CONFIG_COMMENT_EDIT)
 static int
 bcfg_set_mask_content(cmd_ctx_t *ctx)
 {
@@ -1009,6 +1021,7 @@ bcfg_set_mask_content(cmd_ctx_t *ctx)
     ctx->reload = true;
     return 0;
 }
+#endif
 
 #if !BOF_FILES_ARE_CACHE
 static int
@@ -1335,20 +1348,28 @@ static const BConfigItem bconfig_items[] = {
     { 'e', "非看板會員發文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_RESTRICTEDPOST, PERM_SYSOP, NULL, bcfg_set_restrictedpost },
     { 'y', "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
     { 'd', "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
+#if IS_ENABLED(CONFIG_RATING)
+    { 'z', "評分 (%推噓)", ANSI_COLOR(1) "開放" ANSI_RESET, "不開放", BRD_SCORE, PERM_BM, NULL, bcfg_set_score },
+    { 'r', "留言 (X推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NO_COMMENTS, PERM_BM, NULL, bcfg_set_norecommend },
+#else
     { 'r', "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NO_COMMENTS, PERM_BM, NULL, bcfg_set_norecommend },
+#endif
 #if IS_ENABLED(CONFIG_COMMENT_EDIT)
-    { 'u', "修改或刪除自己的留言", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_COMMENT_READONLY, PERM_BM, NULL, bcfg_set_comment_readonly },
+    { 'u', "[留言] 自刪與修改", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_COMMENT_READONLY, PERM_BM, NULL, bcfg_set_comment_readonly },
 #endif
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_no_downvote, bcfg_set_no_downvote },
 #endif
 #if IS_ENABLED(CONFIG_RATING)
-    { 'z', "文章評分 (推噓與推文分開)", ANSI_COLOR(1) "開放" ANSI_RESET, "不開放", BRD_SCORE, PERM_BM, NULL, bcfg_set_score },
-#endif
+    { 'i', "[留言] 預設不顯示 IP", ANSI_COLOR(1) "顯示" ANSI_RESET, "不顯示", BRD_COMMENT_SHOWIP, PERM_BM, NULL, bcfg_set_commentshowip },
+#else
     { 'f', "快速連推文章", NULL, NULL, 0, PERM_BM, bcfg_get_fastrecmd, bcfg_set_fastrecmd },
     { 'i', "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_COMMENT_SHOWIP, PERM_BM, NULL, bcfg_set_commentshowip },
     { 'a', "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
+#endif
+#if !IS_ENABLED(CONFIG_COMMENT_EDIT)
     { 'k', "板主刪除部份違規文字", ANSI_COLOR(1) "可" ANSI_RESET, "無法", BRD_BM_MASK_CONTENT, PERM_SYSGROUPOP, NULL, bcfg_set_mask_content },
+#endif
 #if !BOF_FILES_ARE_CACHE  // nest.svc keeps every crosspost
     { 'x', "轉錄文章自動記錄", ANSI_COLOR(1) "會 (需發文權限)" ANSI_RESET, "不會", BRD_CPLOG, PERM_BM, NULL, bcfg_set_cplog },
 #endif
@@ -1592,14 +1613,28 @@ static const cmd_t bconfig_edit_cmds[] = {
     { 'e', NULL, "切換非看板會員發文限制", bconfig_cmd_hotkey, PERM_SYSOP, CMD_PRIO_NONE, true },
     { 'y', NULL, "切換是否開放回應文章", bconfig_cmd_hotkey, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
     { 'd', NULL, "切換是否開放自刪文章", bconfig_cmd_hotkey, PERM_SELFDEL, CMD_PRIO_NONE, true },
+#if IS_ENABLED(CONFIG_RATING)
+    { 'z', NULL, "切換是否開放評分", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+    { 'r', NULL, "切換是否開放留言", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+#else
     { 'r', NULL, "切換是否開放推文", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+#endif
+#if IS_ENABLED(CONFIG_COMMENT_EDIT)
+    { 'u', NULL, "切換留言是否開放自刪與修改", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+#endif
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', NULL, "切換是否開放噓文", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
 #endif
+#if IS_ENABLED(CONFIG_RATING)
+    { 'i', NULL, "切換留言預設是否顯示 IP", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+#else
     { 'f', NULL, "設定快速連推間隔限制", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
     { 'i', NULL, "切換推文是否記錄來源 IP", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
     { 'a', NULL, "切換推文開頭是否自動對齊", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
+#endif
+#if !IS_ENABLED(CONFIG_COMMENT_EDIT)
     { 'k', NULL, "切換板主刪除部份違規文字", bconfig_cmd_hotkey, PERM_SYSGROUPOP, CMD_PRIO_NONE, true },
+#endif
     { 'x', NULL, "切換轉錄文章是否自動記錄", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
     { 'j', NULL, "切換冷靜模式", bconfig_cmd_hotkey, PERM_POLICEOP, CMD_PRIO_NONE, true },
     { 'p', NULL, "編輯進板畫面", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
