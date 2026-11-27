@@ -66,6 +66,19 @@ func writeHeavyOptions(o *pebble.Options) *pebble.Options {
 	return o
 }
 
+// zstdOptions compresses text (post bodies, comments) with zstd in 16 KB
+// blocks: a third smaller than Snappy in 4 KB, for twice the read CPU. Every
+// level, as imports write in key order and Pebble moves those tables down
+// without rewriting them, so the flush decides how most data is kept.
+func zstdOptions(o *pebble.Options) *pebble.Options {
+	o.Levels = make([]pebble.LevelOptions, 7)
+	for i := range o.Levels {
+		o.Levels[i].BlockSize = 16 << 10
+		o.Levels[i].Compression = pebble.ZstdCompression
+	}
+	return o
+}
+
 func (c Config) IsBig5() bool {
 	enc := strings.ToLower(strings.TrimSpace(c.FilterEncoding))
 	return enc == "" || enc == "big5" || enc == "big5-uao" || enc == "uao"
@@ -178,11 +191,11 @@ func OpenEngine(cfg Config) (*Engine, error) {
 
 	// 1. Posts Pebble DB
 	postsPath := filepath.Join(cfg.DataDir, "posts.pebble")
-	postsOpts := writeHeavyOptions(&pebble.Options{
+	postsOpts := zstdOptions(writeHeavyOptions(&pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/3) * 1024 * 1024),
 		MemTableSize: 16 * 1024 * 1024,
 		MaxOpenFiles: maxOpenFiles,
-	})
+	}))
 	postsDB, err := pebble.Open(postsPath, postsOpts)
 	if err != nil {
 		return nil, fmt.Errorf("open posts pebble failed: %w", err)
@@ -190,11 +203,11 @@ func OpenEngine(cfg Config) (*Engine, error) {
 
 	// 2. Comments Pebble DB
 	commentsPath := filepath.Join(cfg.DataDir, "comments.pebble")
-	commentsOpts := writeHeavyOptions(&pebble.Options{
+	commentsOpts := zstdOptions(writeHeavyOptions(&pebble.Options{
 		Cache:        pebble.NewCache(int64(cfg.CacheSizeMB/3) * 1024 * 1024),
 		MemTableSize: 64 * 1024 * 1024,
 		MaxOpenFiles: maxOpenFiles,
-	})
+	}))
 	commentsDB, err := pebble.Open(commentsPath, commentsOpts)
 	if err != nil {
 		postsDB.Close()
