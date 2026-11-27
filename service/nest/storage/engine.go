@@ -347,6 +347,17 @@ func initSQLiteSchema(db sqlExecer) error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_crossposts_source ON crossposts(source_post_id);
 	CREATE INDEX IF NOT EXISTS idx_crossposts_target ON crossposts(target_community_id, target_post_file);
+
+	-- Where the copies of this engine were copied from (model.CrosspostOrigin).
+	CREATE TABLE IF NOT EXISTS bbs_crosspost_origins (
+		target_post_id INTEGER PRIMARY KEY,
+		source_community TEXT NOT NULL,
+		source_post_file TEXT NOT NULL,
+		creator_name TEXT NOT NULL,
+		creator_id INTEGER NOT NULL DEFAULT 0,
+		created_at INTEGER NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_bbs_crosspost_origins_source ON bbs_crosspost_origins(source_community COLLATE NOCASE, source_post_file);
 	`
 	if _, err := db.Exec(schema); err != nil {
 		return err
@@ -898,26 +909,27 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 
 	// 1. Insert into SQLite crossposts table
 	e.metaWriteMu.Lock()
+	defer e.metaWriteMu.Unlock()
+	existing, err := e.crosspostEntries(srcPost.ID)
+	if err != nil {
+		return nil, 0, err
+	}
 	res, err := e.metaDB.Exec(`
 		INSERT INTO crossposts (source_post_id, target_community_id, target_post_file, creator_name, creator_id, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`, srcPost.ID, targetID, targetPostFile, creatorName, creatorID, createdAt)
 	if err != nil {
-		e.metaWriteMu.Unlock()
 		return nil, 0, fmt.Errorf("insert crosspost failed: %w", err)
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		e.metaWriteMu.Unlock()
 		return nil, 0, err
 	}
 
 	// 2. Increment num_crossposts in posts table
 	if _, err := e.metaDB.Exec(`UPDATE posts SET num_crossposts = num_crossposts + 1 WHERE id = ?`, srcPost.ID); err != nil {
-		e.metaWriteMu.Unlock()
 		return nil, 0, fmt.Errorf("update num_crossposts failed: %w", err)
 	}
-	e.metaWriteMu.Unlock()
 
 	var newCount int
 	_ = e.metaDB.QueryRow(`SELECT num_crossposts FROM posts WHERE id = ?`, srcPost.ID).Scan(&newCount)
@@ -934,8 +946,9 @@ func (e *Engine) AddCrosspost(srcCommunity, srcPostFile, targetCommunity, target
 		CreatedAt:         createdAt,
 	}
 
-	// 3. Write to Pebble (Source of truth)
-	cKey := model.EncodeCrosspostKey(srcPost.ID, uint32(newCount))
+	// 3. Write to Pebble (Source of truth), after the last record: the
+	// count is not a free sequence number once records are merged.
+	cKey := model.EncodeCrosspostKey(srcPost.ID, lastCrosspostSeq(existing)+1)
 	cVal := model.EncodeRFC822Crosspost(rec)
 	if err := e.postsDB.Set(cKey, cVal, pebble.Sync); err != nil {
 		return nil, 0, fmt.Errorf("set pebble crosspost failed: %w", err)
@@ -1519,6 +1532,9 @@ func (e *Engine) clearCommunity(community int64) (postsDeleted int, commentsDele
 	if _, err := tx.Exec("DELETE FROM crossposts WHERE target_community_id = ? OR source_post_id IN (SELECT id FROM posts WHERE community_id = ?)", community, community); err != nil {
 		return 0, 0, fmt.Errorf("delete crossposts failed: %w", err)
 	}
+	if _, err := tx.Exec("DELETE FROM bbs_crosspost_origins WHERE target_post_id IN (SELECT id FROM posts WHERE community_id = ?)", community); err != nil {
+		return 0, 0, fmt.Errorf("delete crosspost origins failed: %w", err)
+	}
 	if _, err := tx.Exec("DELETE FROM posts WHERE community_id = ?", community); err != nil {
 		return 0, 0, fmt.Errorf("delete posts failed: %w", err)
 	}
@@ -1565,6 +1581,7 @@ func (e *Engine) clearCommunity(community int64) (postsDeleted int, commentsDele
 	for _, p := range posts {
 		// Delete post from postsDB
 		_ = deletePostRecords(postBatch, p.id)
+		_ = postBatch.Delete(model.EncodeCrosspostOriginKey(p.id), nil)
 		ops++
 
 		// Delete crossposts associated with this source post
@@ -1736,6 +1753,9 @@ func (e *Engine) removePostRecord(p *model.Post, keepIncoming, keepCache bool) e
 	if _, err := tx.Exec("DELETE FROM posts WHERE id = ?", p.ID); err != nil {
 		return fmt.Errorf("delete post failed: %w", err)
 	}
+	if _, err := tx.Exec("DELETE FROM bbs_crosspost_origins WHERE target_post_id = ?", p.ID); err != nil {
+		return fmt.Errorf("delete crosspost origin failed: %w", err)
+	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit sqlite delete failed: %w", err)
 	}
@@ -1748,6 +1768,7 @@ func (e *Engine) removePostRecord(p *model.Post, keepIncoming, keepCache bool) e
 
 	// 1. Post key
 	_ = deletePostRecords(postBatch, p.ID)
+	_ = postBatch.Delete(model.EncodeCrosspostOriginKey(p.ID), nil)
 
 	// 2. Crossposts prefix
 	cpPrefix := model.EncodeCrosspostPrefix(p.ID)
@@ -3072,11 +3093,24 @@ type ImportedPostData struct {
 	Comments   []*model.Comment
 	Crossposts []*model.CrosspostRecord
 	Votes      []*model.VoteRecord
+	// Origin is where the post was copied from, if it is a copy; the
+	// crosspost record is then added to the source post (see crosspost.go).
+	Origin *model.CrosspostOrigin
 }
 
 // ImportPostBatch imports a slice of posts and their comments atomically into SQLite and Pebble,
-// and optionally renders them directly to renderTarget directory.
+// and optionally renders them directly to renderTarget directory. The
+// copies among them and the copies of them are then linked to their
+// sources, as far as this engine has them.
 func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string, legacyFormat ...bool) error {
+	if err := e.importPostBatch(batch, renderTarget, legacyFormat...); err != nil {
+		return err
+	}
+	linkImported(e, e, batch)
+	return nil
+}
+
+func (e *Engine) importPostBatch(batch []*ImportedPostData, renderTarget string, legacyFormat ...bool) error {
 	if len(batch) == 0 {
 		return nil
 	}
@@ -3133,6 +3167,7 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 	if err := insertImportedPosts(tx, batch, e.cfg.NextPostID); err != nil {
 		return err
 	}
+	batchCrossposts := make(map[uint64][]crosspostEntry)
 	for _, item := range batch {
 		p := item.Post
 		if err := checkPostID(p.ID); err != nil {
@@ -3156,8 +3191,16 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 			_ = voteBatch.Set(key, model.EncodeVoteValue(v.Vote, v.PersonID, v.PersonName, v.CreatedAt, v.IP), nil)
 		}
 
-		// Crossposts
-		for i, cp := range item.Crossposts {
+		// Crossposts. A post imported again keeps the records it has (of
+		// copies linked to it, or added live) and only gets the new ones.
+		existing, ok := batchCrossposts[p.ID]
+		if !ok {
+			if existing, err = e.crosspostEntries(p.ID); err != nil {
+				return err
+			}
+		}
+		seq := lastCrosspostSeq(existing)
+		for _, cp := range item.Crossposts {
 			cp.SourcePostID = p.ID
 			if cp.TargetCommunityID == 0 && cp.TargetCommunity != "" {
 				targetID, err := e.reg.Ensure(cp.TargetCommunity)
@@ -3167,14 +3210,32 @@ func (e *Engine) ImportPostBatch(batch []*ImportedPostData, renderTarget string,
 				cp.TargetCommunityID = targetID
 			}
 			cp.TargetCommunity = e.reg.Name(cp.TargetCommunityID)
+			if knownCrosspost(existing, cp) {
+				continue
+			}
 			cpRes, cpErr := stmtCP.Exec(p.ID, cp.TargetCommunityID, cp.TargetPostFile, cp.CreatorName, cp.CreatorID, cp.CreatedAt)
 			if cpErr == nil {
 				cpID, _ := cpRes.LastInsertId()
 				cp.ID = uint64(cpID)
-				cKey := model.EncodeCrosspostKey(p.ID, uint32(i+1))
-				cVal := model.EncodeRFC822Crosspost(cp)
-				_ = postBatch.Set(cKey, cVal, nil)
+				seq++
+				existing = append(existing, crosspostEntry{seq: seq, rec: cp})
+				_ = postBatch.Set(model.EncodeCrosspostKey(p.ID, seq), model.EncodeRFC822Crosspost(cp), nil)
 			}
+		}
+		batchCrossposts[p.ID] = existing
+		if count := len(existing); count != p.NumCrossposts {
+			p.NumCrossposts = count
+			if _, err := tx.Exec(`UPDATE posts SET num_crossposts = ? WHERE id = ?`, count, p.ID); err != nil {
+				return fmt.Errorf("update num_crossposts failed: %w", err)
+			}
+		}
+
+		if o := item.Origin; o != nil {
+			o.TargetPostID = p.ID
+			if _, err := tx.Exec(insertOriginSQL, originArgs(o)...); err != nil {
+				return fmt.Errorf("insert crosspost origin failed: %w", err)
+			}
+			_ = postBatch.Set(model.EncodeCrosspostOriginKey(p.ID), model.EncodeRFC822CrosspostOrigin(o), nil)
 		}
 	}
 

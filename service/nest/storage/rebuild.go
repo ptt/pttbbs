@@ -26,7 +26,7 @@ import (
 // while it fills the tables, as building them at the end is much faster.
 var sqlIndexes = []string{
 	"idx_posts_comm_id", "idx_posts_comm_del", "idx_posts_comm_file", "idx_posts_creator", "idx_posts_parent_id",
-	"idx_crossposts_source", "idx_crossposts_target",
+	"idx_crossposts_source", "idx_crossposts_target", "idx_bbs_crosspost_origins_source",
 }
 
 const rebuildPostColumns = `id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode,
@@ -105,6 +105,9 @@ func (e *Engine) fillMetaDB(db *sql.DB) (postCount int, commentCount int, err er
 
 	crossposts, err := e.rebuildCrossposts(tx)
 	if err != nil {
+		return 0, 0, err
+	}
+	if err := e.rebuildCrosspostOrigins(tx); err != nil {
 		return 0, 0, err
 	}
 
@@ -210,6 +213,30 @@ func (e *Engine) rebuildCrossposts(tx *sql.Tx) (map[uint64]int, error) {
 		counts[x.SourcePostID]++
 	}
 	return counts, it.Error()
+}
+
+// rebuildCrosspostOrigins fills bbs_crosspost_origins from the 'w' records.
+func (e *Engine) rebuildCrosspostOrigins(tx *sql.Tx) error {
+	stmt, err := tx.Prepare(insertOriginSQL)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	it, err := e.postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'w'}, UpperBound: []byte{'x'}})
+	if err != nil {
+		return err
+	}
+	defer it.Close()
+	for it.First(); it.Valid(); it.Next() {
+		o, err := model.DecodeRFC822CrosspostOrigin(it.Value())
+		if err != nil {
+			continue
+		}
+		if _, err := stmt.Exec(originArgs(o)...); err != nil {
+			return err
+		}
+	}
+	return it.Error()
 }
 
 // RecountPosts counts the comments (tombstones included) and votes of every

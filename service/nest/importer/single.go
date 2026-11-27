@@ -172,12 +172,22 @@ func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserReso
 		Locked:      job.locked,
 		Encoding:    "utf-8",
 	}
-	return &storage.ImportedPostData{
+	data = &storage.ImportedPostData{
 		Post:       post,
 		Comments:   comments,
 		Crossposts: crossposts,
 		Votes:      votes,
-	}, false, nil
+	}
+	if cf := parsed.CopiedFrom; cf != nil {
+		data.Origin = &model.CrosspostOrigin{
+			SourceCommunity: cf.SrcBoard,
+			SourcePostFile:  cf.SrcFile,
+			CreatorName:     post.CreatorName,
+			CreatorID:       post.CreatorID,
+			CreatedAt:       postCtime,
+		}
+	}
+	return data, false, nil
 }
 
 // findRecord looks for the .DIR record of the post canon (an M. name) in

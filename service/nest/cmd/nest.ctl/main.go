@@ -780,6 +780,12 @@ func main() {
 			}
 			failed := importBoards(boards, jobs, mkHeader, dryRun)
 			fmt.Printf("[+] %d boards done, %d failed\n", len(boards)-len(failed), len(failed))
+			if !dryRun {
+				// Copies imported before their sources.
+				if err := linkCrossposts(); err != nil {
+					fmt.Printf("[!] link-crossposts failed: %v\n", err)
+				}
+			}
 			if len(failed) > 0 {
 				fmt.Printf("    Failed: %s\n", strings.Join(failed, " "))
 				os.Exit(1)
@@ -1083,6 +1089,11 @@ func main() {
 			log.Fatalf("crosspost failed: %v", err)
 		}
 		fmt.Println(resp)
+
+	case "link-crossposts":
+		if err := linkCrossposts(); err != nil {
+			log.Fatalf("link-crossposts failed: %v", err)
+		}
 
 	case "crossposts", "shares", "list-crossposts":
 		if len(args) < 2 {
@@ -1576,6 +1587,7 @@ Usage:
   nest.ctl comment-history <post> <seq> [rev]
   nest.ctl crosspost <src_post> <target_post> <operator> [person_id]
   nest.ctl crossposts <post>
+  nest.ctl link-crossposts                   (record the imported copies at their sources)
   nest.ctl origin <post>
   nest.ctl add <community> <author> <title> <content>
   nest.ctl add-file <community> <post_file> <author> <title> [person_id]

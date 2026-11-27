@@ -133,6 +133,19 @@ type CrosspostRecord struct {
 	CreatedAt         int64    `json:"created_at"`
 }
 
+// CrosspostOrigin is where a copy (轉錄) says it was copied from (its
+// "※ [本文轉錄自 ...]" header), kept with the copy so that the crosspost
+// record at the source post can be made, or made again, whenever the source
+// is there. BBS-only: Lemmy links crossposts by URL, Discourse has no copies.
+type CrosspostOrigin struct {
+	TargetPostID    uint64   `json:"bbs_target_post_id"` // the copy
+	SourceCommunity string   `json:"bbs_source_community"`
+	SourcePostFile  string   `json:"bbs_source_post_file"`
+	CreatorName     string   `json:"creator_name"`
+	CreatorID       PersonID `json:"creator_id"`
+	CreatedAt       int64    `json:"created_at"`
+}
+
 // NetScore calculates upvotes - downvotes
 func (p *Post) NetScore() int {
 	return p.Upvotes - p.Downvotes
@@ -592,6 +605,13 @@ func EncodeCrosspostPrefix(sourcePostID uint64) []byte {
 	return k
 }
 
+// Crosspost Origin Key: 'w' (1 byte) + 8-byte uint64 TargetPostID = 9 bytes
+func EncodeCrosspostOriginKey(targetPostID uint64) []byte {
+	k := EncodeCrosspostPrefix(targetPostID)
+	k[0] = 'w'
+	return k
+}
+
 // -----------------------------------------------------------------------------
 // RFC 822 Encoders and Decoders
 // -----------------------------------------------------------------------------
@@ -972,6 +992,51 @@ func DecodeRFC822Crosspost(val []byte) (*CrosspostRecord, error) {
 		}
 	}
 	return rec, nil
+}
+
+// EncodeRFC822CrosspostOrigin packages a crosspost origin into RFC 822 format.
+func EncodeRFC822CrosspostOrigin(o *CrosspostOrigin) []byte {
+	var b strings.Builder
+	b.WriteString("Encoding: utf-8\n")
+	fmt.Fprintf(&b, "TargetPostID: %d\n", o.TargetPostID)
+	fmt.Fprintf(&b, "SourceCommunity: %s\n", HeaderValue(o.SourceCommunity))
+	fmt.Fprintf(&b, "SourcePostFile: %s\n", HeaderValue(o.SourcePostFile))
+	fmt.Fprintf(&b, "CreatorName: %s\n", HeaderValue(o.CreatorName))
+	fmt.Fprintf(&b, "CreatorID: %d\n", o.CreatorID)
+	fmt.Fprintf(&b, "CreatedAt: %d\n\n", o.CreatedAt)
+	return []byte(b.String())
+}
+
+func DecodeRFC822CrosspostOrigin(val []byte) (*CrosspostOrigin, error) {
+	idx := bytes.Index(val, []byte("\n\n"))
+	if idx == -1 {
+		idx = len(val)
+	}
+	o := &CrosspostOrigin{}
+	for _, l := range strings.Split(string(val[:idx]), "\n") {
+		k, v, ok := strings.Cut(l, ": ")
+		if !ok {
+			continue
+		}
+		switch k {
+		case "TargetPostID":
+			o.TargetPostID, _ = strconv.ParseUint(v, 10, 64)
+		case "SourceCommunity":
+			o.SourceCommunity = v
+		case "SourcePostFile":
+			o.SourcePostFile = v
+		case "CreatorName":
+			o.CreatorName = v
+		case "CreatorID":
+			o.CreatorID = ParsePersonID(v)
+		case "CreatedAt":
+			o.CreatedAt, _ = strconv.ParseInt(v, 10, 64)
+		}
+	}
+	if o.SourceCommunity == "" || o.SourcePostFile == "" {
+		return nil, fmt.Errorf("invalid crosspost origin")
+	}
+	return o, nil
 }
 
 // RenderLegacyComment formats a Comment back into legacy BBS push line format

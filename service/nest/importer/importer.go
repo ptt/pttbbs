@@ -179,8 +179,11 @@ var (
 		`\s+(?:(` + ipPattern + `)\s+)?(\d{2}/\d{2}(?:\s+\d{2}:\d{2}(?::\d{2})?)?)\s*$`,
 	)
 
-	crosspostLogRegex      = regexp.MustCompile(`^※\s*([A-Za-z0-9_]+)\s*:\s*轉錄至看板\s+([A-Za-z0-9_\-\.]+)(.*)$`)
-	crosspostFromRegex     = regexp.MustCompile(`^※\s*\[本文轉錄自\s+([A-Za-z0-9_\-\.]+)\s+看板\s*(?:([A-Za-z0-9_\-\.]+))?\]`)
+	crosspostLogRegex = regexp.MustCompile(`^※\s*([A-Za-z0-9_]+)\s*:\s*轉錄至看板\s+([A-Za-z0-9_\-\.]+)(.*)$`)
+	// The header of a copy: "※ [本文轉錄自 <board> 看板 #<AID> ]" (older
+	// ones have no AID, or the file name); also "某隱形看板" or "<user> 信箱".
+	copyHeaderRegex        = regexp.MustCompile(`^※\s*\[本文轉錄自`)
+	crosspostFromRegex     = regexp.MustCompile(`^※\s*\[本文轉錄自\s+([A-Za-z0-9_\-\.]+)\s+看板\s*(?:#([0-9A-Za-z_\-]{8})|([MG]\.\d+\.A(?:\.[0-9A-Fa-f]+)?))?\s*\]`)
 	postFilenameCtimeRegex = regexp.MustCompile(`^[A-Z]\.(\d+)\.`)
 	editMarkRegex          = regexp.MustCompile(`^※\s*編輯:`)
 
@@ -242,7 +245,60 @@ type ParsedCrosspost struct {
 type ParsedArticle struct {
 	BodyContent string
 	Comments    []*ParsedComment
-	Crossposts  []*ParsedCrosspost
+	Crossposts  []*ParsedCrosspost // of this post (its cplog lines)
+	// Where this copy was copied from (its header), if it names the post;
+	// the copy is the target.
+	CopiedFrom *ParsedCrosspost
+}
+
+// cplogSlack is how much later than the copy a cplog line in it may be
+// dated and still be taken as copied from the original.
+const cplogSlack = 60
+
+// cplogBeforeCopy tells whether a cplog line dated dateStr ("MM/DD
+// [HH:MM]") in a copy created at ctime is older than the copy, taking the
+// year that puts the date nearest to ctime.
+func cplogBeforeCopy(dateStr string, ctime int64) bool {
+	parts := strings.Fields(dateStr)
+	if len(parts) == 0 {
+		return true
+	}
+	var month, day, hour, min int
+	if _, err := fmt.Sscanf(parts[0], "%d/%d", &month, &day); err != nil {
+		return true
+	}
+	if len(parts) > 1 {
+		fmt.Sscanf(parts[1], "%d:%d", &hour, &min)
+	}
+	base := time.Unix(ctime, 0)
+	best := int64(0)
+	for y := base.Year() - 1; y <= base.Year()+1; y++ {
+		t := time.Date(y, time.Month(month), day, hour, min, 0, 0, time.Local).Unix()
+		if best == 0 || absInt64(t-ctime) < absInt64(best-ctime) {
+			best = t
+		}
+	}
+	return best <= ctime+cplogSlack
+}
+
+// clampCrosspostTime keeps a crosspost time that RollDate put in the
+// future in the past: a year earlier if that is not before the post, else
+// the time of the post.
+func clampCrosspostTime(ts, postCtime, now int64) int64 {
+	if ts <= now {
+		return ts
+	}
+	if back := time.Unix(ts, 0).AddDate(-1, 0, 0).Unix(); back >= postCtime {
+		return back
+	}
+	return postCtime
+}
+
+func absInt64(v int64) int64 {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // RollDate performs chronological date inference for comment timestamps
@@ -385,25 +441,36 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 	}
 
 	var crossposts []*ParsedCrosspost
+	var copiedFrom *ParsedCrosspost
 
-	// Check body for origin crosspost note
+	// The first copy header names the post this one was copied from;
+	// those after it come with the copied text.
+	isCopy := false
 	for _, bl := range bodyLines {
 		clean := strings.TrimSpace(model.StripANSI(bl))
+		if !copyHeaderRegex.MatchString(clean) {
+			continue
+		}
+		isCopy = true
 		m := crosspostFromRegex.FindStringSubmatch(clean)
-		if len(m) >= 2 {
-			srcFile := ""
-			if len(m) >= 3 {
-				srcFile = m[2]
+		srcFile := ""
+		if m != nil {
+			srcFile = m[3]
+			if m[2] != "" {
+				srcFile, _ = model.AIDToPostFile(m[2])
 			}
-			crossposts = append(crossposts, &ParsedCrosspost{
+		}
+		if srcFile != "" {
+			copiedFrom = &ParsedCrosspost{
 				SrcBoard:    m[1],
 				SrcFile:     srcFile,
 				TargetBoard: community,
 				TargetFile:  postFile,
 				CreatorName: defaultAuthor,
 				CTime:       postCtime,
-			})
+			}
 		}
+		break
 	}
 
 	// Separate system signatures and crosspost logs from comments
@@ -452,8 +519,16 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 				tail = mCp[3]
 			}
 			tm := nonOldTailRegex.FindStringSubmatch(tail)
-			if len(tm) >= 3 && tm[2] != "" {
+			hasDate := len(tm) >= 3 && tm[2] != ""
+			// mbbsd copies the whole file, with the cplog lines of the
+			// original; those are crossposts of the original.
+			if isCopy && (!hasDate || cplogBeforeCopy(tm[2], postCtime)) {
+				bodyLines = append(bodyLines, l)
+				continue
+			}
+			if hasDate {
 				cpTime, _, _, _ = RollDate(tm[2], currYear, prevMonth, prevDay, postCtime)
+				cpTime = clampCrosspostTime(cpTime, postCtime, time.Now().Unix())
 			}
 			crossposts = append(crossposts, &ParsedCrosspost{
 				SrcBoard:    community,
@@ -679,6 +754,7 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 		BodyContent: bodyContent,
 		Comments:    mergedComments,
 		Crossposts:  crossposts,
+		CopiedFrom:  copiedFrom,
 	}, nil
 }
 
@@ -978,6 +1054,9 @@ func ImportBoard(engine storage.Storage, opts ImportBoardOptions) (*ImportStats,
 			}
 			stats.CommentsImported += len(item.Comments)
 			stats.CrosspostsLogged += len(item.Crossposts)
+			if item.Origin != nil {
+				stats.CrosspostsLogged++
+			}
 		}
 		batch = batch[:0]
 		return nil

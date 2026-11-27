@@ -274,3 +274,19 @@ func runRenderCommunity(header, prefix string, out io.Writer) (rendered, seconds
 		}
 	}
 }
+
+// linkCrossposts asks nest.svc to link the imported copies to their
+// sources (LINK_CROSSPOSTS) and shows what it did.
+func linkCrossposts() error {
+	resp, _, err := sendCmd("LINK_CROSSPOSTS\n", nil)
+	if err != nil {
+		return err
+	}
+	parts := strings.Fields(resp)
+	if len(parts) < 6 || parts[0] != "OK" {
+		return fmt.Errorf("%s", resp)
+	}
+	fmt.Printf("[+] Crossposts of %s copies: %s added, %s merged with cplog records, %s linked already, %s pending (source not found)\n",
+		parts[1], parts[2], parts[3], parts[4], parts[5])
+	return nil
+}

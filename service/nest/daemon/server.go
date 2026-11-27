@@ -2421,6 +2421,17 @@ func (s *Server) handleIPC(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("OK %s\t%s\t%s\t%s\t%s\t%d\n",
 			srcPost.Community, srcPost.PostFile, srcPost.CreatorName, srcPost.Title, r.CreatorName, r.CreatedAt)))
 
+	case "LINK_CROSSPOSTS":
+		// LINK_CROSSPOSTS: adds the crosspost records of the imported copies
+		// whose sources are there now. Replies OK <origins> <added> <merged>
+		// <linked> <pending>.
+		st, err := s.storage.LinkCrossposts()
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %d\n", st.Origins, st.Added, st.Merged, st.Linked, st.Pending)))
+
 	default:
 		conn.Write([]byte(fmt.Sprintf("ERR unknown command: %s\n", cmd)))
 	}

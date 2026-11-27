@@ -330,6 +330,10 @@ func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine) error {
 	if err := cpIter.Close(); err != nil {
 		return err
 	}
+	origin, err := e.crosspostOrigin(id)
+	if err != nil {
+		return err
+	}
 
 	moved := *p
 	moved.CommunityID = toID
@@ -340,6 +344,7 @@ func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine) error {
 		Comments:   comments,
 		Crossposts: crossposts,
 		Votes:      votes,
+		Origin:     origin,
 	}}, ""); err != nil {
 		return err
 	}

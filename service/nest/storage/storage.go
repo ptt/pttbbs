@@ -93,6 +93,9 @@ type Storage interface {
 	GetCommentHistory(postID uint64, seq uint32, rev uint32) (*model.CommentRevision, error)
 	ListCommentHistory(postID uint64, seq uint32) ([]*model.CommentRevision, error)
 	ImportPostBatch(batch []*ImportedPostData, renderTarget string, legacyFormat ...bool) error
+	// LinkCrossposts adds the crosspost records of the copies whose
+	// sources are there now (see crosspost.go).
+	LinkCrossposts() (LinkStats, error)
 	RebuildSQLiteFromPebble() (int, int, error)
 	// RecountPosts corrects the post counters from the comments and votes.
 	RecountPosts() (int, error)

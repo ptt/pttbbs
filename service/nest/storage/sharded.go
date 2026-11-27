@@ -595,14 +595,21 @@ func (s *ShardedEngine) ImportPostBatch(batch []*ImportedPostData, renderTarget 
 		return nil
 	}
 	p := batch[0].Post
+	var eng *Engine
 	if p.CommunityID != 0 {
-		return s.GetEngineByCommunityID(p.CommunityID).ImportPostBatch(batch, renderTarget, legacyFormat...)
+		eng = s.GetEngineByCommunityID(p.CommunityID)
+	} else {
+		var err error
+		if eng, err = s.engineForWrite(p.Community); err != nil {
+			return err
+		}
 	}
-	eng, err := s.engineForWrite(p.Community)
-	if err != nil {
+	if err := eng.importPostBatch(batch, renderTarget, legacyFormat...); err != nil {
 		return err
 	}
-	return eng.ImportPostBatch(batch, renderTarget, legacyFormat...)
+	// The sources of the copies, and the copies, may be in any engine.
+	linkImported(s, eng, batch)
+	return nil
 }
 
 func (s *ShardedEngine) RebuildSQLiteFromPebble() (int, int, error) {
