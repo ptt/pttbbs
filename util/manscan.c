@@ -29,7 +29,7 @@ typedef struct {
 } tree_t;
 
 typedef struct {
-    uint64_t dirs, files, broken, dir_bytes;
+    uint64_t dirs, files, broken, bad, dir_bytes;
     uint64_t empty_dirs, empty_trees, removed_trees, removed_dirs;
     int max_depth;
     off_t index_bytes;
@@ -255,9 +255,14 @@ static void scan(const char *path, int depth, tree_t *t)
         char sub[MAX_SCAN_PATH];
         tree_t child;
 
-        if (!fh.filename[0] || strchr(fh.filename, '/') ||
-            !strcmp(fh.filename, ".") || !strcmp(fh.filename, ".."))
+        if (!fh.filename[0])
             continue;
+        /* Bad names (".", "..", ".DIR", "a/b") would loop or point at
+         * index files: neither files nor directories. */
+        if (fh.filename[0] == '.' || memchr(fh.filename, '/', FNLEN)) {
+            cur.bad++;
+            continue;
+        }
         if (snprintf(sub, sizeof(sub), "%s/%.*s", path, FNLEN, fh.filename)
             >= (int)sizeof(sub)) {
             t->unknown = 1;
@@ -349,6 +354,7 @@ static void scan_board(const char *bname)
     total.dirs += cur.dirs;
     total.files += cur.files;
     total.broken += cur.broken;
+    total.bad += cur.bad;
     total.dir_bytes += cur.dir_bytes;
     total.empty_dirs += cur.empty_dirs;
     total.empty_trees += cur.empty_trees;
@@ -438,6 +444,8 @@ int main(int argc, char *argv[])
            total.dir_bytes, (intmax_t)total.index_bytes);
     if (total.broken)
         printf("# records without their file: %" PRIu64 "\n", total.broken);
+    if (total.bad)
+        printf("# records with bad names (skipped): %" PRIu64 "\n", total.bad);
     if (opt_remove)
         printf("# removed %" PRIu64 " trees, %" PRIu64 " dirs\n",
                total.removed_trees, total.removed_dirs);
