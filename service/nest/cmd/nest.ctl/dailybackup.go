@@ -28,7 +28,7 @@ import (
 //     copy is incremental: SST files are immutable, so an SST that the previous
 //     copy already has (same name, size and mtime) is hard-linked to it instead
 //     of copied. Every copy is a complete, directly restorable directory, but
-//     only new SSTs plus the small MANIFEST/WAL files and meta.sqlite3 take
+//     only new SSTs plus the small MANIFEST/WAL files and communities.db take
 //     space and I/O. `rsync -aH` of the copy root to a remote host keeps the
 //     hard links.
 //  3. Optionally verify the result read-only (-verify).

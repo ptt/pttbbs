@@ -182,7 +182,7 @@ func TestShardedEngineBackup(t *testing.T) {
 
 	total := 0
 	for i, shardDir := range dirs {
-		for _, name := range []string{"posts.pebble", "comments.pebble", "votes.pebble", "history.pebble", "meta.sqlite3"} {
+		for _, name := range []string{"posts.pebble", "comments.pebble", "votes.pebble", "history.pebble"} {
 			if _, err := os.Stat(filepath.Join(shardDir, name)); err != nil {
 				t.Fatalf("missing %s in shard %d backup: %v", name, i, err)
 			}
@@ -291,9 +291,21 @@ func TestVerifyDataDir(t *testing.T) {
 		t.Errorf("VerifyDataDir passed with posts of communities missing from communities.db")
 	}
 
-	// A post that SQLite does not know about is an error: a restored service
-	// could reuse its ID.
-	db, err := sql.Open("sqlite", filepath.Join(backupDir, "meta.sqlite3"))
+	// A backup has no meta.sqlite3, which a restore rebuilds.
+	if fileExists(filepath.Join(backupDir, "meta.sqlite3")) {
+		t.Errorf("backup holds meta.sqlite3")
+	}
+
+	// A stopped data dir with meta.sqlite3 is compared with it, and a post
+	// that SQLite does not know about is an error.
+	dataDir := testEngineConfig(tmpDir).DataDir
+	e.Close()
+	if r := VerifyDataDir(dataDir, FindCommunitiesDB([]string{dataDir})); !r.OK() || r.Posts != 3 || len(r.Warnings) != 0 {
+		var out strings.Builder
+		r.Print(&out)
+		t.Errorf("verify of the data dir:\n%s", out.String())
+	}
+	db, err := sql.Open("sqlite", filepath.Join(dataDir, "meta.sqlite3"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,7 +313,7 @@ func TestVerifyDataDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	db.Close()
-	if r := VerifyDataDir(backupDir, FindCommunitiesDB([]string{backupDir})); r.OK() {
+	if r := VerifyDataDir(dataDir, FindCommunitiesDB([]string{dataDir})); r.OK() {
 		t.Errorf("VerifyDataDir passed with a post missing from meta.sqlite3")
 	}
 

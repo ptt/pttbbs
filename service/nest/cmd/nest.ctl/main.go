@@ -235,10 +235,10 @@ func main() {
 		}
 		fmt.Printf("Backup completed in %v:\n", time.Duration(ms)*time.Millisecond)
 		fmt.Print(string(payload))
-		fmt.Println("To restore: stop nest.svc and copy each directory's *.pebble and meta.sqlite3")
-		fmt.Println("(and communities.db, in the first one) back into its engine's data dir.")
-		fmt.Println("Do not run `nest.svc -rebuild` unless meta.sqlite3 is lost: SQLite keeps")
-		fmt.Println("some data that Pebble does not. communities.db cannot be rebuilt at all.")
+		fmt.Println("To restore: stop nest.svc, copy each directory's *.pebble (and communities.db,")
+		fmt.Println("in the first one) back into its engine's data dir, remove meta.sqlite3*")
+		fmt.Println("there and start nest.svc: it rebuilds meta.sqlite3 (about 25 minutes for")
+		fmt.Println("48M posts) before serving. communities.db cannot be rebuilt at all.")
 
 	case "add-file":
 		if len(args) < 5 {

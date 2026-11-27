@@ -2722,7 +2722,7 @@ func TestServerIPCBackup(t *testing.T) {
 	if resp := request("BACKUP"); !strings.HasPrefix(resp, "OK") {
 		t.Fatalf("BACKUP with the default name = %q, want OK", resp)
 	}
-	if named, _ := filepath.Glob(filepath.Join(tmpDir, "data", "backup", "*", "meta.sqlite3")); len(named) != 1 {
+	if named, _ := filepath.Glob(filepath.Join(tmpDir, "data", "backup", "*", "posts.pebble")); len(named) != 1 {
 		t.Errorf("default named backup not found under the data dir: %v", named)
 	}
 
@@ -2730,8 +2730,8 @@ func TestServerIPCBackup(t *testing.T) {
 	if resp := request("BACKUP " + dest); !strings.HasPrefix(resp, "OK") {
 		t.Fatalf("BACKUP = %q, want OK", resp)
 	}
-	if _, err := os.Stat(filepath.Join(dest, "meta.sqlite3")); err != nil {
-		t.Errorf("backup is missing meta.sqlite3: %v", err)
+	if _, err := os.Stat(filepath.Join(dest, "posts.pebble")); err != nil {
+		t.Errorf("backup is missing posts.pebble: %v", err)
 	}
 	if resp := request("BACKUP " + dest); !strings.HasPrefix(resp, "ERR") {
 		t.Errorf("BACKUP to an existing destination = %q, want ERR", resp)

@@ -211,7 +211,10 @@ func VerifyDataDir(dir, communitiesDB string) *VerifyReport {
 	}
 
 	sqlitePath := filepath.Join(dir, "meta.sqlite3")
-	if _, err := os.Stat(sqlitePath); err != nil {
+	if _, err := os.Stat(sqlitePath); os.IsNotExist(err) {
+		verifyPebbleOnly(r, dbs["posts.pebble"], dbs["comments.pebble"], dbs["votes.pebble"], communities)
+		return r
+	} else if err != nil {
 		r.errorf("meta.sqlite3: %v", err)
 		return r
 	}
@@ -258,21 +261,28 @@ func loadCommunityShards(path string) (map[int64]int, error) {
 	return shards, rows.Err()
 }
 
-// shardCursor walks the posts of one engine data dir in post ID order.
+// shardCursor walks the posts (metadata records) of one engine data dir in
+// post ID order.
 type shardCursor struct {
-	rows *sql.Rows
-	id   uint64
-	cid  int64
-	ok   bool
+	it  *pebble.Iterator
+	id  uint64
+	cid int64
+	ok  bool
 }
 
 func (c *shardCursor) next(r *VerifyReport, dir string) {
-	c.ok = c.rows.Next()
-	if c.ok {
-		if err := c.rows.Scan(&c.id, &c.cid); err != nil {
-			r.errorf("%s: scan meta.sqlite3: %v", dir, err)
-			c.ok = false
+	for c.ok = c.it.Valid(); c.ok; c.ok = c.it.Valid() {
+		id, err := model.DecodePostIDKey(c.it.Key())
+		if err == nil {
+			c.id = id
+			c.cid, _ = strconv.ParseInt(model.DecodeRFC822PostMeta(c.it.Value())["CommunityID"], 10, 64)
+			c.it.Next()
+			return
 		}
+		c.it.Next()
+	}
+	if err := c.it.Error(); err != nil {
+		r.errorf("%s: read posts.pebble: %v", dir, err)
 	}
 }
 
@@ -299,19 +309,20 @@ func VerifyShards(dirs []string, communitiesDB string) *VerifyReport {
 
 	cursors := make([]*shardCursor, len(dirs))
 	for i, dir := range dirs {
-		db, err := openReadOnlySQLite(filepath.Join(dir, "meta.sqlite3"))
+		db, closeDB, err := openReadOnlyPebble(filepath.Join(dir, "posts.pebble"))
 		if err != nil {
-			r.errorf("%s: open meta.sqlite3: %v", dir, err)
+			r.errorf("%s: open posts.pebble: %v", dir, err)
 			return r
 		}
-		defer db.Close()
-		rows, err := db.Query("SELECT id, community_id FROM posts ORDER BY id")
+		defer closeDB()
+		it, err := db.NewIter(&pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
 		if err != nil {
-			r.errorf("%s: query meta.sqlite3: %v", dir, err)
+			r.errorf("%s: read posts.pebble: %v", dir, err)
 			return r
 		}
-		defer rows.Close()
-		cursors[i] = &shardCursor{rows: rows}
+		defer it.Close()
+		it.First()
+		cursors[i] = &shardCursor{it: it}
 		cursors[i].next(r, dir)
 	}
 
@@ -459,6 +470,142 @@ type metaRow struct {
 	reason                                      string
 }
 
+// aggregator derives what a rebuild needs of each post, in post ID order,
+// from cursors over the records keyed by post ID.
+type aggregator struct {
+	r                                   *VerifyReport
+	comments, votes, crossposts, counts *idCursor
+}
+
+func newAggregator(r *VerifyReport, postsDB, commentsDB, votesDB *pebble.DB) (*aggregator, error) {
+	comments, err1 := newIDCursor(commentsDB, 'c')
+	votes, err2 := newIDCursor(votesDB, 'v')
+	crossposts, err3 := newIDCursor(postsDB, 'x')
+	counts, err4 := newIDCursor(postsDB, 'n')
+	if err := errors.Join(err1, err2, err3, err4); err != nil {
+		return nil, err
+	}
+	return &aggregator{r: r, comments: comments, votes: votes, crossposts: crossposts, counts: counts}, nil
+}
+
+func (g *aggregator) close() {
+	for name, c := range map[string]*idCursor{"comments.pebble": g.comments, "votes.pebble": g.votes, "crossposts": g.crossposts, "post counters": g.counts} {
+		if err := c.close(); err != nil {
+			g.r.errorf("read %s: %v", name, err)
+		}
+	}
+}
+
+// of consumes the records of post id from all cursors; records of smaller
+// IDs belong to posts that no longer exist.
+func (g *aggregator) of(id uint64) postAggregate {
+	r, comments, votes, crossposts, counts := g.r, g.comments, g.votes, g.crossposts, g.counts
+	var a postAggregate
+	for cid, ok := comments.id(); ok && cid <= id; cid, ok = comments.id() {
+		if k := comments.it.Key(); len(k) == 13 {
+			if cid < id {
+				r.warn("comments of a missing post", cid, "orphan comment record")
+			} else {
+				a.comments++
+				r.Comments++
+				if c, err := model.DecodeRFC822Comment(cid, binary.BigEndian.Uint32(k[9:13]), comments.it.Value()); err == nil && c.ModifiedAt > a.commentModified {
+					a.commentModified = c.ModifiedAt
+				}
+			}
+		}
+		comments.it.Next()
+	}
+	for vid, ok := votes.id(); ok && vid <= id; vid, ok = votes.id() {
+		if vid < id {
+			r.warn("votes of a missing post", vid, "orphan vote record")
+		} else if v := votes.it.Value(); len(v) > 0 {
+			r.Votes++
+			switch v[0] {
+			case 'U':
+				a.upvotes++
+			case 'D':
+				a.downvotes++
+			}
+		}
+		votes.it.Next()
+	}
+	for xid, ok := crossposts.id(); ok && xid <= id; xid, ok = crossposts.id() {
+		if xid == id {
+			a.crossposts++
+		}
+		crossposts.it.Next()
+	}
+	for nid, ok := counts.id(); ok && nid <= id; nid, ok = counts.id() {
+		if nid == id {
+			if c, err := model.DecodePostCounts(counts.it.Value()); err == nil {
+				a.stored = c
+			} else {
+				r.warn("malformed counter record", nid, err.Error())
+			}
+		}
+		counts.it.Next()
+	}
+	return a
+}
+
+// checkPostBodies reads every post body (which checks their blocks) and
+// compares their number with the metadata records.
+func checkPostBodies(r *VerifyReport, postsDB *pebble.DB) {
+	metas, _ := scanAll(postsDB, &pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
+	if bodies, err := scanAll(postsDB, &pebble.IterOptions{LowerBound: []byte{'p'}, UpperBound: []byte{'q'}}); err != nil {
+		r.errorf("read post bodies: %v", err)
+	} else if bodies != metas {
+		r.warn("post bodies and metadata records differ in number", 0, fmt.Sprintf("bodies=%d metadata=%d", bodies, metas))
+	}
+}
+
+// verifyPebbleOnly checks a data dir without meta.sqlite3 (a backup, from
+// which a restore rebuilds it): the counter records against the comments
+// and votes, and the communities of the posts.
+func verifyPebbleOnly(r *VerifyReport, postsDB, commentsDB, votesDB *pebble.DB, communities map[int64]bool) {
+	g, err := newAggregator(r, postsDB, commentsDB, votesDB)
+	if err != nil {
+		r.errorf("open iterators: %v", err)
+		return
+	}
+	defer g.close()
+	posts, err := postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
+	if err != nil {
+		r.errorf("posts.pebble: %v", err)
+		return
+	}
+	defer posts.Close()
+	missing := 0
+	for posts.First(); posts.Valid(); posts.Next() {
+		id, err := model.DecodePostIDKey(posts.Key())
+		if err != nil {
+			continue
+		}
+		r.Posts++
+		a := g.of(id)
+		if s := a.stored; s.Upvotes != a.upvotes || s.Downvotes != a.downvotes || s.NumComments != a.comments {
+			r.warn("counter record differs from comments/votes", id, fmt.Sprintf("record=%d/%d/%d pebble=%d/%d/%d", s.Upvotes, s.Downvotes, s.NumComments, a.upvotes, a.downvotes, a.comments))
+		}
+		if communities != nil {
+			cid, _ := strconv.ParseInt(model.DecodeRFC822PostMeta(posts.Value())["CommunityID"], 10, 64)
+			if !communities[cid] {
+				if missing < maxVerifyExamples {
+					r.errorf("post %d refers to community #%d, which is not in communities.db", id, cid)
+				}
+				missing++
+			}
+		}
+	}
+	if err := posts.Error(); err != nil {
+		r.errorf("read posts: %v", err)
+	}
+	if missing > maxVerifyExamples {
+		r.errorf("... %d references to unknown communities in total", missing)
+	}
+	g.of(^uint64(0))
+	checkPostBodies(r, postsDB)
+}
+
 func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, votesDB *pebble.DB) {
 	posts, err := postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
 	if err != nil {
@@ -466,72 +613,13 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 		return
 	}
 	defer posts.Close()
-	comments, err1 := newIDCursor(commentsDB, 'c')
-	votes, err2 := newIDCursor(votesDB, 'v')
-	crossposts, err3 := newIDCursor(postsDB, 'x')
-	counts, err4 := newIDCursor(postsDB, 'n')
-	if err := errors.Join(err1, err2, err3, err4); err != nil {
+	g, err := newAggregator(r, postsDB, commentsDB, votesDB)
+	if err != nil {
 		r.errorf("open iterators: %v", err)
 		return
 	}
-	defer func() {
-		for name, c := range map[string]*idCursor{"comments.pebble": comments, "votes.pebble": votes, "crossposts": crossposts, "post counters": counts} {
-			if err := c.close(); err != nil {
-				r.errorf("read %s: %v", name, err)
-			}
-		}
-	}()
-
-	// aggregate consumes the records of post id from all cursors; records of
-	// smaller IDs belong to posts that no longer exist.
-	aggregate := func(id uint64) postAggregate {
-		var a postAggregate
-		for cid, ok := comments.id(); ok && cid <= id; cid, ok = comments.id() {
-			if k := comments.it.Key(); len(k) == 13 {
-				if cid < id {
-					r.warn("comments of a missing post", cid, "orphan comment record")
-				} else {
-					a.comments++
-					r.Comments++
-					if c, err := model.DecodeRFC822Comment(cid, binary.BigEndian.Uint32(k[9:13]), comments.it.Value()); err == nil && c.ModifiedAt > a.commentModified {
-						a.commentModified = c.ModifiedAt
-					}
-				}
-			}
-			comments.it.Next()
-		}
-		for vid, ok := votes.id(); ok && vid <= id; vid, ok = votes.id() {
-			if vid < id {
-				r.warn("votes of a missing post", vid, "orphan vote record")
-			} else if v := votes.it.Value(); len(v) > 0 {
-				r.Votes++
-				switch v[0] {
-				case 'U':
-					a.upvotes++
-				case 'D':
-					a.downvotes++
-				}
-			}
-			votes.it.Next()
-		}
-		for xid, ok := crossposts.id(); ok && xid <= id; xid, ok = crossposts.id() {
-			if xid == id {
-				a.crossposts++
-			}
-			crossposts.it.Next()
-		}
-		for nid, ok := counts.id(); ok && nid <= id; nid, ok = counts.id() {
-			if nid == id {
-				if c, err := model.DecodePostCounts(counts.it.Value()); err == nil {
-					a.stored = c
-				} else {
-					r.warn("malformed counter record", nid, err.Error())
-				}
-			}
-			counts.it.Next()
-		}
-		return a
-	}
+	defer g.close()
+	aggregate := g.of
 
 	rows, err := meta.Query(`SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified,
 		filemode, money, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason
@@ -597,13 +685,7 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 	}
 	// Drain the remaining records so their checksums are verified as well.
 	aggregate(^uint64(0))
-	// The bodies are not compared, only read (which checks their blocks).
-	metas, _ := scanAll(postsDB, &pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
-	if bodies, err := scanAll(postsDB, &pebble.IterOptions{LowerBound: []byte{'p'}, UpperBound: []byte{'q'}}); err != nil {
-		r.errorf("read post bodies: %v", err)
-	} else if bodies != metas {
-		r.warn("post bodies and metadata records differ in number", 0, fmt.Sprintf("bodies=%d metadata=%d", bodies, metas))
-	}
+	checkPostBodies(r, postsDB)
 
 	var metaCrossposts, pebbleCrossposts int
 	_ = meta.QueryRow("SELECT COUNT(*) FROM crossposts").Scan(&metaCrossposts)

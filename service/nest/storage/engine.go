@@ -213,7 +213,10 @@ func OpenEngine(cfg Config) (*Engine, error) {
 	}
 
 	// 4. SQLite Metadata DB
-	metaDB, err := openMetaDB(filepath.Join(cfg.DataDir, "meta.sqlite3"))
+	metaPath := filepath.Join(cfg.DataDir, "meta.sqlite3")
+	_, statErr := os.Stat(metaPath)
+	metaMissing := os.IsNotExist(statErr)
+	metaDB, err := openMetaDB(metaPath)
 	if err != nil {
 		postsDB.Close()
 		commentsDB.Close()
@@ -253,9 +256,31 @@ func OpenEngine(cfg Config) (*Engine, error) {
 		stopFlush:   make(chan struct{}),
 	}
 
+	// A data dir restored from a backup has no meta.sqlite3 (see backupTo).
+	if metaMissing && e.hasPostRecords() {
+		log.Printf("[nest.svc] %s: no meta.sqlite3; rebuilding it from Pebble...", cfg.DataDir)
+		start := time.Now()
+		if _, _, err := e.RebuildSQLiteFromPebble(); err != nil {
+			opened = true // e.Close closes the registry.
+			e.Close()
+			return nil, fmt.Errorf("rebuild meta.sqlite3: %w", err)
+		}
+		log.Printf("[nest.svc] %s: meta.sqlite3 rebuilt in %s", cfg.DataDir, time.Since(start).Round(time.Second))
+	}
+
 	go e.flusherLoop()
 	opened = true
 	return e, nil
+}
+
+// hasPostRecords reports whether posts.pebble holds any post.
+func (e *Engine) hasPostRecords() bool {
+	it, err := e.postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
+	if err != nil {
+		return false
+	}
+	defer it.Close()
+	return it.First()
 }
 
 // openMetaDB opens (or creates) meta.sqlite3 at path.

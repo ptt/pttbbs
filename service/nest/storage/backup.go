@@ -16,9 +16,10 @@ import (
 //
 // Each Pebble DB is copied with pebble's Checkpoint, which hard-links the
 // immutable SSTs when the destination is on the same filesystem and copies only
-// the MANIFEST/WAL/OPTIONS, so it takes seconds and very little extra space. The
-// SQLite metadata DB is copied with VACUUM INTO, which is safe while the service
-// keeps running in WAL mode.
+// the MANIFEST/WAL/OPTIONS, so it takes seconds and very little extra space.
+// meta.sqlite3 is not copied: it is an index of posts.pebble, which an engine
+// opened without one rebuilds (RebuildSQLiteFromPebble, about 25 minutes for
+// the 48M posts of ptt1), while copying it would take a full 12 GB a day.
 //
 // The destination given to Backup is either:
 //
@@ -30,11 +31,6 @@ import (
 //     a ShardedEngine write to <path>/shard-<N>. Engines on another filesystem
 //     than the path are copied in full.
 //
-// The Pebble DBs are checkpointed before SQLite on purpose: SQLite allocates the
-// post IDs, so a SQLite copy that is slightly newer than Pebble only has a few
-// extra metadata rows, while an older one could let a restored service reuse an
-// ID that already exists in Pebble.
-//
 // The community registry (communities.db, shared by all shards and kept in
 // the data dir of the first one) is copied last, after every engine, so that
 // it knows every community ID the copies of the posts refer to. It goes into
@@ -42,9 +38,9 @@ import (
 // community IDs, so the names and shards of the communities exist only in
 // communities.db, and no rebuild can recover them: it must be backed up.
 //
-// To restore, put the backed-up meta.sqlite3 (and communities.db) back together with the Pebble DBs
-// and do NOT run `nest.svc -rebuild` unless meta.sqlite3 is missing or
-// corrupt: SQLite may hold data from older versions that Pebble lacks.
+// To restore, stop nest.svc, put the Pebble DBs (and communities.db) back in
+// place of the engine's, remove its meta.sqlite3 (with -wal and -shm), and
+// start nest.svc, which rebuilds meta.sqlite3 before it serves.
 
 // BackupSubdir is the directory under each engine's DataDir that holds named
 // backups.
@@ -169,7 +165,7 @@ func (e *Engine) backupTo(dir string) error {
 		return err
 	}
 
-	// Persist the in-memory vote/comment counter deltas into SQLite first.
+	// Flush the counter deltas, which also writes the counter records.
 	e.FlushDirtyDeltas()
 
 	for _, db := range []struct {
@@ -186,14 +182,6 @@ func (e *Engine) backupTo(dir string) error {
 		if err := db.db.Checkpoint(filepath.Join(dir, db.name), pebble.WithFlushedWAL()); err != nil {
 			return fmt.Errorf("checkpoint %s: %w", db.name, err)
 		}
-	}
-
-	// Holding metaWriteMu keeps the counter flusher and other SQLite writers
-	// out while the copy is made; readers are not blocked.
-	e.metaWriteMu.Lock()
-	defer e.metaWriteMu.Unlock()
-	if _, err := e.metaDB.Exec(`VACUUM INTO ?`, filepath.Join(dir, "meta.sqlite3")); err != nil {
-		return fmt.Errorf("backup meta.sqlite3: %w", err)
 	}
 	return nil
 }
