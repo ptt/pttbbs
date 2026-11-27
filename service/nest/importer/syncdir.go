@@ -252,11 +252,13 @@ func fillRecord(rec []byte, p *model.Post, isBig5 bool) {
 			modified = p.DeletedAt
 		}
 	}
-	var titleBytes []byte
+	var titleBytes, ownerBytes []byte
 	if isBig5 {
 		titleBytes = big5uao.Encode(title)
+		ownerBytes = big5uao.Encode(owner)
 	} else {
 		titleBytes = []byte(title)
+		ownerBytes = []byte(owner)
 	}
 	created := stampTime(p.PostFile)
 	if created == 0 {
@@ -265,7 +267,7 @@ func fillRecord(rec []byte, p *model.Post, isBig5 bool) {
 
 	setString(rec, fhdrOffFilename, fhdrLenFilename, []byte(filename))
 	binary.LittleEndian.PutUint32(rec[fhdrOffModified:], uint32(modified))
-	setString(rec, fhdrOffOwner, fhdrLenOwner, []byte(owner))
+	setString(rec, fhdrOffOwner, fhdrLenOwner, truncateStorage(ownerBytes, fhdrLenOwner-1, isBig5))
 	setString(rec, fhdrOffDate, fhdrLenDate, []byte(fhdrDate(created)))
 	setString(rec, fhdrOffTitle, fhdrLenTitle, truncateStorage(titleBytes, fhdrLenTitle-1, isBig5))
 	binary.LittleEndian.PutUint32(rec[fhdrOffMulti:], p.PackMulti())

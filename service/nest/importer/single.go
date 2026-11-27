@@ -104,6 +104,41 @@ func fileCreationTime(path string) int64 {
 	return t
 }
 
+// decodeHeaderText converts a text field of a .DIR record (Big5-UAO on a
+// Big5 site) to UTF-8, as the articles are; a lead byte left at the end by
+// a cut in the middle of a character is dropped first.
+func decodeHeaderText(s string, isBig5 bool) string {
+	if !isBig5 || utf8.ValidString(s) {
+		return s
+	}
+	return strings.ToValidUTF8(big5uao.DecodeSGR66(trimDanglingLead([]byte(s))), "?")
+}
+
+// trimDanglingLead drops a Big5 lead byte without its trail byte at the
+// end of b, stepping over the characters as the decoder does.
+func trimDanglingLead(b []byte) []byte {
+	for i := 0; i < len(b); {
+		switch {
+		case b[i] < 0x80:
+			i++
+		case i+1 == len(b):
+			return b[:i]
+		case b[i+1] >= 0x40:
+			i += 2
+		default:
+			i++
+		}
+	}
+	return b
+}
+
+// decodeRecord converts the owner and title of fhdr to UTF-8 (see
+// decodeHeaderText); anonymous owners may have spaces around.
+func decodeRecord(fhdr *FileHeader, isBig5 bool) {
+	fhdr.Owner = strings.TrimSpace(decodeHeaderText(fhdr.Owner, isBig5))
+	fhdr.Title = decodeHeaderText(fhdr.Title, isBig5)
+}
+
 // buildRecord returns what to import for one .DIR record, the way
 // ImportBoard imports it: title, owner, filemode, money, modified and
 // locked from the record, created_at from the file name, the author's
@@ -111,14 +146,15 @@ func fileCreationTime(path string) int64 {
 // article. For a safe-deleted record see importSafeDeleted (marked tells
 // that an existing post was marked deleted instead).
 func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserResolver, commentDB *leveldb.DB, job *recordJob) (data *storage.ImportedPostData, marked bool, err error) {
+	fhdr := job.fhdr
+	decodeRecord(fhdr, opts.IsBig5)
 	if job.deleted {
-		return importSafeDeleted(engine, opts, users, job.fhdr)
+		return importSafeDeleted(engine, opts, users, fhdr)
 	}
 	rawBytes, err := ReadArticleFile(job.articlePath)
 	if err != nil {
 		return nil, false, err
 	}
-	fhdr := job.fhdr
 	postCtime := postCtimeOf(fhdr, job.articlePath)
 
 	parsed, err := ParseArticleText(rawBytes, fhdr.Owner, postCtime, opts.Board, fhdr.Filename, opts.IsBig5, opts.NoMerge)
@@ -137,9 +173,6 @@ func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserReso
 	}
 
 	title := fhdr.Title
-	if opts.IsBig5 && !utf8.Valid([]byte(title)) {
-		title = big5uao.DecodeSGR66([]byte(title))
-	}
 
 	comments, votes, upvotes, downvotes := ConvertParsedComments(parsed.Comments, users)
 

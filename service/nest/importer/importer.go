@@ -188,9 +188,11 @@ var (
 	editMarkRegex          = regexp.MustCompile(`^※\s*編輯:`)
 
 	// The comments nest.svc writes into the articles (FormatCommentBlock in
-	// storage): a floor is "RS[*][-|!]userid|[~]No|MM/DD/YYYY HH:MM|[ip]|text",
+	// storage): a floor is "RS[*][-|!]author|[~]No|MM/DD/YYYY HH:MM|[ip]|text",
 	// its other lines "RS[*]<spaces>|text"; the OP mark "*" is ignored here.
-	modernHeadRegex = regexp.MustCompile(`^\x1e\*?([-!]?)([A-Za-z0-9_]+)\|(~?)(\d+)\|(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\|([^|]*)\|(.*)$`)
+	// The author is a userid, or the name of a non-user owner (e.g.
+	// "[系統安全局]") for the OP's text among the comments.
+	modernHeadRegex = regexp.MustCompile(`^\x1e\*?([-!]?)([^|\s][^|]*)\|(~?)(\d+)\|(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\|([^|]*)\|(.*)$`)
 	modernMoreRegex = regexp.MustCompile(`^\x1e\*? +\|(.*)$`)
 )
 

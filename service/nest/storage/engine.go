@@ -2199,8 +2199,26 @@ func commentMoreLine(text, name string, op bool) string {
 	if op {
 		mark = commentOPMark
 	}
-	// Userids are ASCII: as many spaces as the name is wide.
-	return commentLineMark + mark + strings.Repeat(" ", len(name)) + "|" + text + "\n"
+	return commentLineMark + mark + strings.Repeat(" ", visualWidth(name)) + "|" + text + "\n"
+}
+
+// commentAuthor returns the author field of a comment line: never empty, no
+// "|" or leading mark. Non-userids (e.g. "[系統安全局]") come from imports.
+func commentAuthor(name string) string {
+	name = strings.TrimSpace(strings.Map(func(r rune) rune {
+		// Nor a character whose Big5 trail byte is '|', for mbbsd.
+		if r == '|' || (r >= 0x80 && bytes.IndexByte(big5uao.Encode(string(r)), '|') >= 0) {
+			return '?'
+		}
+		return r
+	}, name))
+	if name == "" {
+		return "?"
+	}
+	if strings.ContainsRune(commentOPMark+commentDeletedMark+commentRemovedMark, rune(name[0])) {
+		name = "_" + name[1:]
+	}
+	return name
 }
 
 // FormatCommentBlock formats comment c of post p as PTT's own text form
@@ -2226,13 +2244,14 @@ func FormatCommentBlock(p *model.Post, c *model.Comment) string {
 	if op {
 		marks = commentOPMark
 	}
+	author := commentAuthor(c.CreatorName)
 	modMark := ""
 	if c.ModifiedAt > 0 {
 		modMark = "~"
 	}
 	head := func(marks, text string) string {
 		return fmt.Sprintf("%s%s%s|%s%d|%s|%s|%s\n", commentLineMark, marks,
-			c.CreatorName, modMark, c.Sequence, t, ip, text)
+			author, modMark, c.Sequence, t, ip, text)
 	}
 
 	if c.DeletedOrRemoved() {
@@ -2275,7 +2294,7 @@ func FormatCommentBlock(p *model.Post, c *model.Comment) string {
 	var b strings.Builder
 	b.WriteString(head(marks, firstLine))
 	for i := 1; i < len(cleanLines); i++ {
-		b.WriteString(commentMoreLine(cleanLines[i], c.CreatorName, op))
+		b.WriteString(commentMoreLine(cleanLines[i], author, op))
 	}
 
 	return b.String()
@@ -2330,7 +2349,7 @@ func FormatMergedCommentLines(p *model.Post, floor *model.Comment, content strin
 			clean := model.StripANSI(trimmed)
 			clean = strings.ReplaceAll(clean, "\t", "  ")
 			if clean != "" {
-				b.WriteString(commentMoreLine(clean, floor.CreatorName, op))
+				b.WriteString(commentMoreLine(clean, commentAuthor(floor.CreatorName), op))
 			}
 		}
 	}
@@ -3682,7 +3701,7 @@ func RenderLegacyComment(c *model.Comment, asBig5 bool) []byte {
 		}
 
 		// Calculate padding for 80-column alignment
-		prefixWidth := 3 + len(c.CreatorName) + 2 // tag(3) + author + ": "(2)
+		prefixWidth := 3 + visualWidth(c.CreatorName) + 2 // tag(3) + author + ": "(2)
 		msgWidth := visualWidth(line)
 		tailWidth := len(tail)
 		totalWidth := prefixWidth + msgWidth + tailWidth
