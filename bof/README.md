@@ -182,7 +182,7 @@ keeping the BBS working exactly as before:
 5. **Storage virtualization** -- the files backend behind it *(done)*;
    `pttbbs.conf` picks the default backend (`BOF_DEFAULT_STORAGE`). The
    `nest.svc` backend (`bof/nest/`) is there, off unless a site turns
-   nest.svc on (`CONFIG_NEST_SVC`): nest.svc is the database, and the files of the boards are
+   nest.svc on (`CONFIG_NEST`): nest.svc is the database, and the files of the boards are
    its cache, which BoF reads directly.
 6. **Communities** -- boards and moderators: read *(done)*; the board
    headers (`.BRD`) written through BoF, and removing, renaming, merging and

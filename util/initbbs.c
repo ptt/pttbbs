@@ -277,7 +277,7 @@ int main(int argc, char **argv)
     // .BRD is written here directly, before nest.svc runs: it learns of the
     // boards by importing them.
     if (BOF_FILES_ARE_CACHE)
-        printf("nest.svc (CONFIG_NEST_SVC): start nest.svc, then run "
+        printf("nest.svc (CONFIG_NEST): start nest.svc, then run "
                "`nest.ctl import-boards`.\n");
     return 0;
 }

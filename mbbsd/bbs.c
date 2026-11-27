@@ -13,7 +13,7 @@
 
 static int comment(int ent, fileheader_t * fhdr, const char *direct);
 // The lines of a comment with nest.svc (its MaxCommentLines); else one.
-#define COMMENT_MAX_LINES (IS_ENABLED(CONFIG_NEST_SVC) ? 15 : 1)
+#define COMMENT_MAX_LINES (IS_ENABLED(CONFIG_NEST) ? 15 : 1)
 static int vote_post(int ent, fileheader_t * fhdr, const char *direct);
 static int view_postinfo(int ent, const fileheader_t * fhdr,
                          const char *direct, int crs_ln);
@@ -1711,7 +1711,7 @@ edit_post(int ent, fileheader_t * fhdr, const char *direct)
     // Where comments are kept as they are (BRD_COMMENT_READONLY), only the
     // author edits, and only the post: no need to look for comments.
     // Moderators manage comments elsewhere (Ctrl-E, V).
-    const int comment_lines = IS_ENABLED(CONFIG_NEST_SVC);
+    const int comment_lines = IS_ENABLED(CONFIG_NEST);
     int my_comments = IS_ENABLED(CONFIG_COMMENT_EDIT) &&
                       !(bp->brdattr & BRD_COMMENT_READONLY) &&
                       psb_has_my_comments(currboard, direct, ent, fhdr);
@@ -3096,7 +3096,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 
     // The room left in the line of the comment (bof makes the line).
     maxlength = bof_bbs_comment_width(myid, logIP);
-    if (IS_ENABLED(CONFIG_NEST_SVC)) {
+    if (IS_ENABLED(CONFIG_NEST)) {
 	// nest.svc keeps a comment as what was typed, without a type (no
 	// push, boo or arrow): the article shows it in its own format.
 	sprintf(buf, "%s: ", myid);
@@ -3110,7 +3110,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     move(b_lines, 0);
     clrtoeol();
 
-    if (IS_ENABLED(CONFIG_NEST_SVC)) {
+    if (IS_ENABLED(CONFIG_NEST)) {
         // nest.svc keeps a comment of several lines, as one floor, laid out
         // as the article shows it: "userid: text", further lines under it.
         const comment_theme_t *thm = comment_get_theme(comment_pref_theme());
@@ -3131,7 +3131,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	return FULLUPDATE;
 
     // make sure to do modification
-    if (!IS_ENABLED(CONFIG_NEST_SVC))
+    if (!IS_ENABLED(CONFIG_NEST))
     {
         // to hold ':wq', ':q!' 'ZZ'
 	char ans[2];

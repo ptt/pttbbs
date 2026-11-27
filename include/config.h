@@ -784,38 +784,41 @@
  * of announce.c). Import first with gem.ctl import-all; gem.ctl export
  * writes them back to switch back. Off by default. */
 
-/* CONFIG_NEST_SVC: nest.svc keeps the posts, comments and votes, and the
+/* CONFIG_NEST: nest.svc keeps the posts, comments and votes, and the
  * files of the boards are its cache: BoF uses its backend
  * (bof_storage_nest) unless pttbbs.conf names another. Everything goes
  * through BoF, which tells nest.svc of the board headers it writes (.BRD).
  * Off by default: the files are all there is. */
-#if IS_ENABLED(CONFIG_NEST_SVC) && !defined(BOF_DEFAULT_STORAGE)
+#ifdef CONFIG_NEST_SVC
+#error "CONFIG_NEST_SVC is now CONFIG_NEST: rename it in pttbbs.conf"
+#endif
+#if IS_ENABLED(CONFIG_NEST) && !defined(BOF_DEFAULT_STORAGE)
 #define BOF_DEFAULT_STORAGE bof_storage_nest
 #endif
 
-/* CONFIG_RATING is always on with CONFIG_NEST_SVC: nest.svc keeps votes
+/* CONFIG_RATING is always on with CONFIG_NEST: nest.svc keeps votes
  * apart from comments (Lemmy's CreatePostLike), so a comment only comments
  * and posts are rated with '%' on boards that rate posts (BRD_SCORE); the
  * others list the number of comments. */
-#if IS_ENABLED(CONFIG_NEST_SVC)
+#if IS_ENABLED(CONFIG_NEST)
 #undef CONFIG_RATING
 #define CONFIG_RATING 1
 #endif
 
-/* CONFIG_COMMENT_EDIT is always on with CONFIG_NEST_SVC too: nest.svc keeps
+/* CONFIG_COMMENT_EDIT is always on with CONFIG_NEST too: nest.svc keeps
  * each comment (a floor of several lines) with its revisions, so people
  * edit or delete their own comments ('E' on a post), as Lemmy's EditComment
  * and DeleteComment; a board may still forbid it. */
-#if IS_ENABLED(CONFIG_NEST_SVC)
+#if IS_ENABLED(CONFIG_NEST)
 #undef CONFIG_COMMENT_EDIT
 #define CONFIG_COMMENT_EDIT 1
 #endif
 
-/* CONFIG_COMMENT_MODERATION is always on with CONFIG_NEST_SVC as well: the
+/* CONFIG_COMMENT_MODERATION is always on with CONFIG_NEST as well: the
  * moderators remove comments one by one (Ctrl-E, V), as Lemmy's
  * RemoveComment, which nest.svc keeps (with the reason, and their history),
  * also where people may not edit or delete their own (BRD_COMMENT_READONLY). */
-#if IS_ENABLED(CONFIG_NEST_SVC)
+#if IS_ENABLED(CONFIG_NEST)
 #undef CONFIG_COMMENT_MODERATION
 #define CONFIG_COMMENT_MODERATION 1
 #endif
@@ -837,7 +840,7 @@
 #endif
 
 /* BOF_DEFAULT_STORAGE: the storage backend of BoF when none is set: the
- * files backend unless pttbbs.conf (or CONFIG_NEST_SVC above) names
+ * files backend unless pttbbs.conf (or CONFIG_NEST above) names
  * another. */
 #ifndef BOF_DEFAULT_STORAGE
 #define BOF_DEFAULT_STORAGE bof_storage_files
@@ -859,8 +862,8 @@
  * told of edits, deletes or removes of comments. nest.svc keeps the
  * comments itself (with where they came from, and their history), so the
  * two do not go together. */
-#if IS_ENABLED(CONFIG_NEST_SVC) && defined(USE_COMMENTD)
-#error "USE_COMMENTD does not work with CONFIG_NEST_SVC (nest.svc keeps the comments); undefine it in pttbbs.conf"
+#if IS_ENABLED(CONFIG_NEST) && defined(USE_COMMENTD)
+#error "USE_COMMENTD does not work with CONFIG_NEST (nest.svc keeps the comments); undefine it in pttbbs.conf"
 #endif
 
 #if defined(DEBUG) && !defined(CONFIG_DEBUG)

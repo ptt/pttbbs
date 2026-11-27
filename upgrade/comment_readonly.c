@@ -4,7 +4,7 @@
  * Sets BRD_COMMENT_READONLY (people may neither edit nor delete their own
  * comments) on the boards that have moderators, as many moderators want for
  * the boards they already run when the comments move to nest.svc
- * (CONFIG_NEST_SVC). New boards keep the default (edit and delete allowed),
+ * (CONFIG_NEST). New boards keep the default (edit and delete allowed),
  * and a moderator can change it in the board settings. Run it by hand, once,
  * when switching (see docs/nest_migration.md).
  *

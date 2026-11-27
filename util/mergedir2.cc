@@ -20,7 +20,7 @@ void usage(const char *progname) {
 	    "This program is useful when merging from backup. Here's an example invocation of this use case:\n"
 	    "$ %s .DIR.merge /backup-path/.DIR .DIR && cp .DIR .DIR.bak && mv .DIR.merge .DIR\n"
 	    "Note: You might want to `shmctl touchboard <brdname>` afterwards. This program will not do this for you.\n"
-	    "With nest.svc (CONFIG_NEST_SVC) the .DIR of a board is only its cache: this program refuses to write into a board.\n"
+	    "With nest.svc (CONFIG_NEST) the .DIR of a board is only its cache: this program refuses to write into a board.\n"
 	    "\n",
 	    progname, progname);
 }

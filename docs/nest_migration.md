@@ -1,7 +1,7 @@
-# Switching the posts to nest.svc (CONFIG_NEST_SVC)
+# Switching the posts to nest.svc (CONFIG_NEST)
 
 By default the files of the boards are all there is: `boards/<c>/<name>/.DIR`
-and the article files (`M.*`). With `CONFIG_NEST_SVC`, BoF (`bof/`,
+and the article files (`M.*`). With `CONFIG_NEST`, BoF (`bof/`,
 `include/bof.h`) uses its nest.svc backend (`service/nest`): nest.svc keeps
 the posts, comments and votes, and the files of the boards become **its
 cache**. The board headers (`.BRD`) stay a file, and BoF tells nest.svc of
@@ -138,10 +138,10 @@ host.
    nest.svc writes them as it keeps them (`|user|comment|time|floor`, one
    floor per comment, which mbbsd shows with the floors), as it would
    anyway the next time a post changes. Never run it while an mbbsd
-   without `CONFIG_NEST_SVC` serves the boards: it shows the new format as
+   without `CONFIG_NEST` serves the boards: it shows the new format as
    it is. It replaces the article files; `--legacy-format` writes the old
    format back, if ever needed.
-8. Enable `CONFIG_NEST_SVC` in `pttbbs.conf` (`#define CONFIG_NEST_SVC 1`),
+8. Enable `CONFIG_NEST` in `pttbbs.conf` (`#define CONFIG_NEST 1`),
    check that `USE_COMMENTD` is not defined, then rebuild everything (the
    setting is read by `include/config.h`, so `bof/`, `common/`, `mbbsd/`
    and `util/` all change) and install it.
@@ -152,7 +152,7 @@ host.
 ## Comments and votes
 
 nest.svc keeps votes apart from comments, as Lemmy does (CreatePostLike),
-so `CONFIG_NEST_SVC` always turns on `CONFIG_RATING` (`include/config.h`):
+so `CONFIG_NEST` always turns on `CONFIG_RATING` (`include/config.h`):
 
 - A comment (`X`) is only a comment: no push, boo or arrow, of up to 15
   lines (one floor; a comment of the same author within three minutes is
@@ -179,7 +179,7 @@ are comments and the list shows their score.
 | `util/buildir` | On a board directory, makes the list again from nest.svc (as `nest.ctl sync-dir <board> --rebuild`) instead of from the files. Other directories (mail, digest) as before. |
 | `util/buildir2`, `util/mergedir2` | Refuse to write their output into a board directory. To restore posts from a backup, import them into nest.svc (`nest.ctl import-board`) and run `nest.ctl sync-dir <board> --rebuild`. |
 | `util/chkfnlen --repair` | Inspects the lists of the boards but does not repair them (renaming file names would part them from nest.svc). Mail and digest lists are repaired as before. |
-| `util/viewdir` | Read-only by default when built with `CONFIG_NEST_SVC` (`L` does nothing); mbbsd sets FILE_SOLVED through BoF. |
+| `util/viewdir` | Read-only by default when built with `CONFIG_NEST` (`L` does nothing); mbbsd sets FILE_SOLVED through BoF. |
 | `util/initbbs`, `util/merge_board`, `upgrade/board_split_title`, `upgrade/migrate_board_moderators` | Write `.BRD` directly: run `nest.ctl import-boards` afterwards. |
 | `util/cleandir.pl` | Deletes article files not in `.DIR`: only the cache, but it may race with a post being created. Avoid it, or run it with the BBS stopped. |
 

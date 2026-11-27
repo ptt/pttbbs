@@ -2,7 +2,7 @@ This file contains upgrading tools/scripts/...
 
 Usually you should stop whole BBS and then run scripts here.
 
-With nest.svc (CONFIG_NEST_SVC), the files of the boards (.DIR, articles)
+With nest.svc (CONFIG_NEST), the files of the boards (.DIR, articles)
 are only its cache, and .BRD is mirrored into it. These tools write the
 files directly, not through BoF, so:
 

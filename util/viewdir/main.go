@@ -17,7 +17,7 @@ import (
 )
 
 // nestBuild is set at build time (-ldflags -X main.nestBuild=YES, see
-// Makefile) when pttbbs.conf enables CONFIG_NEST_SVC: the .DIR of a board is
+// Makefile) when pttbbs.conf enables CONFIG_NEST: the .DIR of a board is
 // then only the cache of nest.svc, and a mode written into it here is lost
 // (mbbsd sets FILE_SOLVED through BoF, bof_bbs_set_post_modes). So viewdir
 // is read-only by default there.
@@ -998,7 +998,7 @@ func main() {
 	flag.StringVar(&encFlag, "encoding", "", "Output encoding (utf8 or big5)")
 	flag.StringVar(&encFlag, "e", "", "Output encoding (utf8 or big5), shorthand")
 	flag.BoolVar(&readOnly, "readonly", nestBuild != "",
-		"Never write .DIR (L does nothing); the default when built with CONFIG_NEST_SVC")
+		"Never write .DIR (L does nothing); the default when built with CONFIG_NEST")
 	flag.Parse()
 
 	paths := flag.Args()

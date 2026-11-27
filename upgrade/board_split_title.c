@@ -184,7 +184,7 @@ main(int argc, char **argv)
     // .BRD is written here directly, not through BoF (bof_edit_community):
     // nest.svc, which mirrors it, has to import the boards again.
     if (BOF_FILES_ARE_CACHE && !opt_dry_run && count_migrated > 0)
-        printf("nest.svc (CONFIG_NEST_SVC): run `nest.ctl import-boards` "
+        printf("nest.svc (CONFIG_NEST): run `nest.ctl import-boards` "
                "now.\n");
 
     return 0;

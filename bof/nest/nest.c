@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause OR GPL-2.0-only
  *
  * It is not the default backend: a site with nest.svc running chooses it
- * (CONFIG_NEST_SVC, or BOF_DEFAULT_STORAGE in pttbbs.conf).
+ * (CONFIG_NEST, or BOF_DEFAULT_STORAGE in pttbbs.conf).
  *
  * nest.svc keeps the posts, comments and votes (a database); the files of
  * the board (.DIR, the articles) are a cache of it, compatible with the
