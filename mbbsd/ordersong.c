@@ -4,22 +4,38 @@
 #define lockreturn(unmode, state)  if(lockutmpmode(unmode, state)) return
 #define lockreturn0(unmode, state) if(lockutmpmode(unmode, state)) return 0
 #define lockbreak(unmode, state)   if(lockutmpmode(unmode, state)) break
-#define SONGBOOK  "etc/SONGBOOK"
-#define OSONGPATH "etc/SONGO"
+// The gem area of BN_NOTE has the songbook (templates, ORDERSONG_BOOK) and
+// the ordered songs (ORDERSONG_DIR) shown on the moving board.
+#ifndef ORDERSONG_BOOK
+#define ORDERSONG_BOOK "SONGBOOK"
+#endif
+#ifndef ORDERSONG_DIR
+#define ORDERSONG_DIR  "SONGO"
+#endif
+#define NOTE_GEM_ROOT  "board:" BN_NOTE
 
-// The songs ordered (OSONGPATH, in the gem area of the Note board): kept
-// by gem.svc with CONFIG_GEM, else in files.
+// A directory of the gem area of BN_NOTE as a path of man/ (what a_menu()
+// takes, and gem_path_parse() maps with CONFIG_GEM), in a static buffer.
+static const char *
+note_path(const char *dir)
+{
+    static char path[PATHLEN];
+    char apath[PATHLEN];
+    setapath(apath, BN_NOTE);
+    snprintf(path, sizeof(path), "%s/%s", apath, dir);
+    return path;
+}
+
 static int
 order_song_append(const char *fpath, const fileheader_t *fh)
 {
 #if IS_ENABLED(CONFIG_GEM)
-    char root[GEM_ROOT_SIZE], sub[PATHLEN];
-    if (!gem_path_parse(OSONGPATH, root, sizeof(root), sub, sizeof(sub)))
-        return -1;
-    return gem_add_file(root, sub, -1, fh, fpath, NULL) < 0 ? -1 : 0;
+    return gem_add_file(NOTE_GEM_ROOT, ORDERSONG_DIR, -1, fh, fpath, NULL) < 0 ? -1 : 0;
 #else
+    char dir[PATHLEN];
     (void)fpath;
-    return append_fileheader(OSONGPATH "/" FN_DIR, fh);
+    snprintf(dir, sizeof(dir), "%s/" FN_DIR, note_path(ORDERSONG_DIR));
+    return append_fileheader(dir, fh);
 #endif
 }
 
@@ -27,14 +43,14 @@ static int
 order_song_count(void)
 {
 #if IS_ENABLED(CONFIG_GEM)
-    char root[GEM_ROOT_SIZE], sub[PATHLEN];
     int count = 0;
-    if (!gem_path_parse(OSONGPATH, root, sizeof(root), sub, sizeof(sub)) ||
-        gem_list(root, sub, 0, 0, NULL, &count, NULL) < 0)
+    if (gem_list(NOTE_GEM_ROOT, ORDERSONG_DIR, 0, 0, NULL, &count, NULL) < 0)
         return 0;
     return count;
 #else
-    return get_num_records(OSONGPATH "/" FN_DIR, sizeof(fileheader_t));
+    char dir[PATHLEN];
+    snprintf(dir, sizeof(dir), "%s/" FN_DIR, note_path(ORDERSONG_DIR));
+    return get_num_records(dir, sizeof(fileheader_t));
 #endif
 }
 
@@ -43,19 +59,33 @@ static void
 order_song_trim(int n)
 {
 #if IS_ENABLED(CONFIG_GEM)
-    char root[GEM_ROOT_SIZE], sub[PATHLEN];
     gem_entry_t *ents;
     int got;
-    if (n <= 0 || !gem_path_parse(OSONGPATH, root, sizeof(root), sub, sizeof(sub)) ||
-        !(ents = calloc(n, sizeof(gem_entry_t))))
+    if (n <= 0 || !(ents = calloc(n, sizeof(gem_entry_t))))
         return;
-    got = gem_list(root, sub, 0, n, ents, NULL, NULL);
+    got = gem_list(NOTE_GEM_ROOT, ORDERSONG_DIR, 0, n, ents, NULL, NULL);
     for (int i = 0; i < got; i++)
-        gem_remove(root, sub, -1, ents[i].header.filename);
+        gem_remove(NOTE_GEM_ROOT, ORDERSONG_DIR, -1, ents[i].header.filename);
     free(ents);
 #else
-    delete_range(OSONGPATH "/" FN_DIR, 1, n);
+    char dir[PATHLEN];
+    snprintf(dir, sizeof(dir), "%s/" FN_DIR, note_path(ORDERSONG_DIR));
+    delete_range(dir, 1, n);
 #endif
+}
+
+// Whether fpath, picked in the songbook, may be read as a template: a copy
+// in tmp/ with CONFIG_GEM, else a file really in the songbook (no links).
+static bool
+order_song_template_ok(const char *fpath)
+{
+    if (IS_ENABLED(CONFIG_GEM))
+        return true;
+    char book[PATH_MAX], real[PATH_MAX];
+    if (!realpath(note_path(ORDERSONG_BOOK), book) || !realpath(fpath, real))
+        return false;
+    size_t n = strlen(book);
+    return strncmp(real, book, n) == 0 && real[n] == '/';
 }
 
 #ifndef ORDERSONG_MIN_NUMPOST
@@ -210,7 +240,7 @@ do_order_song(void)
 	if (ans[0] == '1')
 	    break;
 	else if (ans[0] == '2') {
-	    a_menu("留言範本", SONGBOOK, 0, 0, NULL, NULL);
+	    a_menu("留言範本", note_path(ORDERSONG_BOOK), 0, 0, NULL, NULL);
 	    clear();
 	}
 	else if (ans[0] == '3') {
@@ -244,16 +274,16 @@ do_order_song(void)
     SNPRINTF(save_title, "%s:%s", sender, say);
 
     vmsg("接著要選範本囉...");
-    a_menu("留言範本", SONGBOOK, 0, 0, trans_buffer, NULL);
-    if (!trans_buffer[0] || strstr(trans_buffer, "home") ||
-	strstr(trans_buffer, "boards") || !(fp = fopen(trans_buffer, "r"))) {
+    a_menu("留言範本", note_path(ORDERSONG_BOOK), 0, 0, trans_buffer, NULL);
+    if (!trans_buffer[0] || !order_song_template_ok(trans_buffer) ||
+	!(fp = fopen(trans_buffer, "r"))) {
 	unlockutmpmode();
 	return 0;
     }
     if (IS_ENABLED(CONFIG_DEBUG))
         vmsg(trans_buffer);
     // With CONFIG_GEM the songs are kept by gem.svc: written in tmp/ first.
-    STRLCPY(filename, IS_ENABLED(CONFIG_GEM) ? "tmp" : OSONGPATH);
+    STRLCPY(filename, IS_ENABLED(CONFIG_GEM) ? "tmp" : note_path(ORDERSONG_DIR));
     stampfile(filename, &mail);
     unlink(filename);
 

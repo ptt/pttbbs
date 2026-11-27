@@ -7,8 +7,9 @@ import (
 	"pttbbs/gem/storage"
 )
 
-// etcLinks are the symbolic links of etc/ into gem areas (util/initbbs.c),
-// which links may go through; as gem_path_parse() of common/bbs/gem.c.
+// etcLinks are the symbolic links of etc/ into gem areas that util/initbbs
+// made (mbbsd now names those areas directly), which links of man/ may go
+// through.
 var etcLinks = [][2]string{
 	{"etc/SONGBOOK", "man/boards/N/Note/SONGBOOK"},
 	{"etc/SONGO", "man/boards/N/Note/SONGO"},

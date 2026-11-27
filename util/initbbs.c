@@ -240,11 +240,6 @@ static void initMan() {
     
 }
 
-static void initSymLink() {
-    symlink(BBSHOME "/man/boards/N/Note/SONGBOOK", BBSHOME "/etc/SONGBOOK");
-    symlink(BBSHOME "/man/boards/N/Note/SONGO", BBSHOME "/etc/SONGO");
-}
-
 static void initHistory() {
     FILE *fp = fopen("etc/history.data", "w");
     
@@ -277,7 +272,6 @@ int main(int argc, char **argv)
     initPasswds();
     initBoards();
     initMan();
-    initSymLink();
     initHistory();
 
     // .BRD is written here directly, before nest.svc runs: it learns of the

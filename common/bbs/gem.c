@@ -47,13 +47,6 @@ set_error(const char *fmt, ...)
 // --------------------------------------------------------------------------
 // Paths of man/
 
-// The links of etc/ into gem areas (util/initbbs.c).
-static const struct {
-    const char *link, *target;
-} etc_links[] = {
-    { "etc/SONGBOOK", "man/boards/N/Note/SONGBOOK" },
-    { "etc/SONGO", "man/boards/N/Note/SONGO" },
-};
 
 // Whether s starts with the path p (followed by '/' or the end); the rest
 // in *rest (without the '/').
@@ -85,21 +78,13 @@ int
 gem_path_parse(const char *path, char *root, size_t rootsz,
                char *sub, size_t subsz)
 {
-    char buf[PATHLEN], name[IDLEN + 2], letter[4];
+    char name[IDLEN + 2], letter[4];
     const char *rest;
 
     if (!path)
         return 0;
     if (path_prefix(path, BBSHOME, &rest))
         path = rest;
-    for (size_t i = 0; i < ARRAY_SIZE(etc_links); i++) {
-        if (path_prefix(path, etc_links[i].link, &rest)) {
-            snprintf(buf, sizeof(buf), "%s%s%s", etc_links[i].target,
-                     *rest ? "/" : "", rest);
-            path = buf;
-            break;
-        }
-    }
 
     if (path_prefix(path, "trash", &rest)) {
         // trash/<root>[/sub]: the trash of root.

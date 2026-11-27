@@ -435,7 +435,7 @@ func (s *Store) Move(src Ref, dstBoard string, dstPath []string, pos int, h *Hea
 }
 
 // Expire removes for good the files of directory path of root made or last
-// changed before cutoff (Unix time), e.g. the songs ordered (etc/SONGO)
+// changed before cutoff (Unix time), e.g. the songs ordered (Note SONGO)
 // after some days, and returns how many. Directories and other entries are
 // left.
 func (s *Store) Expire(root string, path []string, cutoff int64) (int, error) {

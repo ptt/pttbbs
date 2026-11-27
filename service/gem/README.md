@@ -141,7 +141,7 @@ header: a directory by the same listing, shared until either side changes
 (as a copy), a file by the same content, `.index` by the table of contents.
 Absolute targets are taken under BBSHOME or an old BBSHOME (`-old-home`,
 default `/home/bbs`), relative ones from the directory of the link, and
-`etc/SONGBOOK` and `etc/SONGO` as the links of `util/initbbs`.
+`etc/SONGBOOK` and `etc/SONGO` as the links `util/initbbs` made.
 A link pointing nowhere, out of `man/` and `home/*/*/man`, or to a directory
 it is in (which would then hold itself) becomes missing, and is reported.
 The links of man/ were live: a change of the target showed through them; the
@@ -172,7 +172,7 @@ gem.ctl purge Board T.1.ABC      # one entry, now
 Renaming an area moves its trash, deleting it drops it. `REMOVE`
 (`gem.ctl rm`) still removes for good, as for the songs ordered past the
 limit, and so does `EXPIRE` (`gem.ctl expire -days 5 Note SONGO`, for cron):
-the files of a directory older than some days, as `find etc/SONGO -mtime +5`
+the files of a directory older than some days, as `find .../Note/SONGO -mtime +5`
 removed them.
 
 ## Backups
@@ -211,7 +211,8 @@ more to the gem area of the board `deleted`, nor files to the posts of the
 board); `u` opens the trash, path `trash/<root>` for `gem_path_parse()`,
 read only but for `u` at its top, which restores an entry where it was.
 Links are not followed: one left by an import (before
-`resolve-links`) shows as broken. The films of the `Note` board, the songs ordered (`etc/SONGO`), the
+`resolve-links`) shows as broken. The films of the `Note` board, the songs ordered (`SONGO` of its gem area)
+and the songbook (`SONGBOOK`, named directly, no more through `etc/`), the
 creation, renaming and removal of boards follow gem.svc as well.
 
 A new site: `util/initbbs` still makes the gem areas it starts with in
