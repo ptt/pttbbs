@@ -541,6 +541,23 @@ func (r *CommunityRegistry) Active(id int64) bool {
 	return ok && !c.DeletedOrRemoved()
 }
 
+// LowerPublished moves the creation time of community id back to ts if ts
+// is earlier (and set), e.g. to its oldest post for a community imported
+// from a board (.BRD has no creation time); it reports whether it did.
+func (r *CommunityRegistry) LowerPublished(id, ts int64) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	c, ok := r.byID[id]
+	if !ok || ts <= 0 || ts >= c.Published {
+		return false, nil
+	}
+	if _, err := r.db.Exec(`UPDATE community SET published = ? WHERE id = ?`, ts, id); err != nil {
+		return false, fmt.Errorf("set published of community %s failed: %w", c.Name, err)
+	}
+	c.Published = ts
+	return true, nil
+}
+
 // Rename changes the name of the active community oldName to newName and
 // returns its ID. It fails if newName is used by another active community.
 // Changing only the case of the name is allowed.

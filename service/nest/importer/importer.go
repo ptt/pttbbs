@@ -1172,6 +1172,11 @@ finished:
 	if err := flushBatch(); err != nil {
 		return stats, err
 	}
+	if !opts.DryRun {
+		if _, _, err := FixCommunityPublished(engine, opts.Board); err != nil {
+			return stats, err
+		}
+	}
 
 	stats.Elapsed = time.Since(startTime)
 	return stats, nil

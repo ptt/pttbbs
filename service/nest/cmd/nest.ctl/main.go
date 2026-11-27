@@ -785,6 +785,10 @@ func main() {
 				if err := linkCrossposts(); err != nil {
 					fmt.Printf("[!] link-crossposts failed: %v\n", err)
 				}
+				// Also communities imported before (with the import time).
+				if err := fixCommunityPublished(); err != nil {
+					fmt.Printf("[!] fix-published failed: %v\n", err)
+				}
 			}
 			if len(failed) > 0 {
 				fmt.Printf("    Failed: %s\n", strings.Join(failed, " "))
@@ -1093,6 +1097,11 @@ func main() {
 	case "link-crossposts":
 		if err := linkCrossposts(); err != nil {
 			log.Fatalf("link-crossposts failed: %v", err)
+		}
+
+	case "fix-published":
+		if err := fixCommunityPublished(args[1:]...); err != nil {
+			log.Fatalf("fix-published failed: %v", err)
 		}
 
 	case "crossposts", "shares", "list-crossposts":
@@ -1588,6 +1597,7 @@ Usage:
   nest.ctl crosspost <src_post> <target_post> <operator> [person_id]
   nest.ctl crossposts <post>
   nest.ctl link-crossposts                   (record the imported copies at their sources)
+  nest.ctl fix-published [community...]      (date communities from their oldest post)
   nest.ctl origin <post>
   nest.ctl add <community> <author> <title> <content>
   nest.ctl add-file <community> <post_file> <author> <title> [person_id]

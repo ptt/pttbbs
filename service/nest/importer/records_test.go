@@ -147,3 +147,48 @@ func TestEmptyOwnerAndDeletedTitle(t *testing.T) {
 		}
 	}
 }
+
+// A community imported from a board is dated from its oldest post, also
+// when fixed afterwards; a later post leaves the date as it is.
+func TestCommunityPublished(t *testing.T) {
+	tempDir := t.TempDir()
+	const (
+		older = "M.1100000000.A.001"
+		newer = "M.1200000000.A.002"
+	)
+	writeDir(t, tempDir, "Old", [][]byte{
+		dirFixture{filename: newer, owner: "userA", title: "t", modified: 1200000000}.record(),
+		dirFixture{filename: older, owner: "userA", title: "t", modified: 1100000000}.record(),
+	}, map[string][]byte{newer: legacyArticle("userA", "t"), older: legacyArticle("userA", "t")})
+	engine := openImportEngine(t, tempDir)
+	if _, err := ImportBoard(engine, ImportBoardOptions{BBSHome: tempDir, Board: "Old", IsBig5: true}); err != nil {
+		t.Fatal(err)
+	}
+	c, ok := engine.Communities().GetByName("Old")
+	if !ok || c.Published != 1100000000 {
+		t.Errorf("published %d, want the oldest post 1100000000", c.Published)
+	}
+
+	// Registered at import time, as before: fixed without importing.
+	id, err := engine.Communities().Ensure("Empty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, _ := engine.Communities().Get(id)
+	checked, fixed, err := FixCommunityPublished(engine)
+	if err != nil || checked != 2 || fixed != 0 {
+		t.Errorf("FixCommunityPublished = %d %d %v, want 2 checked, none fixed", checked, fixed, err)
+	}
+	if after, _ := engine.Communities().Get(id); after.Published != before.Published {
+		t.Errorf("community without posts changed: %d -> %d", before.Published, after.Published)
+	}
+	if changed, err := engine.Communities().LowerPublished(c.ID, 1300000000); err != nil || changed {
+		t.Errorf("LowerPublished to a later time = %v, %v", changed, err)
+	}
+	if changed, err := engine.Communities().LowerPublished(c.ID, 1000000000); err != nil || !changed {
+		t.Errorf("LowerPublished = %v, %v", changed, err)
+	}
+	if _, fixed, _ := FixCommunityPublished(engine, "Old"); fixed != 0 {
+		t.Errorf("fixed again")
+	}
+}

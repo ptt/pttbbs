@@ -2466,6 +2466,17 @@ func (s *Server) handleIPC(conn net.Conn) {
 		}
 		conn.Write([]byte(fmt.Sprintf("OK %d %d %d %d %d\n", st.Origins, st.Added, st.Merged, st.Linked, st.Pending)))
 
+	case "FIX_COMMUNITY_PUBLISHED":
+		// FIX_COMMUNITY_PUBLISHED [community...]: moves the creation time
+		// of the communities (all if none) back to their oldest post.
+		// Replies OK <checked> <fixed>.
+		checked, fixed, err := importer.FixCommunityPublished(s.storage, parts[1:]...)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d %d\n", checked, fixed)))
+
 	default:
 		conn.Write([]byte(fmt.Sprintf("ERR unknown command: %s\n", cmd)))
 	}

@@ -290,3 +290,18 @@ func linkCrossposts() error {
 		parts[1], parts[2], parts[3], parts[4], parts[5])
 	return nil
 }
+
+// fixCommunityPublished asks nest.svc to move the creation time of the
+// communities (all if none) back to their oldest post, and shows what it did.
+func fixCommunityPublished(names ...string) error {
+	resp, _, err := sendCmd(strings.Join(append([]string{"FIX_COMMUNITY_PUBLISHED"}, names...), " ")+"\n", nil)
+	if err != nil {
+		return err
+	}
+	parts := strings.Fields(resp)
+	if len(parts) < 3 || parts[0] != "OK" {
+		return fmt.Errorf("%s", resp)
+	}
+	fmt.Printf("[+] Creation time of %s communities checked, %s moved back to their oldest post\n", parts[1], parts[2])
+	return nil
+}

@@ -37,7 +37,7 @@ type Community struct {
 	Name        string `json:"name"`        // brdname
 	Title       string `json:"title"`       // desc
 	Description string `json:"description"` // longer description (not in .BRD yet)
-	Published   int64  `json:"published"`   // when nest.svc first saw it
+	Published   int64  `json:"published"`   // when nest.svc first saw it, or its oldest post if earlier
 	Updated     int64  `json:"updated,omitempty"`
 	Removed     bool   `json:"removed"`              // taken down by the site (Lemmy's RemoveCommunity): the board was deleted in mbbsd
 	Deleted     bool   `json:"deleted"`              // deleted by its top moderator (Lemmy's DeleteCommunity; not done on PTT yet)

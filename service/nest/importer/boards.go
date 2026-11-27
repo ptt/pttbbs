@@ -317,3 +317,40 @@ func boardExists(st storage.Storage, bbsHome, name string) bool {
 	c, ok := st.Communities().GetByName(name)
 	return ok && c.BID != 0
 }
+
+// FixCommunityPublished moves the creation time (published) of the named
+// communities (all if none) back to their oldest post: .BRD keeps no time
+// a board was created, so imported communities had the import time. It
+// returns how many communities it checked and how many it changed.
+func FixCommunityPublished(st storage.Storage, names ...string) (checked, fixed int, err error) {
+	reg := st.Communities()
+	var ids []int64
+	if len(names) == 0 {
+		for _, c := range reg.List() {
+			ids = append(ids, c.ID)
+		}
+	}
+	for _, name := range names {
+		if id, ok := reg.Lookup(name); ok {
+			ids = append(ids, id)
+		}
+	}
+	for _, id := range ids {
+		posts, err := st.QueryPosts(storage.PostQuery{CommunityIDs: []int64{id}, Sort: storage.SortOld, Limit: 1})
+		if err != nil {
+			return checked, fixed, err
+		}
+		checked++
+		if len(posts) == 0 {
+			continue
+		}
+		changed, err := reg.LowerPublished(id, posts[0].CreatedAt)
+		if err != nil {
+			return checked, fixed, err
+		}
+		if changed {
+			fixed++
+		}
+	}
+	return checked, fixed, nil
+}
