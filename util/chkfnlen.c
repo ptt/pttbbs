@@ -39,7 +39,7 @@ typedef struct {
     uint64_t shorten_skipped;
     /* Records with bad names left alone, as a file has that name. */
     uint64_t bad_name_file_exists;
-    /* --prune-missing: announce records without their file, dropped */
+    /* --prune-missing: announce and mail records without their file */
     uint64_t need_prune;
     uint64_t pruned;
     /* Spare space: how many records have each byte of fileheader_t not 0
@@ -113,8 +113,9 @@ static char opt_bbshome[MAX_SCAN_PATH] = "";
 /* --rename: the current .DIR's directory and the names its records use or
  * were given, so no new name is taken twice. */
 static char cur_dirname[MAX_SCAN_PATH];
-/* Whether the .DIR being scanned lists an announce (man) directory. */
-static int cur_is_man;
+/* Whether the .DIR being scanned may be pruned: an announce list or a
+ * mailbox, where entries are deleted rather than left as tombstones. */
+static int cur_prunable;
 static char (*cur_names)[FNLEN];
 static size_t cur_nnames, cur_cap;
 
@@ -133,10 +134,12 @@ static void print_usage(const char *progname)
     printf("                            3. Contains space                  -> tombstone\n");
     printf("                            4. Not NUL-terminated              -> tombstone\n");
     printf("                            5. 'non-exist' or 'non-xist'       -> tombstone\n");
+    printf("                            6. Not a BBS file name (a letter, then letters, digits,\n");
+    printf("                               '.', '_', '-'; e.g. '?@host')  -> tombstone\n");
     printf("                            *  All trailing bytes in filename are zeroed out\n");
     printf("                            A tombstone is what mbbsd leaves of a removed post: file\n");
     printf("                            name '.deleted', owner '-', title '(removed) <owner>'.\n");
-    printf("                            2-5 are left alone (to fix by hand) if a file has that name.\n");
+    printf("                            2-6 are left alone (to fix by hand) if a file has that name.\n");
     printf("                            With nest.svc, the .DIR of boards (its cache) are not repaired\n");
     printf("      --rename            With -r, give names longer than the threshold the standard\n");
     printf("                            [MG].<time>.A.<hex> (the hex the AID already has), renaming\n");
@@ -144,10 +147,11 @@ static void print_usage(const char *progname)
     printf("                            that name is taken. Other names are only reported.\n");
     printf("                            Backups (.DIR.old, ...) keep the old names.\n");
     printf("      --prune-missing     With -r, drop the records of announce (man) directories\n");
-    printf("                            whose file or directory does not exist (or whose name\n");
-    printf("                            is a bad path or not NUL-terminated), as the announce\n");
-    printf("                            menu deletes entries; instead of tombstones or renames.\n");
-    printf("                            Boards and mailboxes are not pruned. Run mandex after.\n");
+    printf("                            and mailboxes (home/) whose file or directory does not\n");
+    printf("                            exist, whatever the name (or whose name is a bad path or\n");
+    printf("                            not NUL-terminated), as the announce menu and the mailbox\n");
+    printf("                            delete entries; instead of tombstones or renames.\n");
+    printf("                            Boards are not pruned. Run mandex after.\n");
     printf("      --boards            Scan only boards/ directory\n");
     printf("      --mail, --home      Scan only home/ (mailboxes) directory\n");
     printf("      --man, --announce   Scan only man/ and man/boards/ directory\n");
@@ -427,6 +431,17 @@ static int is_announce_path(const char *path)
     return 0;
 }
 
+/* Whether path is in a home directory (home/X/<userid>/...): mailboxes. */
+static int is_mail_path(const char *path)
+{
+    for (const char *p = path; (p = strstr(p, "home/")) != NULL; p++) {
+        if ((p == path || p[-1] == '/') && p[5] && p[5] != '/' &&
+            p[6] == '/' && p[7] && p[7] != '/' && strchr(p + 7, '/'))
+            return 1;
+    }
+    return 0;
+}
+
 /* Repairs are written at record_offset; *drop (--prune-missing) leaves the
  * record out, and the caller rewrites the .DIR. */
 static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
@@ -469,6 +484,7 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
     int cond4_unterminated = 0;
     int cond5_dirty_trailing = 0;
     int cond6_non_exist = 0;
+    int cond7_bad_chars = 0;
 
     const char *nul_ptr = memchr(fh->filename, '\0', FNLEN);
     size_t len = 0;
@@ -493,6 +509,17 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
                 cond3_has_space = 1;
         }
 
+        /* Printable but not a name the BBS makes (a letter, then letters,
+         * digits, '.', '_', '-'), e.g. a host name from a broken record.
+         * Tombstones (.deleted, sync-dir's .d<stamp>) are names too. */
+        if (!cond1_bad_path && !cond2_non_ascii && !cond3_has_space &&
+            !cond4_unterminated && !cond6_non_exist &&
+            !bof_bbs_valid_post_file(fh->filename) &&
+            strcmp(fh->filename, FN_SAFEDEL) != 0 &&
+            !(fh->filename[0] == '.' && fh->filename[1] == 'd' &&
+              isdigit((unsigned char)fh->filename[2])))
+            cond7_bad_chars = 1;
+
         /* Check if bytes after '\0' are dirty */
         if (!cond4_unterminated) {
             for (size_t i = len + 1; i < FNLEN; i++) {
@@ -512,11 +539,13 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
         }
     }
 
-    int need_rename = (cond1_bad_path || cond2_non_ascii || cond3_has_space || cond4_unterminated || cond6_non_exist);
+    int need_rename = (cond1_bad_path || cond2_non_ascii || cond3_has_space || cond4_unterminated || cond6_non_exist ||
+                       cond7_bad_chars);
     int need_repair = (need_rename || cond5_dirty_trailing);
 
-    /* Dropped as the announce menu deletes entries: no tombstones there. */
-    if (opt_prune_missing && cur_is_man && len > 0 &&
+    /* Dropped as the announce menu and the mailbox delete entries: no
+     * tombstones there. Any name, as long as there is no such file. */
+    if (opt_prune_missing && cur_prunable && len > 0 &&
         (cond1_bad_path || cond4_unterminated ||
          !cur_dir_has_file(fh->filename))) {
         char title[sizeof(fh->title) * 4 + 1];
@@ -585,6 +614,10 @@ static void process_record(fileheader_t *fh, const char *dir_path, int rec_idx,
         if (cond6_non_exist) {
             if (reasons[0]) strlcat(reasons, ", ", sizeof(reasons));
             strlcat(reasons, "'non-exist' placeholder", sizeof(reasons));
+        }
+        if (cond7_bad_chars) {
+            if (reasons[0]) strlcat(reasons, ", ", sizeof(reasons));
+            strlcat(reasons, "not a BBS file name", sizeof(reasons));
         }
 
         char owner_escaped[sizeof(orig.owner) * 4 + 1];
@@ -811,12 +844,12 @@ static void scan_dir_file(const char *dir_path, section_stats_t *stats)
         cur_names_load(fd);
 
     /* Pruning moves kept records down and truncates: whole records only. */
-    cur_is_man = is_announce_path(dir_path);
-    if (opt_prune_missing && cur_is_man &&
+    cur_prunable = is_announce_path(dir_path) || is_mail_path(dir_path);
+    if (opt_prune_missing && cur_prunable &&
         st.st_size % (off_t)sizeof(fileheader_t) != 0) {
         fprintf(stderr, "[WARN] %s: not pruned: not a whole number of records\n",
                 dir_path);
-        cur_is_man = 0;
+        cur_prunable = 0;
     }
 
     fileheader_t buf[CHUNK_RECORDS];
@@ -1039,11 +1072,11 @@ static void print_summary_table(const section_stats_t *boards,
                fmt_num(overall->bad_name_file_exists, b1));
 
     if (opt_prune_missing) {
-        printf("Prune (--prune-missing, announce records without their file):\n");
+        printf("Prune (--prune-missing, announce and mail records without their file):\n");
         printf("  %-28s %14s\n\n", opt_repair ? "Dropped:" : "To drop:",
                fmt_num(opt_repair ? overall->pruned : overall->need_prune, b1));
         if (opt_repair && overall->pruned)
-            printf("  NOTE: run mandex to rebuild the announce index.\n\n");
+            printf("  NOTE: run mandex if announce lists were pruned.\n\n");
     }
 
     if (opt_rename) {
