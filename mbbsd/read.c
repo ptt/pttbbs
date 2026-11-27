@@ -882,7 +882,6 @@ enum SCORE_SEARCH_KIND {
 typedef struct {
     int kind;       // SCORE_SEARCH_KIND
     int next_kind;  // the hot key pressed, or -1
-    int can_score;  // whether the board rates posts
 } score_search_ctx_t;
 
 // Whether the number may be below 0 (a low score).
@@ -893,13 +892,13 @@ score_search_negative(int kind)
 }
 
 static int
-score_search_kind_by_key(int key, const score_search_ctx_t *ctx)
+score_search_kind_by_key(int key)
 {
     switch (key) {
     case 'c': case 'C':
         return SCORE_SEARCH_COMMENTS;
     case 'v': case 'V':
-        return ctx->can_score ? SCORE_SEARCH_SCORE : -1;
+        return SCORE_SEARCH_SCORE;
     }
     return -1;
 }
@@ -915,7 +914,7 @@ score_search_peek(int key, VGET_RUNTIME *prt, void *instance)
         prt->buf[0] != '-')
         return VGETCB_NONE;
 
-    int kind = score_search_kind_by_key(key, ctx);
+    int kind = score_search_kind_by_key(key);
     if (kind < 0) {
         bell();
         return VGETCB_NEXT;
@@ -945,15 +944,13 @@ ask_score_predicate(fileheader_predicate_t *pred, int sr_mode)
     char buf[8] = "";
     score_search_ctx_t ctx = {
         (sr_mode & RS_COMMENTS) ? SCORE_SEARCH_COMMENTS : SCORE_SEARCH_SCORE,
-        -1, !board_lists_comments(currbid),
+        -1,
     };
     const VGET_CALLBACKS cb = { score_search_peek };
-    if (!ctx.can_score)
-        ctx.kind = SCORE_SEARCH_COMMENTS;
 
     while (1) {
         char prompt[STRLEN];
-        const char *hint = ctx.can_score ? " [C痙ē计 V崩糔计]: " : ": ";
+        const char *hint = " [C痙ē计 V崩糔计]: ";
         if (currmode & MODE_SELECT)
             snprintf(prompt, sizeof(prompt), "糤兵ン %s%s",
                      names[ctx.kind], hint);
