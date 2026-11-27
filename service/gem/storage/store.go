@@ -281,19 +281,15 @@ func Open(opts Options) (*Store, error) {
 		Cache:                       cache,
 		MemTableSize:                64 << 20,
 		MemTableStopWritesThreshold: 4,
-		// Listings and article text compress well with zstd, which costs
-		// CPU at each compaction: only the two last levels (most of the
-		// data ends there) use it, the others Snappy.
+		// zstd on every level: imports write in key order and Pebble moves
+		// those tables down without rewriting them, so the flush decides.
 		Levels: make([]pebble.LevelOptions, 7),
 	}
 	for i := range po.Levels {
 		l := &po.Levels[i]
 		l.BlockSize = 32 << 10
 		l.FilterPolicy = bloomFilter
-		l.Compression = pebble.SnappyCompression
-		if i >= 5 {
-			l.Compression = pebble.ZstdCompression
-		}
+		l.Compression = pebble.ZstdCompression
 	}
 	if opts.MaxOpenFiles <= 0 {
 		opts.MaxOpenFiles = maxOpenFiles()
