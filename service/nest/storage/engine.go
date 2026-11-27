@@ -320,7 +320,6 @@ func initSQLiteSchema(db sqlExecer) error {
 		downvotes INTEGER DEFAULT 0,
 		num_comments INTEGER DEFAULT 0,
 		num_crossposts INTEGER DEFAULT 0,
-		encoding TEXT DEFAULT 'utf-8',
 		deleted INTEGER DEFAULT 0,
 		removed INTEGER DEFAULT 0,
 		deleted_at INTEGER DEFAULT 0,
@@ -452,7 +451,6 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	if p.Modified == 0 {
 		p.Modified = p.CreatedAt
 	}
-	p.Encoding = "utf-8"
 	p.Title = model.HeaderValue(p.Title)
 	p.PostFile = model.CanonicalPostFile(p.PostFile)
 	if err := e.resolveCommunity(p); err != nil {
@@ -503,9 +501,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 			}
 			e.metaWriteMu.Lock()
 			_, err := e.metaDB.Exec(`
-				INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, p.ID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
+				INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, money)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, p.ID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Money)
 			e.metaWriteMu.Unlock()
 			if err != nil {
 				return nil, fmt.Errorf("insert sqlite post with allocated id failed: %w", err)
@@ -513,9 +511,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 		} else {
 			e.metaWriteMu.Lock()
 			res, err := e.metaDB.Exec(`
-				INSERT INTO posts (parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			`, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
+				INSERT INTO posts (parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, money)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			`, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Money)
 			if err != nil {
 				e.metaWriteMu.Unlock()
 				return nil, fmt.Errorf("insert sqlite post failed: %w", err)
@@ -533,9 +531,9 @@ func (e *Engine) CreatePost(p *model.Post) (*model.Post, error) {
 	} else {
 		e.metaWriteMu.Lock()
 		_, err := e.metaDB.Exec(`
-			INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, money)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, p.ID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Encoding, p.Money)
+			INSERT INTO posts (id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, money)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, p.ID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID, p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes, p.NumComments, p.NumCrossposts, p.Money)
 		e.metaWriteMu.Unlock()
 		if err != nil {
 			return nil, fmt.Errorf("insert sqlite post with explicit id failed: %w", err)
@@ -607,9 +605,9 @@ func (e *Engine) HasPost(postID uint64) bool {
 func (e *Engine) GetPost(postID uint64) (*model.Post, error) {
 	var p model.Post
 	err := e.metaDB.QueryRow(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE id = ?
-	`, postID).Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked)
+	`, postID).Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked)
 	if err != nil {
 		return nil, err
 	}
@@ -723,7 +721,7 @@ func (e *Engine) ListPostMeta(community string) ([]*model.Post, error) {
 	e.FlushDirtyDeltas()
 
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE community_id = ? ORDER BY id
 	`, cid)
 	if err != nil {
@@ -734,7 +732,7 @@ func (e *Engine) ListPostMeta(community string) ([]*model.Post, error) {
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
@@ -797,7 +795,7 @@ func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, 
 		return nil, nil
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE community_id = ? AND deleted = 0 AND removed = 0 ORDER BY id DESC LIMIT ? OFFSET ?
 	`, cid, limit, offset)
 	if err != nil {
@@ -808,7 +806,7 @@ func (e *Engine) ListPosts(community string, limit, offset int) ([]*model.Post, 
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
@@ -832,7 +830,7 @@ func (e *Engine) ListDeletedPosts(community string, limit, offset int) ([]*model
 		return nil, nil
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE community_id = ? AND (deleted = 1 OR removed = 1) ORDER BY id DESC LIMIT ? OFFSET ?
 	`, cid, limit, offset)
 	if err != nil {
@@ -843,7 +841,7 @@ func (e *Engine) ListDeletedPosts(community string, limit, offset int) ([]*model
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
@@ -861,7 +859,7 @@ func (e *Engine) GetReplies(parentID uint64, limit, offset int) ([]*model.Post, 
 		limit = 50
 	}
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE parent_id = ? ORDER BY id ASC LIMIT ? OFFSET ?
 	`, parentID, limit, offset)
 	if err != nil {
@@ -872,7 +870,7 @@ func (e *Engine) GetReplies(parentID uint64, limit, offset int) ([]*model.Post, 
 	var replies []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {
@@ -1124,8 +1122,7 @@ func (e *Engine) AddComment(c *model.Comment) (added *model.Comment, err error) 
 	c.Sequence = seq
 	c.ID = model.MakeCommentID(c.PostID, seq)
 
-	// 2. Write the comment (RFC 822, Encoding is the first header!) and its
-	// author index u:{author}:{created_at}:{post_id}:{sequence} together.
+	// 2. Write the comment (RFC 822) and its author index u:{author}:{created_at}:{post_id}:{sequence} together.
 	batch := e.commentsDB.NewBatch()
 	_ = batch.Set(model.EncodeCommentKey(c.PostID, c.Sequence), model.EncodeRFC822Comment(c), nil)
 	_ = batch.Set(model.EncodeAuthorCommentKey(c.CreatorName, c.CreatedAt, c.PostID, c.Sequence), []byte{}, nil)
@@ -1439,9 +1436,8 @@ func (e *Engine) PurgeUserPosts(author string, maxAge time.Duration) (purged int
 			closer.Close()
 			meta["Deleted"] = "true"
 			var b strings.Builder
-			b.WriteString("Encoding: utf-8\n")
 			for k, v := range meta {
-				if k == "Encoding" {
+				if k == "Encoding" { // obsolete header of old records
 					continue
 				}
 				b.WriteString(fmt.Sprintf("%s: %s\n", k, v))
@@ -2563,7 +2559,6 @@ func (e *Engine) UpdatePost(postID uint64, newTitle, newContent, editorName stri
 		EditorName:  editorName,
 		EditorID:    editorID,
 		Content:     p.Content,
-		Encoding:    "utf-8",
 	}
 	revKey := model.EncodePostHistoryKey(p.ID, nextRev)
 	revVal := model.EncodeRFC822PostRevision(revRecord)
@@ -2650,7 +2645,6 @@ func (e *Engine) UpdatePostTitle(postID uint64, newTitle, editorName string, edi
 		EditorID:    editorID,
 		Action:      "update_title",
 		Content:     p.Content,
-		Encoding:    "utf-8",
 	}
 	revKey := model.EncodePostHistoryKey(p.ID, nextRev)
 	revVal := model.EncodeRFC822PostRevision(revRecord)
@@ -2748,7 +2742,6 @@ func (e *Engine) takeDownPost(postID uint64, deleterName string, deleterID model
 		Action:      "delete",
 		Reason:      reason,
 		Content:     p.Content,
-		Encoding:    "utf-8",
 	}
 	revKey := model.EncodePostHistoryKey(p.ID, nextRev)
 	revVal := model.EncodeRFC822PostRevision(revRecord)
@@ -2875,7 +2868,6 @@ func (e *Engine) UpdateComment(postID uint64, seq uint32, newContent, editorName
 		IP:          currentComment.IP,
 		Action:      "edit",
 		Content:     currentComment.Content,
-		Encoding:    "utf-8",
 	}
 	revKey := model.EncodeCommentHistoryKey(postID, seq, nextRev)
 	revVal := model.EncodeRFC822CommentRevision(revRecord)
@@ -2977,7 +2969,6 @@ func (e *Engine) takeDownComment(postID uint64, seq uint32, deleterName string, 
 		Action:      "delete",
 		Reason:      reason,
 		Content:     currentComment.Content,
-		Encoding:    "utf-8",
 	}
 	revKey := model.EncodeCommentHistoryKey(postID, seq, nextRev)
 	revVal := model.EncodeRFC822CommentRevision(revRecord)
@@ -3163,9 +3154,6 @@ func (e *Engine) importPostBatch(batch []*ImportedPostData, renderTarget string,
 		}
 		p.NumCrossposts = len(item.Crossposts)
 		p.Title = model.HeaderValue(p.Title)
-		if p.Encoding == "" {
-			p.Encoding = "utf-8"
-		}
 	}
 
 	e.metaWriteMu.Lock()
@@ -3336,7 +3324,7 @@ func (e *Engine) importPostBatch(batch []*ImportedPostData, renderTarget string,
 // importPostColumns are the columns of posts that ImportPostBatch writes,
 // and importPostUpsert what it does with a post that is there already.
 const (
-	importPostColumns = `id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding,
+	importPostColumns = `id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts,
 		deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked`
 	importPostUpsert = `ON CONFLICT(community_id, post_file) DO UPDATE SET
 			locked = excluded.locked,
@@ -3350,9 +3338,8 @@ const (
 			downvotes = excluded.downvotes,
 			num_comments = excluded.num_comments,
 			num_crossposts = excluded.num_crossposts,
-			encoding = excluded.encoding,
 			money = excluded.money`
-	importPostParams = 23
+	importPostParams = 22
 	// importPostsPerInsert is how many posts one INSERT writes: the SQLite
 	// driver prepares every statement it runs again, which took as long as
 	// the insert itself when it was one statement per post.
@@ -3373,7 +3360,7 @@ func insertImportedPosts(tx *sql.Tx, batch []*ImportedPostData, nextID func() ui
 		}
 		return []any{candidateID, p.ParentID, p.CommunityID, p.PostFile, p.Title, p.CreatorName, p.CreatorID,
 			p.CreatedAt, p.Modified, p.Filemode, p.Upvotes, p.Downvotes,
-			p.NumComments, p.NumCrossposts, p.Encoding,
+			p.NumComments, p.NumCrossposts,
 			boolToInt(p.Deleted), boolToInt(p.Removed), p.DeletedAt, p.ModPersonName, p.ModPersonID, p.Reason,
 			p.Money, boolToInt(p.Locked)}
 	}

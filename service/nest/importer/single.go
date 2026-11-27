@@ -235,7 +235,6 @@ func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserReso
 		NumComments: len(comments),
 		Content:     parsed.BodyContent,
 		Locked:      job.locked,
-		Encoding:    "utf-8",
 	}
 	data = &storage.ImportedPostData{
 		Post:       post,

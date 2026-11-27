@@ -114,7 +114,7 @@ func (e *Engine) QueryPosts(q PostQuery) ([]*model.Post, error) {
 
 	e.FlushDirtyDeltas()
 	rows, err := e.metaDB.Query(`
-		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
+		SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked
 		FROM posts WHERE `+where+` ORDER BY `+order+` LIMIT ? OFFSET ?`, args...)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (e *Engine) QueryPosts(q PostQuery) ([]*model.Post, error) {
 	var posts []*model.Post
 	for rows.Next() {
 		var p model.Post
-		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Encoding, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentID, &p.CommunityID, &p.PostFile, &p.Title, &p.CreatorName, &p.CreatorID, &p.CreatedAt, &p.Modified, &p.Filemode, &p.Upvotes, &p.Downvotes, &p.NumComments, &p.NumCrossposts, &p.Deleted, &p.Removed, &p.DeletedAt, &p.ModPersonName, &p.ModPersonID, &p.Reason, &p.Money, &p.Locked); err != nil {
 			return nil, err
 		}
 		if p.Modified == 0 {

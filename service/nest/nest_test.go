@@ -2769,7 +2769,7 @@ func TestRebuildMatchesLiveCounters(t *testing.T) {
 	legacy := &model.Post{
 		Community: "testboard", PostFile: "M.1727800000.A.001", Title: "legacy",
 		CreatorName: "author", CreatedAt: 1727800000, Modified: 1727800000,
-		Upvotes: up, Downvotes: down, Content: "body", Encoding: "utf-8",
+		Upvotes: up, Downvotes: down, Content: "body",
 	}
 	if err := st.ImportPostBatch([]*storage.ImportedPostData{{Post: legacy, Comments: comments, Votes: votes}}, ""); err != nil {
 		t.Fatalf("ImportPostBatch: %v", err)

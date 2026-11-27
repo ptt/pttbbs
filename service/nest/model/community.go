@@ -111,7 +111,6 @@ func rfc822Value(s string) string {
 // the payload of UPSERT_COMMUNITY and of the reply of GET_COMMUNITY.
 func EncodeRFC822Community(c *Community) []byte {
 	var b strings.Builder
-	b.WriteString("Encoding: utf-8\n")
 	w := func(k string, v any) { fmt.Fprintf(&b, "%s: %v\n", k, v) }
 	if c.ID != 0 {
 		w("ID", c.ID)

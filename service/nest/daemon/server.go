@@ -1246,7 +1246,6 @@ func (s *Server) handleIPC(conn net.Conn) {
 						Community: community,
 						PostFile:  postFile,
 						Title:     t,
-						Encoding:  "utf-8",
 						Content:   postContent,
 					}
 					p, _ = s.storage.CreatePost(autoP)

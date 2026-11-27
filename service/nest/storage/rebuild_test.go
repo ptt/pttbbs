@@ -20,7 +20,7 @@ func dumpMetaRows(t *testing.T, db *sql.DB) map[string]string {
 	t.Helper()
 	out := map[string]string{}
 	rows, err := db.Query(`SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode,
-		upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
+		upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money
 		FROM posts`)
 	if err != nil {
 		t.Fatal(err)

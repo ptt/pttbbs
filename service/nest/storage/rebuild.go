@@ -30,7 +30,7 @@ var sqlIndexes = []string{
 }
 
 const rebuildPostColumns = `id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified, filemode,
-	upvotes, downvotes, num_comments, num_crossposts, encoding, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked`
+	upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason, money, locked`
 
 // RebuildSQLiteFromPebble replaces meta.sqlite3 with one built from what
 // posts.pebble holds. It returns the number of posts (not deleted or
@@ -160,7 +160,7 @@ func (e *Engine) fillMetaDB(db *sql.DB) (postCount int, commentCount int, err er
 		money, _ := strconv.Atoi(meta["Money"])
 		communityID, _ := strconv.ParseInt(meta["CommunityID"], 10, 64)
 		if _, err := ins.Exec(id, parentID, communityID, meta["PostFile"], meta["Title"], meta["CreatorName"], model.ParsePersonID(meta["CreatorID"]),
-			ctime, mtime, filemode, c.Upvotes, c.Downvotes, c.NumComments, crossposts[id], "utf-8",
+			ctime, mtime, filemode, c.Upvotes, c.Downvotes, c.NumComments, crossposts[id],
 			boolToInt(del.Deleted), boolToInt(del.Removed), del.DeletedAt, del.ModPersonName, del.ModPersonID, del.Reason,
 			money, boolToInt(meta["Locked"] == "true")); err != nil {
 			return 0, 0, fmt.Errorf("insert post %d: %w", id, err)

@@ -112,7 +112,6 @@ type Post struct {
 	Downvotes     int    `json:"downvotes"`      // Downvotes count
 	NumComments   int    `json:"num_comments"`   // Total comments count
 	NumCrossposts int    `json:"num_crossposts"` // Total crossposts count (shares)
-	Encoding      string `json:"encoding"`       // Always "utf-8" in DB
 	// Locked as Lemmy's post.locked: no new comments, and (as PTT locks
 	// posts) the content is not shown; see CanonicalPostFile.
 	Locked bool `json:"locked,omitempty"`
@@ -284,7 +283,6 @@ type PostRevision struct {
 	Action      string   `json:"action,omitempty"` // "update" or "delete"
 	Reason      string   `json:"reason,omitempty"`
 	Content     string   `json:"content"`
-	Encoding    string   `json:"encoding"`
 }
 
 // CommentRevision represents an archived previous version of an edited comment
@@ -303,7 +301,6 @@ type CommentRevision struct {
 	Action      string   `json:"action,omitempty"` // "update" or "delete"
 	Reason      string   `json:"reason,omitempty"`
 	Content     string   `json:"content"`
-	Encoding    string   `json:"encoding"`
 }
 
 // ConflictError indicates an optimistic concurrency check failure when editing a post
@@ -620,8 +617,6 @@ func EncodeCrosspostOriginKey(targetPostID uint64) []byte {
 // RFC 822 Encoders and Decoders
 // -----------------------------------------------------------------------------
 
-// EncodeRFC822Post packages the post into RFC 822 format:
-// Encoding MUST be the very first header!
 // HeaderValue makes s safe for a single RFC 822 header line: line breaks
 // would end the header early and let the rest of the value forge other headers
 // (or start the body), so each run of CR/LF becomes a single space and trailing
@@ -639,11 +634,10 @@ func EncodeRFC822Post(p *Post) []byte {
 	return append(append(EncodeRFC822PostMeta(p), '\n'), p.Content...)
 }
 
-// EncodeRFC822PostMeta returns the RFC 822 headers of post p (Encoding
-// first), without the body: the 'm' record in posts.pebble.
+// EncodeRFC822PostMeta returns the RFC 822 headers of post p, without
+// the body: the 'm' record in posts.pebble.
 func EncodeRFC822PostMeta(p *Post) []byte {
 	var b strings.Builder
-	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("CommunityID: %d\n", p.CommunityID))
 	b.WriteString(fmt.Sprintf("ParentID: %d\n", p.ParentID))
 	b.WriteString(fmt.Sprintf("PostFile: %s\n", HeaderValue(p.PostFile)))
@@ -728,10 +722,8 @@ func DecodeRFC822Post(val []byte) (meta map[string]string, body string) {
 }
 
 // EncodeRFC822Comment packages a comment into RFC 822 format
-// Encoding is the first header!
 func EncodeRFC822Comment(c *Comment) []byte {
 	var b strings.Builder
-	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("CreatorName: %s\n", HeaderValue(c.CreatorName)))
 	b.WriteString(fmt.Sprintf("CreatorID: %d\n", c.CreatorID))
 	b.WriteString(fmt.Sprintf("CreatedAt: %d\n", c.CreatedAt))
@@ -804,7 +796,6 @@ func DecodeRFC822Comment(postID uint64, seq uint32, val []byte) (*Comment, error
 // EncodeRFC822PostRevision encodes a post revision into RFC 822 text
 func EncodeRFC822PostRevision(r *PostRevision) []byte {
 	var b strings.Builder
-	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("PostID: %d\n", r.PostID))
 	b.WriteString(fmt.Sprintf("Revision: %d\n", r.Revision))
 	b.WriteString(fmt.Sprintf("CommunityID: %d\n", r.CommunityID))
@@ -880,7 +871,6 @@ func DecodeRFC822PostRevision(val []byte) (*PostRevision, error) {
 // EncodeRFC822CommentRevision encodes a comment revision into RFC 822 text
 func EncodeRFC822CommentRevision(r *CommentRevision) []byte {
 	var b strings.Builder
-	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("PostID: %d\n", r.PostID))
 	b.WriteString(fmt.Sprintf("Sequence: %d\n", r.Sequence))
 	b.WriteString(fmt.Sprintf("Revision: %d\n", r.Revision))
@@ -958,7 +948,6 @@ func DecodeRFC822CommentRevision(val []byte) (*CommentRevision, error) {
 // EncodeRFC822Crosspost packages a crosspost into RFC 822 format
 func EncodeRFC822Crosspost(x *CrosspostRecord) []byte {
 	var b strings.Builder
-	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("SourcePostID: %d\n", x.SourcePostID))
 	b.WriteString(fmt.Sprintf("TargetCommunityID: %d\n", x.TargetCommunityID))
 	b.WriteString(fmt.Sprintf("TargetPostFile: %s\n", HeaderValue(x.TargetPostFile)))
@@ -1007,7 +996,6 @@ func DecodeRFC822Crosspost(val []byte) (*CrosspostRecord, error) {
 // EncodeRFC822CrosspostOrigin packages a crosspost origin into RFC 822 format.
 func EncodeRFC822CrosspostOrigin(o *CrosspostOrigin) []byte {
 	var b strings.Builder
-	b.WriteString("Encoding: utf-8\n")
 	fmt.Fprintf(&b, "TargetPostID: %d\n", o.TargetPostID)
 	fmt.Fprintf(&b, "SourceCommunity: %s\n", HeaderValue(o.SourceCommunity))
 	fmt.Fprintf(&b, "SourcePostFile: %s\n", HeaderValue(o.SourcePostFile))
