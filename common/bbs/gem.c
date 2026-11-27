@@ -8,6 +8,9 @@
 #include <poll.h>
 
 #define GEM_TIMEOUT_MS  (5000)
+#define GEM_SLOW_TIMEOUT_MS  (120000)  /* EXPORT, IMPORT: a whole area */
+
+static int timeout_ms = GEM_TIMEOUT_MS;
 
 static char last_error[256];
 static const char *gem_socket = GET_SVC_SOCKET(gem);
@@ -151,7 +154,7 @@ fill(reply_t *r)
     if (r->end == sizeof(r->buf))
         return 0;
     do {
-        pr = poll(&pfd, 1, GEM_TIMEOUT_MS);
+        pr = poll(&pfd, 1, timeout_ms);
     } while (pr < 0 && errno == EINTR);
     if (pr <= 0)
         return -1;
@@ -746,6 +749,31 @@ gem_root_delete(const char *root)
     char hdr[GEM_ROOT_SIZE + 16];
     snprintf(hdr, sizeof(hdr), "DELETE_ROOT %s", root);
     return simple(hdr, NULL, 0, NULL, 0);
+}
+
+static int
+simple_slow(const char *hdr)
+{
+    timeout_ms = GEM_SLOW_TIMEOUT_MS;
+    int ret = simple(hdr, NULL, 0, NULL, 0);
+    timeout_ms = GEM_TIMEOUT_MS;
+    return ret;
+}
+
+int
+gem_root_export(const char *root, const char *dir)
+{
+    char hdr[GEM_ROOT_SIZE + PATHLEN + 16];
+    snprintf(hdr, sizeof(hdr), "EXPORT %s %s", root, dir);
+    return simple_slow(hdr);
+}
+
+int
+gem_root_import(const char *root)
+{
+    char hdr[GEM_ROOT_SIZE + 16];
+    snprintf(hdr, sizeof(hdr), "IMPORT %s", root);
+    return simple_slow(hdr);
 }
 
 int

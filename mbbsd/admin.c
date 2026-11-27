@@ -37,6 +37,23 @@ user_info_admin(const char *userid)
     return 0;
 }
 
+// The mail folder that purge_user_account() exported into the home goes
+// back to gem.svc.
+static void
+restore_mail_folder(const char *userid)
+{
+    char man[PATHLEN], root[GEM_ROOT_SIZE];
+
+    sethomeman(man, userid);
+    if (!dashd(man))
+	return;
+    snprintf(root, sizeof(root), "user:%s", userid);
+    if (gem_root_import(root) == 0)
+	RmTree(man);
+    else
+	vmsgf("信件精華區無法匯回: %s", gem_last_error());
+}
+
 static int retrieve_backup(userec_t *user)
 {
     int     uid;
@@ -64,8 +81,10 @@ static int retrieve_backup(userec_t *user)
 	sethomepath(dst, user->userid);
 	if (!dashd(dst)) {
 	    AUTO_STR(src, "tmp/%s", user->userid);
-	    if (!dashd(src) || !Rename(src, dst))
+	    if (!dashd(src) || Rename(src, dst) != 0)
 		mkuserdir(user->userid);
+	    else if (IS_ENABLED(CONFIG_GEM))
+		restore_mail_folder(user->userid);
 	}
 	return 0;
     }

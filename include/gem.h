@@ -154,5 +154,9 @@ int gem_user_folder_exists(const char *userid);
 int gem_root_create(const char *root);
 int gem_root_delete(const char *root);
 int gem_root_rename(const char *from, const char *to);
+/* An area to files in dir (absolute, new or empty), or from its files
+ * (e.g. home/<c>/<id>/man for user:<id>). */
+int gem_root_export(const char *root, const char *dir);
+int gem_root_import(const char *root);
 
 #endif /* INCLUDE_GEM_H */

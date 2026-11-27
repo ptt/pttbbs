@@ -14,6 +14,7 @@
 #include <fcntl.h>
 #include "cmbbs.h"
 #include "common.h"
+#include "gem.h"
 #include "uflags.h"
 #include "var.h"
 
@@ -336,6 +337,35 @@ log_account_event(const char *action, int unum, const userec_t *u,
                  from, u->email[0] ? u->email : "-");
 }
 
+// The mail folder in gem.svc goes to tmp/<id>/man, as it went with the
+// home before; a new account of the same ID must not find it. Kept (and
+// logged) when that fails.
+static void
+archive_mail_folder(const char *userid)
+{
+    char root[GEM_ROOT_SIZE], dir[PATHLEN];
+
+    snprintf(root, sizeof(root), "user:%s", userid);
+    if (gem_stat(root, NULL) != 0) {
+        if (gem_last_error_is(GEM_ERR_NO_ROOT))
+            return;
+    } else {
+        // A man/ left from before gem.svc: EXPORT wants an empty dir.
+        snprintf(dir, sizeof(dir), "tmp/%s/man", userid);
+        if (dashd(dir)) {
+            AUTO_STR(old, "%s.old", dir);
+            RmTree(old);
+            Rename(dir, old);
+        }
+        snprintf(dir, sizeof(dir), BBSHOME "/tmp/%s/man", userid);
+        if (gem_root_export(root, dir) == 0 && gem_root_delete(root) == 0)
+            return;
+    }
+    time4_t now_t = (time4_t)time(NULL);
+    file_appendf(FN_USIES, "%s GEM_ARCHIVE_FAIL %-12s %s\n",
+                 Cdate(&now_t), userid, gem_last_error());
+}
+
 /**
  * Safely purge/delete a user account and clean up home directory,
  * SHM hash table, audit logs, and .PASSWDS file.
@@ -396,6 +426,9 @@ purge_user_account(int unum, const char *userid, const char *action_tag)
             RmTree(src);
         }
     }
+
+    if (IS_ENABLED(CONFIG_GEM))
+        archive_mail_folder(userid);
 
     return ret;
 }
