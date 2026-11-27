@@ -119,7 +119,8 @@ static int c_fhdr_size(void) {
 }
 
 enum {
-    FHDR_OFF_SCORE    = offsetof(fileheader_t, score),
+    FHDR_OFF_UPVOTE    = offsetof(fileheader_t, upvote),
+    FHDR_OFF_DOWNVOTE  = offsetof(fileheader_t, downvote),
     FHDR_OFF_OWNER     = offsetof(fileheader_t, owner),
     FHDR_OFF_FILEMODE  = offsetof(fileheader_t, filemode),
     PRED_OFF_MODE      = offsetof(fileheader_predicate_t, mode),
@@ -186,7 +187,7 @@ static int c_append_fileheader_with_comments(const char *direct, const char *fil
     if (title)
         strlcpy(fh.title, title, sizeof(fh.title));
     fh.filemode = (uint8_t)filemode;
-    fh.score = (int16_t)score;
+    fh.upvote = (int16_t)score;
     fh.multi.money = money;
     fh.comments = (uint16_t)comments;
     return append_fileheader(direct, &fh);
@@ -205,7 +206,7 @@ static int c_append_fileheader(const char *direct, const char *filename,
     if (title)
         strlcpy(fh.title, title, sizeof(fh.title));
     fh.filemode = (uint8_t)filemode;
-    fh.score = (int16_t)score;
+    fh.upvote = (int16_t)score;
     fh.multi.money = money;
     return append_fileheader(direct, &fh);
 }
@@ -920,7 +921,8 @@ const (
 	FILE_MARKED        = int(C.FILE_MARKED)
 	FILE_BOTTOM        = int(C.FILE_BOTTOM)
 
-	FHDR_OFF_SCORE    = int(C.FHDR_OFF_SCORE)
+	FHDR_OFF_UPVOTE   = int(C.FHDR_OFF_UPVOTE)
+	FHDR_OFF_DOWNVOTE = int(C.FHDR_OFF_DOWNVOTE)
 	FHDR_OFF_OWNER    = int(C.FHDR_OFF_OWNER)
 	FHDR_OFF_FILEMODE = int(C.FHDR_OFF_FILEMODE)
 	PRED_OFF_MODE     = int(C.PRED_OFF_MODE)
@@ -994,17 +996,25 @@ func ReadFilenameAt(directPath string, rec int32) (string, bool) {
 	return C.GoString(&buf[0]), true
 }
 
-func SetFileheaderScore(fh *[128]byte, score int) {
+func SetFileheaderVotes(fh *[128]byte, upvote, downvote int16) {
 	if fh != nil {
-		binary.NativeEndian.PutUint16(fh[FHDR_OFF_SCORE:], uint16(int16(score)))
+		binary.NativeEndian.PutUint16(fh[FHDR_OFF_UPVOTE:], uint16(upvote))
+		binary.NativeEndian.PutUint16(fh[FHDR_OFF_DOWNVOTE:], uint16(downvote))
 	}
 }
 
-func FileheaderScore(fh *[128]byte) int16 {
+func FileheaderVotes(fh *[128]byte) (upvote, downvote int16) {
 	if fh == nil {
-		return 0
+		return 0, 0
 	}
-	return int16(binary.NativeEndian.Uint16(fh[FHDR_OFF_SCORE:]))
+	return int16(binary.NativeEndian.Uint16(fh[FHDR_OFF_UPVOTE:])),
+		int16(binary.NativeEndian.Uint16(fh[FHDR_OFF_DOWNVOTE:]))
+}
+
+// FileheaderScore returns the net score (upvotes - downvotes).
+func FileheaderScore(fh *[128]byte) int {
+	up, down := FileheaderVotes(fh)
+	return int(up) - int(down)
 }
 
 func FileheaderFilemode(fh *[128]byte) int {

@@ -688,7 +688,8 @@ typedef struct bof_create_post_like_t {
 typedef struct bof_post_like_response_t {
     /* If not NULL, gets the updated record of the post. */
     struct fileheader_t *bbs_header;
-    int bbs_score_delta;       /* how the score of the post changed */
+    int bbs_upvote_delta;      /* how the upvotes of the post changed */
+    int bbs_downvote_delta;    /* and its downvotes */
 } bof_post_like_response_t;
 
 bof_error_t bof_create_post_like(const bof_actor_t *actor,

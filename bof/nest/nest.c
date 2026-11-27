@@ -308,9 +308,15 @@ cache_failed(const char *op, const char *community, const char *file,
 
 struct record_update {
     int32_t modified;       // 0: unchanged
-    int score_delta;
+    int upvote_delta, downvote_delta;
     int comments_delta;
 };
+
+static int16_t
+clamp_int16(int v)
+{
+    return v < INT16_MIN ? INT16_MIN : v > INT16_MAX ? INT16_MAX : v;
+}
 
 static void
 apply_update(fileheader_t *fh, const void *ctx)
@@ -320,18 +326,19 @@ apply_update(fileheader_t *fh, const void *ctx)
 
     if (u->modified)
         fh->modified = u->modified;
-    // nest.svc keeps the whole score; it is shown capped.
-    v = (int)fh->score + u->score_delta;
-    fh->score = v < -32768 ? -32768 : v > 32767 ? 32767 : v;
+    // nest.svc keeps the whole counts; the score is shown capped.
+    fh->upvote = clamp_int16(fh->upvote + u->upvote_delta);
+    fh->downvote = clamp_int16(fh->downvote + u->downvote_delta);
     v = (int)fh->comments + u->comments_delta;
     fh->comments = v < 0 ? 0 : v > 65535 ? 65535 : v;
 }
 
 static int
-update_record(const bof_post_ref_t *post, int32_t modified, int score_delta,
-              int comments_delta, fileheader_t *out)
+update_record(const bof_post_ref_t *post, int32_t modified, int upvote_delta,
+              int downvote_delta, int comments_delta, fileheader_t *out)
 {
-    struct record_update u = { modified, score_delta, comments_delta };
+    struct record_update u = { modified, upvote_delta, downvote_delta,
+                               comments_delta };
 
     if (post->bbs_index <= 0) {
         if (out)
@@ -471,8 +478,9 @@ nest_create_post_like(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         up = req->score > 0;
         down = req->score < 0;
     }
-    out->bbs_score_delta = up - down;
-    if (update_record(post, 0, up - down, 0, out->bbs_header) != 0)
+    out->bbs_upvote_delta = up;
+    out->bbs_downvote_delta = down;
+    if (update_record(post, 0, up, down, 0, out->bbs_header) != 0)
         cache_failed("create_post_like", post->community,
                      post->bbs_header->filename, BOF_ERR_COULDNT_UPDATE_POST);
     return BOF_OK;
@@ -1110,7 +1118,7 @@ note_body(const bof_actor_t *actor, const bof_post_ref_t *post,
 static void
 zero_score(fileheader_t *fh, const void *ctx GCC_UNUSED)
 {
-    fh->score = 0;
+    fh->upvote = fh->downvote = 0;
 }
 
 static bof_error_t
@@ -1143,7 +1151,7 @@ nest_reset_post_score(void *ctx GCC_UNUSED, const bof_actor_t *actor,
                                 &updated) != 0) {
         cache_failed("reset_post_score", post->community,
                      post->bbs_header->filename, BOF_ERR_COULDNT_FIND_POST);
-        updated.score = 0;
+        updated.upvote = updated.downvote = 0;
     }
     if (out && out->bbs_header)
         *out->bbs_header = updated;
@@ -1369,7 +1377,7 @@ nest_create_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     // (nest.svc has written the article again itself).
     fileheader_t updated;
     char path[PATHLEN];
-    if (update_record(post, ctime > 0 ? (int32_t)ctime : time4(NULL), 0,
+    if (update_record(post, ctime > 0 ? (int32_t)ctime : time4(NULL), 0, 0,
                       merged ? 0 : 1, &updated) != 0)
         return BOF_ERR_COULDNT_UPDATE_POST;
     if (out) {
@@ -1399,7 +1407,7 @@ comment_changed(const bof_post_ref_t *post, bof_comment_response_t *out)
         cache_failed("comment", post->community, post->bbs_header->filename,
                      BOF_ERR_UNKNOWN);
     if (update_record(post, dasht4(path) ? dasht4(path) : time4(NULL), 0, 0,
-                      &updated) != 0)
+                      0, &updated) != 0)
         return BOF_ERR_COULDNT_UPDATE_POST;
     if (out) {
         if (out->bbs_header)

@@ -66,7 +66,7 @@ bof_fs_create_comment(void *ctx GCC_UNUSED,
     fileheader_t updated;
     char path[PATHLEN];
     int64_t size = 0;
-    int delta = 0;
+    int up = 0, down = 0;
     bof_error_t err;
 
     if (!post->bbs_dir || !fh || post->bbs_index <= 0 || !fh->filename[0] ||
@@ -77,17 +77,18 @@ bof_fs_create_comment(void *ctx GCC_UNUSED,
     if ((err = append_comment(path, req->content, req, &size)) != BOF_OK)
         return err;
 
-    if (req->bbs_vote > 0 && fh->score < INT16_MAX)
-        delta = 1;
-    else if (req->bbs_vote < 0 && fh->score > INT16_MIN)
-        delta = -1;
+    if (req->bbs_vote > 0 && fh->upvote < INT16_MAX)
+        up = 1;
+    else if (req->bbs_vote < 0 && fh->downvote < INT16_MAX)
+        down = 1;
 
     updated = *fh;
-    updated.score += delta;
+    updated.upvote += up;
+    updated.downvote += down;
     updated.modified = dasht4(path);
     if (updated.modified != 0 &&
         bof_files_modify_record(post->bbs_dir, post->bbs_index, fh->filename,
-                                updated.modified, NULL, NULL, NULL, delta,
+                                updated.modified, NULL, NULL, NULL, up, down,
                                 NULL, 0, 0, &updated) != 0)
         return BOF_ERR_COULDNT_UPDATE_POST;  // appended, but not counted
 
@@ -514,7 +515,7 @@ bof_fs_edit_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
         if (updated.modified == 0 ||
             bof_files_modify_record(post->bbs_dir, post->bbs_index,
                                     fh->filename, updated.modified, NULL,
-                                    NULL, NULL, 0, NULL, 0, 0,
+                                    NULL, NULL, 0, 0, NULL, 0, 0,
                                     &updated) != 0)
             return BOF_ERR_COULDNT_UPDATE_POST;  // edited, not in the list
     }

@@ -22,9 +22,10 @@ import (
 // Layout of fileheader_t (include/pttstruct.h).
 const (
 	fhdrOffFilename = 0
-	fhdrLenFilename = 22 // FNSIZE; then 6 reserved bytes, to LEGACY_FNSIZE (28)
+	fhdrLenFilename = 22 // FNSIZE; then 4 reserved bytes and downvote
+	fhdrOffDownvote = 26
 	fhdrOffModified = 28
-	fhdrOffScore    = 32
+	fhdrOffUpvote   = 32
 	fhdrOffOwner    = 34
 	fhdrLenOwner    = 14 // IDLEN + 2
 	fhdrOffDate     = 48
@@ -69,7 +70,7 @@ type SyncDirOptions struct {
 	DryRun  bool
 
 	// Full rewrites every field of the records of the posts that nest.svc
-	// knows, instead of only score and comments. Deleted posts are written
+	// knows, instead of only votes and comments. Deleted posts are written
 	// the way mbbsd safe-deletes them.
 	Full bool
 	// Prune removes deleted entries: safe-deleted records, and records of
@@ -104,10 +105,9 @@ type SyncDirStats struct {
 	Kept        int // old records kept as they are, as they could not be imported (Rebuild)
 }
 
-// ScoreFromVotes converts nest.svc's votes to fileheader_t.score, which is
-// the net score (upvotes - downvotes), clamped to fit in its int16.
-func ScoreFromVotes(upvotes, downvotes int) int16 {
-	v := upvotes - downvotes
+// VotesFromCount converts nest.svc's number of upvotes or downvotes to
+// fileheader_t.upvote or downvote, clamped to fit in its int16.
+func VotesFromCount(v int) int16 {
 	if v > math.MaxInt16 {
 		return math.MaxInt16
 	}
@@ -233,7 +233,8 @@ func boardFileName(p *model.Post) string {
 }
 
 func setCounts(rec []byte, p *model.Post) {
-	binary.LittleEndian.PutUint16(rec[fhdrOffScore:], uint16(ScoreFromVotes(p.Upvotes, p.Downvotes)))
+	binary.LittleEndian.PutUint16(rec[fhdrOffUpvote:], uint16(VotesFromCount(p.Upvotes)))
+	binary.LittleEndian.PutUint16(rec[fhdrOffDownvote:], uint16(VotesFromCount(p.Downvotes)))
 	binary.LittleEndian.PutUint16(rec[fhdrOffComments:], CommentsFromCount(p.NumComments))
 }
 
@@ -285,7 +286,7 @@ type dirEntry struct {
 // board's .DIR, so that mbbsd and search.svc (which read .DIR) agree with
 // nest.svc.
 //
-// By default only score and comments are written, in place. Full rewrites
+// By default only votes and comments are written, in place. Full rewrites
 // whole records, still in place. Prune and AddMissing change the number of
 // records, so .DIR is then rewritten to a new file that replaces it, keeping
 // the old one as .DIR.bak-<time>; this must run while mbbsd is not using

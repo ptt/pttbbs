@@ -59,16 +59,16 @@ struct fileheader_t;
 
 /* Updates the record of the post named fhdr_name at position ent of
  * direct: modified (if not 0), title, owner and date (if not NULL or ""),
- * multi (if not NULL), the score by score_delta (within int16_t; the
- * list shows it capped at MAX_DISPLAY_SCORE), and the filemode bits to enable and disable. out
- * (if not NULL) gets the updated record. Returns 0, or -1 if the record
- * there is not that post. */
+ * multi (if not NULL), upvote and downvote by their deltas (within int16_t;
+ * the list shows the score capped at MAX_DISPLAY_SCORE), and the filemode
+ * bits to enable and disable. out (if not NULL) gets the updated record.
+ * Returns 0, or -1 if the record there is not that post. */
 int bof_files_modify_record(const char *direct, int ent,
                             const char *fhdr_name, int32_t modified,
                             const char *title, const char *owner,
-                            const char *date, int score_delta,
-                            const void *multi, uint16_t enable_modes,
-                            uint16_t disable_modes,
+                            const char *date, int upvote_delta,
+                            int downvote_delta, const void *multi,
+                            uint16_t enable_modes, uint16_t disable_modes,
                             struct fileheader_t *out);
 
 /* Reads the record of the post named fhdr_name at position ent of direct,
@@ -81,13 +81,13 @@ int bof_files_update_record(const char *direct, int ent,
                             const void *ctx, struct fileheader_t *out);
 
 /* Updates the record of the post named fhdr_name at position ent of direct
- * for comments: modified (if not 0), the score by score_delta (within
- * int16_t) and the count of comments by comments_delta. out (if
+ * for comments: modified (if not 0), upvote and downvote by their deltas
+ * (within int16_t) and the count of comments by comments_delta. out (if
  * not NULL) gets the updated record. Returns 0, or -1. */
 int bof_files_count_comments(const char *direct, int ent,
                              const char *fhdr_name, time4_t modified,
-                             int score_delta, int comments_delta,
-                             struct fileheader_t *out);
+                             int upvote_delta, int downvote_delta,
+                             int comments_delta, struct fileheader_t *out);
 
 /* Turns the record of a post into the record left for it when it is
  * deleted (by deleter, as the creator if deleter is its owner) or removed:

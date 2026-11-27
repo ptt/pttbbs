@@ -225,21 +225,23 @@ test_edit_post(void)
     bof_edit_post_t stale = { .post = r, .name = "x" };
     EXPECT_INT(bof_edit_post(&me, &stale, &res), BOF_ERR_COULDNT_FIND_POST);
 
-    // The whole score is kept, past MAX_DISPLAY_SCORE (the list caps it).
+    // The whole counts are kept, past MAX_DISPLAY_SCORE (the list caps it).
     EXPECT_INT(bof_files_modify_record(DIRPATH, 4, "M.1700000005.A.005", 0,
-                                       NULL, NULL, NULL, MAX_DISPLAY_SCORE + 5,
-                                       NULL, 0, 0, &updated), 0);
-    EXPECT_INT(updated.score, MAX_DISPLAY_SCORE + 5);
-    // ... within its int16_t.
+                                       NULL, NULL, NULL, MAX_DISPLAY_SCORE + 7,
+                                       2, NULL, 0, 0, &updated), 0);
+    EXPECT_INT(updated.upvote, MAX_DISPLAY_SCORE + 7);
+    EXPECT_INT(updated.downvote, 2);
+    EXPECT_INT(FHDR_SCORE(&updated), MAX_DISPLAY_SCORE + 5);
+    // ... each within its int16_t.
     EXPECT_INT(bof_files_modify_record(DIRPATH, 4, "M.1700000005.A.005", 0,
-                                       NULL, NULL, NULL, 100000,
+                                       NULL, NULL, NULL, 100000, 0,
                                        NULL, 0, 0, &updated), 0);
-    EXPECT_INT(updated.score, INT16_MAX);
+    EXPECT_INT(updated.upvote, INT16_MAX);
     EXPECT_INT(bof_files_modify_record(DIRPATH, 4, "M.1700000005.A.005", 0,
                                        NULL, NULL, NULL,
-                                       MAX_DISPLAY_SCORE - INT16_MAX,
+                                       MAX_DISPLAY_SCORE + 2 - INT16_MAX, 0,
                                        NULL, 0, 0, &updated), 0);
-    EXPECT_INT(updated.score, MAX_DISPLAY_SCORE);
+    EXPECT_INT(FHDR_SCORE(&updated), MAX_DISPLAY_SCORE);
 }
 
 static void
@@ -282,12 +284,14 @@ test_lock_feature_score(void)
 
     // The score goes back to 0.
     EXPECT_INT(read_dir(recs, 8), 4);
-    EXPECT(recs[3].score != 0);   // MAX_DISPLAY_SCORE from test_edit_post
+    EXPECT(FHDR_SCORE(&recs[3]) != 0);   // MAX_DISPLAY_SCORE from test_edit_post
     bof_bbs_reset_post_score_t reset = { .post = ref(recs, 4) };
     EXPECT_OK(bof_bbs_reset_post_score(&me, &reset, &res));
-    EXPECT_INT(updated.score, 0);
+    EXPECT_INT(updated.upvote, 0);
+    EXPECT_INT(updated.downvote, 0);
     EXPECT_INT(read_dir(recs, 8), 4);
-    EXPECT_INT(recs[3].score, 0);
+    EXPECT_INT(recs[3].upvote, 0);
+    EXPECT_INT(recs[3].downvote, 0);
 }
 
 static int
@@ -368,16 +372,18 @@ test_create_post_and_comment(void)
         .bbs_lock = 1,
     };
     EXPECT_OK(bof_create_comment(&me, &push, &cres));
-    EXPECT_INT(updated.score, 1);
+    EXPECT_INT(updated.upvote, 1);
     EXPECT(updated.modified != 0);
     EXPECT_INT(cres.bbs_file_size, strlen("body\npush line\n"));
     EXPECT_INT(read_dir(recs, 16), n + 1);
-    EXPECT_INT(recs[n].score, 1);
+    EXPECT_INT(recs[n].upvote, 1);
     bof_create_comment_t boo = {
         .post = ref(recs, n + 1), .content = "boo line\n", .bbs_vote = -1,
     };
     EXPECT_OK(bof_create_comment(&me, &boo, &cres));
-    EXPECT_INT(updated.score, 0);
+    EXPECT_INT(updated.upvote, 1);
+    EXPECT_INT(updated.downvote, 1);
+    EXPECT_INT(FHDR_SCORE(&updated), 0);
 
     // A post without its file.
     unlink(BDIR "/M.1700000011.A.011");
@@ -1232,9 +1238,9 @@ test_files_extras(void)
 
     // Counting comments in the record.
     EXPECT_INT(bof_files_count_comments(DIRPATH, n, recs[n - 1].filename,
-                                        1700000999, 1, 2, &updated), 0);
+                                        1700000999, 1, 0, 2, &updated), 0);
     EXPECT_INT(updated.comments, 2);
-    EXPECT_INT(updated.score, 1);
+    EXPECT_INT(updated.upvote, 1);
     EXPECT_INT(updated.modified, 1700000999);
 
     // A vote alone is not kept by files.

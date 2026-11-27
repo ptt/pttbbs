@@ -302,24 +302,30 @@ test_votes(void)
     EXPECT_OK(bof_create_post_like(&alice, &req, &res));
     EXPECT(received("CREATE_POST_LIKE_FILE " BOARD
                     " M.300.A.AAA alice 42 1 127.0.0.1 "));
-    EXPECT_INT(res.bbs_score_delta, 1);
-    EXPECT_INT(updated.score, 1);
+    EXPECT_INT(res.bbs_upvote_delta, 1);
+    EXPECT_INT(res.bbs_downvote_delta, 0);
+    EXPECT_INT(updated.upvote, 1);
+    EXPECT_INT(updated.downvote, 0);
 
     // The same vote again changes nothing.
     fh = updated;
     reply("CREATE_POST_LIKE_FILE", "OK 0 0");
     EXPECT_OK(bof_create_post_like(&alice, &req, &res));
-    EXPECT_INT(res.bbs_score_delta, 0);
+    EXPECT_INT(res.bbs_upvote_delta, 0);
+    EXPECT_INT(res.bbs_downvote_delta, 0);
     read_dir(recs, 8);
-    EXPECT_INT(recs[n - 1].score, 1);
+    EXPECT_INT(FHDR_SCORE(&recs[n - 1]), 1);
 
     // Changed to a boo: one up less, one down more.
     reply("CREATE_POST_LIKE_FILE", "OK -1 1");
     req.score = -1;
     EXPECT_OK(bof_create_post_like(&alice, &req, &res));
-    EXPECT_INT(res.bbs_score_delta, -2);
+    EXPECT_INT(res.bbs_upvote_delta, -1);
+    EXPECT_INT(res.bbs_downvote_delta, 1);
     read_dir(recs, 8);
-    EXPECT_INT(recs[n - 1].score, -1);
+    EXPECT_INT(recs[n - 1].upvote, 0);
+    EXPECT_INT(recs[n - 1].downvote, 1);
+    EXPECT_INT(FHDR_SCORE(&recs[n - 1]), -1);
 }
 
 static void
@@ -1063,7 +1069,7 @@ test_comment_checks(void)
     reply("CREATE_COMMENT", "OK 1 1700000000 0 NEW 5");
     EXPECT_OK(bof_create_comment(&alice, &cr, &res));
     EXPECT_INT(res.bbs_file_size, strlen("the content of M.540.A.AAA\n"));
-    EXPECT_INT(updated.score, 0);   // votes are apart (rating)
+    EXPECT_INT(FHDR_SCORE(&updated), 0);   // votes are apart (rating)
 
     reply("GET_COMMENTS_FILE",
           "OK 1 1\n1\talice\t1700000000\t-\t1\t\t5\told");
@@ -1273,7 +1279,8 @@ test_reset_and_mask(void)
     EXPECT_OK(bof_bbs_reset_post_score(&mod, &rs, &res));
     EXPECT(received("RESET_POST_SCORE_FILE " BOARD " M.570.A.AAA"));
     EXPECT(received("EDIT_POST_FILE " BOARD " M.570.A.AAA boss 7 1700000500 "));
-    EXPECT_INT(updated.score, 0);
+    EXPECT_INT(updated.upvote, 0);
+    EXPECT_INT(updated.downvote, 0);
     // The cache does not get the note (nest.svc writes the article).
     EXPECT_STR(slurp(BDIR "/M.570.A.AAA"), "the content of M.570.A.AAA\n");
 

@@ -122,7 +122,7 @@ Post AsPost(const boardheader_t *bp, size_t index, const fileheader_t &fh) {
   p.set_index(index);
   p.set_filename(fh.filename);
   p.set_raw_date(strings::b2u(fh.date));
-  p.set_num_ratings(RatingsByComments(bp) ? fh.comments : fh.score);
+  p.set_num_ratings(RatingsByComments(bp) ? fh.comments : FHDR_SCORE(&fh));
   p.set_filemode(fh.filemode);
   p.set_owner(strings::b2u(fh.owner));
   p.set_title(strings::b2u(fh.title));

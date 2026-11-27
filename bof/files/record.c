@@ -51,10 +51,16 @@ bof_files_update_record(const char *direct, int ent, const char *fhdr_name,
     return 0;
 }
 
+static int16_t
+clamp_int16(int v)
+{
+    return v < INT16_MIN ? INT16_MIN : v > INT16_MAX ? INT16_MAX : v;
+}
+
 struct record_changes {
     time4_t modified;
     const char *title, *owner, *date;
-    int score_delta;
+    int upvote_delta, downvote_delta;
     int comments_delta;
     const void *multi;
     uint16_t enable_modes, disable_modes;
@@ -79,13 +85,12 @@ apply_record_changes(fileheader_t *fhdr, const void *ctx)
         mb_to_storage(c->date, fhdr->date, sizeof(fhdr->date));
     if (c->multi)
         memcpy(&fhdr->multi, c->multi, sizeof(fhdr->multi));
-    if (c->score_delta) {
-        // The whole score, as nest.svc keeps it; the list shows it capped
-        // (MAX_DISPLAY_SCORE).
-        int score = fhdr->score + c->score_delta;
-        fhdr->score = score < INT16_MIN ? INT16_MIN :
-                      score > INT16_MAX ? INT16_MAX : score;
-    }
+    // Whole counts, as nest.svc keeps them; the list shows the score capped
+    // (MAX_DISPLAY_SCORE).
+    if (c->upvote_delta)
+        fhdr->upvote = clamp_int16(fhdr->upvote + c->upvote_delta);
+    if (c->downvote_delta)
+        fhdr->downvote = clamp_int16(fhdr->downvote + c->downvote_delta);
     if (c->comments_delta) {
         int n = (int)fhdr->comments + c->comments_delta;
         fhdr->comments = n < 0 ? 0 : n > 65535 ? 65535 : n;
@@ -94,11 +99,13 @@ apply_record_changes(fileheader_t *fhdr, const void *ctx)
 
 int
 bof_files_count_comments(const char *direct, int ent, const char *fhdr_name,
-                         time4_t modified, int score_delta,
-                         int comments_delta, fileheader_t *out)
+                         time4_t modified, int upvote_delta,
+                         int downvote_delta, int comments_delta,
+                         fileheader_t *out)
 {
     struct record_changes c = {
-        .modified = modified, .score_delta = score_delta,
+        .modified = modified, .upvote_delta = upvote_delta,
+        .downvote_delta = downvote_delta,
         .comments_delta = comments_delta,
     };
     return bof_files_update_record(direct, ent, fhdr_name,
@@ -108,13 +115,15 @@ bof_files_count_comments(const char *direct, int ent, const char *fhdr_name,
 int
 bof_files_modify_record(const char *direct, int ent, const char *fhdr_name,
                         time4_t modified, const char *title,
-                        const char *owner, const char *date, int score_delta,
-                        const void *multi, uint16_t enable_modes,
-                        uint16_t disable_modes, fileheader_t *out)
+                        const char *owner, const char *date, int upvote_delta,
+                        int downvote_delta, const void *multi,
+                        uint16_t enable_modes, uint16_t disable_modes,
+                        fileheader_t *out)
 {
     struct record_changes c = {
         .modified = modified, .title = title, .owner = owner, .date = date,
-        .score_delta = score_delta, .multi = multi,
+        .upvote_delta = upvote_delta, .downvote_delta = downvote_delta,
+        .multi = multi,
         .enable_modes = enable_modes, .disable_modes = disable_modes,
     };
     return bof_files_update_record(direct, ent, fhdr_name,

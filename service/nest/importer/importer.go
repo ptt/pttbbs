@@ -40,18 +40,16 @@ func ReadArticleFile(path string) ([]byte, error) {
 
 // FileHeader represents the 128-byte BBS fileheader_t
 type FileHeader struct {
-	Filename  string
-	Modified  uint32
-	Score     int16
-	Downvote  uint8
-	Upvote    uint8
-	Recommend int8
-	Owner     string
-	Date      string
-	Title     string
-	Filemode  uint16
-	Multi     uint32 // fileheader_t.multi; see model.UnpackMulti
-	Comments  uint16
+	Filename string
+	Modified uint32
+	Upvote   int16 // old records: the net score, with Downvote 0
+	Downvote int16
+	Owner    string
+	Date     string
+	Title    string
+	Filemode uint16
+	Multi    uint32 // fileheader_t.multi; see model.UnpackMulti
+	Comments uint16
 }
 
 func cString(b []byte) string {
@@ -66,12 +64,10 @@ func UnpackFileHeader(buf []byte) (*FileHeader, error) {
 	if len(buf) < FileHeaderSize {
 		return nil, io.ErrUnexpectedEOF
 	}
-	fn := cString(buf[0:22]) // FNSIZE; 22..28 are reserved
+	fn := cString(buf[0:22]) // FNSIZE; 22..26 are reserved
+	downvote := int16(binary.LittleEndian.Uint16(buf[26:28]))
 	mod := binary.LittleEndian.Uint32(buf[28:32])
-	score := int16(binary.LittleEndian.Uint16(buf[32:34]))
-	downvote := buf[32]
-	upvote := buf[33]
-	rec := int8(score)
+	upvote := int16(binary.LittleEndian.Uint16(buf[32:34]))
 	owner := cString(buf[34:48])
 	date := cString(buf[48:54])
 	title := cString(buf[54:119])
@@ -80,18 +76,16 @@ func UnpackFileHeader(buf []byte) (*FileHeader, error) {
 	comments := binary.LittleEndian.Uint16(buf[126:128])
 
 	return &FileHeader{
-		Filename:  fn,
-		Modified:  mod,
-		Score:     score,
-		Downvote:  downvote,
-		Upvote:    upvote,
-		Recommend: rec,
-		Owner:     owner,
-		Date:      date,
-		Title:     title,
-		Filemode:  fmode,
-		Multi:     multi,
-		Comments:  comments,
+		Filename: fn,
+		Modified: mod,
+		Upvote:   upvote,
+		Downvote: downvote,
+		Owner:    owner,
+		Date:     date,
+		Title:    title,
+		Filemode: fmode,
+		Multi:    multi,
+		Comments: comments,
 	}, nil
 }
 

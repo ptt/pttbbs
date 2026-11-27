@@ -34,7 +34,7 @@ match_fileheader_predicate(const fileheader_t *fh, void *arg)
     else if (sr_mode & RS_TITLE)
 	return strcasecmp(subject(fh->title), keyword) == 0;
     else if (sr_mode & RS_SCORE) {
-        int16_t score = fh->filemode & FILE_SUSPICIOUS ? 0 : fh->score;
+        int score = fh->filemode & FILE_SUSPICIOUS ? 0 : FHDR_SCORE(fh);
 	return pred->score > 0 ?
 	    (score >= pred->score) :
 	    (score <= pred->score);
@@ -200,7 +200,8 @@ search_svc_hint_post(const char *direct, int bid, int recno, aidu_t aidu, const 
 }
 
 int
-search_svc_hint_comment(const char *direct, int bid, int recno, int comment)
+search_svc_hint_comment(const char *direct, int bid, int recno,
+                        const fileheader_t *fh)
 {
     if (recno <= 0)
         return -1;
@@ -210,7 +211,8 @@ search_svc_hint_comment(const char *direct, int bid, int recno, int comment)
     req.type = HINT_TYPE_COMMENT;
     req.bid = bid;
     req.recno = recno;
-    req.data = comment;
+    req.data = FHDR_SCORE(fh);
+    req.fh = *fh;
     if (direct)
         strlcpy(req.direct, direct, sizeof(req.direct));
     return search_svc_hint_send(&req);

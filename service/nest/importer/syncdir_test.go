@@ -16,18 +16,18 @@ import (
 	"pttbbs/nest/storage"
 )
 
-func TestScoreAndCommentsClamp(t *testing.T) {
-	if got := ScoreFromVotes(150, 20); got != 130 {
-		t.Errorf("ScoreFromVotes(150, 20) = %d, want 130", got)
+func TestVotesAndCommentsClamp(t *testing.T) {
+	if got := VotesFromCount(150); got != 150 {
+		t.Errorf("VotesFromCount(150) = %d, want 150", got)
 	}
-	if got := ScoreFromVotes(3, 10); got != -7 {
-		t.Errorf("ScoreFromVotes(3, 10) = %d, want -7", got)
+	if got := VotesFromCount(-7); got != -7 {
+		t.Errorf("VotesFromCount(-7) = %d, want -7", got)
 	}
-	if got := ScoreFromVotes(100000, 0); got != math.MaxInt16 {
-		t.Errorf("ScoreFromVotes(100000, 0) = %d, want %d", got, math.MaxInt16)
+	if got := VotesFromCount(100000); got != math.MaxInt16 {
+		t.Errorf("VotesFromCount(100000) = %d, want %d", got, math.MaxInt16)
 	}
-	if got := ScoreFromVotes(0, 100000); got != math.MinInt16 {
-		t.Errorf("ScoreFromVotes(0, 100000) = %d, want %d", got, math.MinInt16)
+	if got := VotesFromCount(-100000); got != math.MinInt16 {
+		t.Errorf("VotesFromCount(-100000) = %d, want %d", got, math.MinInt16)
 	}
 	if got := CommentsFromCount(70000); got != math.MaxUint16 {
 		t.Errorf("CommentsFromCount(70000) = %d, want %d", got, math.MaxUint16)
@@ -152,7 +152,8 @@ type dirFixture struct {
 	owner    string
 	title    string
 	modified uint32
-	score    int16
+	upvote   int16
+	downvote int16
 	filemode uint16
 	multi    uint32
 	comments uint16
@@ -162,8 +163,9 @@ type dirFixture struct {
 func (f dirFixture) record() []byte {
 	rec := make([]byte, FileHeaderSize)
 	copy(rec[fhdrOffFilename:], f.filename)
+	binary.LittleEndian.PutUint16(rec[fhdrOffDownvote:], uint16(f.downvote))
 	binary.LittleEndian.PutUint32(rec[fhdrOffModified:], f.modified)
-	binary.LittleEndian.PutUint16(rec[fhdrOffScore:], uint16(f.score))
+	binary.LittleEndian.PutUint16(rec[fhdrOffUpvote:], uint16(f.upvote))
 	copy(rec[fhdrOffOwner:], f.owner)
 	orig, _ := IsSafeDeletedFilename(f.filename)
 	copy(rec[fhdrOffDate:], fhdrDate(stampTime(model.CanonicalPostFile(orig))))
@@ -202,14 +204,14 @@ func TestSyncDir(t *testing.T) {
 	fixtures := []dirFixture{
 		// 0: marked post with money
 		{filename: "M.1728000001.A.001", owner: "userA", title: "[問卦] 第一篇", modified: 1728000100,
-			filemode: 0x0002, multi: 50, score: 9,
+			filemode: 0x0002, multi: 50, upvote: 9,
 			content: "本文一\n" + sig + "推 userB: 推 10/01 12:00\n推 userC: 推 10/01 12:01\n→ userD: 嗯 10/01 12:02\n"},
 		// 1: deleted by its author in nest.svc after the import
 		{filename: "M.1728000002.A.002", owner: "userB", title: "第二篇", modified: 1728000200,
 			content: "本文二\n" + sig + "噓 userA: 噓 10/01 12:05\n"},
 		// 2: already safe-deleted by a moderator in .DIR: not imported
 		{filename: ".d1728000003.A.003", owner: "-", title: "(本文已被移除) <userC>", modified: 1728000300,
-			score: -3, comments: 4},
+			upvote: -3, comments: 4},
 		// 3: anonymous, in nest.svc but (later) not in .DIR
 		{filename: "M.1728000004.A.004", owner: "Anonymous.", title: "第四篇", modified: 1728000400,
 			filemode: model.FileAnonymous, multi: 7,
@@ -315,8 +317,11 @@ func TestSyncDir(t *testing.T) {
 	sync(SyncDirOptions{})
 	recs := readDirRecords(t, dirPath)
 	// post 1: 2 up (userB, userC) and 1 down (userE); 3 comments.
-	if r := int16(binary.LittleEndian.Uint16(recs[0][fhdrOffScore:])); r != 1 {
-		t.Errorf("post 1 score = %d, want 1", r)
+	if up := int16(binary.LittleEndian.Uint16(recs[0][fhdrOffUpvote:])); up != 2 {
+		t.Errorf("post 1 upvote = %d, want 2", up)
+	}
+	if down := int16(binary.LittleEndian.Uint16(recs[0][fhdrOffDownvote:])); down != 1 {
+		t.Errorf("post 1 downvote = %d, want 1", down)
 	}
 	if c := binary.LittleEndian.Uint16(recs[0][fhdrOffComments:]); c != 3 {
 		t.Errorf("post 1 comments = %d, want 3", c)
@@ -347,7 +352,8 @@ func TestSyncDir(t *testing.T) {
 	}
 	// Everything else of post 1 is as mbbsd wrote it.
 	want0 := append([]byte(nil), original[0]...)
-	copy(want0[fhdrOffScore:], recs[0][fhdrOffScore:fhdrOffScore+2])
+	copy(want0[fhdrOffDownvote:], recs[0][fhdrOffDownvote:fhdrOffDownvote+2])
+	copy(want0[fhdrOffUpvote:], recs[0][fhdrOffUpvote:fhdrOffUpvote+2])
 	copy(want0[fhdrOffMulti:], recs[0][fhdrOffMulti:fhdrOffComments+2])
 	if !bytes.Equal(recs[0], want0) {
 		t.Errorf("post 1 record:\n got %q\nwant %q", recs[0], want0)

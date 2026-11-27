@@ -85,7 +85,7 @@ change_record(const bof_post_ref_t *post, int32_t modified,
     if (money)
         multi = *money;
     if (bof_files_modify_record(post->bbs_dir, post->bbs_index, fh->filename,
-                                modified, title, owner, date, 0,
+                                modified, title, owner, date, 0, 0,
                                 money ? &multi : NULL, enable, disable,
                                 &updated) != 0)
         return BOF_ERR_COULDNT_FIND_POST;
@@ -212,7 +212,7 @@ bof_fs_feature_post(void *ctx GCC_UNUSED, const bof_actor_t *actor GCC_UNUSED,
 static void
 reset_score(fileheader_t *fhdr, const void *ctx GCC_UNUSED)
 {
-    fhdr->score = 0;
+    fhdr->upvote = fhdr->downvote = 0;
 }
 
 bof_error_t

@@ -744,8 +744,8 @@ func TestFileheaderModeHelpers(t *testing.T) {
 	fh[FHDR_OFF_OWNER] = 't'
 
 	// Test score
-	SetFileheaderScore(nil, 50) // should not panic
-	SetFileheaderScore(&fh, 77)
+	SetFileheaderVotes(nil, 50, 0) // should not panic
+	SetFileheaderVotes(&fh, 80, 3)
 	if FileheaderScore(&fh) != 77 {
 		t.Errorf("expected score=77, got %d", FileheaderScore(&fh))
 	}
@@ -1363,7 +1363,7 @@ func overwriteFileheaderRatingOnDisk(t *testing.T, dirPath string, recno int, sc
 		t.Fatalf("open %s: %v", dirPath, err)
 	}
 	defer f.Close()
-	off := int64(recno-1)*int64(FileheaderSize()) + int64(FHDR_OFF_SCORE)
+	off := int64(recno-1)*int64(FileheaderSize()) + int64(FHDR_OFF_UPVOTE)
 	var buf [2]byte
 	binary.NativeEndian.PutUint16(buf[:], uint16(score))
 	if _, err := f.WriteAt(buf[:], off); err != nil {

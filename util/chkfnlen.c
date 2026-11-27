@@ -13,10 +13,10 @@
 #define MAX_SCAN_PATH 4096
 #define CHUNK_RECORDS 64
 
-/* Names are checked over all that fileheader_t.filename was (LEGACY_FNSIZE:
- * filename, then reserved): older binaries may still write names that long,
- * and reserved must stay zero for them. */
-#define NAME_SPAN LEGACY_FNSIZE
+/* Names are checked over what fileheader_t.filename was up to downvote
+ * (filename, then reserved): reserved must stay zero for older binaries. */
+#define NAME_SPAN ((int)offsetof(fileheader_t, downvote))
+#define RESERVED_SIZE ((int)sizeof(((fileheader_t *)0)->reserved))
 #define FH_NAME(fh) ((char *)(fh)->filename)
 
 typedef struct {
@@ -139,7 +139,7 @@ static void print_usage(const char *progname)
     printf("Options:\n");
     printf("  -b, --bbshome <dir>     Set BBS home directory (default: BBSHOME or auto-detect)\n");
     printf("  -t, --threshold <len>   Filename length threshold, without the NUL (default: %d,\n", FNLEN);
-    printf("                            FNLEN; up to %d, LEGACY_FNSIZE)\n", LEGACY_FNSIZE);
+    printf("                            FNLEN; up to %d)\n", NAME_SPAN);
     printf("  -r, --repair            Apply repairs to .DIR files (default is dry-run inspection):\n");
     printf("                            1. Bad path (., .., ./, ../, /...) -> tombstone\n");
     printf("                            2. Contains non-ASCII              -> tombstone\n");
@@ -165,7 +165,7 @@ static void print_usage(const char *progname)
     printf("                            delete entries; instead of tombstones or renames.\n");
     printf("                            Boards are not pruned. Run mandex after.\n");
     printf("      --clear-reserved    Only zero fileheader_t.reserved (the %d bytes after\n",
-           LEGACY_FNSIZE - FNSIZE);
+           RESERVED_SIZE);
     printf("                            filename, which older binaries read as the end of the\n");
     printf("                            name), nothing else; writes with -r. A name running\n");
     printf("                            into reserved is reported: rename it with --rename.\n");
@@ -1132,7 +1132,7 @@ static void print_summary_table(const section_stats_t *boards,
 
     if (opt_clear_reserved) {
         printf("Reserved (--clear-reserved, the %d bytes after filename):\n",
-               LEGACY_FNSIZE - FNSIZE);
+               RESERVED_SIZE);
         printf("  %-28s %14s\n", opt_repair ? "Cleared:" : "To clear:",
                fmt_num(opt_repair ? overall->cleared_reserved :
                        overall->need_clear_reserved, b1));
@@ -1195,8 +1195,9 @@ enum { FIELD_STRING, FIELD_NUMBER, FIELD_PAD };
 static const field_t fhdr_fields[] = {
     FIELD(filename, FIELD_STRING),
     FIELD(reserved, FIELD_PAD),
+    FIELD(downvote, FIELD_NUMBER),
     FIELD(modified, FIELD_NUMBER),
-    FIELD(score,    FIELD_NUMBER),
+    FIELD(upvote,   FIELD_NUMBER),
     FIELD(owner,    FIELD_STRING),
     FIELD(date,     FIELD_STRING),
     FIELD(title,    FIELD_STRING),
@@ -1313,7 +1314,7 @@ static void print_space_report(const section_stats_t *s)
     if (rare)
         printf("\n");
 
-    /* Names in N bytes (their length + 1), of the LEGACY_FNSIZE they took. */
+    /* Names in N bytes (their length + 1), of the NAME_SPAN they took. */
     printf("Names in N of the %d bytes filename[] was (names need len + 1;"
            " FNSIZE is %d):\n", NAME_SPAN, FNSIZE);
     printf("  %4s %14s %12s\n", "N", "Not fitting", "Freed bytes");

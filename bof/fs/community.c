@@ -182,7 +182,7 @@ bof_fs_merge_communities(void *ctx GCC_UNUSED,
         if (!fh[i - 1].filename[0])
             continue;
         if (i == n || strcmp(fh[i - 1].filename, fh[i].filename) != 0) {
-            fh[i - 1].score = 0;
+            fh[i - 1].upvote = fh[i - 1].downvote = 0;
             fh[i - 1].filemode |= 1;
             append_fileheader(dir_to, &fh[i - 1]);
             strlcpy(p_to, fh[i - 1].filename,

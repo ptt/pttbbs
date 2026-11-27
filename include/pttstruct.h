@@ -90,7 +90,7 @@ typedef struct userec_t {
     uint8_t	wmsg;		/* 呼叫器狀態 */
     uint8_t	invisible;	/* 隱形狀態 */
     uint8_t	u_2fa;		/* 雙重驗證 2FA */
-    char	_unused4[1];
+    uint8_t	comment_theme;	/* 留言色彩主題 */
     uint32_t    exmailbox;	/* 購買信箱數 */
 
     char	_unused5[4];
@@ -308,9 +308,9 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 #define TTLEN      64             /* Length of title */
 #define FNSIZE     22             /* Size of filename, with its NUL */
 #define FNLEN      (FNSIZE - 1)   /* Length of filename, without NUL */
-/* What fileheader_t.filename was; the rest of it is reserved, and still the
- * file name to older binaries: keep it zero until they are all gone. Also
- * the length of file names in formats shared with them (IPC). */
+/* What fileheader_t.filename was; the rest of it (reserved, downvote) is
+ * still the file name to older binaries, which stop at its NUL. Also the
+ * length of file names in formats shared with them (IPC). */
 #define LEGACY_FNSIZE 28
 
 // Prefix of str_reply and str_forward usually needs longer.
@@ -319,9 +319,10 @@ _Static_assert(sizeof(boardheader_t) == 256, "boardheader_t size mismatch");
 
 typedef struct fileheader_t { /* 128 bytes */
     char    filename[FNSIZE];        /* M.1120582370.A.1EA [18+1], create time */
-    char    reserved[LEGACY_FNSIZE - FNSIZE]; /* 0; was the end of filename */
+    char    reserved[LEGACY_FNSIZE - FNSIZE - 2]; /* 0; was the end of filename */
+    int16_t downvote;                /* was the end of filename */
     time4_t modified;		     /* last modified time */
-    int16_t score;                   /* net votes (upvotes - downvotes); was pad + recommend */
+    int16_t upvote;                  /* was pad + recommend; old records: the net score */
     char    owner[IDLEN + 2];        /* uid[.] */
     char    date[6];                 /* [02/02] or space(5) */
     char    title[TTLEN + 1];
@@ -340,8 +341,12 @@ typedef struct fileheader_t { /* 128 bytes */
 } PACKSTRUCT fileheader_t;
 _Static_assert(sizeof(fileheader_t) == 128, "fileheader_t size mismatch");
 _Static_assert(sizeof(((fileheader_t *)0)->filename) +
-               sizeof(((fileheader_t *)0)->reserved) == LEGACY_FNSIZE,
+               sizeof(((fileheader_t *)0)->reserved) +
+               sizeof(((fileheader_t *)0)->downvote) == LEGACY_FNSIZE,
                "fileheader_t.modified moved");
+
+/* The net score of a post (upvotes - downvotes). */
+#define FHDR_SCORE(fh) ((int)(fh)->upvote - (int)(fh)->downvote)
 
 #define FILE_LOCAL      0x0001  /* local saved,  non-mail */
 #define FILE_READ       0x0001  /* already read, mail only */

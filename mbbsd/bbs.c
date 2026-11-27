@@ -127,7 +127,7 @@ post_record_changed(const char *direct, int ent, const fileheader_t *fhdr)
 	    syncnow();
 	    bp->SRexpire = time4_next(bp->SRexpire, now);
 	}
-	search_svc_hint_comment(direct, currbid, ent, fhdr->score);
+	search_svc_hint_comment(direct, currbid, ent, fhdr);
     }
 }
 
@@ -648,6 +648,7 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
 
     // The score, or the number of comments (board_lists_comments()).
     int by_comments = board_lists_comments(currbid);
+    int score = FHDR_SCORE(ent);
     if (title_type == SUBJECT_LOCKED)
         STRLCPY(recom, "0m--");
     else if (ent->filemode & FILE_SUSPICIOUS)
@@ -663,16 +664,16 @@ readdoent(int num, fileheader_t *ent, PSB_CTX *ctx)
         else
             STRLCPY(recom, "0m  ");
     }
-    else if(ent->score >= MAX_DISPLAY_SCORE)
+    else if(score >= MAX_DISPLAY_SCORE)
 	  strcpy(recom,"1mÃz");
-    else if(ent->score>9)
-	  sprintf(recom,"3m%2d",ent->score);
-    else if(ent->score>0)
-	  sprintf(recom,"2m%2d",ent->score);
-    else if(ent->score <= -MAX_DISPLAY_SCORE)
+    else if(score>9)
+	  sprintf(recom,"3m%2d",score);
+    else if(score>0)
+	  sprintf(recom,"2m%2d",score);
+    else if(score <= -MAX_DISPLAY_SCORE)
 	  sprintf(recom,"0mXX");
-    else if(ent->score<-10)
-	  sprintf(recom,"0mX%d",-ent->score);
+    else if(score<-10)
+	  sprintf(recom,"0mX%d",-score);
     else STRLCPY(recom, "0m  ");
 
     /* start printing */
@@ -3048,7 +3049,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
     }
     // no matter it is first time or not; with CONFIG_OLD_RECOMMEND the
     // old format is one way counter, so let's relax.
-    else if ((!IS_ENABLED(CONFIG_OLD_RECOMMEND) || fhdr->score == 0) &&
+    else if ((!IS_ENABLED(CONFIG_OLD_RECOMMEND) || FHDR_SCORE(fhdr) == 0) &&
 	     is_file_owner(fhdr, &cuser))
     {
 	// owner recommend
@@ -4354,7 +4355,7 @@ comment_cancel(int ent, fileheader_t * fhdr, const char *direct)
 
     char log_reason[MODLOG_REASON_LEN] = "";
     bof_modlog_t log;
-    bof_modlog_init(&log, "±ÀÂË­È (%d) Âk¹s", (int)fhdr->score);
+    bof_modlog_init(&log, "±ÀÂË­È (%d) Âk¹s", FHDR_SCORE(fhdr));
     bof_modlog_add_post(&log, fhdr);
     int y = show_post_line(modlog_form(currboard, "±ÀÂË­ÈÂk¹s"), NULL, ent,
                            fhdr) + 1;

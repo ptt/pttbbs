@@ -167,9 +167,10 @@ DISP_TTLEN = 46
 
 FILEHEADER_FMT = (
         ("filename", "%ds" % FNSIZE),
-        ("reserved", "%ds" % (LEGACY_FNSIZE - FNSIZE)),
+        ("reserved", "%ds" % (LEGACY_FNSIZE - FNSIZE - 2)),
+        ("downvote", "h"),
         ("modified", "I"),
-        ("rating", "h"),
+        ("upvote", "h"),
         ("owner", "%ds" % (IDLEN + 2)),
         ("date", "6s"),
         ("title", "%ds" % (TTLEN + 1)),

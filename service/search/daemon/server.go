@@ -2137,7 +2137,7 @@ func (s *Service) handleBinaryHintConn(r io.Reader, w io.Writer, conn net.Conn) 
 	case HintTypePost:
 		s.handleHintPost(conn, "", resolvedDirect, req.Bid, req.Recno, req.Aidu, req.Fh)
 	case HintTypeComment:
-		s.handleHintComment(conn, "", resolvedDirect, req.Bid, req.Recno, req.Data)
+		s.handleHintComment(conn, "", resolvedDirect, req.Bid, req.Recno, req.Data, &req.Fh)
 	case HintTypeDelete:
 		s.handleHintDelete(conn, "", resolvedDirect, req.Bid, req.Recno, req.Aidu)
 	}
@@ -2225,14 +2225,20 @@ func inspectScorePredicates(predsRaw []byte, predSize int, score int32) (hasScor
 	return hasScore, allScore, allScoreMatch
 }
 
-func (s *Service) handleHintComment(conn net.Conn, peerInfo, direct string, bid, recno int32, score int32) {
+// handleHintComment takes the votes from fh, the record after the change;
+// older mbbsd sent only the score, kept as upvotes.
+func (s *Service) handleHintComment(conn net.Conn, peerInfo, direct string, bid, recno int32, score int32, fh *[128]byte) {
 	if direct == "" || recno <= 0 {
 		return
 	}
 
+	up, down := int16(score), int16(0)
+	if fh != nil && fh[0] != 0 {
+		up, down = FileheaderVotes(fh)
+	}
 	s.aidMu.Lock()
 	for _, e := range s.aidByRec[boardRecKey{direct: direct, recno: recno}] {
-		SetFileheaderScore(&e.fhBytes, int(score))
+		SetFileheaderVotes(&e.fhBytes, up, down)
 	}
 	s.aidMu.Unlock()
 

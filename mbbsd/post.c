@@ -195,13 +195,15 @@ VotePostRecord(const char *board, const char *direct, fileheader_t *fhdr,
         return -2;
     if (err != BOF_OK)
         return -1;
-    if (res.bbs_score_delta == 0 && vote != 0)
+    if (res.bbs_upvote_delta == 0 && res.bbs_downvote_delta == 0 && vote != 0)
         return 1;
     if (ent > 0) {
         *fhdr = updated;
     } else {
-        int v = (int)fhdr->score + res.bbs_score_delta;
-        fhdr->score = v < -32768 ? -32768 : v > 32767 ? 32767 : v;
+        int up = fhdr->upvote + res.bbs_upvote_delta;
+        int down = fhdr->downvote + res.bbs_downvote_delta;
+        fhdr->upvote = up < INT16_MIN ? INT16_MIN : up > INT16_MAX ? INT16_MAX : up;
+        fhdr->downvote = down < INT16_MIN ? INT16_MIN : down > INT16_MAX ? INT16_MAX : down;
     }
     if (direct && ent > 0)
         post_record_changed(direct, ent, fhdr);
