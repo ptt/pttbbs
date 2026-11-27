@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include "cmbbs.h"
 #include "common.h"
@@ -92,12 +93,29 @@ typedef struct {
 /* Seconds to wait for search.svc before falling back to local scans. */
 #define SEARCH_SVC_IO_TIMEOUT 2
 
+/* search.svc reads lists under its BBSHOME: a process working elsewhere
+ * (tests, tools on a copy) must not get its answers or send it hints. */
+static int
+in_bbshome(void)
+{
+    static struct stat home;
+    static int known;
+    struct stat cwd;
+
+    if (!known)
+        known = stat(BBSHOME, &home) == 0 ? 1 : -1;
+    return known > 0 && stat(".", &cwd) == 0 &&
+        cwd.st_dev == home.st_dev && cwd.st_ino == home.st_ino;
+}
+
 /*
  * Connect to search.svc with timeout; a hung service must not freeze mbbsd.
  */
 int
 search_svc_connect(void)
 {
+    if (!in_bbshome())
+        return -1;
     return toconnect_timed(GET_SVC_SOCKET(search), SEARCH_SVC_IO_TIMEOUT, 0, SEARCH_SVC_IO_TIMEOUT);
 }
 
