@@ -157,7 +157,15 @@ func buildRecord(engine storage.Storage, opts ImportBoardOptions, users UserReso
 	}
 	postCtime := postCtimeOf(fhdr, job.articlePath)
 
-	parsed, err := ParseArticleText(rawBytes, fhdr.Owner, postCtime, opts.Board, fhdr.Filename, opts.IsBig5, opts.NoMerge)
+	parsed, err := parseArticle(rawBytes, articleInfo{
+		defaultAuthor: fhdr.Owner,
+		postCtime:     postCtime,
+		commentBase:   commentBase(fhdr.Date, postCtime),
+		community:     opts.Board,
+		postFile:      fhdr.Filename,
+		isBig5:        opts.IsBig5,
+		noMerge:       opts.NoMerge,
+	})
 	if err != nil {
 		return nil, false, err
 	}

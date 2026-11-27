@@ -103,8 +103,8 @@ func TestCopySkipsCopiedCplog(t *testing.T) {
 	}
 }
 
-// RollDate puts a cplog line dated before its post a year later, which may
-// be in the future; such times are brought back.
+// A cplog line dated a little before its post is not a year later, and
+// none is in the future.
 func TestCplogTimeNotInFuture(t *testing.T) {
 	now := time.Now().Unix()
 	ctime := minuteOf(now) - 30*86400
@@ -123,16 +123,17 @@ func TestCplogTimeNotInFuture(t *testing.T) {
 		t.Errorf("After: %v, want %v", time.Unix(got, 0), time.Unix(ctime+5*86400, 0))
 	}
 
-	future := time.Unix(now, 0).AddDate(0, 0, 10).Unix()
-	back := time.Unix(future, 0).AddDate(-1, 0, 0).Unix()
-	if got := clampCrosspostTime(future, now-400*86400, now); got != back {
-		t.Errorf("clamp to a year earlier: %d, want %d", got, back)
+	// A cplog line dated later than now (and a year earlier, before the
+	// post) is at the post.
+	soon := minuteOf(now) + 3*86400
+	post := soon - 300*86400
+	text = originalArticle(cplogLine("userA", "Soon", soon))
+	parsed, err = ParseArticleText([]byte(text), "userA", post, "Src", "M.1.A.001", false)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := clampCrosspostTime(future, now-100*86400, now); got != now-100*86400 {
-		t.Errorf("clamp to the post time: %d", got)
-	}
-	if got := clampCrosspostTime(now-5, now-100, now); got != now-5 {
-		t.Errorf("past time changed: %d", got)
+	if len(parsed.Crossposts) != 1 || parsed.Crossposts[0].CTime != post {
+		t.Errorf("Soon: %+v, want the post time", parsed.Crossposts)
 	}
 }
 

@@ -284,19 +284,6 @@ func cplogBeforeCopy(dateStr string, ctime int64) bool {
 	return best <= ctime+cplogSlack
 }
 
-// clampCrosspostTime keeps a crosspost time that RollDate put in the
-// future in the past: a year earlier if that is not before the post, else
-// the time of the post.
-func clampCrosspostTime(ts, postCtime, now int64) int64 {
-	if ts <= now {
-		return ts
-	}
-	if back := time.Unix(ts, 0).AddDate(-1, 0, 0).Unix(); back >= postCtime {
-		return back
-	}
-	return postCtime
-}
-
 func absInt64(v int64) int64 {
 	if v < 0 {
 		return -v
@@ -304,24 +291,31 @@ func absInt64(v int64) int64 {
 	return v
 }
 
-// RollDate performs chronological date inference for comment timestamps
-func RollDate(dateStr string, currYear, prevMonth, prevDay int, lastTs int64) (int64, int, int, int) {
+// commentBackSlack is how much earlier than the comment before it a comment
+// may be dated and still be in the same year: out of order (edits, clocks)
+// rather than a year later.
+const commentBackSlack = 28 * 86400
+
+// RollDate returns the time of a comment (or cplog line) dated dateStr
+// ("MM/DD [HH:MM[:SS]]", no year) that follows one at lastTs: the earliest
+// such date, in the year of lastTs or the one before or after, that is not
+// more than commentBackSlack before lastTs; if that is after now, the latest
+// one that is not. Callers keep the order (the result may be before lastTs).
+// ok is false if dateStr has no date.
+func RollDate(dateStr string, lastTs, now int64) (ts int64, ok bool) {
 	parts := strings.Fields(dateStr)
 	if len(parts) == 0 {
-		return lastTs, currYear, prevMonth, prevDay
+		return lastTs, false
 	}
-
 	dateParts := strings.Split(parts[0], "/")
 	if len(dateParts) < 2 {
-		return lastTs, currYear, prevMonth, prevDay
+		return lastTs, false
 	}
-
 	month, errM := strconv.Atoi(dateParts[0])
 	day, errD := strconv.Atoi(dateParts[1])
 	if errM != nil || errD != nil {
-		return lastTs, currYear, prevMonth, prevDay
+		return lastTs, false
 	}
-
 	hour, min, sec := 0, 0, 0
 	if len(parts) > 1 {
 		timeParts := strings.Split(parts[1], ":")
@@ -334,18 +328,48 @@ func RollDate(dateStr string, currYear, prevMonth, prevDay int, lastTs int64) (i
 		}
 	}
 
-	// Chronological year rollover
-	if month < prevMonth || (month == prevMonth && day < prevDay) {
-		currYear++
+	year := time.Unix(lastTs, 0).Year()
+	var cands [3]int64
+	for i := range cands {
+		cands[i] = time.Date(year-1+i, time.Month(month), day, hour, min, sec, 0, time.Local).Unix()
 	}
-
-	t := time.Date(currYear, time.Month(month), day, hour, min, sec, 0, time.Local)
-	ts := t.Unix()
-	if ts < lastTs {
-		ts = lastTs + 1
+	ts = cands[2]
+	for _, c := range cands {
+		if c >= lastTs-commentBackSlack {
+			ts = c
+			break
+		}
 	}
+	if ts > now {
+		ts = now
+		for i := len(cands) - 1; i >= 0; i-- {
+			if cands[i] <= now {
+				ts = cands[i]
+				break
+			}
+		}
+	}
+	return ts, true
+}
 
-	return ts, currYear, month, day
+// commentBase returns the time to date the comments of a post from: the
+// day in its .DIR record (date, "MM/DD") if that is more than a day before
+// postCtime, as old mbbsd gave edited posts new file names; else postCtime.
+func commentBase(date string, postCtime int64) int64 {
+	var month, day int
+	if _, err := fmt.Sscanf(strings.TrimSpace(date), "%d/%d", &month, &day); err != nil ||
+		month < 1 || month > 12 || day < 1 || day > 31 {
+		return postCtime
+	}
+	pt := time.Unix(postCtime, 0)
+	d := time.Date(pt.Year(), time.Month(month), day, 0, 0, 0, 0, time.Local)
+	if d.After(pt) {
+		d = time.Date(pt.Year()-1, time.Month(month), day, 0, 0, 0, 0, time.Local)
+	}
+	if postCtime-d.Unix() > 86400 {
+		return d.Unix()
+	}
+	return postCtime
 }
 
 // MergeConsecutiveComments merges consecutive comments from the same author
@@ -405,6 +429,30 @@ func MergeConsecutiveComments(comments []*ParsedComment) []*ParsedComment {
 
 // ParseArticleText parses raw article bytes into body, comments, and crossposts
 func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, community, postFile string, isBig5 bool, noMerge ...bool) (*ParsedArticle, error) {
+	return parseArticle(rawBytes, articleInfo{
+		defaultAuthor: defaultAuthor,
+		postCtime:     postCtime,
+		commentBase:   postCtime,
+		community:     community,
+		postFile:      postFile,
+		isBig5:        isBig5,
+		noMerge:       len(noMerge) > 0 && noMerge[0],
+	})
+}
+
+// articleInfo tells parseArticle about the article; comments are dated
+// from commentBase (see commentBase) rather than postCtime.
+type articleInfo struct {
+	defaultAuthor       string
+	postCtime           int64
+	commentBase         int64
+	community, postFile string
+	isBig5, noMerge     bool
+}
+
+func parseArticle(rawBytes []byte, info articleInfo) (*ParsedArticle, error) {
+	defaultAuthor, postCtime, community, postFile, isBig5 := info.defaultAuthor, info.postCtime, info.community, info.postFile, info.isBig5
+	now := time.Now().Unix()
 	var fullText string
 	if isBig5 && !utf8.Valid(rawBytes) {
 		fullText = big5uao.DecodeSGR66(rawBytes)
@@ -516,11 +564,7 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 	}
 
 	var commentRawLines []string
-	baseDt := time.Unix(postCtime, 0)
-	currYear := baseDt.Year()
-	prevMonth := int(baseDt.Month())
-	prevDay := baseDt.Day()
-	lastTs := postCtime
+	lastTs := info.commentBase
 
 	for i, l := range candidateLines {
 		clean := strings.TrimSpace(model.StripANSI(l))
@@ -544,8 +588,8 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 				continue
 			}
 			if hasDate {
-				cpTime, _, _, _ = RollDate(tm[2], currYear, prevMonth, prevDay, postCtime)
-				cpTime = clampCrosspostTime(cpTime, postCtime, time.Now().Unix())
+				cpTime, _ = RollDate(tm[2], postCtime, now)
+				cpTime = max(cpTime, postCtime)
 			}
 			crossposts = append(crossposts, &ParsedCrosspost{
 				SrcBoard:    community,
@@ -621,8 +665,6 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 			comments = append(comments, floor)
 			if ts > lastTs {
 				lastTs = ts
-				t := time.Unix(ts, 0)
-				currYear, prevMonth, prevDay = t.Year(), int(t.Month()), t.Day()
 			}
 			continue
 		}
@@ -696,12 +738,13 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 
 			commentTs := lastTs
 			if dateStr != "" {
-				commentTs, currYear, prevMonth, prevDay = RollDate(
-					dateStr, currYear, prevMonth, prevDay, lastTs,
-				)
+				commentTs, _ = RollDate(dateStr, lastTs, now)
 			}
 			if commentTs < lastTs {
-				commentTs = lastTs + 1
+				commentTs = lastTs
+				if lastTs < now {
+					commentTs++
+				}
 			}
 			lastTs = commentTs
 
@@ -735,7 +778,7 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 	}
 
 	var mergedComments []*ParsedComment
-	if len(noMerge) > 0 && noMerge[0] {
+	if info.noMerge {
 		mergedComments = comments
 	} else {
 		mergedComments = MergeConsecutiveComments(comments)
