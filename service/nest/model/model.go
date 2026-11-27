@@ -302,7 +302,34 @@ func (e *ConflictError) Error() string {
 // Pebble Key Encoders
 // -----------------------------------------------------------------------------
 
-// Post Key: 'p' (1 byte) + 8-byte uint64 PostID = 9 bytes
+// A post is three records in posts.pebble, split by how they are read:
+// 'm'<id> its metadata (EncodeRFC822PostMeta), 'p'<id> its body, and
+// 'n'<id> its counters (PostCounts, absent while all zero), so that
+// RebuildSQLiteFromPebble reads neither bodies nor comments and votes.
+
+// EncodePostMetaKey returns 'm' + 8-byte post ID.
+func EncodePostMetaKey(postID uint64) []byte {
+	k := EncodePostKey(postID)
+	k[0] = 'm'
+	return k
+}
+
+// EncodePostCountsKey returns 'n' + 8-byte post ID.
+func EncodePostCountsKey(postID uint64) []byte {
+	k := EncodePostKey(postID)
+	k[0] = 'n'
+	return k
+}
+
+// DecodePostIDKey returns the post ID of an 'm', 'n' or 'p' key.
+func DecodePostIDKey(k []byte) (uint64, error) {
+	if len(k) != 9 || (k[0] != 'm' && k[0] != 'n' && k[0] != 'p') {
+		return 0, fmt.Errorf("invalid post key: %x", k)
+	}
+	return binary.BigEndian.Uint64(k[1:9]), nil
+}
+
+// Post Key (the body): 'p' (1 byte) + 8-byte uint64 PostID = 9 bytes
 func EncodePostKey(postID uint64) []byte {
 	k := make([]byte, 9)
 	k[0] = 'p'
@@ -582,7 +609,15 @@ func HeaderValue(s string) string {
 	return strings.Join(strings.FieldsFunc(s, func(r rune) bool { return r == '\r' || r == '\n' }), " ")
 }
 
+// EncodeRFC822Post packages a post as its metadata headers, a blank line
+// and its body.
 func EncodeRFC822Post(p *Post) []byte {
+	return append(append(EncodeRFC822PostMeta(p), '\n'), p.Content...)
+}
+
+// EncodeRFC822PostMeta returns the RFC 822 headers of post p (Encoding
+// first), without the body: the 'm' record in posts.pebble.
+func EncodeRFC822PostMeta(p *Post) []byte {
 	var b strings.Builder
 	b.WriteString("Encoding: utf-8\n")
 	b.WriteString(fmt.Sprintf("CommunityID: %d\n", p.CommunityID))
@@ -608,9 +643,47 @@ func EncodeRFC822Post(p *Post) []byte {
 		b.WriteString(fmt.Sprintf("BBSEditMark: %s\n", HeaderValue(p.BBSEditMark)))
 	}
 	p.Deletion.writeRFC822(&b)
-	b.WriteString("\n")
-	b.WriteString(p.Content)
 	return []byte(b.String())
+}
+
+// DecodeRFC822PostMeta parses the headers of an 'm' record.
+func DecodeRFC822PostMeta(val []byte) map[string]string {
+	meta := make(map[string]string)
+	for _, l := range strings.Split(string(val), "\n") {
+		if k, v, ok := strings.Cut(l, ": "); ok {
+			meta[k] = v
+		}
+	}
+	return meta
+}
+
+// PostCounts are the counters of a post as meta.sqlite3 has them, kept in
+// the 'n' record so that a rebuild need not count comments and votes.
+// Modified is the modified time of the post when a comment edit moved it
+// past the one in the 'm' record.
+type PostCounts struct {
+	Upvotes, Downvotes, NumComments int
+	Modified                        int64
+}
+
+func EncodePostCounts(c PostCounts) []byte {
+	b := make([]byte, 0, 4*binary.MaxVarintLen64)
+	b = binary.AppendVarint(b, int64(c.Upvotes))
+	b = binary.AppendVarint(b, int64(c.Downvotes))
+	b = binary.AppendVarint(b, int64(c.NumComments))
+	return binary.AppendVarint(b, c.Modified)
+}
+
+func DecodePostCounts(val []byte) (PostCounts, error) {
+	var v [4]int64
+	for i := range v {
+		x, n := binary.Varint(val)
+		if n <= 0 {
+			return PostCounts{}, fmt.Errorf("invalid post counts: %x", val)
+		}
+		v[i], val = x, val[n:]
+	}
+	return PostCounts{Upvotes: int(v[0]), Downvotes: int(v[1]), NumComments: int(v[2]), Modified: v[3]}, nil
 }
 
 func DecodeRFC822Post(val []byte) (meta map[string]string, body string) {

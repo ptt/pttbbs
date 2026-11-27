@@ -94,6 +94,8 @@ type Storage interface {
 	ListCommentHistory(postID uint64, seq uint32) ([]*model.CommentRevision, error)
 	ImportPostBatch(batch []*ImportedPostData, renderTarget string, legacyFormat ...bool) error
 	RebuildSQLiteFromPebble() (int, int, error)
+	// RecountPosts corrects the post counters from the comments and votes.
+	RecountPosts() (int, error)
 	Backup(dest string) ([]string, error)
 	Close() error
 }

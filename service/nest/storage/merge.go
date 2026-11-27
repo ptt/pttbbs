@@ -279,7 +279,7 @@ func (e *Engine) moveLocal(refs []postRef, fromID, toID int64) (int, error) {
 		if err != nil {
 			return moved, err
 		}
-		if err := e.postsDB.Set(model.EncodePostKey(p.ID), model.EncodeRFC822Post(p), pebble.NoSync); err != nil {
+		if err := putPostMeta(e.postsDB, p); err != nil {
 			return moved, err
 		}
 		if err := e.copyPostHistory(e, p.ID, p.ID, toID); err != nil {
@@ -347,7 +347,9 @@ func (e *Engine) moveToEngine(id uint64, toID int64, dst *Engine) error {
 	// ImportPostBatch counts every comment; keep the count as it was.
 	if moved.NumComments != numComments {
 		dst.metaWriteMu.Lock()
-		_, _ = dst.metaDB.Exec(`UPDATE posts SET num_comments = ? WHERE id = ?`, numComments, moved.ID)
+		if _, err := dst.metaDB.Exec(`UPDATE posts SET num_comments = ? WHERE id = ?`, numComments, moved.ID); err == nil {
+			_ = dst.syncCounts(moved.ID)
+		}
 		dst.metaWriteMu.Unlock()
 	}
 	if err := dst.copyPostHistory(e, id, moved.ID, toID); err != nil {

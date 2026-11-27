@@ -440,6 +440,7 @@ func (c *idCursor) close() error {
 type postAggregate struct {
 	comments, upvotes, downvotes, crossposts int
 	commentModified                          int64
+	stored                                   model.PostCounts // the 'n' record
 }
 
 type metaRow struct {
@@ -459,7 +460,7 @@ type metaRow struct {
 }
 
 func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, votesDB *pebble.DB) {
-	posts, err := postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'p'}, UpperBound: []byte{'q'}})
+	posts, err := postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
 	if err != nil {
 		r.errorf("posts.pebble: %v", err)
 		return
@@ -468,12 +469,13 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 	comments, err1 := newIDCursor(commentsDB, 'c')
 	votes, err2 := newIDCursor(votesDB, 'v')
 	crossposts, err3 := newIDCursor(postsDB, 'x')
-	if err := errors.Join(err1, err2, err3); err != nil {
+	counts, err4 := newIDCursor(postsDB, 'n')
+	if err := errors.Join(err1, err2, err3, err4); err != nil {
 		r.errorf("open iterators: %v", err)
 		return
 	}
 	defer func() {
-		for name, c := range map[string]*idCursor{"comments.pebble": comments, "votes.pebble": votes, "crossposts": crossposts} {
+		for name, c := range map[string]*idCursor{"comments.pebble": comments, "votes.pebble": votes, "crossposts": crossposts, "post counters": counts} {
 			if err := c.close(); err != nil {
 				r.errorf("read %s: %v", name, err)
 			}
@@ -518,6 +520,16 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 			}
 			crossposts.it.Next()
 		}
+		for nid, ok := counts.id(); ok && nid <= id; nid, ok = counts.id() {
+			if nid == id {
+				if c, err := model.DecodePostCounts(counts.it.Value()); err == nil {
+					a.stored = c
+				} else {
+					r.warn("malformed counter record", nid, err.Error())
+				}
+			}
+			counts.it.Next()
+		}
 		return a
 	}
 
@@ -549,7 +561,7 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 		var pid uint64
 		havePost := false
 		if posts.Valid() {
-			if id, err := model.DecodePostKey(posts.Key()); err == nil {
+			if id, err := model.DecodePostIDKey(posts.Key()); err == nil {
 				pid, havePost = id, true
 			} else {
 				posts.Next() // Not a post key (e.g. history-style); skip.
@@ -585,6 +597,13 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 	}
 	// Drain the remaining records so their checksums are verified as well.
 	aggregate(^uint64(0))
+	// The bodies are not compared, only read (which checks their blocks).
+	metas, _ := scanAll(postsDB, &pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
+	if bodies, err := scanAll(postsDB, &pebble.IterOptions{LowerBound: []byte{'p'}, UpperBound: []byte{'q'}}); err != nil {
+		r.errorf("read post bodies: %v", err)
+	} else if bodies != metas {
+		r.warn("post bodies and metadata records differ in number", 0, fmt.Sprintf("bodies=%d metadata=%d", bodies, metas))
+	}
 
 	var metaCrossposts, pebbleCrossposts int
 	_ = meta.QueryRow("SELECT COUNT(*) FROM crossposts").Scan(&metaCrossposts)
@@ -631,16 +650,14 @@ func checkCommunityRefs(r *VerifyReport, meta *sql.DB, communities map[int64]boo
 }
 
 func comparePost(r *VerifyReport, row *metaRow, val []byte, a postAggregate) {
-	h, _ := model.DecodeRFC822Post(val)
+	h := model.DecodeRFC822PostMeta(val)
 	del := model.DeletionFromRFC822(h)
 	num := func(k string) int64 { v, _ := strconv.ParseInt(h[k], 10, 64); return v }
 	createdAt, modified := num("CreatedAt"), num("Modified")
 	if modified == 0 {
 		modified = createdAt
 	}
-	if modified < a.commentModified {
-		modified = a.commentModified
-	}
+	modified = max(modified, a.commentModified, a.stored.Modified)
 
 	diff := func(kind string, sqlite, pebble any) {
 		r.warn(kind, row.id, fmt.Sprintf("meta.sqlite3=%v pebble=%v", sqlite, pebble))
@@ -670,6 +687,10 @@ func comparePost(r *VerifyReport, row *metaRow, val []byte, a postAggregate) {
 			kind = "counters of a deleted post imported from .DIR"
 		}
 		diff(kind, fmt.Sprintf("%d/%d/%d", row.upvotes, row.downvotes, row.numComments), fmt.Sprintf("%d/%d/%d", a.upvotes, a.downvotes, a.comments))
+	}
+	if s := a.stored; s.Upvotes != row.upvotes || s.Downvotes != row.downvotes || s.NumComments != row.numComments {
+		// What a rebuild takes; flushed with SQLite, so equal in a backup.
+		diff("counter record", fmt.Sprintf("%d/%d/%d", row.upvotes, row.downvotes, row.numComments), fmt.Sprintf("%d/%d/%d", s.Upvotes, s.Downvotes, s.NumComments))
 	}
 	if row.crossposts != a.crossposts {
 		diff("num_crossposts", row.crossposts, a.crossposts)

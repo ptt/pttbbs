@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cockroachdb/pebble"
+
 	"pttbbs/nest/model"
 )
 
@@ -213,5 +215,67 @@ func TestRebuildReproducesLiveSQLite(t *testing.T) {
 	sort.Strings(diffs)
 	for _, d := range diffs {
 		t.Error(d)
+	}
+}
+
+// TestRebuildReadsOnlyPostRecords checks that a rebuild takes the counters
+// from the counter records, without the comments and votes, and that
+// RecountPosts corrects them from the comments and votes.
+func TestRebuildReadsOnlyPostRecords(t *testing.T) {
+	e, err := OpenEngine(testEngineConfig(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	p, err := e.CreatePost(&model.Post{Community: "board", PostFile: "M.1.A.001", Title: "t", CreatorName: "author", CreatedAt: 1727800000, Content: "body"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, who := range []string{"a", "b", "c"} {
+		if _, err := e.AddComment(&model.Comment{PostID: p.ID, CreatorName: who, Content: "c", CreatedAt: 1727800001 + int64(i)}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := e.VotePost(p.ID, who, 0, model.VoteUp, 1727800010, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.FlushDirtyDeltas()
+	counters := func() string {
+		t.Helper()
+		var up, down, comments int
+		if err := e.metaDB.QueryRow("SELECT upvotes, downvotes, num_comments FROM posts WHERE id = ?", p.ID).Scan(&up, &down, &comments); err != nil {
+			t.Fatal(err)
+		}
+		return fmt.Sprintf("%d/%d/%d", up, down, comments)
+	}
+	if got := counters(); got != "3/0/3" {
+		t.Fatalf("live counters = %s, want 3/0/3", got)
+	}
+
+	// Without the comment and vote records a rebuild still has the counters.
+	for _, db := range []*pebble.DB{e.commentsDB, e.votesDB} {
+		if err := db.DeleteRange([]byte{0}, []byte{0xff}, pebble.Sync); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if posts, comments, err := e.RebuildSQLiteFromPebble(); err != nil || posts != 1 || comments != 3 {
+		t.Fatalf("rebuild = %d posts, %d comments, %v; want 1, 3", posts, comments, err)
+	}
+	if got := counters(); got != "3/0/3" {
+		t.Errorf("rebuilt counters = %s, want 3/0/3", got)
+	}
+
+	// RecountPosts follows the records: now there are none.
+	if fixed, err := e.RecountPosts(); err != nil || fixed != 1 {
+		t.Fatalf("RecountPosts = %d, %v; want 1 post corrected", fixed, err)
+	}
+	if got := counters(); got != "0/0/0" {
+		t.Errorf("recounted counters = %s, want 0/0/0", got)
+	}
+	if _, _, err := e.RebuildSQLiteFromPebble(); err != nil {
+		t.Fatal(err)
+	}
+	if got := counters(); got != "0/0/0" {
+		t.Errorf("counters rebuilt after the recount = %s, want 0/0/0", got)
 	}
 }

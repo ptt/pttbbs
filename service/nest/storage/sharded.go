@@ -618,6 +618,18 @@ func (s *ShardedEngine) RebuildSQLiteFromPebble() (int, int, error) {
 	return totalPosts, totalComments, nil
 }
 
+func (s *ShardedEngine) RecountPosts() (int, error) {
+	total := 0
+	for _, e := range s.engines {
+		n, err := e.RecountPosts()
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+	return total, nil
+}
+
 func (s *ShardedEngine) Close() error {
 	var firstErr error
 	for _, e := range s.engines {

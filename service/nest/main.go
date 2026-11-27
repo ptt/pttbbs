@@ -39,6 +39,7 @@ var (
 	flagMaxOpenFiles   = flag.Int("max-files", 0, "Max open files per Pebble DB (0 for auto)")
 	flagWorkers        = flag.Int("workers", 0, "Default worker threads for board import (0 to use config or default 8)")
 	flagRebuild        = flag.Bool("rebuild", false, "Disaster recovery: rebuild SQLite from Pebble and exit")
+	flagRecount        = flag.Bool("recount", false, "Count the comments and votes of every post again, correct the counters and exit (slow; after -rebuild if both)")
 	flagVerify         = flag.Bool("verify", false, "Verify backup dirs given as arguments (read-only) and exit; non-zero exit on errors")
 )
 
@@ -179,7 +180,7 @@ func main() {
 	sockPath := svcConf.UnixSocket
 	logPath := svcConf.LogPath
 
-	if *flagDebugMode || *flagRebuild {
+	if *flagDebugMode || *flagRebuild || *flagRecount {
 		*flagDaemonize = false
 	}
 
@@ -235,6 +236,16 @@ func main() {
 			log.Fatalf("[nest.svc] Rebuild failed: %v", err)
 		}
 		log.Printf("[nest.svc] Successfully rebuilt SQLite metadata! Topics: %d, Posts: %d", topics, posts)
+	}
+	if *flagRecount {
+		log.Printf("[nest.svc] Recounting the comments and votes of every post...")
+		fixed, err := st.RecountPosts()
+		if err != nil {
+			log.Fatalf("[nest.svc] Recount failed: %v", err)
+		}
+		log.Printf("[nest.svc] Recount corrected %d posts", fixed)
+	}
+	if *flagRebuild || *flagRecount {
 		return
 	}
 
