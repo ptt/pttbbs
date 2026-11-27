@@ -193,6 +193,10 @@ var (
 	modernMoreRegex = regexp.MustCompile(`^\| (.*)$`)
 )
 
+// spamCommentsRemovedNote is the line mbbsd leaves among the comments where
+// it removed spam ones; imports drop it.
+const spamCommentsRemovedNote = "[部份違規或廣告推文已被系統自動刪除]"
+
 // isCommentLine tells whether a line begins the comments: a push line of
 // mbbsd, or a floor written by nest.svc.
 func isCommentLine(clean string) bool {
@@ -623,6 +627,11 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 				CommentType: tag,
 				LegacyType:  legacyType,
 			})
+			continue
+		}
+
+		// mbbsd's note where it dropped spam comments; not the OP's words.
+		if cleanTrimmed == spamCommentsRemovedNote {
 			continue
 		}
 

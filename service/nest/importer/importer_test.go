@@ -30,6 +30,7 @@ func TestImporterP2AndP1Comments(t *testing.T) {
 → lantw44:看起來好像真的可以耶！                               推 10/01 21:40
 這是原 po 的白字補充
 這又是原 po 的第二行補充
+[部份違規或廣告推文已被系統自動刪除]
 推 user1: 這是 PTT1 標準推文                                   10/01 21:45
 推 jim: 推                                                     10/01 21:46
 → user2: 這是 PTT1 箭頭推文                                   10/01 21:47
@@ -75,6 +76,10 @@ func TestImporterP2AndP1Comments(t *testing.T) {
 	c1 := parsed.Comments[1]
 	if c1.CreatorName != "op" || c1.CommentType != "white" {
 		t.Errorf("c1 author/type mismatch: %s / %s", c1.CreatorName, c1.CommentType)
+	}
+	// mbbsd's note on removed spam comments is dropped, not the OP's words.
+	if want := "這是原 po 的白字補充\n這又是原 po 的第二行補充"; c1.Content != want {
+		t.Errorf("c1 content = %q, want %q", c1.Content, want)
 	}
 
 	// Comment 2: PTT1
