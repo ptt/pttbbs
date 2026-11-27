@@ -21,6 +21,10 @@ import (
 	"pttbbs/gem/storage"
 )
 
+// oldDirTitle (Big5 "[舊目錄] ") heads the title of a directory that IMPORT
+// attach adds, e.g. one of two directories of a board differing in case.
+var oldDirTitle = []byte{'[', 0xc2, 0xc2, 0xa5, 0xd8, 0xbf, 0xfd, ']', ' '}
+
 // Config of a Server.
 type Config struct {
 	BBSHome    string
@@ -657,9 +661,10 @@ func (s *Server) dispatch(q *request) error {
 		return nil
 
 	case "IMPORT":
-		// IMPORT <root> [replace] [<dir>] -> OK <stats>
-		// From its files (legacy.RootDir), or dir (absolute).
-		a, err := q.need(1, "IMPORT <root> [replace] [<dir>]")
+		// IMPORT <root> [replace|attach] [<dir>] -> OK <stats>
+		// From its files (legacy.RootDir), or dir (absolute). attach adds
+		// dir to the area as a directory titled oldDirTitle.
+		a, err := q.need(1, "IMPORT <root> [replace|attach] [<dir>]")
 		if err != nil {
 			return err
 		}
@@ -669,15 +674,26 @@ func (s *Server) dispatch(q *request) error {
 		}
 		opts := legacy.ImportOptions{BBSHome: s.cfg.BBSHome, Root: root, Workers: s.cfg.Workers, Stop: s.quit,
 			Logf: func(f string, args ...any) { log.Printf("[gem.svc] import %s: "+f, append([]any{a[0]}, args...)...) }}
+		attach := false
 		for _, x := range a[1:] {
 			switch {
 			case x == "replace":
 				opts.Replace = true
+			case x == "attach":
+				attach = true
 			case filepath.IsAbs(x):
 				opts.Dir = x
 			default:
 				return badRequest("IMPORT: %q", x)
 			}
+		}
+		if attach {
+			if opts.Dir == "" || opts.Replace {
+				return badRequest("IMPORT attach needs a dir and no replace")
+			}
+			var h storage.Header
+			h.SetTitle(append(append([]byte{}, oldDirTitle...), filepath.Base(opts.Dir)...))
+			opts.Attach = &h
 		}
 		key := strings.ToLower(opts.Root)
 		s.importMu.Lock()

@@ -227,3 +227,47 @@ func TestRootDir(t *testing.T) {
 		}
 	}
 }
+
+// A directory attached to an area becomes its last directory, with the
+// header given; an area is needed.
+func TestImportAttach(t *testing.T) {
+	home := t.TempDir()
+	root := RootDir(home, "board:Test")
+	writeDir(t, root, hdr("M.1.A", "first"))
+	write(t, filepath.Join(root, "M.1.A"), "hello\n")
+	old := filepath.Join(home, "old")
+	writeDir(t, old, hdr("M.2.A", "older"))
+	write(t, filepath.Join(old, "M.2.A"), "from before\n")
+
+	st, err := storage.Open(storage.Options{Dir: filepath.Join(t.TempDir(), "gem.pebble"), NoSync: true, NoReaper: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	var h storage.Header
+	h.SetTitle([]byte("[old] old"))
+	if _, err := ImportRoot(st, ImportOptions{BBSHome: home, Root: "board:Test", Dir: old, Attach: &h}); err == nil {
+		t.Fatal("attached to an area that is not there")
+	}
+	if _, err := ImportRoot(st, ImportOptions{BBSHome: home, Root: "board:Test"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ImportRoot(st, ImportOptions{BBSHome: home, Root: "board:Test", Dir: old, Attach: &h}); err != nil {
+		t.Fatal(err)
+	}
+	l, err := st.List("board:Test", nil)
+	if err != nil || len(l.Entries) != 2 {
+		t.Fatalf("list: %v, %v", l, err)
+	}
+	d := l.Entries[1]
+	if d.Kind != storage.KindDir || string(d.Header.Title()) != "[old] old" || d.Name() == "" {
+		t.Fatalf("attached = %+v", d)
+	}
+	in, err := st.List("board:Test", []string{d.Name()})
+	if err != nil || len(in.Entries) != 1 || string(in.Entries[0].Header.Title()) != "older" {
+		t.Fatalf("inside: %v, %v", in, err)
+	}
+	if rep, err := st.Verify(false); err != nil || !rep.OK() {
+		t.Fatalf("verify: %+v, %v", rep, err)
+	}
+}

@@ -88,6 +88,9 @@ type ImportOptions struct {
 	Root    string // see storage.SplitRoot
 	// Replace an area the root already has (else ErrRootExists).
 	Replace bool
+	// Attach, if set, adds Dir as a directory with this header at the end
+	// of the area of Root, which must exist, instead of making the area.
+	Attach *storage.Header
 	// Workers read the files of a directory in parallel (default 8).
 	Workers int
 	// Logf reports problems (files that cannot be read); may be nil.
@@ -149,7 +152,10 @@ func ImportRoot(st *storage.Store, opts ImportOptions) (ImportStats, error) {
 	if opts.Workers <= 0 {
 		opts.Workers = 8
 	}
-	if !opts.Replace && st.HasRoot(opts.Root) {
+	if opts.Attach != nil && !st.HasRoot(opts.Root) {
+		return ImportStats{}, &storage.Error{Code: storage.ErrNoRoot.Code, Detail: opts.Root}
+	}
+	if opts.Attach == nil && !opts.Replace && st.HasRoot(opts.Root) {
 		return ImportStats{}, &storage.Error{Code: storage.ErrRootExists.Code, Detail: opts.Root}
 	}
 	if fi, err := os.Stat(opts.Dir); err != nil {
@@ -160,6 +166,10 @@ func ImportRoot(st *storage.Store, opts ImportOptions) (ImportStats, error) {
 	im := &importer{st: st, opts: opts}
 	id, err := im.importDir(opts.Dir, 0)
 	if err != nil {
+		return im.stats, err
+	}
+	if opts.Attach != nil {
+		_, _, err = st.AttachDir(opts.Root, nil, -1, *opts.Attach, id)
 		return im.stats, err
 	}
 	err = st.Update(func(t *storage.Tx) error {

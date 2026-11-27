@@ -182,6 +182,34 @@ func (s *Store) AddFile(board string, path []string, pos int, h Header, data []b
 	return e, at, err
 }
 
+// AttachDir adds listing id (made by an import, not referred to yet) as a
+// directory with header h at pos of directory path. Quotas do not apply,
+// as to an import.
+func (s *Store) AttachDir(board string, path []string, pos int, h Header, id ListingID) (Entry, int, error) {
+	var e Entry
+	at := -1
+	if !ValidRoot(board) {
+		return e, at, errorf(ErrInvalidName, "root %q", board)
+	}
+	err := s.Update(func(t *Tx) error {
+		l, err := t.listing(id)
+		if err != nil {
+			return err
+		}
+		de := Entry{Header: h, Kind: KindDir, Child: id, Sub: l.Totals, Mtime: time.Now().Unix()}
+		t.refs[id]++
+		_, _, err = t.Modify(board, path, func(dl *Listing) error {
+			var err error
+			if at, err = insert(dl, pos, de, Limits{}); err == nil {
+				e = dl.Entries[at]
+			}
+			return err
+		})
+		return err
+	})
+	return e, at, err
+}
+
 // AddDir adds an empty directory with header h at pos of directory path.
 func (s *Store) AddDir(board string, path []string, pos int, h Header) (Entry, int, error) {
 	var e Entry

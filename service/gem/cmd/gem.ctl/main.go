@@ -577,6 +577,113 @@ func main() {
 }
 
 // isDir tells whether path is a directory, following symbolic links.
+// importJob is one area for import-all: root, from dir (absolute; empty:
+// the directory of root), with others added to it as directories.
+type importJob struct {
+	root   string
+	dir    string
+	others []string
+}
+
+// groupBoards groups the board directories of man/boards by name, which is
+// case-insensitive (getbnum(3)): of two differing only in case (left over
+// from a rename), the one named as in .BRD is the area, else the latest
+// modified; the others that list anything become directories of it
+// ("[...] name").
+func groupBoards(bbsHome string, paths []string) []importJob {
+	brd := brdNames(bbsHome)
+	byKey := map[string][]string{}
+	var keys []string
+	for _, p := range paths {
+		k := strings.ToLower(filepath.Base(p))
+		if byKey[k] == nil {
+			keys = append(keys, k)
+		}
+		byKey[k] = append(byKey[k], p)
+	}
+	sort.Strings(keys)
+	var out []importJob
+	for _, k := range keys {
+		ps := byKey[k]
+		sort.Strings(ps)
+		ds := make([]string, len(ps))
+		for i, p := range ps {
+			ds[i] = filepath.Base(p)
+		}
+		path := func(d string) string {
+			for i := range ds {
+				if ds[i] == d {
+					return ps[i]
+				}
+			}
+			return ""
+		}
+		name, hasName := brd[k]
+		pick := -1
+		for i, d := range ds {
+			if hasName && d == name {
+				pick = i
+			}
+		}
+		if pick < 0 {
+			var latest time.Time
+			for i, d := range ds {
+				if fi, err := os.Stat(path(d)); err == nil && (pick < 0 || fi.ModTime().After(latest)) {
+					pick, latest = i, fi.ModTime()
+				}
+			}
+		}
+		if pick < 0 {
+			pick = 0
+		}
+		j := importJob{root: storage.BoardRoot(ds[pick])}
+		if hasName {
+			j.root = storage.BoardRoot(name)
+		}
+		if len(ds) > 1 || (hasName && ds[pick] != name) {
+			j.dir = path(ds[pick])
+		}
+		for i, d := range ds {
+			switch {
+			case i == pick:
+			case !hasRecords(path(d)):
+				fmt.Printf("%s: empty, not imported (same board as %s)\n", d, j.root)
+			default:
+				j.others = append(j.others, path(d))
+				fmt.Printf("%s: imported into %s as a directory (names are case-insensitive)\n", d, j.root)
+			}
+		}
+		out = append(out, j)
+	}
+	return out
+}
+
+// hasRecords tells whether the .DIR of dir lists anything.
+func hasRecords(dir string) bool {
+	fi, err := os.Stat(filepath.Join(dir, ".DIR"))
+	return err == nil && fi.Size() >= storage.HeaderSize
+}
+
+// brdNames returns the names of the boards in .BRD by their lower case.
+func brdNames(bbsHome string) map[string]string {
+	const recSize = 256 // sizeof(boardheader_t); brdname[13] first
+	names := map[string]string{}
+	data, err := os.ReadFile(filepath.Join(bbsHome, ".BRD"))
+	if err != nil {
+		return names
+	}
+	for off := 0; off+recSize <= len(data); off += recSize {
+		n := data[off : off+13]
+		if i := strings.IndexByte(string(n), 0); i >= 0 {
+			n = n[:i]
+		}
+		if len(n) > 0 {
+			names[strings.ToLower(string(n))] = string(n)
+		}
+	}
+	return names
+}
+
 func isDir(path string) bool {
 	fi, err := os.Stat(path)
 	return err == nil && fi.IsDir()
@@ -633,78 +740,82 @@ func importAll(bbsHome string, jobs int, replace, users bool) int {
 		for _, d := range des {
 			if storage.ValidName(d.Name()) && strings.EqualFold(d.Name()[:1], l.Name()) &&
 				isDir(filepath.Join(bbsHome, "man", "boards", l.Name(), d.Name())) {
-				boards = append(boards, d.Name())
+				boards = append(boards, filepath.Join(bbsHome, "man", "boards", l.Name(), d.Name()))
 			}
 		}
 	}
-	sort.Strings(boards)
-	// Board names are case-insensitive (getbnum(3)): a second directory
-	// differing only in case is left over from a rename and not imported.
-	seen := map[string]string{}
-	uniq := boards[:0]
-	for _, b := range boards {
-		if first, ok := seen[strings.ToLower(b)]; ok {
-			fmt.Printf("%s: not imported, same board as %s (names are case-insensitive)\n", b, first)
-			continue
-		}
-		seen[strings.ToLower(b)] = b
-		uniq = append(uniq, b)
-	}
-	boards = uniq
-	roots := []string{storage.RootSite}
-	for _, b := range boards {
-		roots = append(roots, storage.BoardRoot(b))
-	}
+	work := append([]importJob{{root: storage.RootSite}}, groupBoards(bbsHome, boards)...)
 	if users {
 		homes, _ := filepath.Glob(filepath.Join(bbsHome, "home", "*", "*", "man"))
 		sort.Strings(homes)
 		for _, h := range homes {
 			id := filepath.Base(filepath.Dir(h))
 			if fi, err := os.Stat(h); err == nil && fi.IsDir() && storage.ValidName(id) {
-				roots = append(roots, storage.UserRoot(id))
+				work = append(work, importJob{root: storage.UserRoot(id)})
 			}
 		}
 	}
-	boards = roots
-	fmt.Printf("%d gem areas\n", len(boards))
+	fmt.Printf("%d gem areas\n", len(work))
 	var done, failed, skipped atomic.Int64
 	start := time.Now()
-	ch := make(chan string)
+	ch := make(chan importJob)
 	var wg sync.WaitGroup
 	var outMu sync.Mutex
 	for i := 0; i < max(1, jobs); i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for b := range ch {
+			for j := range ch {
+				b := j.root
 				line := "IMPORT " + b
 				if replace {
 					line += " replace"
+				}
+				if j.dir != "" {
+					line += " " + j.dir
 				}
 				w, err := cl.Simple(line)
 				n := done.Add(1)
 				outMu.Lock()
 				var ce *client.Error
+				imported := false
 				switch {
 				case errors.As(err, &ce) && ce.Code() == storage.ErrRootExists.Code:
 					skipped.Add(1)
 				case err != nil:
 					failed.Add(1)
-					fmt.Printf("[%d/%d] %s: %v\n", n, len(boards), b, err)
+					fmt.Printf("[%d/%d] %s: %v\n", n, len(work), b, err)
 				default:
-					fmt.Printf("[%d/%d] %s: %s (%sms)\n", n, len(boards), b, strings.Join(w[1:], " "), w[0])
+					imported = true
+					fmt.Printf("[%d/%d] %s: %s (%sms)\n", n, len(work), b, strings.Join(w[1:], " "), w[0])
 				}
 				outMu.Unlock()
+				// The other directories of the board, as directories of its
+				// area: only along with the area, so a rerun adds none again.
+				for _, old := range j.others {
+					if !imported {
+						break
+					}
+					w, err := cl.Simple("IMPORT " + b + " attach " + old)
+					outMu.Lock()
+					if err != nil {
+						failed.Add(1)
+						fmt.Printf("    %s: attach %s: %v\n", b, old, err)
+					} else {
+						fmt.Printf("    %s: attached %s: %s\n", b, old, strings.Join(w[1:], " "))
+					}
+					outMu.Unlock()
+				}
 			}
 		}()
 	}
-	for _, b := range boards {
-		ch <- b
+	for _, j := range work {
+		ch <- j
 	}
 	close(ch)
 	wg.Wait()
 	fmt.Printf("done in %v: %d gem areas, %d skipped (already there), %d failed\n",
-		time.Since(start).Round(time.Second), len(boards), skipped.Load(), failed.Load())
+		time.Since(start).Round(time.Second), len(work), skipped.Load(), failed.Load())
 	if failed.Load() > 0 {
 		return 1
 	}

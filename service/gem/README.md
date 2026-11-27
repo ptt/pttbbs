@@ -131,8 +131,12 @@ owned by `自動更新` instead of `每天自動更新`; it is listed with the t
 is listed (the date mbbsd shows), mbbsd shows what `INDEX` makes, and
 `export` writes it as a file, as it is then. New areas get no such entry:
 the key `i` of the gem menu shows the table of contents anywhere.
-Board names are case-insensitive: of two
-directories differing only in case, `import-all` imports the first.
+Board names are case-insensitive: of directories differing only in case
+(left over from renames), `import-all` makes the area of the one named as
+in `.BRD` (else the latest modified) and adds the others whose `.DIR`
+lists anything to it as directories titled `[舊目錄] <name>` (`IMPORT
+<root> attach <dir>`), only when it makes the area, so a rerun adds none
+again.
 
 Symbolic links are imported as they are (their targets), then
 `resolve-links` (`RESOLVE_LINKS`; `import-all` runs it at the end unless
