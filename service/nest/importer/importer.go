@@ -186,6 +186,7 @@ var (
 	crosspostFromRegex     = regexp.MustCompile(`^※\s*\[本文轉錄自\s+([A-Za-z0-9_\-\.]+)\s+看板\s*(?:#([0-9A-Za-z_\-]{8})|([MG]\.\d+\.A(?:\.[0-9A-Fa-f]+)?))?\s*\]`)
 	postFilenameCtimeRegex = regexp.MustCompile(`^[A-Z]\.(\d+)\.`)
 	editMarkRegex          = regexp.MustCompile(`^※\s*編輯:`)
+	copierRegex            = regexp.MustCompile(`^※\s*轉錄者:`)
 
 	// The comments nest.svc writes into the articles (FormatCommentBlock in
 	// storage): a floor is "RS[*][-|!]author|[~]No|MM/DD/YYYY HH:MM|[ip]|text",
@@ -473,6 +474,20 @@ func ParseArticleText(rawBytes []byte, defaultAuthor string, postCtime int64, co
 			}
 		}
 		break
+	}
+
+	// A copy since 2011 ends with "※ 轉錄者:" (addforwardsignature) and no
+	// "--", so the original's comments come after the last "--"; what is
+	// before that line is quoted text, and only the comments after it are
+	// the copy's own.
+	if isCopy {
+		for i := len(candidateLines) - 1; i >= 0; i-- {
+			if copierRegex.MatchString(strings.TrimSpace(model.StripANSI(candidateLines[i]))) {
+				bodyLines = append(bodyLines, candidateLines[:i]...)
+				candidateLines = candidateLines[i:]
+				break
+			}
+		}
 	}
 
 	// Separate system signatures and crosspost logs from comments
