@@ -504,6 +504,10 @@ func (s *ShardedEngine) SetPostContent(postID uint64, content string) error {
 	return s.GetEngineByPostID(postID).SetPostContent(postID, content)
 }
 
+func (s *ShardedEngine) OverwritePostContent(postID uint64, content string, touch bool) (*model.Post, error) {
+	return s.GetEngineByPostID(postID).OverwritePostContent(postID, content, touch)
+}
+
 func (s *ShardedEngine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) {
 	return s.GetEngineByPostID(postID).RenderFullPostText(postID, asBig5)
 }

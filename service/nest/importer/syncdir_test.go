@@ -580,3 +580,32 @@ func TestSyncDirRebuild(t *testing.T) {
 		t.Errorf("SyncDir changed the .DIR of an unknown board")
 	}
 }
+
+func TestTouchDirRecord(t *testing.T) {
+	home := t.TempDir()
+	boardDir := filepath.Join(home, "boards", "Touch")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	dirPath := filepath.Join(boardDir, ".DIR")
+	a := dirFixture{filename: "M.1728000001.A.001", owner: "a", title: "a", modified: 100, multi: 5}
+	b := dirFixture{filename: "M.1728000002.A.002", owner: "b", title: "b", modified: 200}
+	if err := os.WriteFile(dirPath, append(a.record(), b.record()...), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := TouchDirRecord(home, "Touch", b.filename, 1728009999); err != nil {
+		t.Fatal(err)
+	}
+	recs := readDirRecords(t, dirPath)
+	if !bytes.Equal(recs[0], a.record()) {
+		t.Errorf("other record changed")
+	}
+	want := b.record()
+	binary.LittleEndian.PutUint32(want[fhdrOffModified:], 1728009999)
+	if !bytes.Equal(recs[1], want) {
+		t.Errorf("record = %x; want %x", recs[1], want)
+	}
+	if err := TouchDirRecord(home, "Touch", "M.1.A.000", 1); err == nil {
+		t.Errorf("no error for a post not in .DIR")
+	}
+}

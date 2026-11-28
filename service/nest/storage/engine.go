@@ -2421,6 +2421,36 @@ func (e *Engine) SetPostContent(postID uint64, content string) error {
 	return putPostBody(e.postsDB, p)
 }
 
+// OverwritePostContent replaces the body of a post as is, without a
+// revision or an edit mark; with touch, modified moves to now as well. The
+// post is rendered again.
+func (e *Engine) OverwritePostContent(postID uint64, content string, touch bool) (*model.Post, error) {
+	p, err := e.GetPost(postID)
+	if err != nil {
+		return nil, err
+	}
+	p.Content = content
+	if !touch {
+		if err := putPostBody(e.postsDB, p); err != nil {
+			return nil, fmt.Errorf("write post body failed: %w", err)
+		}
+	} else {
+		now := time.Now().Unix()
+		if now <= p.Modified {
+			now = p.Modified + 1
+		}
+		p.Modified = now
+		if err := putPost(e.postsDB, p); err != nil {
+			return nil, fmt.Errorf("write post failed: %w", err)
+		}
+		e.metaWriteMu.Lock()
+		_, _ = e.metaDB.Exec("UPDATE posts SET modified = ? WHERE id = ?", p.Modified, p.ID)
+		e.metaWriteMu.Unlock()
+	}
+	_ = e.RenderAndSave(p)
+	return p, nil
+}
+
 func (e *Engine) RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error) {
 	p, err := e.GetPost(postID)
 	if err != nil {

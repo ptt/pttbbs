@@ -3096,3 +3096,81 @@ func TestServerCrosspostLimits(t *testing.T) {
 		t.Fatalf("crosspost of an exempt board: %+v", cps)
 	}
 }
+
+func TestServerSetPostContent(t *testing.T) {
+	tmpDir := t.TempDir()
+	bbsHome := filepath.Join(tmpDir, "bbshome")
+	sockPath := filepath.Join(tmpDir, "nest.sock")
+	st, err := storage.OpenEngine(storage.Config{
+		BBSHome:     bbsHome,
+		DataDir:     filepath.Join(tmpDir, "data"),
+		CacheDir:    filepath.Join(tmpDir, "cache"),
+		CacheSizeMB: 16,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	srv := daemon.NewServer(daemon.ServerConfig{BBSHome: bbsHome, UnixSocket: sockPath}, st)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+
+	const file = "M.1700000000.A.001"
+	p, err := st.CreatePost(&model.Post{Community: "Test", PostFile: file, Title: "t",
+		CreatorName: "author", Content: "old body\n", CreatedAt: 1700000000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	boardDir := filepath.Join(bbsHome, "boards", "T", "Test")
+	if err := os.MkdirAll(boardDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	rec := make([]byte, importer.FileHeaderSize)
+	copy(rec, file)
+	if err := os.WriteFile(filepath.Join(boardDir, ".DIR"), rec, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	request := func(header string, body []byte) string {
+		conn, err := net.Dial("unix", sockPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Close()
+		conn.Write(append([]byte(header+"\n"), body...))
+		resp, _ := bufio.NewReader(conn).ReadString('\n')
+		return strings.TrimSpace(resp)
+	}
+
+	body := []byte("new body\n")
+	if resp := request(fmt.Sprintf("SET_POST_CONTENT %d 0 %d", p.ID, len(body)), body); resp != fmt.Sprintf("OK %d", p.Modified) {
+		t.Fatalf("SET_POST_CONTENT = %q; want modified %d kept", resp, p.Modified)
+	}
+	got, _ := st.GetPost(p.ID)
+	if got.Content != "new body\n" {
+		t.Errorf("content = %q", got.Content)
+	}
+	if revs, _ := st.ListPostHistory(p.ID); len(revs) != 0 {
+		t.Errorf("%d revisions", len(revs))
+	}
+
+	body = []byte("touched body\n")
+	resp := request(fmt.Sprintf("SET_POST_CONTENT %d 1 %d", p.ID, len(body)), body)
+	var modified int64
+	if _, err := fmt.Sscanf(resp, "OK %d", &modified); err != nil || modified <= p.Modified {
+		t.Fatalf("SET_POST_CONTENT touch = %q; want modified after %d", resp, p.Modified)
+	}
+	dir, _ := os.ReadFile(filepath.Join(boardDir, ".DIR"))
+	if m := binary.LittleEndian.Uint32(dir[28:]); int64(m) != modified {
+		t.Errorf(".DIR modified = %d; want %d", m, modified)
+	}
+	if rendered, _ := os.ReadFile(filepath.Join(boardDir, file)); !strings.Contains(string(rendered), "touched body") {
+		t.Errorf("board file not rendered again: %q", rendered)
+	}
+
+	if resp := request(fmt.Sprintf("SET_POST_CONTENT %d 0 2", p.ID), []byte{0xa4, 0x40}); !strings.HasPrefix(resp, "ERR") {
+		t.Errorf("non-UTF-8 content = %q; want ERR", resp)
+	}
+}

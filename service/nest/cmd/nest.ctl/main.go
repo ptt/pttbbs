@@ -96,6 +96,47 @@ func sendCmd(header string, payload []byte) (string, []byte, error) {
 	return respLine, rest, nil
 }
 
+// splitOpts separates the -options in args (anywhere) from the rest.
+func splitOpts(args []string) (pos []string, opts map[string]bool) {
+	opts = map[string]bool{}
+	for _, a := range args {
+		if len(a) > 1 && strings.HasPrefix(a, "-") {
+			opts[a] = true
+		} else {
+			pos = append(pos, a)
+		}
+	}
+	return pos, opts
+}
+
+// getBody returns the body and the ID of the post in args[0] (GET_POST).
+func getBody(args []string) ([]byte, uint64, error) {
+	target, _, err := parsePostArg(args, 0)
+	if err != nil {
+		return nil, 0, err
+	}
+	header := fmt.Sprintf("GET_POST %d\n", target.postID)
+	if target.isFile {
+		header = fmt.Sprintf("GET_POST_FILE %s %s\n", target.community, target.postFile)
+	}
+	resp, payload, err := sendCmd(header, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	// OK <id> ... <title_bytes> <content_bytes>, then the title and body.
+	f := strings.Fields(resp)
+	if len(f) < 14 || f[0] != "OK" {
+		return nil, 0, fmt.Errorf("%s", resp)
+	}
+	id, _ := strconv.ParseUint(f[1], 10, 64)
+	titleLen, _ := strconv.Atoi(f[len(f)-2])
+	contentLen, _ := strconv.Atoi(f[len(f)-1])
+	if titleLen < 0 || contentLen < 0 || titleLen+contentLen > len(payload) {
+		return nil, 0, fmt.Errorf("short reply: %s", resp)
+	}
+	return payload[titleLen : titleLen+contentLen], id, nil
+}
+
 // -----------------------------------------------------------------------------
 // Unified Post Target (<post_id> or <post_file>@<community>)
 // -----------------------------------------------------------------------------
@@ -499,6 +540,62 @@ func run() int {
 		if len(payload) > 0 {
 			fmt.Println(string(payload))
 		}
+
+	case "get-content":
+		// The content as nest.svc keeps it (UTF-8), not the rendered article.
+		pos, opts := splitOpts(args[1:])
+		if len(pos) < 1 || len(pos) > 2 {
+			return fail("Usage: nest.ctl get-content <post> [file] [-big5]")
+		}
+		body, _, err := getBody(pos)
+		if err != nil {
+			return fail("get-content failed: %v", err)
+		}
+		if opts["-big5"] {
+			body = big5uao.Encode(string(body))
+		}
+		if len(pos) == 2 && pos[1] != "-" {
+			if err := os.WriteFile(pos[1], body, 0644); err != nil {
+				return fail("get-content failed: %v", err)
+			}
+		} else {
+			os.Stdout.Write(body)
+		}
+
+	case "overwrite-content":
+		pos, opts := splitOpts(args[1:])
+		if len(pos) != 2 {
+			return fail("Usage: nest.ctl overwrite-content <post> <file|-> [-touch] [-big5]")
+		}
+		var body []byte
+		var err error
+		if pos[1] == "-" {
+			body, err = io.ReadAll(os.Stdin)
+		} else {
+			body, err = os.ReadFile(pos[1])
+		}
+		if err != nil {
+			return fail("overwrite-content failed: %v", err)
+		}
+		if opts["-big5"] {
+			body = []byte(big5uao.DecodeSGR66(body))
+		}
+		_, id, err := getBody(pos[:1])
+		if err != nil {
+			return fail("overwrite-content failed: %v", err)
+		}
+		touch := 0
+		if opts["-touch"] {
+			touch = 1
+		}
+		resp, _, err := sendCmd(fmt.Sprintf("SET_POST_CONTENT %d %d %d\n", id, touch, len(body)), body)
+		if err != nil {
+			return fail("overwrite-content failed: %v", err)
+		}
+		if !strings.HasPrefix(resp, "OK") {
+			return fail("overwrite-content failed: %s", resp)
+		}
+		fmt.Println(resp)
 
 	case "purge-comments":
 		if len(args) < 2 {
@@ -1583,6 +1680,8 @@ Usage:
   nest.ctl daily-backup [-dest DIR | -cross] [-keep N] [-keep-local N] [-verify] [name]
   nest.ctl list <community> [count [start]] [deleted]
   nest.ctl get <post>
+  nest.ctl get-content <post> [file] [-big5]   (the content as kept, UTF-8; for overwrite-content)
+  nest.ctl overwrite-content <post> <file|-> [-touch] [-big5]   (replaces the content: no revision, no modlog; -touch moves modified)
   nest.ctl render <post> [output] [--legacy-format]
   nest.ctl render-community <community>|--all [output_dir|boards|cache] [--legacy-format] [--jobs N]
   nest.ctl extract-backup [-o DIR] [-id N] [-deleted] [-utf8] [-legacy-format] <community> <backup_dir>...   (files of a community from a backup; read only, without nest.svc)

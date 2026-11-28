@@ -1433,6 +1433,47 @@ func (s *Server) handleIPC(conn net.Conn) {
 			conn.Write([]byte(fmt.Sprintf("OK %d %d\n", rev, newModified)))
 		}
 
+	case "SET_POST_CONTENT":
+		// SET_POST_CONTENT <post_id> <touch:0|1> <content_bytes>\n<content>
+		// Replaces the content (UTF-8) as is, for admins (nest.ctl
+		// overwrite-content): no revision, edit mark or modlog. touch also
+		// moves modified, in the .DIR record too. Replies OK <modified>.
+		if len(parts) < 4 {
+			conn.Write([]byte("ERR invalid arguments for SET_POST_CONTENT\n"))
+			return
+		}
+		postID, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR invalid post_id: %s\n", parts[1])))
+			return
+		}
+		touch := parts[2] == "1"
+		contentLen, err := strconv.Atoi(parts[3])
+		if err != nil || contentLen < 0 {
+			conn.Write([]byte("ERR invalid content length\n"))
+			return
+		}
+		contentBytes := make([]byte, contentLen)
+		if _, err := io.ReadFull(reader, contentBytes); err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR read content failed: %v\n", err)))
+			return
+		}
+		if !utf8.Valid(contentBytes) {
+			conn.Write([]byte("ERR content is not UTF-8\n"))
+			return
+		}
+		p, err := s.storage.OverwritePostContent(postID, string(contentBytes), touch)
+		if err != nil {
+			conn.Write([]byte(fmt.Sprintf("ERR %v\n", err)))
+			return
+		}
+		if touch {
+			if err := importer.TouchDirRecord(s.cfg.BBSHome, p.Community, p.PostFile, p.Modified); err != nil {
+				log.Printf("SET_POST_CONTENT %d: %v", postID, err)
+			}
+		}
+		conn.Write([]byte(fmt.Sprintf("OK %d\n", p.Modified)))
+
 	case "EDIT_POST_TITLE":
 		// EDIT_POST_TITLE <post_id> <editor_name> <editor_id> <title_bytes>\n<title>
 		if len(parts) < 5 {

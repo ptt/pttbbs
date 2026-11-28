@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -425,6 +426,36 @@ func mergeByTime(entries, missing []dirEntry) []dirEntry {
 		out = append(out, e)
 	}
 	return append(out, missing[m:]...)
+}
+
+// TouchDirRecord sets the modified time of the record of postFile in the
+// .DIR of board, in place.
+func TouchDirRecord(bbsHome, board, postFile string, modified int64) error {
+	boardDir, err := LocateBoardDir(bbsHome, board)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(filepath.Join(boardDir, ".DIR"), os.O_RDWR, 0)
+	if err != nil {
+		return fmt.Errorf("open .DIR failed: %w", err)
+	}
+	defer f.Close()
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("read .DIR failed: %w", err)
+	}
+	for off := 0; off+FileHeaderSize <= len(data); off += FileHeaderSize {
+		if cString(data[off+fhdrOffFilename:off+fhdrOffFilename+fhdrLenFilename]) != postFile {
+			continue
+		}
+		var b [4]byte
+		binary.LittleEndian.PutUint32(b[:], uint32(modified))
+		if _, err := f.WriteAt(b[:], int64(off+fhdrOffModified)); err != nil {
+			return fmt.Errorf("write .DIR failed: %w", err)
+		}
+		return f.Close()
+	}
+	return fmt.Errorf("%s not in the .DIR of %s", postFile, board)
 }
 
 // writeInPlace writes the changed records back to where they are, which is

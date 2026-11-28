@@ -71,6 +71,7 @@ type Storage interface {
 	ResetVotes(postID uint64) error
 	ResetVotesByCommunityFile(community, postFile string) error
 	SetPostContent(postID uint64, content string) error
+	OverwritePostContent(postID uint64, content string, touch bool) (*model.Post, error)
 	RenderFullPostText(postID uint64, asBig5 bool) ([]byte, error)
 	RenderLegacyPostText(postID uint64, asBig5 bool) ([]byte, error)
 	RenderCommunity(opts RenderCommunityOptions) (int, error)
