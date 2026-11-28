@@ -216,6 +216,9 @@ func run() int {
 	case "daily-backup", "inc-backup":
 		return dailyBackup(args[1:])
 
+	case "extract-backup", "export-community":
+		return extractBackup(args[0], args[1:])
+
 	case "backup":
 		// nest.ctl backup [name | dir]
 		//   name: each engine writes to <DataDir>/backup/<name> on its own disk.
@@ -1582,6 +1585,8 @@ Usage:
   nest.ctl get <post>
   nest.ctl render <post> [output] [--legacy-format]
   nest.ctl render-community <community>|--all [output_dir|boards|cache] [--legacy-format] [--jobs N]
+  nest.ctl extract-backup [-o DIR] [-id N] [-deleted] [-utf8] [-legacy-format] <community> <backup_dir>...   (files of a community from a backup; read only, without nest.svc)
+  nest.ctl extract-backup -list <backup_dir>...   (the communities in a backup)
   nest.ctl import-board <board>|--all [--overwrite] [--dry-run] [--workers N] [--jobs N (with --all: boards at a time)] [--limit N] [--offset N] [--no-merge] [--commentd-db PATH] [--re-render [target_dir]] [--legacy-format]
   nest.ctl sync-dir <board>|--all [--only-scores | --full | --rebuild] [--prune] [--add-missing] [--dry-run]
   nest.ctl fetch <post> <output_path>      (output under $BBSHOME; relative to it)
