@@ -179,11 +179,28 @@ func loadCommunityIDs(r *VerifyReport, path string) map[int64]bool {
 	return ids
 }
 
+// DefaultQuickVerifyTail is how many newest posts VerifyDataDirQuick checks.
+const DefaultQuickVerifyTail = 10000
+
 // VerifyDataDir verifies the engine DBs in dir without modifying them.
 // communitiesDB is the communities.db of the same backup (see
 // FindCommunitiesDB); every post must belong to a community it knows. With
 // "", that check is skipped with a warning.
 func VerifyDataDir(dir, communitiesDB string) *VerifyReport {
+	return verifyDataDir(dir, communitiesDB, 0)
+}
+
+// VerifyDataDirQuick is VerifyDataDir limited to DB integrity checks and the
+// newest tail posts, for fast checks after a crash or reboot.
+func VerifyDataDirQuick(dir, communitiesDB string, tail int) *VerifyReport {
+	if tail <= 0 {
+		tail = DefaultQuickVerifyTail
+	}
+	return verifyDataDir(dir, communitiesDB, tail)
+}
+
+func verifyDataDir(dir, communitiesDB string, tail int) *VerifyReport {
+	quick := tail > 0
 	r := &VerifyReport{Dir: dir, Warnings: map[string]int{}}
 	var communities map[int64]bool
 	if communitiesDB == "" {
@@ -206,13 +223,19 @@ func VerifyDataDir(dir, communitiesDB string) *VerifyReport {
 		return r
 	}
 	// History is not cross-checked against SQLite; reading it all verifies it.
-	if _, err := scanAll(dbs["history.pebble"], nil); err != nil {
-		r.errorf("read history.pebble: %v", err)
+	if !quick {
+		if _, err := scanAll(dbs["history.pebble"], nil); err != nil {
+			r.errorf("read history.pebble: %v", err)
+		}
 	}
 
 	sqlitePath := filepath.Join(dir, "meta.sqlite3")
 	if _, err := os.Stat(sqlitePath); os.IsNotExist(err) {
-		verifyPebbleOnly(r, dbs["posts.pebble"], dbs["comments.pebble"], dbs["votes.pebble"], communities)
+		var minID uint64
+		if quick {
+			minID, _ = pebbleTailMinID(dbs["posts.pebble"], tail)
+		}
+		verifyPebbleOnly(r, dbs["posts.pebble"], dbs["comments.pebble"], dbs["votes.pebble"], communities, minID, quick)
 		return r
 	} else if err != nil {
 		r.errorf("meta.sqlite3: %v", err)
@@ -230,8 +253,21 @@ func VerifyDataDir(dir, communitiesDB string) *VerifyReport {
 		return r
 	}
 
-	compareMetaWithPebble(r, meta, dbs["posts.pebble"], dbs["comments.pebble"], dbs["votes.pebble"])
-	if communities != nil {
+	var minID uint64
+	if quick {
+		pMin, pOK := pebbleTailMinID(dbs["posts.pebble"], tail)
+		mMin, mOK := metaTailMinID(meta, tail)
+		switch {
+		case pOK && mOK:
+			minID = min(pMin, mMin)
+		case pOK:
+			minID = pMin
+		case mOK:
+			minID = mMin
+		}
+	}
+	compareMetaWithPebble(r, meta, dbs["posts.pebble"], dbs["comments.pebble"], dbs["votes.pebble"], communities, minID, quick)
+	if !quick && communities != nil {
 		checkCommunityRefs(r, meta, communities)
 	}
 	return r
@@ -419,13 +455,60 @@ type idCursor struct {
 	err error
 }
 
+func idIterBounds(prefix byte, minID uint64) *pebble.IterOptions {
+	lower := []byte{prefix}
+	if minID > 0 {
+		lower = make([]byte, 9)
+		lower[0] = prefix
+		binary.BigEndian.PutUint64(lower[1:9], minID)
+	}
+	return &pebble.IterOptions{LowerBound: lower, UpperBound: []byte{prefix + 1}}
+}
+
 func newIDCursor(db *pebble.DB, prefix byte) (*idCursor, error) {
-	it, err := db.NewIter(&pebble.IterOptions{LowerBound: []byte{prefix}, UpperBound: []byte{prefix + 1}})
+	return newIDCursorFrom(db, prefix, 0)
+}
+
+func newIDCursorFrom(db *pebble.DB, prefix byte, minID uint64) (*idCursor, error) {
+	it, err := db.NewIter(idIterBounds(prefix, minID))
 	if err != nil {
 		return nil, err
 	}
 	it.First()
 	return &idCursor{it: it}, nil
+}
+
+func pebbleTailMinID(postsDB *pebble.DB, tail int) (uint64, bool) {
+	it, err := postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
+	if err != nil {
+		return 0, false
+	}
+	defer it.Close()
+	var minID uint64
+	found := false
+	for ok, n := it.Last(), 0; ok && n < tail; ok = it.Prev() {
+		id, err := model.DecodePostIDKey(it.Key())
+		if err != nil {
+			continue
+		}
+		minID = id
+		found = true
+		n++
+	}
+	return minID, found
+}
+
+func metaTailMinID(meta *sql.DB, tail int) (uint64, bool) {
+	var id uint64
+	err := meta.QueryRow("SELECT id FROM posts ORDER BY id DESC LIMIT 1 OFFSET ?", tail-1).Scan(&id)
+	if err == nil {
+		return id, true
+	}
+	var minID sql.NullInt64
+	if err := meta.QueryRow("SELECT MIN(id) FROM posts").Scan(&minID); err == nil && minID.Valid {
+		return uint64(minID.Int64), true
+	}
+	return 0, false
 }
 
 // id returns the post ID of the current key, or false at the end.
@@ -477,11 +560,11 @@ type aggregator struct {
 	comments, votes, crossposts, counts *idCursor
 }
 
-func newAggregator(r *VerifyReport, postsDB, commentsDB, votesDB *pebble.DB) (*aggregator, error) {
-	comments, err1 := newIDCursor(commentsDB, 'c')
-	votes, err2 := newIDCursor(votesDB, 'v')
-	crossposts, err3 := newIDCursor(postsDB, 'x')
-	counts, err4 := newIDCursor(postsDB, 'n')
+func newAggregator(r *VerifyReport, postsDB, commentsDB, votesDB *pebble.DB, minID uint64) (*aggregator, error) {
+	comments, err1 := newIDCursorFrom(commentsDB, 'c', minID)
+	votes, err2 := newIDCursorFrom(votesDB, 'v', minID)
+	crossposts, err3 := newIDCursorFrom(postsDB, 'x', minID)
+	counts, err4 := newIDCursorFrom(postsDB, 'n', minID)
 	if err := errors.Join(err1, err2, err3, err4); err != nil {
 		return nil, err
 	}
@@ -559,22 +642,48 @@ func checkPostBodies(r *VerifyReport, postsDB *pebble.DB) {
 	}
 }
 
+// checkPostBody verifies that the 'p' body record for id exists in posts.pebble.
+func checkPostBody(r *VerifyReport, bodies *idCursor, id uint64) {
+	for bid, ok := bodies.id(); ok && bid < id; bid, ok = bodies.id() {
+		r.warn("post body of a missing post", bid, "orphan body record")
+		bodies.it.Next()
+	}
+	if bid, ok := bodies.id(); ok && bid == id {
+		_ = bodies.it.Value()
+		bodies.it.Next()
+		return
+	}
+	r.warn("post body missing in posts.pebble", id, "")
+}
+
 // verifyPebbleOnly checks a data dir without meta.sqlite3 (a backup, from
 // which a restore rebuilds it): the counter records against the comments
 // and votes, and the communities of the posts.
-func verifyPebbleOnly(r *VerifyReport, postsDB, commentsDB, votesDB *pebble.DB, communities map[int64]bool) {
-	g, err := newAggregator(r, postsDB, commentsDB, votesDB)
+func verifyPebbleOnly(r *VerifyReport, postsDB, commentsDB, votesDB *pebble.DB, communities map[int64]bool, minID uint64, quick bool) {
+	g, err := newAggregator(r, postsDB, commentsDB, votesDB, minID)
 	if err != nil {
 		r.errorf("open iterators: %v", err)
 		return
 	}
 	defer g.close()
-	posts, err := postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
+	posts, err := postsDB.NewIter(idIterBounds('m', minID))
 	if err != nil {
 		r.errorf("posts.pebble: %v", err)
 		return
 	}
 	defer posts.Close()
+	var bodies *idCursor
+	if quick {
+		if bodies, err = newIDCursorFrom(postsDB, 'p', minID); err != nil {
+			r.errorf("posts.pebble bodies: %v", err)
+			return
+		}
+		defer func() {
+			if err := bodies.close(); err != nil {
+				r.errorf("read post bodies: %v", err)
+			}
+		}()
+	}
 	missing := 0
 	for posts.First(); posts.Valid(); posts.Next() {
 		id, err := model.DecodePostIDKey(posts.Key())
@@ -583,6 +692,9 @@ func verifyPebbleOnly(r *VerifyReport, postsDB, commentsDB, votesDB *pebble.DB, 
 		}
 		r.Posts++
 		a := g.of(id)
+		if bodies != nil {
+			checkPostBody(r, bodies, id)
+		}
 		if s := a.stored; s.Upvotes != a.upvotes || s.Downvotes != a.downvotes || s.NumComments != a.comments {
 			r.warn("counter record differs from comments/votes", id, fmt.Sprintf("record=%d/%d/%d pebble=%d/%d/%d", s.Upvotes, s.Downvotes, s.NumComments, a.upvotes, a.downvotes, a.comments))
 		}
@@ -603,27 +715,41 @@ func verifyPebbleOnly(r *VerifyReport, postsDB, commentsDB, votesDB *pebble.DB, 
 		r.errorf("... %d references to unknown communities in total", missing)
 	}
 	g.of(^uint64(0))
-	checkPostBodies(r, postsDB)
+	if !quick {
+		checkPostBodies(r, postsDB)
+	}
 }
 
-func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, votesDB *pebble.DB) {
-	posts, err := postsDB.NewIter(&pebble.IterOptions{LowerBound: []byte{'m'}, UpperBound: []byte{'n'}})
+func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, votesDB *pebble.DB, communities map[int64]bool, minID uint64, quick bool) {
+	posts, err := postsDB.NewIter(idIterBounds('m', minID))
 	if err != nil {
 		r.errorf("posts.pebble: %v", err)
 		return
 	}
 	defer posts.Close()
-	g, err := newAggregator(r, postsDB, commentsDB, votesDB)
+	g, err := newAggregator(r, postsDB, commentsDB, votesDB, minID)
 	if err != nil {
 		r.errorf("open iterators: %v", err)
 		return
 	}
 	defer g.close()
 	aggregate := g.of
+	var bodies *idCursor
+	if quick {
+		if bodies, err = newIDCursorFrom(postsDB, 'p', minID); err != nil {
+			r.errorf("posts.pebble bodies: %v", err)
+			return
+		}
+		defer func() {
+			if err := bodies.close(); err != nil {
+				r.errorf("read post bodies: %v", err)
+			}
+		}()
+	}
 
 	rows, err := meta.Query(`SELECT id, parent_id, community_id, post_file, title, creator_name, creator_id, created_at, modified,
 		filemode, money, upvotes, downvotes, num_comments, num_crossposts, deleted, removed, deleted_at, mod_person_name, mod_person_id, reason
-		FROM posts ORDER BY id`)
+		FROM posts WHERE id >= ? ORDER BY id`, minID)
 	if err != nil {
 		r.errorf("query meta.sqlite3: %v", err)
 		return
@@ -645,6 +771,7 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 	}
 	nextRow()
 	posts.First()
+	missingComm := 0
 	for posts.Valid() || haveRow {
 		var pid uint64
 		havePost := false
@@ -675,16 +802,31 @@ func compareMetaWithPebble(r *VerifyReport, meta *sql.DB, postsDB, commentsDB, v
 			nextRow()
 		default:
 			r.Posts++
+			if bodies != nil {
+				checkPostBody(r, bodies, pid)
+			}
+			if quick && communities != nil && !communities[row.communityID] {
+				if missingComm < maxVerifyExamples {
+					r.errorf("post %d refers to community #%d, which is not in communities.db", row.id, row.communityID)
+				}
+				missingComm++
+			}
 			comparePost(r, &row, posts.Value(), aggregate(pid))
 			posts.Next()
 			nextRow()
 		}
+	}
+	if missingComm > maxVerifyExamples {
+		r.errorf("... %d references to unknown communities in total", missingComm)
 	}
 	if err := errors.Join(posts.Error(), rows.Err()); err != nil {
 		r.errorf("read posts: %v", err)
 	}
 	// Drain the remaining records so their checksums are verified as well.
 	aggregate(^uint64(0))
+	if quick {
+		return
+	}
 	checkPostBodies(r, postsDB)
 
 	var metaCrossposts, pebbleCrossposts int

@@ -324,3 +324,68 @@ func TestVerifyDataDir(t *testing.T) {
 		t.Errorf("ExpandVerifyDirs accepted a dir without a backup")
 	}
 }
+
+func TestVerifyDataDirQuick(t *testing.T) {
+	tmpDir := t.TempDir()
+	e, err := OpenEngine(testEngineConfig(tmpDir))
+	if err != nil {
+		t.Fatalf("OpenEngine: %v", err)
+	}
+	for i := 1; i <= 5; i++ {
+		p, err := e.CreatePost(&model.Post{Community: "board", PostFile: fmt.Sprintf("M.%d.A.001", i), Title: "t",
+			CreatorName: "author", CreatedAt: 1727800000, Content: "body"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		e.AddComment(&model.Comment{PostID: p.ID, CreatorName: "a", Content: "c", CreatedAt: 1727800001})
+		e.VotePost(p.ID, "a", 0, model.VoteUp, 1727800002, "")
+	}
+
+	backupDir := filepath.Join(tmpDir, "backup")
+	if _, err := e.Backup(backupDir); err != nil {
+		t.Fatalf("Backup: %v", err)
+	}
+	before := dirSnapshot(t, backupDir)
+	if r := VerifyDataDirQuick(backupDir, FindCommunitiesDB([]string{backupDir}), 2); !r.OK() || r.Posts != 2 || r.Comments != 2 || r.Votes != 2 || len(r.Warnings) != 0 {
+		var out strings.Builder
+		r.Print(&out)
+		t.Errorf("quick verify of backup:\n%s", out.String())
+	}
+	if after := dirSnapshot(t, backupDir); fmt.Sprint(after) != fmt.Sprint(before) {
+		t.Errorf("VerifyDataDirQuick modified the backup")
+	}
+
+	dataDir := testEngineConfig(tmpDir).DataDir
+	e.Close()
+
+	if r := VerifyDataDirQuick(dataDir, FindCommunitiesDB([]string{dataDir}), 2); !r.OK() || r.Posts != 2 || r.Comments != 2 || r.Votes != 2 || len(r.Warnings) != 0 {
+		var out strings.Builder
+		r.Print(&out)
+		t.Errorf("quick verify of data dir:\n%s", out.String())
+	}
+
+	// Missing post outside the tail is not scanned; missing post in the tail is caught.
+	db, err := sql.Open("sqlite", filepath.Join(dataDir, "meta.sqlite3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("DELETE FROM posts WHERE id = 1"); err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+	if r := VerifyDataDirQuick(dataDir, FindCommunitiesDB([]string{dataDir}), 2); !r.OK() {
+		t.Errorf("quick verify failed for an error outside the tail: %v", r.Errors)
+	}
+
+	db, err = sql.Open("sqlite", filepath.Join(dataDir, "meta.sqlite3"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("DELETE FROM posts WHERE id = 5"); err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+	if r := VerifyDataDirQuick(dataDir, FindCommunitiesDB([]string{dataDir}), 2); r.OK() {
+		t.Errorf("quick verify passed with a tail post missing from meta.sqlite3")
+	}
+}

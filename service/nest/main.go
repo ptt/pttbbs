@@ -41,6 +41,7 @@ var (
 	flagRebuild        = flag.Bool("rebuild", false, "Disaster recovery: rebuild SQLite from Pebble and exit")
 	flagRecount        = flag.Bool("recount", false, "Count the comments and votes of every post again, correct the counters and exit (slow; after -rebuild if both)")
 	flagVerify         = flag.Bool("verify", false, "Verify backup dirs given as arguments (read-only) and exit; non-zero exit on errors")
+	flagQuick          = flag.Bool("quick", false, "With -verify: check DB integrity and the newest posts only (fast after a crash)")
 )
 
 func init() {
@@ -117,7 +118,7 @@ func raiseFDLimit() {
 func main() {
 	flag.Parse()
 	if *flagVerify {
-		os.Exit(runVerify(flag.Args()))
+		os.Exit(runVerify(flag.Args(), *flagQuick))
 	}
 	raiseFDLimit()
 
@@ -293,11 +294,11 @@ func main() {
 	log.Printf("[nest.svc] Service stopped cleanly.")
 }
 
-// runVerify implements `nest.svc -verify <dir>...`. Each dir is an engine data
-// dir (posts.pebble, ..., meta.sqlite3) or a dir with shard-<N> subdirs.
-func runVerify(args []string) int {
+// runVerify implements `nest.svc -verify [-quick] <dir>...`. Each dir is an
+// engine data dir (posts.pebble, ..., meta.sqlite3) or a dir with shard-<N> subdirs.
+func runVerify(args []string, quick bool) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "Usage: nest.svc -verify <backup_dir>...")
+		fmt.Fprintln(os.Stderr, "Usage: nest.svc -verify [-quick] <backup_dir>...")
 		return 2
 	}
 	dirs, err := storage.ExpandVerifyDirs(args)
@@ -308,13 +309,18 @@ func runVerify(args []string) int {
 	communities := storage.FindCommunitiesDB(dirs)
 	rc := 0
 	for _, dir := range dirs {
-		r := storage.VerifyDataDir(dir, communities)
+		var r *storage.VerifyReport
+		if quick {
+			r = storage.VerifyDataDirQuick(dir, communities, storage.DefaultQuickVerifyTail)
+		} else {
+			r = storage.VerifyDataDir(dir, communities)
+		}
 		r.Print(os.Stdout)
 		if !r.OK() {
 			rc = 1
 		}
 	}
-	if len(dirs) > 1 && rc == 0 {
+	if !quick && len(dirs) > 1 && rc == 0 {
 		r := storage.VerifyShards(dirs, communities)
 		r.Print(os.Stdout)
 		if !r.OK() {
