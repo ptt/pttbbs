@@ -278,6 +278,23 @@ static const comment_theme_t comment_themes[] = {
         .color_comment_text_op = COLOR_COMMENT_TEXT_OP,
         .color_commenter_info = COLOR_COMMENTER_INFO,
     },
+    // PTT2's old pushes (OLDRECOMMEND): "→ userid:text", a push before the
+    // time. There each "→" was a push, so further lines have none.
+    [COMMENT_THEME_CLASSIC2] = {
+        .name = "經典批兔",
+        .tight_colon = 1,
+        .mark_first = "→",
+        .color_mark_first = ANSI_COLOR(1;31),
+        .mark_more = "  ",
+        .color_commenter = COLOR_COMMENTER,
+        .color_commenter_op = COLOR_COMMENTER_OP,
+        .color_commenter_more = ANSI_COLOR(0;33),
+        .color_commenter_more_op = NULL,
+        .color_comment_text = COLOR_COMMENT_TEXT,
+        .color_comment_text_op = COLOR_COMMENT_TEXT_OP,
+        .color_commenter_info = ANSI_RESET,
+        .info_mark = "推",
+    },
     // Further lines: an arrow, then the text under that of the first line.
     [COMMENT_THEME_SIMPLE] = {
         .name = "單純易讀",
@@ -450,22 +467,30 @@ print_mark(const char *mark, const char *color)
 {
     if (!mark)
         return 0;
-    outs(color);
+    if (color)
+        outs(color);
     outs(mark);
     outs(ANSI_RESET " ");
     return (int)strlen(mark) + 1;
 }
 
-/* Prints "userid: ", the userid padded to IDLEN if the theme aligns (so
- * colons line up, as PTT's aligned pushes); returns its width. */
+/* Prints "userid: " ("userid:" in the text color if tight_colon), the
+ * userid padded to IDLEN if the theme aligns (so colons line up, as PTT's
+ * aligned pushes); returns its width. */
 static int
 print_commenter(const comment_theme_t *thm, const char *color,
                 const char *user, int user_len)
 {
     int pad = thm->align && user_len < IDLEN ? IDLEN - user_len : 0;
     outs(color);
-    prints("%.*s%*s:", user_len, user, pad, "");
-    outs(ANSI_RESET " ");
+    prints("%.*s%*s", user_len, user, pad, "");
+    if (thm->tight_colon) {
+        outs(ANSI_RESET);
+        outs(thm->color_comment_text ? thm->color_comment_text : "");
+        outs(":");
+        return pad + user_len + 1;
+    }
+    outs(":" ANSI_RESET " ");
     return pad + user_len + 2;
 }
 
@@ -482,7 +507,8 @@ print_more_prefix(const comment_ctx_t *ctx, const comment_more_t *m)
 
     // Blank up to where the text of the first line starts.
     int head = (thm->mark_first ? (int)strlen(thm->mark_first) + 1 : 0) +
-               (thm->align && m->user_len < IDLEN ? IDLEN : m->user_len) + 2;
+               (thm->align && m->user_len < IDLEN ? IDLEN : m->user_len) +
+               (thm->tight_colon ? 1 : 2);
     if (head <= w)
         return w;
     prints("%*s", head - w, "");
@@ -560,10 +586,13 @@ comment_render_modern_header(comment_ctx_t *ctx,
     if (avail >= floor_width + 1) {
         const char *info_color = thm->color_commenter_info ?
                                  thm->color_commenter_info : COLOR_COMMENTER_INFO;
-        const int len = 11;     // "MM/DD HH:MM"
+        // "MM/DD HH:MM", after info_mark and a space if any
+        const int len = 11 + (thm->info_mark ? strlen(thm->info_mark) + 1 : 0);
         if (len <= avail - floor_width - 1) {
             prints("%*s", avail - len - 1 - floor_width, "");
             outs(info_color);
+            if (thm->info_mark)
+                prints("%s ", thm->info_mark);
             prints("%.5s %.5s", h.date, h.date + 11);
             outs(ANSI_RESET " ");
         } else if (avail > floor_width) {

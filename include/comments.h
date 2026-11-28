@@ -17,12 +17,14 @@ enum {
     COMMENT_THEME_SIMPLE = 0,   /* the default */
     COMMENT_THEME_ALIGNED,
     COMMENT_THEME_CLASSIC,
+    COMMENT_THEME_CLASSIC2,
     COMMENT_THEMES
 };
 
 typedef struct {
     const char *name;
     int align;                          /* pad userids to IDLEN */
+    int tight_colon;                    /* "userid:text", no space */
     const char *mark_first;             /* before the userid, e.g. a push */
     const char *color_mark_first;
     const char *mark_more;              /* the same on further lines */
@@ -34,6 +36,7 @@ typedef struct {
     const char *color_comment_text;
     const char *color_comment_text_op;
     const char *color_commenter_info;
+    const char *info_mark;              /* before the time, e.g. a push */
 } comment_theme_t;
 
 /* Context passed for comment rendering */
