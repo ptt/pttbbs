@@ -263,44 +263,37 @@ const struct CommentKeyReq *CommentsGetKeyReq(void *ctx)
 #define COLOR_COMMENTER_INFO  ANSI_COLOR(1;30)
 
 static const comment_theme_t comment_themes[] = {
+    // PTT's own push lines: "推 userid: text", then "→ userid: text".
     [COMMENT_THEME_CLASSIC] = {
         .name = "經典醒目",
+        .mark_first = "推",
+        .color_mark_first = ANSI_COLOR(1;37),
+        .mark_more = "→",
+        .color_mark_more = ANSI_COLOR(1;31),
         .color_commenter = COLOR_COMMENTER,
         .color_commenter_op = COLOR_COMMENTER_OP,
+        .color_commenter_more = COLOR_COMMENTER,
+        .color_commenter_more_op = COLOR_COMMENTER_OP,
         .color_comment_text = COLOR_COMMENT_TEXT,
         .color_comment_text_op = COLOR_COMMENT_TEXT_OP,
         .color_commenter_info = COLOR_COMMENTER_INFO,
-        .color_border = NULL,
-        .border_first = NULL,
-        .border_next = NULL,
-        .border_fill = NULL,
-        .body_indent = "│ ",
     },
+    // The userid on every line keeps the left edge filled; dim on further
+    // lines, so the eye finds where each comment starts.
     [COMMENT_THEME_SIMPLE] = {
         .name = "單純易讀",
         .color_commenter = ANSI_COLOR(0;33),
         .color_commenter_op = ANSI_COLOR(1;36),
-        .color_comment_text = NULL,
-        .color_comment_text_op = NULL,
+        .color_commenter_more = ANSI_COLOR(1;30),
+        .color_commenter_more_op = ANSI_COLOR(1;30),
         .color_commenter_info = COLOR_COMMENTER_INFO,
-        .color_border = NULL,
-        .border_first = NULL,
-        .border_next = NULL,
-        .border_fill = NULL,
-        .body_indent = "│ ",
     },
     [COMMENT_THEME_ALIGNED] = {
         .name = "對齊顯示",
+        .align = 1,
         .color_commenter = ANSI_COLOR(0;33),
         .color_commenter_op = ANSI_COLOR(1;36),
-        .color_comment_text = NULL,
-        .color_comment_text_op = NULL,
         .color_commenter_info = COLOR_COMMENTER_INFO,
-        .color_border = NULL,
-        .border_first = NULL,
-        .border_next = NULL,
-        .border_fill = NULL,
-        .body_indent = "  ",
     },
 };
 
@@ -353,44 +346,20 @@ comment_set_pref_theme(int theme_idx)
         s_comment_pref_theme = theme_idx;
 }
 
-static void
-comment_print_fill(const comment_theme_t *thm, int pad)
-{
-    if (pad <= 0)
-        return;
-
-    if (thm->border_fill && pad >= 4) {
-        outs(" ");
-        int dash_width = pad - 2;
-        int num_dashes = dash_width / 2;
-        int rem = dash_width % 2;
-        if (thm->color_border && *thm->color_border)
-            outs(thm->color_border);
-        for (int i = 0; i < num_dashes; i++)
-            outs(thm->border_fill);
-        if (rem > 0)
-            prints("%*s", rem, "");
-        if (thm->color_border && *thm->color_border)
-            outs(ANSI_RESET);
-        outs(" ");
-    } else {
-        prints("%*s", pad, "");
-    }
-}
-
 /*
  * The lines nest.svc writes for a comment (FormatCommentBlock):
  *   RS[*][-|!]userid|[~]No|MM/DD/YYYY HH:MM|[ip]|text
- *   RS[*]<spaces>|text     (further lines)
+ *   RS[*]+userid|text      (further lines)
  * RS is COMMENT_LINE_MARK, which editors drop, so no article line is taken
- * for a comment. "*": by the OP, "-": deleted, "!": removed, "~": edited.
- * The fields before the text never have '|': they are read forward, then
- * the text is printed as it comes. Further lines have as many spaces as the
- * userid is wide, so each line is drawn on its own, aligned with the first.
+ * for a comment. "*": by the OP, "-": deleted, "!": removed, "~": edited,
+ * "+": a further line. The fields before the text never have '|': they are
+ * read forward, then the text is printed as it comes. Further lines repeat
+ * the userid, so each line is drawn on its own.
  */
 #define COMMENT_OP_MARK      '*'
 #define COMMENT_DELETED_MARK '-'
 #define COMMENT_REMOVED_MARK '!'
+#define COMMENT_MORE_MARK    '+'
 #define COMMENT_DATE_LEN     16  /* "MM/DD/YYYY HH:MM" */
 
 typedef struct {
@@ -439,34 +408,73 @@ parse_head(const char *p, const char *end, comment_head_t *h)
     return 1;
 }
 
-/* Reads further line "RS[*]<spaces>|text" (up to end): returns the length
- * of its prefix up to the '|', or 0 if line is not one. */
+typedef struct {
+    int is_op;
+    const char *user;
+    int user_len;
+} comment_more_t;
+
+/* Reads further line "RS[*]+userid|text" (up to end) into m: returns the
+ * length of its prefix up to the '|', or 0 if line is not one. */
 static int
 parse_body_prefix(const unsigned char *line, const unsigned char *end,
-                  int *width, int *is_op)
+                  comment_more_t *m)
 {
     const unsigned char *p = line;
     if (p >= end || *p++ != COMMENT_LINE_MARK)
         return 0;
-    *is_op = (p < end && *p == COMMENT_OP_MARK);
-    p += *is_op;
-    const unsigned char *spaces = p;
-    while (p < end && *p == ' ')
-        p++;
-    if (p == spaces || p >= end || *p != '|')
+    m->is_op = (p < end && *p == COMMENT_OP_MARK);
+    p += m->is_op;
+    if (p >= end || *p++ != COMMENT_MORE_MARK)
         return 0;
-    *width = (int)(p - spaces);
+    m->user = (const char *)p;
+    while (p < end && *p != '|' && *p != '\n')
+        p++;
+    m->user_len = (int)((const char *)p - m->user);
+    if (!m->user_len || p >= end || *p != '|')
+        return 0;
     return (int)(p + 1 - line);
 }
 
-/* The indent of further lines under the header of a userid width wide:
- * "userid: ", padded to IDLEN in the aligned theme. */
+/* Prints mark (if any) and a space in color; returns its width. */
 static int
-body_indent(const comment_ctx_t *ctx, int width)
+print_mark(const char *mark, const char *color)
 {
-    if (ctx->theme == COMMENT_THEME_ALIGNED && width < IDLEN)
-        width = IDLEN;
-    return width + 2;
+    if (!mark)
+        return 0;
+    outs(color);
+    outs(mark);
+    outs(ANSI_RESET " ");
+    return (int)strlen(mark) + 1;
+}
+
+/* Prints "userid: " (spaces if no color), aligned as the theme says;
+ * returns its width. */
+static int
+print_commenter(const comment_theme_t *thm, const char *color,
+                const char *user, int user_len)
+{
+    int pad = thm->align && user_len < IDLEN ? IDLEN - user_len : 0;
+    prints("%*s", pad, "");
+    if (color) {
+        outs(color);
+        prints("%.*s:", user_len, user);
+        outs(ANSI_RESET " ");
+    } else {
+        prints("%*s", user_len + 2, "");
+    }
+    return pad + user_len + 2;
+}
+
+/* Prints what comes before the text of further line m; returns its width. */
+static int
+print_more_prefix(const comment_ctx_t *ctx, const comment_more_t *m)
+{
+    const comment_theme_t *thm = comment_get_theme(ctx->theme);
+    int w = print_mark(thm->mark_more, thm->color_mark_more);
+    return w + print_commenter(thm, m->is_op ? thm->color_commenter_more_op :
+                                               thm->color_commenter_more,
+                               m->user, m->user_len);
 }
 
 /* Prints the text of a comment from p up to the end of its line (or end);
@@ -526,11 +534,10 @@ comment_render_modern_header(comment_ctx_t *ctx,
     ctx->cur_is_op = h.is_op;
 
     /* Left: the userid, then the text as it comes. */
-    if (ctx->theme == COMMENT_THEME_ALIGNED && h.user_len < IDLEN)
-        prints("%*s", IDLEN - h.user_len, "");
-    outs(h.is_op ? thm->color_commenter_op : thm->color_commenter);
-    prints("%.*s", h.user_len, h.user);
-    outs(ANSI_RESET ": ");
+    print_mark(thm->mark_first, h.is_tombstone ? ANSI_COLOR(1;30) :
+                                thm->color_mark_first);
+    print_commenter(thm, h.is_op ? thm->color_commenter_op :
+                                   thm->color_commenter, h.user, h.user_len);
     const char *eol = comment_render_content(ctx, h.text, end, h.is_op,
                                              h.is_tombstone);
 
@@ -558,12 +565,12 @@ comment_render_modern_header(comment_ctx_t *ctx,
             len = 0;
         }
         if (len > 0) {
-            comment_print_fill(thm, avail - len - 1 - floor_width);
+            prints("%*s", avail - len - 1 - floor_width, "");
             outs(info_color);
             outs(info);
             outs(ANSI_RESET " ");
         } else if (avail > floor_width) {
-            comment_print_fill(thm, avail - floor_width);
+            prints("%*s", avail - floor_width, "");
         } else {
             outs(" ");
         }
@@ -596,27 +603,26 @@ comment_render_body_prefix(comment_ctx_t *ctx,
                            int *col,
                            int *need_reset_color)
 {
-    int plen, width, is_op;
-    if (!ctx || !(plen = parse_body_prefix(line_head, ctx->buf_end, &width,
-                                           &is_op)))
+    comment_more_t m;
+    int plen;
+    if (!ctx || !(plen = parse_body_prefix(line_head, ctx->buf_end, &m)))
         return 0;
 
     const comment_theme_t *thm = comment_get_theme(ctx->theme);
-    ctx->cur_is_op = is_op;
+    ctx->cur_is_op = m.is_op;
 
-    const char *t_color = is_op ? thm->color_comment_text_op : thm->color_comment_text;
+    if (*dispe == line_head) {
+        int w = print_more_prefix(ctx, &m);
+        *dispe += plen;
+        if (col)
+            *col += w;
+    }
+
+    const char *t_color = m.is_op ? thm->color_comment_text_op : thm->color_comment_text;
     if (t_color && *t_color) {
         outs(t_color);
         if (need_reset_color)
             *need_reset_color = 1;
-    }
-
-    if (*dispe == line_head) {
-        int indent = body_indent(ctx, width);
-        prints("%*s", indent, "");
-        *dispe += plen;
-        if (col)
-            *col += indent;
     }
 
     return 1;
@@ -669,12 +675,13 @@ comment_render_line(comment_ctx_t *ctx, const char *line, int len)
         return 0;
 
     const unsigned char *head = (const unsigned char *)line;
-    int plen, width, is_op;
+    comment_more_t m;
+    int plen;
     if (line && len > 0 && *head == COMMENT_LINE_MARK) {
-        if ((plen = parse_body_prefix(head, head + len, &width, &is_op))) {
-            ctx->cur_is_op = is_op;
-            prints("%*s", body_indent(ctx, width), "");
-            comment_render_content(ctx, line + plen, line + len, is_op, 0);
+        if ((plen = parse_body_prefix(head, head + len, &m))) {
+            ctx->cur_is_op = m.is_op;
+            print_more_prefix(ctx, &m);
+            comment_render_content(ctx, line + plen, line + len, m.is_op, 0);
             return 1;
         }
         /* Header: as if the buffer were this line alone. */

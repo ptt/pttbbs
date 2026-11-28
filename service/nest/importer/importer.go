@@ -136,11 +136,11 @@ var (
 
 	// The comments nest.svc writes into the articles (FormatCommentBlock in
 	// storage): a floor is "RS[*][-|!]author|[~]No|MM/DD/YYYY HH:MM|[ip]|text",
-	// its other lines "RS[*]<spaces>|text"; the OP mark "*" is ignored here.
+	// its other lines "RS[*]+author|text"; the OP mark "*" is ignored here.
 	// The author is a userid, or the name of a non-user owner (e.g.
 	// "[系統安全局]") for the OP's text among the comments.
 	modernHeadRegex = regexp.MustCompile(`^\x1e\*?([-!]?)([^|\s][^|]*)\|(~?)(\d+)\|(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\|([^|]*)\|(.*)$`)
-	modernMoreRegex = regexp.MustCompile(`^\x1e\*? +\|(.*)$`)
+	modernMoreRegex = regexp.MustCompile(`^\x1e\*?\+[^|]*\|(.*)$`)
 )
 
 // spamCommentsRemovedNote is the line mbbsd leaves among the comments where

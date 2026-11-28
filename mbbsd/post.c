@@ -85,11 +85,11 @@ live_comment_lines(const char *path, off_t before, off_t after,
     if (buf[0] != COMMENT_LINE_MARK ||
         strncmp(user, cuser.userid, idlen) != 0 || user[idlen] != '|')
         return 0;
-    // Headers; the other lines are "RS[*]<spaces>|text".
+    // Headers; the other lines are "RS[*]+userid|text".
     for (const char *p = buf; *p; ) {
         const char *nl = strchr(p, '\n');
         const char *q = p + 1 + (p[1] == '*');
-        if (p[0] == COMMENT_LINE_MARK && *q != ' ')
+        if (p[0] == COMMENT_LINE_MARK && *q != '+')
             blocks++;
         p = nl ? nl + 1 : p + strlen(p);
     }

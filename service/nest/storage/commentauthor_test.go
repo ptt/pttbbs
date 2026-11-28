@@ -8,8 +8,8 @@ import (
 )
 
 // Authors that are not userids (imported from .DIR owners) keep the comment
-// line readable: no field separator, mark or empty name, and further lines
-// as wide as the name is on a terminal.
+// line readable: no field separator, mark or empty name, also on further
+// lines.
 func TestCommentAuthorField(t *testing.T) {
 	for _, tc := range []struct{ in, want string }{
 		{"userA", "userA"},
@@ -21,6 +21,7 @@ func TestCommentAuthorField(t *testing.T) {
 		{"-.-", "_.-"},
 		{"*star", "_star"},
 		{"!bang", "_bang"},
+		{"+plus", "_plus"},
 	} {
 		if got := commentAuthor(tc.in); got != tc.want {
 			t.Errorf("commentAuthor(%q) = %q, want %q", tc.in, got, tc.want)
@@ -33,7 +34,7 @@ func TestCommentAuthorField(t *testing.T) {
 	if len(lines) != 2 || !strings.HasPrefix(lines[0], "\x1e[系統安全局]|3|") {
 		t.Fatalf("lines = %q", lines)
 	}
-	if want := "\x1e" + strings.Repeat(" ", 12) + "|二"; lines[1] != want {
+	if want := "\x1e+[系統安全局]|二"; lines[1] != want {
 		t.Errorf("further line %q, want %q", lines[1], want)
 	}
 }

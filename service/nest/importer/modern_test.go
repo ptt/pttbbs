@@ -14,15 +14,15 @@ func TestParseModernFloors(t *testing.T) {
 		"※ 文章網址: https://www.ptt.cc/bbs/TestBoard/M.1791118800.A.001.html\n" +
 		"\x1ealice|1|10/04/2026 21:27||first\n" +
 		"\x1ebob|2|10/04/2026 21:30|1.2.3.4|has a | inside\n" +
-		"\x1e   |second line\n" +
-		"\x1e   |third line\n" +
+		"\x1e+bob|second line\n" +
+		"\x1e+bob|third line\n" +
 		"\x1e-carol|3|10/04/2026 21:31||留言已刪除\n" +
 		"\x1e!dave|4|10/04/2026 21:32||留言已移除 (spam)\n" +
 		"\x1ealice|~5|10/04/2026 21:33||edited\n" +
 		"\x1e!erin|6|10/04/2026 21:33||留言已移除 (ad)\n" +
 		"\x1ealice|7|10/04/2026 21:34||same author soon after\n" +
 		"\x1e*op|8|10/04/2026 21:35||by the OP\n" +
-		"\x1e*  |more by the OP\n" +
+		"\x1e*+op|more by the OP\n" +
 		"\x1e*-op|9|10/04/2026 21:36||留言已刪除\n"
 	base := time.Date(2026, 10, 4, 21, 0, 0, 0, time.Local).Unix()
 	parsed, err := ParseArticleText([]byte(article), "op", base, "TestBoard", "M.1791118800.A.001", false)

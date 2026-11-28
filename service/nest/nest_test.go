@@ -315,8 +315,8 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if !strings.Contains(cacheStr, "\x1ecommenter1|1|") || !strings.Contains(cacheStr, "192.168.1.1") || !strings.Contains(cacheStr, "這是彩色推文第一行") {
 		t.Fatalf("Cache file header missing expected floor info, got: %s", cacheStr)
 	}
-	// Cache must contain further lines aligned by the userid
-	if !strings.Contains(cacheStr, "\x1e          |第二行也是彩色\n") {
+	// Cache must contain further lines with the userid
+	if !strings.Contains(cacheStr, "\x1e+commenter1|第二行也是彩色\n") {
 		t.Fatalf("Cache file comment lines not properly indented, got: %s", cacheStr)
 	}
 
@@ -329,7 +329,7 @@ func TestStorageEngineAllFeatures(t *testing.T) {
 	if strings.Contains(renderedStr, "\x1b") {
 		t.Fatalf("RenderFullPostText should not contain ANSI escape codes, got: %q", renderedStr)
 	}
-	if !strings.Contains(renderedStr, "\x1ecommenter1|1|") || !strings.Contains(renderedStr, "\x1e          |第二行也是彩色\n") {
+	if !strings.Contains(renderedStr, "\x1ecommenter1|1|") || !strings.Contains(renderedStr, "\x1e+commenter1|第二行也是彩色\n") {
 		t.Fatalf("RenderFullPostText missing comment body: %s", renderedStr)
 	}
 	t.Logf("Cache file formatting and RenderFullPostText verified cleanly:\n%s", cacheStr)
@@ -2599,7 +2599,7 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 		t.Fatalf("RenderFullPostText failed: %v", err)
 	}
 	rendered := string(renderedBytes)
-	if !strings.Contains(rendered, "\x1euserA|1|11/15/2023 06:13|1.1.1.1|第一句\n\x1e     |第二句\n\x1e     |第三句\n") {
+	if !strings.Contains(rendered, "\x1euserA|1|11/15/2023 06:13|1.1.1.1|第一句\n\x1e+userA|第二句\n\x1e+userA|第三句\n") {
 		t.Fatalf("Rendered text mismatch for merged comment:\n%s", rendered)
 	}
 	if !strings.Contains(rendered, "\x1euserB|2|11/15/2023 06:16|2.2.2.2|路人甲插話\n") {
@@ -2615,7 +2615,7 @@ func TestConsecutiveCommentAutoMerge(t *testing.T) {
 		t.Fatalf("ReadFile from BoardFilePath failed: %v", err)
 	}
 	diskContent := string(diskBytes)
-	if !strings.Contains(diskContent, "\x1euserA|1|11/15/2023 06:13|1.1.1.1|第一句\n\x1e     |第二句\n\x1e     |第三句\n") {
+	if !strings.Contains(diskContent, "\x1euserA|1|11/15/2023 06:13|1.1.1.1|第一句\n\x1e+userA|第二句\n\x1e+userA|第三句\n") {
 		t.Fatalf("Disk file mismatch for merged comment:\n%s", diskContent)
 	}
 

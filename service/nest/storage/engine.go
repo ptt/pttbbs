@@ -2206,16 +2206,17 @@ const (
 	commentOPMark      = "*"    // by the OP
 	commentDeletedMark = "-"    // deleted by its creator (Lemmy's deleted)
 	commentRemovedMark = "!"    // removed by a moderator (Lemmy's removed)
+	commentMoreMark    = "+"    // a further line of the comment
 )
 
 // commentMoreLine formats a further line of the comment by name, marked if
-// by the OP, so each line can be drawn alone and aligned with the first.
+// by the OP; it repeats the name so each line can be drawn alone.
 func commentMoreLine(text, name string, op bool) string {
 	mark := ""
 	if op {
 		mark = commentOPMark
 	}
-	return commentLineMark + mark + strings.Repeat(" ", visualWidth(name)) + "|" + text + "\n"
+	return commentLineMark + mark + commentMoreMark + name + "|" + text + "\n"
 }
 
 // commentAuthor returns the author field of a comment line: never empty, no
@@ -2231,7 +2232,7 @@ func commentAuthor(name string) string {
 	if name == "" {
 		return "?"
 	}
-	if strings.ContainsRune(commentOPMark+commentDeletedMark+commentRemovedMark, rune(name[0])) {
+	if strings.ContainsRune(commentOPMark+commentDeletedMark+commentRemovedMark+commentMoreMark, rune(name[0])) {
 		name = "_" + name[1:]
 	}
 	return name
@@ -2241,13 +2242,13 @@ func commentAuthor(name string) string {
 // (Lemmy and Reddit write no comment files); each line can be drawn alone:
 //
 //	Line 1:  RS[*][-|!]userid|[~]No|MM/DD/YYYY HH:MM|[ip]|comment
-//	Line 2+: RS[*]<spaces>|comment
+//	Line 2+: RS[*]+userid|comment
 //
 // RS (0x1e) cannot be typed, so no article line is taken for a comment.
 // "*" is the OP (IsSubmitter; Reddit "[S]", Lemmy "OP"), "-" deleted, "!"
-// removed, "~" edited. The fields before the comment never have "|", so
-// readers parse them forward and print the comment as it comes. Further
-// lines have as many spaces as the userid is wide, to align with the first.
+// removed, "~" edited, "+" a further line. The fields before the comment
+// never have "|", so readers parse them forward and print the comment as it
+// comes. Further lines repeat the userid, as PTT's own "→ userid:" lines.
 func FormatCommentBlock(p *model.Post, c *model.Comment) string {
 	t := time.Unix(c.CreatedAt, 0).Format("01/02/2006 15:04")
 	ip := c.IP

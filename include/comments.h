@@ -20,20 +20,20 @@ enum {
     COMMENT_THEMES
 };
 
-#define COMMENT_THEME_BORDERED COMMENT_THEME_ALIGNED
-
 typedef struct {
     const char *name;
+    int align;                          /* pad userids to IDLEN */
+    const char *mark_first;             /* before the userid, e.g. a push */
+    const char *color_mark_first;
+    const char *mark_more;              /* the same on further lines */
+    const char *color_mark_more;
     const char *color_commenter;
     const char *color_commenter_op;
+    const char *color_commenter_more;   /* NULL: no userid on further lines */
+    const char *color_commenter_more_op;
     const char *color_comment_text;
     const char *color_comment_text_op;
     const char *color_commenter_info;
-    const char *color_border;
-    const char *border_first;
-    const char *border_next;
-    const char *border_fill;
-    const char *body_indent;
 } comment_theme_t;
 
 /* Context passed for comment rendering */
@@ -67,12 +67,12 @@ int comment_render_header(comment_ctx_t *ctx,
                           const unsigned char *line,
                           const unsigned char **next_line);
 
-/* Renders comment body indent prefix and sets text color.
- * Checks if line_head is a comment body line ("RS[*]<spaces>|text"), anywhere
- * in the article; the line alone tells its OP state and indent.
+/* Renders the prefix of a comment body line and sets text color.
+ * Checks if line_head is a comment body line ("RS[*]+userid|text"), anywhere
+ * in the article; the line alone tells its OP state and userid.
  * If yes:
- *   - renders border prefix if *dispe == line_head
- *   - advances *dispe past the prefix up to the second '|'
+ *   - renders the theme's prefix (e.g. "userid: ") if *dispe == line_head
+ *   - advances *dispe past the prefix up to the '|'
  *   - updates *col with the rendered prefix width
  *   - updates ctx->cur_is_op and outputs text color (OP vs non-OP)
  *   - sets *need_reset_color = 1
@@ -98,7 +98,7 @@ const char *comment_get_body_color(const comment_ctx_t *ctx);
 
 /* Renders a standalone line (not in a pager buffer, e.g. live mode) in the
  * new comment format: a header "RS[*][-|!]userid|..." or a body line
- * "RS[*]<spaces>|text". The buffer fields of ctx are not used, and each line
+ * "RS[*]+userid|text". The buffer fields of ctx are not used, and each line
  * is rendered on its own.
  * Returns 1 if the line was rendered, or 0 (nothing output, state reset) if
  * it is not a new format comment line.

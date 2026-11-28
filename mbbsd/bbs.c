@@ -3301,7 +3301,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
         int idlen = strlen(myid);
         while (idlen > 0 && myid[idlen - 1] == ' ')
             idlen--;    // aligncmt pads it; the article does its own
-        snprintf(prefix, sizeof(prefix), "%s%.*s" ANSI_RESET ":",
+        snprintf(prefix, sizeof(prefix), "%s%.*s:" ANSI_RESET,
                  thm->color_commenter, idlen, myid);
         msg[0] = '\0';
         const char *prompt = already_voted ?
