@@ -982,6 +982,7 @@ bcfg_set_fastrecmd(cmd_ctx_t *ctx)
 }
 #endif
 
+#if !IS_ENABLED(CONFIG_NEST)
 static int
 bcfg_set_commentshowip(cmd_ctx_t *ctx)
 {
@@ -1005,6 +1006,7 @@ bcfg_set_commentshowip(cmd_ctx_t *ctx)
 #endif
     return 0;
 }
+#endif
 
 #if !IS_ENABLED(CONFIG_RATING)
 static int
@@ -1355,18 +1357,15 @@ static const BConfigItem bconfig_items[] = {
     { 'e', "非看板會員發文", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_RESTRICTEDPOST, PERM_SYSOP, NULL, bcfg_set_restrictedpost },
     { 'y', "回應文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOREPLY, PERM_SYSGROUPOP, NULL, bcfg_set_noreply },
     { 'd', "自刪文章", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NOSELFDELPOST, PERM_SELFDEL, NULL, bcfg_set_noselfdelpost },
-#if IS_ENABLED(CONFIG_RATING)
+#if IS_ENABLED(CONFIG_NEST)
     { 'r', "留言 (X推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NO_COMMENTS, PERM_BM, NULL, bcfg_set_norecommend },
-#if IS_ENABLED(CONFIG_COMMENT_EDIT)
     { 'u', "[留言] 自刪與修改", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_COMMENT_READONLY, PERM_BM, NULL, bcfg_set_comment_readonly },
-#endif
-    { 'i', "[留言] 預設不顯示 IP", ANSI_COLOR(1) "顯示" ANSI_RESET, "不顯示", BRD_COMMENT_SHOWIP, PERM_BM, NULL, bcfg_set_commentshowip },
     { 'z', "評分 (%推噓)", ANSI_COLOR(1) "開放" ANSI_RESET, "不開放", BRD_SCORE, PERM_BM, NULL, bcfg_set_score },
     { 's', "[評分] 噓文", NULL, NULL, 0, PERM_BM, bcfg_get_no_downvote, bcfg_set_no_downvote },
 #else
     { 'r', "推薦文章 (推文)", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_NO_COMMENTS, PERM_BM, NULL, bcfg_set_norecommend },
 #if IS_ENABLED(CONFIG_COMMENT_EDIT)
-    { 'u', "[留言] 自刪與修改", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_COMMENT_READONLY, PERM_BM, NULL, bcfg_set_comment_readonly },
+    { 'u', "[推文] 自刪與修改", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_COMMENT_READONLY, PERM_BM, NULL, bcfg_set_comment_readonly },
 #endif
 #if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_no_downvote, bcfg_set_no_downvote },
