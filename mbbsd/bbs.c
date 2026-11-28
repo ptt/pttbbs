@@ -3171,19 +3171,13 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	    }
 	}
     }
-    // no matter it is first time or not; with CONFIG_OLD_RECOMMEND the
-    // old format is one way counter, so let's relax.
-    else if ((!IS_ENABLED(CONFIG_OLD_RECOMMEND) || FHDR_SCORE(fhdr) == 0) &&
-	     is_file_owner(fhdr, &cuser))
+    // no matter it is first time or not
+    else if (is_file_owner(fhdr, &cuser))
     {
 	// owner recommend
 	type = RECTYPE_ARROW;
 	move(ymsg--, 0); clrtoeol();
-	if (!IS_ENABLED(CONFIG_OLD_RECOMMEND))
-	    outs("作者本人, 使用 → 加註方式\n");
-	else
-	    outs("作者本人首推, 使用 → 加註方式\n");
-
+	outs("作者本人, 使用 → 加註方式\n");
     }
     else if (!IS_ENABLED(CONFIG_DEBUG) && !CBRD_IS_BM() &&
 	    time4_diff(now, lastcomment) < 90) {
@@ -3193,7 +3187,7 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	outs("時間太近, 使用 → 加註方式\n");
     }
 
-    else if (!IS_ENABLED(CONFIG_OLD_RECOMMEND))
+    else
     {
 	int i;
 
@@ -3283,8 +3277,6 @@ comment(int ent, fileheader_t * fhdr, const char *direct)
 	// nest.svc keeps a comment as what was typed, without a type (no
 	// push, boo or arrow): the article shows it in its own format.
 	sprintf(buf, "%s: ", myid);
-    } else if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
-	sprintf(buf, "%s %s:", "→", myid);
     } else {
 	sprintf(buf, "%s%s%s %s: ",
 		ctype_attr[type], ctype[type], ANSI_RESET, myid);

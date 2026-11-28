@@ -435,9 +435,8 @@ test_remove_comment(void)
                BOF_ERR_COULDNT_FIND_COMMENT);
     rm.bbs_author = "ivan";
     rm.bbs_content = "nice";
-    if (!IS_ENABLED(CONFIG_OLD_RECOMMEND))
-        EXPECT_INT(bof_remove_comment(&mod, &rm, NULL),
-                   BOF_ERR_COULDNT_FIND_COMMENT);
+    EXPECT_INT(bof_remove_comment(&mod, &rm, NULL),
+               BOF_ERR_COULDNT_FIND_COMMENT);
     rm.bbs_vote = 1;
     EXPECT_OK(bof_remove_comment(&mod, &rm, NULL));
 

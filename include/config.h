@@ -731,8 +731,8 @@
 #  define CONFIG_ASSESS 0
 # endif
 #endif
-#if defined(OLDRECOMMEND) && !defined(CONFIG_OLD_RECOMMEND)
-#define CONFIG_OLD_RECOMMEND 1
+#if defined(OLDRECOMMEND) || defined(CONFIG_OLD_RECOMMEND)
+#error "OLDRECOMMEND / CONFIG_OLD_RECOMMEND was removed: drop it from pttbbs.conf"
 #endif
 #if defined(GUESTRECOMMEND) && !defined(CONFIG_GUESTRECOMMEND)
 #define CONFIG_GUESTRECOMMEND 1
@@ -803,9 +803,6 @@
 #if IS_ENABLED(CONFIG_NEST)
 #undef CONFIG_RATING
 #define CONFIG_RATING 1
-#endif
-#if IS_ENABLED(CONFIG_RATING) && IS_ENABLED(CONFIG_OLD_RECOMMEND)
-#error "CONFIG_RATING conflicts with OLDRECOMMEND / CONFIG_OLD_RECOMMEND"
 #endif
 
 /* CONFIG_COMMENT_EDIT is always on with CONFIG_NEST too: nest.svc keeps

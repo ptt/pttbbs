@@ -199,10 +199,7 @@ remove_line(const char *line, FILE *out, void *vctx)
         if (!parse_comment_line(line, &pc, NULL, NULL) ||
             ++c->floor != c->req->bbs_floor)
             return 0;
-        // (Comments of the old style all look the same, whatever vote.)
-        match = !pc.removed &&
-                (IS_ENABLED(CONFIG_OLD_RECOMMEND) ||
-                 pc.bbs_vote == c->req->bbs_vote) &&
+        match = !pc.removed && pc.bbs_vote == c->req->bbs_vote &&
                 strcasecmp(pc.creator, c->req->bbs_author) == 0 &&
                 strcmp(pc.content, c->req->bbs_content) == 0;
     } else {
@@ -229,7 +226,7 @@ bof_fs_remove_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     const char *reason = req->reason ? req->reason : "";
     char path[PATHLEN], padded[IDLEN + 1], rev_note[ANSILINELEN * 2];
     time4_t now = time4(NULL);
-    remove_ctx c = { .npatterns = IS_ENABLED(CONFIG_OLD_RECOMMEND) ? 2 : 4 };
+    remove_ctx c = { .npatterns = 4 };
     int type, i, matched;
     bof_error_t err;
 
@@ -288,13 +285,6 @@ comment_prefix_of(int type, char *buf, size_t sz)
         ANSI_COLOR(1;37), ANSI_COLOR(1;31), ANSI_COLOR(1;31),
     };
 
-    if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
-        if (type != RECTYPE_GOOD)
-            return 0;
-        snprintf(buf, sz, ANSI_COLOR(1;31) STR_COMMENT_ARROW " "
-                 ANSI_COLOR(33));
-        return 1;
-    }
     snprintf(buf, sz, "%s%s " ANSI_COLOR(33), attrs[type], kinds[type]);
     return 1;
 }
@@ -360,7 +350,7 @@ parse_comment_line(const char *line, bof_comment_t *c, size_t *coff,
         copy_trimmed(c->creator, sizeof(c->creator), p, e - p);
         p = e + strlen(ANSI_RESET ANSI_COLOR(33) ":");
         // Older comments may have no space after the colon.
-        if (!IS_ENABLED(CONFIG_OLD_RECOMMEND) && *p == ' ')
+        if (*p == ' ')
             p++;
         if (!(e = strstr(p, ANSI_RESET)) || e > end)
             return 0;
@@ -371,9 +361,6 @@ parse_comment_line(const char *line, bof_comment_t *c, size_t *coff,
         if (clen)
             *clen = e - p;
         e += strlen(ANSI_RESET);
-        if (IS_ENABLED(CONFIG_OLD_RECOMMEND) &&
-            strncmp(e, STR_COMMENT_PUSH, strlen(STR_COMMENT_PUSH)) == 0)
-            e += strlen(STR_COMMENT_PUSH);
         copy_trimmed(c->bbs_tail, sizeof(c->bbs_tail), e,
                      e < end ? (size_t)(end - e) : 0);
         // An edited comment has the mark before its date.

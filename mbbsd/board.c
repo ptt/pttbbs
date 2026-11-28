@@ -652,7 +652,6 @@ bcfg_get_title(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
     return buf;
 }
 
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
 static const char *
 bcfg_get_no_downvote(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED,
                char *buf, size_t sz)
@@ -663,7 +662,6 @@ bcfg_get_no_downvote(const bconfig_ctx_t *cx, const BConfigItem *item GCC_UNUSED
                  ? ANSI_COLOR(1) "不開放" ANSI_RESET : "開放", sz);
     return buf;
 }
-#endif
 
 #if !IS_ENABLED(CONFIG_RATING)
 static const char *
@@ -930,7 +928,6 @@ bcfg_set_norecommend(cmd_ctx_t *ctx)
     return 0;
 }
 
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
 static int
 bcfg_set_no_downvote(cmd_ctx_t *ctx)
 {
@@ -950,7 +947,6 @@ bcfg_set_no_downvote(cmd_ctx_t *ctx)
     }
     return 0;
 }
-#endif
 
 #if !IS_ENABLED(CONFIG_RATING)
 static int
@@ -1367,9 +1363,7 @@ static const BConfigItem bconfig_items[] = {
 #if IS_ENABLED(CONFIG_COMMENT_EDIT)
     { 'u', "[推文] 自刪與修改", ANSI_COLOR(1) "不開放" ANSI_RESET, "開放", BRD_COMMENT_READONLY, PERM_BM, NULL, bcfg_set_comment_readonly },
 #endif
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', "噓文", NULL, NULL, 0, PERM_BM, bcfg_get_no_downvote, bcfg_set_no_downvote },
-#endif
     { 'f', "快速連推文章", NULL, NULL, 0, PERM_BM, bcfg_get_fastrecmd, bcfg_set_fastrecmd },
     { 'i', "推文時記錄來源 IP", ANSI_COLOR(1) "自動記錄" ANSI_RESET, "不會記錄", BRD_COMMENT_SHOWIP, PERM_BM, NULL, bcfg_set_commentshowip },
     { 'a', "推文開頭自動對齊", ANSI_COLOR(1) "對齊" ANSI_RESET, "不用對齊", BRD_ALIGNEDCMT, PERM_BM, NULL, bcfg_set_alignedcmt },
@@ -1629,9 +1623,7 @@ static const cmd_t bconfig_edit_cmds[] = {
 #if IS_ENABLED(CONFIG_COMMENT_EDIT)
     { 'u', NULL, "切換留言是否開放自刪與修改", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
 #endif
-#if !IS_ENABLED(CONFIG_OLD_RECOMMEND)
     { 's', NULL, "切換是否開放噓文", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
-#endif
 #if IS_ENABLED(CONFIG_RATING)
     { 'i', NULL, "切換留言預設是否顯示 IP", bconfig_cmd_hotkey, PERM_BM, CMD_PRIO_NONE, true },
 #else

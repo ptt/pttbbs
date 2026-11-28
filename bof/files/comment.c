@@ -30,14 +30,6 @@ bof_files_format_comment(char *buf, size_t szbuf, int type, const char *author,
 
     if (type < 0 || type >= RECTYPE_SIZE)
         type = RECTYPE_ARROW;
-    if (IS_ENABLED(CONFIG_OLD_RECOMMEND)) {
-        snprintf(buf, szbuf,
-                 ANSI_COLOR(1;31) STR_COMMENT_ARROW " " ANSI_COLOR(33) "%s"
-                 ANSI_RESET ANSI_COLOR(33) ":%-*s" ANSI_RESET
-                 STR_COMMENT_PUSH "%s\n",
-                 author, width, content, tail);
-        return;
-    }
     snprintf(buf, szbuf,
              "%s%s " ANSI_COLOR(33) "%s" ANSI_RESET ANSI_COLOR(33)
              ": %-*s" ANSI_RESET "%s\n",
@@ -52,9 +44,7 @@ bof_bbs_comment_width(const char *author_shown, int show_from)
     if (show_from)
         width -= 15;
     width -= strlen(author_shown ? author_shown : "");
-    // The old format ends with a push mark; the new one has a space
-    // after the colon.
-    width -= IS_ENABLED(CONFIG_OLD_RECOMMEND) ? 2 : 1;
+    width--;    // the space after the colon
     return width > 0 ? width : 0;
 }
 

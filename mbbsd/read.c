@@ -888,7 +888,7 @@ typedef struct {
 static int
 score_search_negative(int kind)
 {
-    return kind != SCORE_SEARCH_COMMENTS && !IS_ENABLED(CONFIG_OLD_RECOMMEND);
+    return kind != SCORE_SEARCH_COMMENTS;
 }
 
 static int
@@ -1026,9 +1026,7 @@ ask_filter_predicate(fileheader_predicate_t *pred, int prev_modes, int sr_mode,
 	if (currstat == RMAIL ||
 	    !getdata(b_lines, 0, (currmode & MODE_SELECT) ?
 		     "增加條件 推文數: " :
-		     (!IS_ENABLED(CONFIG_OLD_RECOMMEND) ?
-		      "搜尋推文數高於多少 (<0則搜噓文數) 的文章: " :
-		      "搜尋推文數高於多少的文章: "),
+		     "搜尋推文數高於多少 (<0則搜噓文數) 的文章: ",
 		     // 因為有負數所以暫時不能用 NUMECHO
 		     keyword, 7, LCECHO) ||
 	    (pred->score = atoi(keyword)) == 0)
