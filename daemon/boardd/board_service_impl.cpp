@@ -157,7 +157,7 @@ Status BoardServiceImpl::List(ServerContext * /*context*/,
     // Pinned posts are referenced from boardheader_t.bottom[] and live in
     // .DIR itself.
     int32_t recs[MAX_BOTTOM_POSTS];
-    int n = resolve_board_bottoms(bid, recs);
+    int n = resolve_board_bottoms(bid, recs, NULL);
     const std::string dir = paths::bfile(bp->brdname, FN_DIR);
     for (int i = 0; i < n; i++) {
       std::vector<fileheader_t> fhs;
