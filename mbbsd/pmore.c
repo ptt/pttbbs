@@ -2509,7 +2509,7 @@ PMORE_UINAV_FORWARDLINE()
     mf_forward(1);
 }
 
-#define REENTRANT_RESTORE() { mf = bkmf; fh = bkfh; \
+#define REENTRANT_RESTORE() { mf = bkmf; fh = bkfh; bpref = bkpref; \
                               mf_cb = bkcb; mf_cb_ctx = bkcb_ctx; }
 
 #ifndef HAVE_CMD_T
@@ -2958,6 +2958,13 @@ _pmore2(
     void *bkcb_ctx = mf_cb_ctx;
     mf_cb = cb;
     mf_cb_ctx = ctx;
+    MF_BrowsingPreference bkpref = bpref;
+    // A one-page screen (e.g. the board entry) is drawn for its layout;
+    // wrapped lines would push the rest down.
+    if (promptend == PMORE_AUTO_EXIT) {
+        bpref.wrapmode = MFDISP_WRAP_TRUNCATE;
+        bpref.wrapindicator = 0;
+    }
     RESETFH();
     RESETMF();
 
