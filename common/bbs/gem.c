@@ -339,6 +339,49 @@ gem_list(const char *root, const char *sub, int offset, int limit,
 }
 
 int
+gem_list_all(const char *root, const char *sub, const char *role,
+             gem_entry_t **out, gem_totals_t *totals)
+{
+    char hdr[PATHLEN + 64];
+    reply_t r;
+    int n;
+
+    *out = NULL;
+    snprintf(hdr, sizeof(hdr), "LIST %s %s 0 -1 %s", root, wire_path(sub),
+             role ? role : GEM_ROLE_ALL);
+    if (call(&r, hdr, NULL, 0, NULL, 0) < 0) {
+        if (gem_last_error_is(GEM_ERR_NO_ROOT) && (!sub || !*sub)) {
+            if (totals)
+                memset(totals, 0, sizeof(*totals));
+            return 0;
+        }
+        return -1;
+    }
+    n = (int)word(&r, 1);
+    if (totals) {
+        totals->files = word(&r, 2);
+        totals->dirs = word(&r, 3);
+        totals->links = word(&r, 4);
+        totals->missing = word(&r, 5);
+        totals->bytes = word(&r, 6);
+        totals->depth = word(&r, 7);
+    }
+    if (n < 0 || (n > 0 && !(*out = malloc(n * sizeof(gem_entry_t))))) {
+        set_error("bbs_gem_unavailable out of memory");
+        reply_close(&r);
+        return -1;
+    }
+    if (n > 0 && read_exact(&r, *out, n * sizeof(gem_entry_t)) < 0) {
+        free(*out);
+        *out = NULL;
+        reply_close(&r);
+        return -1;
+    }
+    reply_close(&r);
+    return n;
+}
+
+int
 gem_entry(const char *root, const char *sub, int idx, const char *name,
           gem_entry_t *out, int *index, char *target, size_t targetsz)
 {
@@ -372,15 +415,28 @@ char *
 gem_get(const char *root, const char *sub, int idx, const char *name,
         size_t *len)
 {
+    return gem_get_as(root, sub, idx, name, NULL, len, NULL);
+}
+
+char *
+gem_get_as(const char *root, const char *sub, int idx, const char *name,
+           const char *role, size_t *len, int64_t *mtime)
+{
     char hdr[PATHLEN + 64];
     reply_t r;
     char *data;
 
-    snprintf(hdr, sizeof(hdr), "GET %s %s %d %s", root, wire_path(sub), idx,
-             name);
+    if (role)
+        snprintf(hdr, sizeof(hdr), "GET %s %s %d %s %s", root, wire_path(sub),
+                 idx, name, role);
+    else
+        snprintf(hdr, sizeof(hdr), "GET %s %s %d %s", root, wire_path(sub),
+                 idx, name);
     if (call(&r, hdr, NULL, 0, NULL, 0) < 0)
         return NULL;
     size_t n = (size_t)word(&r, 0);
+    if (mtime)
+        *mtime = word(&r, 1);
     if (!(data = malloc(n + 1))) {
         set_error("bbs_gem_unavailable out of memory");
         reply_close(&r);

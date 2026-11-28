@@ -231,6 +231,18 @@ func readRef(a []string) (storage.Ref, error) {
 	return storage.Ref{Root: board, Path: path, Index: idx, Name: a[3]}, nil
 }
 
+// roleArg reads the optional role a[i] (default all).
+func roleArg(a []string, i int) (storage.Role, error) {
+	if len(a) <= i {
+		return storage.RoleAll, nil
+	}
+	r, err := storage.ParseRole(a[i])
+	if err != nil {
+		return r, badRequest("%v", err)
+	}
+	return r, nil
+}
+
 // rootArg reads a root argument.
 func rootArg(s string) (string, error) {
 	r := storage.NormalizeRoot(s)
@@ -335,10 +347,10 @@ func (s *Server) dispatch(q *request) error {
 		return nil
 
 	case "LIST":
-		// LIST <root> <path> [<offset> [<limit>]]
+		// LIST <root> <path> [<offset> [<limit> [<role>]]]
 		//   -> OK <count> <n> <files> <dirs> <links> <missing> <bytes> <depth>\n
 		//      then n records from offset (count: entries in the directory).
-		a, err := q.need(2, "LIST <root> <path> [<offset> [<limit>]]")
+		a, err := q.need(2, "LIST <root> <path> [<offset> [<limit> [<role>]]]")
 		if err != nil {
 			return err
 		}
@@ -357,12 +369,16 @@ func (s *Server) dispatch(q *request) error {
 				return err
 			}
 		}
+		role, err := roleArg(a, 4)
+		if err != nil {
+			return err
+		}
 		var l *storage.Listing
 		var infos []storage.TrashInfo
-		if root, ok := storage.SplitTrashRoot(board); ok && len(path) == 0 {
+		if root, ok := storage.SplitTrashRoot(board); ok && len(path) == 0 && role == storage.RoleAll {
 			l, infos, err = s.st.Trash(root)
 		} else {
-			l, err = s.st.List(board, path)
+			l, err = s.st.ListAs(board, path, role)
 		}
 		if err != nil {
 			return err
@@ -390,9 +406,9 @@ func (s *Server) dispatch(q *request) error {
 		return nil
 
 	case "ENTRY":
-		// ENTRY <root> <path> <index> <name>
+		// ENTRY <root> <path> <index> <name> [<role>]
 		//   -> OK <index> <target_bytes>\n<record><link target>
-		a, err := q.need(4, "ENTRY <root> <path> <index> <name>")
+		a, err := q.need(4, "ENTRY <root> <path> <index> <name> [<role>]")
 		if err != nil {
 			return err
 		}
@@ -400,7 +416,11 @@ func (s *Server) dispatch(q *request) error {
 		if err != nil {
 			return err
 		}
-		e, i, err := s.st.Stat(rf.Root, rf.Path, rf.Index, rf.Name)
+		role, err := roleArg(a, 4)
+		if err != nil {
+			return err
+		}
+		e, i, err := s.st.StatAs(rf.Root, rf.Path, rf.Index, rf.Name, role)
 		if err != nil {
 			return err
 		}
@@ -411,8 +431,8 @@ func (s *Server) dispatch(q *request) error {
 		return nil
 
 	case "GET":
-		// GET <root> <path> <index> <name> -> OK <bytes>\n<content>
-		a, err := q.need(4, "GET <root> <path> <index> <name>")
+		// GET <root> <path> <index> <name> [<role>] -> OK <bytes> <mtime>\n<content>
+		a, err := q.need(4, "GET <root> <path> <index> <name> [<role>]")
 		if err != nil {
 			return err
 		}
@@ -420,11 +440,15 @@ func (s *Server) dispatch(q *request) error {
 		if err != nil {
 			return err
 		}
-		data, _, err := s.st.ReadFile(rf.Root, rf.Path, rf.Index, rf.Name)
+		role, err := roleArg(a, 4)
 		if err != nil {
 			return err
 		}
-		q.ok("%d", len(data))
+		data, e, err := s.st.ReadFileAs(rf.Root, rf.Path, rf.Index, rf.Name, role)
+		if err != nil {
+			return err
+		}
+		q.ok("%d %d", len(data), e.Mtime)
 		q.w.Write(data)
 		return nil
 

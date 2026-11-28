@@ -85,6 +85,7 @@ is_gem_path(const char *path)
     return gem_path_parse(path, root, sizeof(root), sub, sizeof(sub));
 }
 
+// One GET as GEM_ROLE_PUBLIC: gem.svc refuses what is hidden on the path.
 static int
 answer_gem(struct evbuffer *buf, const char *path, gem_entry_t *e,
 	   const char *ck, int cklen, int offset, int maxlen)
@@ -93,6 +94,7 @@ answer_gem(struct evbuffer *buf, const char *path, gem_entry_t *e,
     const char *dir, *name;
     char *slash, *data;
     size_t size;
+    int64_t mtime = 0;
 
     if (!gem_path_parse(path, root, sizeof(root), sub, sizeof(sub)) || !*sub)
 	return SELECT_ENOTFOUND;
@@ -104,16 +106,24 @@ answer_gem(struct evbuffer *buf, const char *path, gem_entry_t *e,
 	dir = "";
 	name = sub;
     }
-    if (gem_entry(root, dir, -1, name, e, NULL, NULL, 0) < 0 ||
-	e->kind != GEM_KIND_FILE)
-	return SELECT_ENOTFOUND;
+    if (!(data = gem_get_as(root, dir, -1, name, GEM_ROLE_PUBLIC, &size,
+			    &mtime)))
+	return (gem_last_error_is(GEM_ERR_NOT_FOUND) ||
+		gem_last_error_is(GEM_ERR_NO_ROOT) ||
+		gem_last_error_is(GEM_ERR_NOT_DIR) ||
+		gem_last_error_is(GEM_ERR_NOT_FILE)) ?
+	    SELECT_ENOTFOUND : SELECT_EUNKNOWN;
+    memset(e, 0, sizeof(*e));
+    e->kind = GEM_KIND_FILE;
+    e->mtime = mtime;
+    e->bytes = size;
     if (ck && cklen) {
 	gem_cachekey(ckbuf, sizeof(ckbuf), e);
-	if ((size_t) cklen != strlen(ckbuf) || strncmp(ck, ckbuf, cklen) != 0)
+	if ((size_t) cklen != strlen(ckbuf) || strncmp(ck, ckbuf, cklen) != 0) {
+	    free(data);
 	    return SELECT_ECHANGED;
+	}
     }
-    if (!(data = gem_get(root, dir, -1, name, &size)))
-	return SELECT_EUNKNOWN;
     if (offset < 0)
 	offset += size;
     if (offset < 0)

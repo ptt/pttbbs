@@ -543,6 +543,14 @@ func SplitPath(p string) ([]string, error) {
 
 // walk follows path from the root listing of board.
 func walk(r reader, board string, path []string) (*Listing, error) {
+	return walkAs(r, board, path, RoleAll)
+}
+
+// walkAs is walk as role sees the area: the listing returned is filtered.
+func walkAs(r reader, board string, path []string, role Role) (*Listing, error) {
+	if !role.canRead(board) {
+		return nil, errorf(ErrNoRoot, "%s", board)
+	}
 	id, _, err := readRoot(r, board)
 	if err != nil {
 		return nil, err
@@ -551,6 +559,7 @@ func walk(r reader, board string, path []string) (*Listing, error) {
 	if err != nil {
 		return nil, err
 	}
+	l = role.filter(l)
 	for i, name := range path {
 		j := l.Find(-1, name)
 		if j < 0 {
@@ -563,15 +572,21 @@ func walk(r reader, board string, path []string) (*Listing, error) {
 		if l, err = readListing(r, e.Child); err != nil {
 			return nil, err
 		}
+		l = role.filter(l)
 	}
 	return l, nil
 }
 
 // List returns the listing of the directory path of board's gem area.
 func (s *Store) List(board string, path []string) (*Listing, error) {
+	return s.ListAs(board, path, RoleAll)
+}
+
+// ListAs is List as role sees it.
+func (s *Store) ListAs(board string, path []string, role Role) (*Listing, error) {
 	snap := s.db.NewSnapshot()
 	defer snap.Close()
-	return walk(snap, board, path)
+	return walkAs(snap, board, path, role)
 }
 
 // View reads the store as it was when it was made (a Pebble snapshot), e.g.
@@ -601,7 +616,12 @@ func (v *View) Dir(e *Entry) (*Listing, error) {
 
 // Stat returns the entry name (hint: its index last seen) in directory path.
 func (s *Store) Stat(board string, path []string, hint int, name string) (Entry, int, error) {
-	l, err := s.List(board, path)
+	return s.StatAs(board, path, hint, name, RoleAll)
+}
+
+// StatAs is Stat as role sees it.
+func (s *Store) StatAs(board string, path []string, hint int, name string, role Role) (Entry, int, error) {
+	l, err := s.ListAs(board, path, role)
 	if err != nil {
 		return Entry{}, -1, err
 	}
@@ -690,9 +710,14 @@ func (s *Store) readBlob(r reader, h BlobID) ([]byte, error) {
 // ReadFile returns the content of the file name (hint: its index last seen)
 // in directory path.
 func (s *Store) ReadFile(board string, path []string, hint int, name string) ([]byte, Entry, error) {
+	return s.ReadFileAs(board, path, hint, name, RoleAll)
+}
+
+// ReadFileAs is ReadFile as role sees it.
+func (s *Store) ReadFileAs(board string, path []string, hint int, name string, role Role) ([]byte, Entry, error) {
 	snap := s.db.NewSnapshot()
 	defer snap.Close()
-	l, err := walk(snap, board, path)
+	l, err := walkAs(snap, board, path, role)
 	if err != nil {
 		return nil, Entry{}, err
 	}

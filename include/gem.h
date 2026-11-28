@@ -47,6 +47,8 @@ typedef struct gem_totals_t {
 /* Error codes of gem.svc that callers act on. */
 #define GEM_ERR_NO_ROOT   "bbs_couldnt_find_gem_area"
 #define GEM_ERR_NOT_FOUND "bbs_couldnt_find_gem"
+#define GEM_ERR_NOT_DIR   "bbs_gem_not_a_dir"
+#define GEM_ERR_NOT_FILE  "bbs_gem_not_a_file"
 #define GEM_ERR_EXISTS    "bbs_gem_already_exists"
 #define GEM_ERR_QUOTA     "bbs_gem_quota_exceeded"
 #define GEM_ERR_INTO_SELF "bbs_gem_move_into_itself"
@@ -71,6 +73,16 @@ int gem_path_parse(const char *path, char *root, size_t rootsz,
 int gem_list(const char *root, const char *sub, int offset, int limit,
              gem_entry_t *out, int *count, gem_totals_t *totals);
 
+/* Who reads (see service/gem): everything, or what the web may show (no
+ * hidden or BM-only entries, nor paths through them). */
+#define GEM_ROLE_ALL    "all"
+#define GEM_ROLE_PUBLIC "public"
+
+/* gem_list() of the whole directory as role sees it (NULL: all), in one
+ * call, into *out (to free()). */
+int gem_list_all(const char *root, const char *sub, const char *role,
+                 gem_entry_t **out, gem_totals_t *totals);
+
 /* The entry name; its index in *index, a link's target in target. */
 int gem_entry(const char *root, const char *sub, int idx, const char *name,
               gem_entry_t *out, int *index, char *target, size_t targetsz);
@@ -78,6 +90,10 @@ int gem_entry(const char *root, const char *sub, int idx, const char *name,
 /* The content of a file, to free(), NUL terminated (its length in *len). */
 char *gem_get(const char *root, const char *sub, int idx, const char *name,
               size_t *len);
+
+/* gem_get() as role sees it (NULL: all), with the mtime of the entry. */
+char *gem_get_as(const char *root, const char *sub, int idx, const char *name,
+                 const char *role, size_t *len, int64_t *mtime);
 
 /* Writes the content of a file to fpath. */
 int gem_get_to_file(const char *root, const char *sub, int idx,

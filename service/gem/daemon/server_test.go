@@ -102,6 +102,11 @@ func TestProtocol(t *testing.T) {
 	if _, err := c.Get("Test", nil, 0, "L1"); code(err) != storage.ErrNotFile.Code {
 		t.Fatalf("get link: %v", err)
 	}
+	if r, err := c.Do("GET Test " + dname + " 0 M.1.A"); err != nil || r.Int(0) != 1000 || r.Int(1) == 0 {
+		t.Fatalf("get: mtime in the reply: %v", err)
+	} else {
+		r.Close()
+	}
 
 	// Copy the directory twice (shared), then change one copy.
 	h := hdr("Dcopy", "copy")
@@ -235,5 +240,82 @@ func TestTrashProtocol(t *testing.T) {
 		t.Fatal(err)
 	} else if _, err := c.Simple("RESTORE Test " + w[0]); code(err) != storage.ErrNotFound.Code {
 		t.Fatalf("restore what was purged: %v", err)
+	}
+}
+
+func TestPublicRole(t *testing.T) {
+	c, _ := start(t, storage.Limits{})
+	if _, err := c.Simple("CREATE_ROOT board:Test"); err != nil {
+		t.Fatal(err)
+	}
+	add := func(kind string, path []string, name string, mode uint16) {
+		t.Helper()
+		h := hdr(name, name)
+		h.SetFilemode(mode)
+		if _, _, err := c.Add(kind, "Test", path, -1, h, []byte("x")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	add("dir", nil, "D1", 0)
+	add("dir", nil, "D2", 0x0040) // FILE_BM
+	add("file", []string{"D1"}, "M.1.A", 0)
+	add("file", []string{"D1"}, "M.2.A", 0x0020) // FILE_HIDE
+	add("file", []string{"D1"}, "M.3.A", 0)
+	add("file", []string{"D2"}, "M.4.A", 0)
+
+	list := func(path, role string) (int, int, error) {
+		r, err := c.Do("LIST Test " + path + " 0 -1 " + role)
+		if err != nil {
+			return 0, 0, err
+		}
+		r.Close()
+		return int(r.Int(0)), int(r.Int(1)), nil
+	}
+	if count, n, err := list(".", "all"); err != nil || count != 2 || n != 2 {
+		t.Fatalf("all: %d %d %v", count, n, err)
+	}
+	if count, n, err := list(".", "public"); err != nil || count != 1 || n != 1 {
+		t.Fatalf("public: %d %d %v", count, n, err)
+	}
+	if count, _, err := list("D1", "public"); err != nil || count != 2 {
+		t.Fatalf("public D1: %d %v", count, err)
+	}
+	if _, _, err := list("D2", "public"); code(err) != storage.ErrNotFound.Code {
+		t.Fatalf("public through a hidden dir: %v", err)
+	}
+	if _, _, err := list(".", "nobody"); code(err) != "bbs_gem_bad_request" {
+		t.Fatalf("bad role: %v", err)
+	}
+	// Indexes are those the role lists: M.3.A is the second in public.
+	r, err := c.Do("ENTRY Test D1 -1 M.3.A public")
+	if err != nil || r.Int(0) != 1 {
+		t.Fatalf("public entry index: %v", err)
+	}
+	r.Close()
+	if r, err := c.Do("GET Test D1 -1 M.2.A public"); code(err) != storage.ErrNotFound.Code {
+		if r != nil {
+			r.Close()
+		}
+		t.Fatalf("public get of a hidden file: %v", err)
+	}
+	if r, err := c.Do("GET Test D2 -1 M.4.A public"); code(err) != storage.ErrNotFound.Code {
+		if r != nil {
+			r.Close()
+		}
+		t.Fatalf("public get below a hidden dir: %v", err)
+	}
+	if r, err := c.Do("GET Test D1 -1 M.1.A public"); err != nil || r.Int(0) != 1 || r.Int(1) == 0 {
+		t.Fatalf("public get: %v", err)
+	} else {
+		r.Close()
+	}
+	if _, err := c.Simple("LIST trash:board:Test . 0 -1 public"); code(err) != storage.ErrNoRoot.Code {
+		t.Fatalf("public trash: %v", err)
+	}
+	if _, err := c.Simple("CREATE_ROOT user:someone"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Simple("LIST user:someone . 0 -1 public"); code(err) != storage.ErrNoRoot.Code {
+		t.Fatalf("public mail folder: %v", err)
 	}
 }

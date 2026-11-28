@@ -11,8 +11,10 @@
 #include "util.hpp"
 #include "daemon/boardd/evbuffer.hpp"
 extern "C" {
+#include "bbs.h"
 #include "cmbbs.h"
 #include "daemon/boardd/boardd.h"
+#include "gem.h"
 }
 
 using grpc::ServerContext;
@@ -63,8 +65,14 @@ Status ManServiceImpl::List(ServerContext *context GCC_UNUSED, const ListRequest
   RETURN_ON_FAIL(CheckPathPermission(path));
 
   std::vector<FileHeader> entries;
-  if (!man_directory_->ListDirectory(path, &entries))
+  if (!man_directory_->ListDirectory(path, &entries)) {
+    // Hidden from the public, or not there: the same to the web.
+    if (IS_ENABLED(CONFIG_GEM) && (gem_last_error_is(GEM_ERR_NOT_FOUND) ||
+                                   gem_last_error_is(GEM_ERR_NO_ROOT) ||
+                                   gem_last_error_is(GEM_ERR_NOT_DIR)))
+      return Status(StatusCode::NOT_FOUND, "Not found");
     return Status(StatusCode::UNAVAILABLE, "Backend unavailable");
+  }
 
   for (const auto &e : entries) {
     if (!man_directory_->HasPermission(e))
@@ -107,7 +115,10 @@ Status ManServiceImpl::Article(ServerContext *context GCC_UNUSED,
 
   select_result_t result;
   Evbuffer buf;
-  if (select_article(buf.GetBuffer(), &result, &spec) < 0)
+  int ret = select_article(buf.GetBuffer(), &result, &spec);
+  if (ret == SELECT_ENOTFOUND)
+    return Status(StatusCode::NOT_FOUND, "Not found");
+  if (ret < 0)
     return Status(StatusCode::INTERNAL, "select_article failed");
   if (!buf.ConvertUTF8())
     return Status(StatusCode::INTERNAL, "convert utf8 failed");

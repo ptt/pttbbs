@@ -240,6 +240,13 @@ payload it announces. Replies are `OK ...` (then a payload) or
 where the client last saw it (-1 if unknown). Adding at the top of an area
 that has none makes it.
 
+Reads take a role: `all` (the default; mbbsd checks people itself) or
+`public` (the web, through mand): only boards and the site, without the
+entries marked hidden or for moderators (`FILE_HIDE`, `FILE_BM`). A path
+through such an entry is not found, and indexes are those the role lists,
+so a page of the web is one call however deep it is. The totals of a
+public listing leave out its hidden entries but not those deeper below.
+
 Entries are sent as 152-byte records (`gem_entry_t` of `include/gem.h`): the
 `fileheader_t`, then `uint8 kind` (1 file, 2 dir, 3 link, 4 missing, 5 index), 3 bytes
 of padding, `uint32 nodes` (dir: entries below), `uint64 bytes` (file: size;
@@ -251,9 +258,9 @@ dir: bytes below) and `int64 mtime`, little endian.
 | `ROOTS` | `OK <n>`, then a root per line |
 | `STAT <root>` | `OK <files> <dirs> <links> <missing> <bytes> <depth> <nodes>` |
 | `QUOTA <root>` | `OK <nodes> <dirs> <bytes> <width> <depth> <copy>` |
-| `LIST <root> <path> [<offset> [<limit>]]` | `OK <count> <n> <files> <dirs> <links> <missing> <bytes> <depth>`, then n records |
-| `ENTRY <entry>` | `OK <index> <target bytes>`, record, link target |
-| `GET <entry>` | `OK <bytes>`, content |
+| `LIST <root> <path> [<offset> [<limit> [<role>]]]` | `OK <count> <n> <files> <dirs> <links> <missing> <bytes> <depth>`, then n records |
+| `ENTRY <entry> [<role>]` | `OK <index> <target bytes>`, record, link target |
+| `GET <entry> [<role>]` | `OK <bytes> <mtime>`, content |
 | `ADD <file\|dir> <root> <path> <pos> <bytes>` + header + content | `OK <index>`, record (an empty name is made up) |
 | `SET_HEADER <entry>` + header | `OK`, record |
 | `PUT <entry> <bytes>` + content | `OK` |

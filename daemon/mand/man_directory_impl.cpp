@@ -36,6 +36,9 @@ class ManDirectoryImpl final : public ManDirectory {
 bool ManDirectoryImpl::HasPermission(const ManPath &path) {
   if (!HasBoardPermission(path.BoardName()))
     return false;
+  // gem.svc checks the path itself: mand reads as GEM_ROLE_PUBLIC.
+  if (IS_ENABLED(CONFIG_GEM))
+    return true;
   ManPath p(path.BoardName(), "");
   for (const auto &dir : path.Dirs()) {
     if (!HasPermission(p, dir))
@@ -63,18 +66,16 @@ static void GemDir(const ManPath &path, std::string *root, std::string *sub) {
 static bool GemList(const ManPath &path, std::vector<FileHeader> *entries) {
   std::string root, sub;
   GemDir(path, &root, &sub);
-  int count = 0;
-  if (gem_list(root.c_str(), sub.c_str(), 0, 0, nullptr, &count, nullptr) < 0)
-    return false;
-  std::vector<gem_entry_t> ents(count);
-  int n = count ? gem_list(root.c_str(), sub.c_str(), 0, count, ents.data(),
-                           nullptr, nullptr) : 0;
+  gem_entry_t *ents;
+  int n = gem_list_all(root.c_str(), sub.c_str(), GEM_ROLE_PUBLIC, &ents,
+                       nullptr);
   if (n < 0)
     return false;
   for (int i = 0; i < n; i++) {
     entries->emplace_back(&ents[i].header);
     entries->back().SetDir(ents[i].kind == GEM_KIND_DIR);
   }
+  free(ents);
   return true;
 }
 
@@ -97,15 +98,6 @@ bool ManDirectoryImpl::ListDirectory(const ManPath &path,
 
 bool ManDirectoryImpl::HasPermission(const ManPath &path,
                                      const std::string &name) {
-  if (IS_ENABLED(CONFIG_GEM)) {
-    std::string root, sub;
-    GemDir(path, &root, &sub);
-    gem_entry_t e;
-    if (gem_entry(root.c_str(), sub.c_str(), -1, name.c_str(), &e, nullptr,
-                  nullptr, 0) < 0)
-      return false;
-    return HasPermission(FileHeader(&e.header));
-  }
   File f(path.FullPath() + "/.DIR");
   if (!f)
     return false;
