@@ -102,8 +102,9 @@ func (c *cachedResolver) LookupUsernum(usernum int) (string, uint32, bool) {
 }
 
 // ConvertParsedComments turns the comments parsed from a legacy article into
-// comments and votes (the last 推 or 噓 of each user counts), resolving the
-// person IDs of their authors as of the time of each comment.
+// comments and votes (the last 推 or 噓 of each user counts, with where it
+// came from), resolving the person IDs of their authors as of the time of
+// each comment.
 func ConvertParsedComments(parsed []*ParsedComment, users UserResolver) (comments []*model.Comment, votes []*model.VoteRecord, upvotes, downvotes int) {
 	// Keyed like model.EncodeVoteKey, so that a user who changed the case
 	// of the ID has one vote, as in votes.pebble.
@@ -119,9 +120,9 @@ func ConvertParsedComments(parsed []*ParsedComment, users UserResolver) (comment
 		if vote != model.VoteNeutral {
 			key := string(model.EncodeVoteKey(0, personID, pc.CreatorName))
 			if v, ok := voteOf[key]; ok {
-				v.Vote, v.PersonName, v.CreatedAt = vote, pc.CreatorName, pc.CTime
+				v.Vote, v.PersonName, v.CreatedAt, v.IP = vote, pc.CreatorName, pc.CTime, pc.IP
 			} else {
-				v = &model.VoteRecord{PersonName: pc.CreatorName, PersonID: personID, Vote: vote, CreatedAt: pc.CTime}
+				v = &model.VoteRecord{PersonName: pc.CreatorName, PersonID: personID, Vote: vote, CreatedAt: pc.CTime, IP: pc.IP}
 				voteOf[key] = v
 				votes = append(votes, v)
 			}

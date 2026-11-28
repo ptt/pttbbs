@@ -3381,7 +3381,6 @@ typedef struct {
     int count;
     int up_count;
     int down_count;
-    int show_ip;    // where the votes came from: for sysops only
     int ent;
     fileheader_t fhdr;
     const char *direct;
@@ -3422,9 +3421,12 @@ vote_view_renderer(int idx, PSB_CTX *ctx)
                         (v->score < 0) ? ANSI_COLOR(1;31) "¼N   (-1)" ANSI_RESET :
                                         ANSI_COLOR(1;37) "¨ú®ø ( 0)" ANSI_RESET;
 
+    // Deviation: Lemmy shows voters' IPs to admins only; here everyone sees
+    // them, as votes come from comments, which show IPs. Web (bof actors
+    // with a person) still hides them.
     prints("  [%3d]  %-19s  %s  " ANSI_COLOR(1;36) "%-12s" ANSI_RESET "  %s",
            idx + 1, timestr, vtype, v->creator,
-           (cx->show_ip && v->bbs_from[0]) ? v->bbs_from : "-");
+           v->bbs_from[0] ? v->bbs_from : "-");
     return 0;
 }
 
@@ -3486,7 +3488,6 @@ static int
 view_post_votes(int ent, const fileheader_t *fhdr, const char *direct)
 {
     vote_view_ctx_t cx = {
-        .show_ip = HasUserPerm(PERM_SYSOP),
         .ent = ent,
         .fhdr = *fhdr,
         .direct = direct,
