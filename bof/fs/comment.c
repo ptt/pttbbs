@@ -474,11 +474,11 @@ bof_fs_edit_comment(void *ctx GCC_UNUSED, const bof_actor_t *actor,
     int matched;
     bof_error_t err;
 
-    // bof_edit_comment() has checked the input (one line of plain text
-    // that fits) and that the actor is the creator.
+    // bof_edit_comment() has checked the input (plain text that fits) and
+    // that the actor is the creator; a line in the file holds one line.
     if (!post->bbs_dir || !fh || !fh->filename[0] || req->bbs_floor <= 0 ||
         !req->bbs_creator || !req->bbs_old_content || !req->content ||
-        !actor || !actor->name)
+        strchr(req->content, '\n') || !actor || !actor->name)
         return BOF_ERR_INVALID_BODY_FIELD;
 
     setdirpath(path, post->bbs_dir, fh->filename);

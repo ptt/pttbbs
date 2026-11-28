@@ -722,13 +722,14 @@ bof_edit_comment(const bof_actor_t *actor, const bof_edit_comment_t *req,
     bof_error_t err;
     GATE_POST(bof_edit_comment_t, post);
     CHECK(actor, req->post.community, MAY_COMMENT, req->post.bbs_header);
-    // What every backend needs: one line of plain text that fits.
+    // What every backend needs: plain text that fits; lines apart by '\n'
+    // (only nest.svc keeps several; the files backend refuses them).
     if (!req->post.bbs_header || req->bbs_floor <= 0 || !req->bbs_creator ||
         !req->bbs_old_content || !req->content || !actor || !actor->name ||
         strlen(req->content) >= sizeof(((bof_comment_t *)0)->content))
         return BOF_ERR_INVALID_BODY_FIELD;
     for (const char *p = req->content; *p; p++)
-        if ((unsigned char)*p < ' ' || *p == 0x7f)
+        if (((unsigned char)*p < ' ' && *p != '\n') || *p == 0x7f)
             return BOF_ERR_INVALID_BODY_FIELD;
     // Only by its creator, as Lemmy's EditComment (also for callers
     // without a person, e.g. mbbsd, which check it themselves).

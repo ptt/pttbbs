@@ -1154,13 +1154,13 @@ bof_error_t bof_get_comments(const bof_get_comments_t *req,
                              bof_get_comments_response_t *out);
 
 /* Lemmy's EditComment, by its creator (the actor must be bbs_creator, else
- * no_comment_edit_allowed): the content (one line, no control codes, in
- * the room of the old in files, else invalid_body_field) replaces what the
- * comment at bbs_floor says, which must still be by bbs_creator and say
- * bbs_old_content (else couldnt_update_comment); the post before is kept
- * in the time capsule, with a note of the edit. With post.bbs_index, the
- * record of the post gets the time of the change (out->bbs_header). Lines
- * appended meanwhile are kept. */
+ * no_comment_edit_allowed): the content (no control codes but '\n' between
+ * lines; in files one line in the room of the old; else invalid_body_field)
+ * replaces what the comment at bbs_floor says, which must still be by
+ * bbs_creator and say bbs_old_content (else couldnt_update_comment); the
+ * post before is kept in the time capsule, with a note of the edit. With
+ * post.bbs_index, the record of the post gets the time of the change
+ * (out->bbs_header). Lines appended meanwhile are kept. */
 typedef struct bof_edit_comment_t {
     bof_post_ref_t post;
     int bbs_floor;

@@ -1096,14 +1096,21 @@ test_comment_checks(void)
     bof_actor_t bob = { .name = "bob" };
     EXPECT_INT(bof_edit_comment(&bob, &ed, &res),
                BOF_ERR_COULDNT_UPDATE_COMMENT);
-    // Not one line of plain text.
+    // Not plain text.
     ed.bbs_creator = "alice";
     ed.content = "a\ttab";
     EXPECT_INT(bof_edit_comment(&alice, &ed, &res),
                BOF_ERR_INVALID_BODY_FIELD);
+    // Several lines, as nest.svc keeps them.
+    reply("GET_COMMENTS_FILE",
+          "OK 1 1\n1\talice\t1700000000\t-\t1\t\t5\told\tlines");
+    reply("EDIT_COMMENT_FILE", "OK 2");
+    reply("RENDER_FILE", "OK");
+    ed.bbs_old_content = "old\nlines";
     ed.content = "two\nlines";
-    EXPECT_INT(bof_edit_comment(&alice, &ed, &res),
-               BOF_ERR_INVALID_BODY_FIELD);
+    forget();
+    EXPECT_OK(bof_edit_comment(&alice, &ed, &res));
+    EXPECT(received("EDIT_COMMENT_FILE " BOARD " M.540.A.AAA 1 alice 42 9"));
 
     // Without its floor: a line of a comment merged of several.
     reply("GET_COMMENTS_FILE",
