@@ -6,7 +6,7 @@ include $(SRCROOT)/pttbbs.mk
 all: viewdir
 
 # With CONFIG_NEST the .DIR of boards is the cache of nest.svc:
-# viewdir is read-only by default (see nestBuild).
+# L sets modes through nest.svc (see nestBuild).
 VIEWDIR_LDFLAGS:=	$(if $(call DEF_CHECK,CONFIG_NEST),-X main.nestBuild=YES)
 
 viewdir:

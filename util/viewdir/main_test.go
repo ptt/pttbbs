@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -833,5 +835,111 @@ func TestLoadRCFile(t *testing.T) {
 	}
 	if len(paths) != 1 || paths[0] != filepath.Join(tmp, "boards", "T", "Test") {
 		t.Errorf("unexpected paths %v", paths)
+	}
+}
+
+func TestBoardOf(t *testing.T) {
+	home, board := boardOf("/home/bbs/boards/P/PttBug/.DIR")
+	if home != "/home/bbs" || board != "PttBug" {
+		t.Errorf("boardOf(board) = %q, %q", home, board)
+	}
+	for _, p := range []string{
+		"/home/bbs/home/s/sysop/.DIR",
+		"/home/bbs/boards/P/PttBug/D.123/.DIR",
+		"/home/bbs/boards/P/PttBug/M.1.A.ABC",
+	} {
+		if _, b := boardOf(p); b != "" {
+			t.Errorf("boardOf(%q) = %q; want none", p, b)
+		}
+	}
+}
+
+// fakeNest answers each connection with reply and sends what it got to got.
+func fakeNest(t *testing.T, reply string) chan string {
+	sock := filepath.Join(t.TempDir(), "nest.sock")
+	ln, err := net.Listen("unix", sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	t.Setenv("NEST_SOCK", sock)
+	got := make(chan string, 4)
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			line, _ := bufio.NewReader(c).ReadString('\n')
+			got <- strings.TrimSpace(line)
+			c.Write([]byte(reply + "\n"))
+			c.Close()
+		}
+	}()
+	return got
+}
+
+func nestBoardApp(t *testing.T) *AppState {
+	t.Cleanup(func() { nestBuild = "" })
+	nestBuild = "YES"
+	bdir := filepath.Join(t.TempDir(), "boards", "T", "Test")
+	if err := os.MkdirAll(bdir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	dirPath := filepath.Join(bdir, ".DIR")
+	createMockDirFile(t, dirPath, []ArticleHeader{
+		{Filename: "M.100.A.ABC", Owner: "SYSOP", Date: "01/01", Title: "Article 1"},
+	})
+	arts, err := parseDirFile(dirPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &AppState{baseDir: bdir, dirPath: dirPath, allArticles: arts,
+		articles: arts, mode: ModeDirView, outputEnc: "utf8",
+		termWidth: 80, termHeight: 24}
+}
+
+func TestToggleSolveNest(t *testing.T) {
+	got := fakeNest(t, "OK")
+	app := nestBoardApp(t)
+	app.handleInput([]byte("L"))
+	app.handleInput([]byte("y"))
+	if cmd := <-got; cmd != "SET_META_FILE Test M.100.A.ABC 16 0" {
+		t.Errorf("sent %q", cmd)
+	}
+	disk, _ := parseDirFile(app.dirPath)
+	if app.articles[0].Filemode&FILE_SOLVED == 0 || disk[0].Filemode&FILE_SOLVED == 0 {
+		t.Errorf("FILE_SOLVED not set: memory %x, disk %x; notice %q",
+			app.articles[0].Filemode, disk[0].Filemode, app.notice)
+	}
+}
+
+func TestToggleSolveNestFails(t *testing.T) {
+	fakeNest(t, "ERR post not found")
+	app := nestBoardApp(t)
+	app.handleInput([]byte("L"))
+	app.handleInput([]byte("y"))
+	disk, _ := parseDirFile(app.dirPath)
+	if app.articles[0].Filemode&FILE_SOLVED != 0 || disk[0].Filemode&FILE_SOLVED != 0 {
+		t.Errorf("FILE_SOLVED set although nest.svc failed")
+	}
+	if !strings.Contains(app.notice, "post not found") {
+		t.Errorf("notice = %q", app.notice)
+	}
+}
+
+func TestToggleSolveNestNotBoard(t *testing.T) {
+	t.Cleanup(func() { nestBuild = "" })
+	nestBuild = "YES"
+	tmpDir := t.TempDir()
+	dirPath := filepath.Join(tmpDir, ".DIR")
+	createMockDirFile(t, dirPath, []ArticleHeader{{Filename: "M.100", Title: "A"}})
+	arts, _ := parseDirFile(dirPath)
+	app := &AppState{baseDir: tmpDir, dirPath: dirPath, allArticles: arts,
+		articles: arts, mode: ModeDirView, outputEnc: "utf8",
+		termWidth: 80, termHeight: 24}
+	app.handleInput([]byte("L"))
+	if app.mode != ModeDirView || app.notice == "" {
+		t.Errorf("L on a non-board .DIR: mode %v, notice %q", app.mode, app.notice)
 	}
 }

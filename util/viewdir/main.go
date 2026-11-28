@@ -1,16 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unicode/utf8"
 
 	"golang.org/x/term"
@@ -18,12 +21,12 @@ import (
 
 // nestBuild is set at build time (-ldflags -X main.nestBuild=YES, see
 // Makefile) when pttbbs.conf enables CONFIG_NEST: the .DIR of a board is
-// then only the cache of nest.svc, and a mode written into it here is lost
-// (mbbsd sets FILE_SOLVED through BoF, bof_bbs_set_post_modes). So viewdir
-// is read-only by default there.
+// then only the cache of nest.svc, so L sets the mode in nest.svc first
+// (SET_META_FILE, as bof's set_meta()) and then in the .DIR, and refuses
+// any .DIR that is not of a board.
 var nestBuild string
 
-// readOnly: never write .DIR (-readonly).
+// readOnly: never write .DIR or nest.svc (-readonly).
 var readOnly bool
 
 // RawFileHeader represents fileheader_t structure in PTT (128 bytes)
@@ -51,7 +54,11 @@ type ArticleHeader struct {
 	Filemode uint16
 }
 
-const FILE_SOLVED uint16 = 0x10
+const (
+	FILE_SOLVED    uint16 = 0x10
+	FILE_PETITION  uint16 = 0x40
+	FILE_ANONYMOUS uint16 = 0x80
+)
 
 type ViewMode int
 
@@ -997,8 +1004,8 @@ func main() {
 	var encFlag string
 	flag.StringVar(&encFlag, "encoding", "", "Output encoding (utf8 or big5)")
 	flag.StringVar(&encFlag, "e", "", "Output encoding (utf8 or big5), shorthand")
-	flag.BoolVar(&readOnly, "readonly", nestBuild != "",
-		"Never write .DIR (L does nothing); the default when built with CONFIG_NEST")
+	flag.BoolVar(&readOnly, "readonly", false,
+		"Never write .DIR or nest.svc (L does nothing)")
 	flag.Parse()
 
 	paths := flag.Args()
@@ -1204,8 +1211,14 @@ func (app *AppState) handleInput(input []byte) bool {
 			}
 		case 'L': // Toggle FILE_SOLVED with y/n confirmation
 			if readOnly && (app.mode == ModeDirView || app.mode == ModeFileView) {
-				app.notice = " 唯讀模式 (-readonly；nest.svc 的 .DIR 只是快取)：請在 BBS 裡用 L 設定"
+				app.notice = " 唯讀模式 (-readonly)"
 				return false
+			}
+			if nestBuild != "" && (app.mode == ModeDirView || app.mode == ModeFileView) {
+				if _, board := boardOf(app.dirPath); board == "" {
+					app.notice = " 不是看板的 .DIR (nest.svc 只管看板)：請在 BBS 裡用 L 設定"
+					return false
+				}
 			}
 			if (app.mode == ModeDirView || app.mode == ModeFileView) && len(app.articles) > 0 && app.selectedIndex >= 0 && app.selectedIndex < len(app.articles) {
 				app.prevMode = app.mode
@@ -1290,23 +1303,84 @@ func (app *AppState) toggleSolve() {
 	art := app.articles[app.selectedIndex]
 	newFilemode := art.Filemode ^ FILE_SOLVED
 
-	app.articles[app.selectedIndex].Filemode = newFilemode
-
 	idxInAll := app.findArticleIndexInAll(art)
-	if idxInAll != -1 {
-		app.allArticles[idxInAll].Filemode = newFilemode
-	} else {
+	if idxInAll == -1 {
 		idxInAll = app.selectedIndex
 	}
 
+	var before func(raw *RawFileHeader) error
+	if nestBuild != "" {
+		home, board := boardOf(app.dirPath)
+		before = func(raw *RawFileHeader) error {
+			if string(cString(raw.Filename[:])) != art.Filename {
+				return fmt.Errorf(".DIR 已變動，請重新進入")
+			}
+			if board == "" {
+				return fmt.Errorf("不是看板的 .DIR")
+			}
+			money := int32(raw.Multi)
+			if newFilemode&(FILE_ANONYMOUS|FILE_PETITION) != 0 {
+				money = 0
+			}
+			return nestSetMeta(home, board, art.Filename, newFilemode, money)
+		}
+	}
+	if err := updateArticleFilemode(app.dirPath, idxInAll, newFilemode, before); err != nil {
+		app.notice = " 設定失敗: " + err.Error()
+		return
+	}
+
+	app.articles[app.selectedIndex].Filemode = newFilemode
+	app.allArticles[idxInAll].Filemode = newFilemode
 	if app.currentArticle.Filename == art.Filename {
 		app.currentArticle.Filemode = newFilemode
 	}
-
-	_ = updateArticleFilemode(app.dirPath, idxInAll, newFilemode)
 }
 
-func updateArticleFilemode(dirPath string, articleIdx int, newFilemode uint16) error {
+// boardOf returns BBSHOME and the board when dirPath is the .DIR of a board
+// ($BBSHOME/boards/<c>/<board>/.DIR), else "", "".
+func boardOf(dirPath string) (home, board string) {
+	if filepath.Base(dirPath) != ".DIR" {
+		return "", ""
+	}
+	bdir := filepath.Dir(dirPath)
+	boards := filepath.Dir(filepath.Dir(bdir))
+	if filepath.Base(boards) != "boards" {
+		return "", ""
+	}
+	return filepath.Dir(boards), filepath.Base(bdir)
+}
+
+// nestSetMeta sets the filemode and money of a post in nest.svc.
+func nestSetMeta(home, board, file string, filemode uint16, money int32) error {
+	sock := os.Getenv("NEST_SOCK")
+	if sock == "" {
+		sock = filepath.Join(home, "run", "nest.svc.sock")
+	}
+	conn, err := net.DialTimeout("unix", sock, 3*time.Second)
+	if err != nil {
+		return fmt.Errorf("nest.svc: %v", err)
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
+	if _, err := fmt.Fprintf(conn, "SET_META_FILE %s %s %d %d\n", board, file, filemode, money); err != nil {
+		return fmt.Errorf("nest.svc: %v", err)
+	}
+	resp, err := bufio.NewReader(conn).ReadString('\n')
+	resp = strings.TrimSpace(resp)
+	if err != nil && resp == "" {
+		return fmt.Errorf("nest.svc: %v", err)
+	}
+	if resp != "OK" && !strings.HasPrefix(resp, "OK ") {
+		return fmt.Errorf("nest.svc: %s", resp)
+	}
+	return nil
+}
+
+// updateArticleFilemode writes the filemode of a record; before (if not
+// nil) sees the record first and stops the write by an error.
+func updateArticleFilemode(dirPath string, articleIdx int, newFilemode uint16,
+	before func(raw *RawFileHeader) error) error {
 	if articleIdx < 0 {
 		return fmt.Errorf("invalid article index")
 	}
@@ -1328,6 +1402,11 @@ func updateArticleFilemode(dirPath string, articleIdx int, newFilemode uint16) e
 		return err
 	}
 
+	if before != nil {
+		if err := before(&raw); err != nil {
+			return err
+		}
+	}
 	raw.Filemode = newFilemode
 
 	var outBuf bytes.Buffer
