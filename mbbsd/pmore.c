@@ -1613,7 +1613,6 @@ mf_display()
 
     mf_cmt_ctx = (comment_ctx_t){
         .buf_end = mf.end,
-        .show_comment_ip = 1,
         .max_width = t_columns - 1,
         .theme = comment_pref_theme(),
         .cur_is_op = 0,

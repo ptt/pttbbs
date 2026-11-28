@@ -14,7 +14,7 @@
 #endif
 
 enum {
-    COMMENT_THEME_SIMPLE = 0,
+    COMMENT_THEME_SIMPLE = 0,   /* the default */
     COMMENT_THEME_ALIGNED,
     COMMENT_THEME_CLASSIC,
     COMMENT_THEMES
@@ -29,7 +29,7 @@ typedef struct {
     const char *color_mark_more;
     const char *color_commenter;
     const char *color_commenter_op;
-    const char *color_commenter_more;   /* NULL: no userid on further lines */
+    const char *color_commenter_more;   /* NULL: blank up to the text */
     const char *color_commenter_more_op;
     const char *color_comment_text;
     const char *color_comment_text_op;
@@ -39,7 +39,6 @@ typedef struct {
 /* Context passed for comment rendering */
 typedef struct comment_ctx {
     const unsigned char *buf_end;       /* mf.end */
-    int show_comment_ip;                /* mf.show_comment_ip */
     int max_width;                      /* usually t_columns - 1 (e.g. 79) */
     int theme;                          /* bpref.comment_theme */
     int cur_is_op;                      /* state: is the line being drawn by OP */

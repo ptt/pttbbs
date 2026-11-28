@@ -272,27 +272,27 @@ static const comment_theme_t comment_themes[] = {
         .color_mark_more = ANSI_COLOR(1;31),
         .color_commenter = COLOR_COMMENTER,
         .color_commenter_op = COLOR_COMMENTER_OP,
-        .color_commenter_more = COLOR_COMMENTER,
-        .color_commenter_more_op = COLOR_COMMENTER_OP,
+        .color_commenter_more = ANSI_COLOR(0;33),
+        .color_commenter_more_op = NULL,   // blank: the OP is well known
         .color_comment_text = COLOR_COMMENT_TEXT,
         .color_comment_text_op = COLOR_COMMENT_TEXT_OP,
         .color_commenter_info = COLOR_COMMENTER_INFO,
     },
-    // The userid on every line keeps the left edge filled; dim on further
-    // lines, so the eye finds where each comment starts.
+    // Further lines: an arrow, then the text under that of the first line.
     [COMMENT_THEME_SIMPLE] = {
         .name = "單純易讀",
+        .mark_more = "→",
+        .color_mark_more = ANSI_COLOR(1;31),
         .color_commenter = ANSI_COLOR(0;33),
-        .color_commenter_op = ANSI_COLOR(1;36),
-        .color_commenter_more = ANSI_COLOR(1;30),
-        .color_commenter_more_op = ANSI_COLOR(1;30),
+        .color_commenter_op = COLOR_COMMENTER_OP,
         .color_commenter_info = COLOR_COMMENTER_INFO,
     },
+    // The text in one column, further lines under it.
     [COMMENT_THEME_ALIGNED] = {
         .name = "對齊顯示",
         .align = 1,
         .color_commenter = ANSI_COLOR(0;33),
-        .color_commenter_op = ANSI_COLOR(1;36),
+        .color_commenter_op = COLOR_COMMENTER_OP,
         .color_commenter_info = COLOR_COMMENTER_INFO,
     },
 };
@@ -320,7 +320,15 @@ comment_theme_name(int theme_idx)
 const char *
 comment_theme_menu_options(void)
 {
-    return "單純易讀\t對齊顯示\t經典醒目";
+    static char buf[64];
+    if (!buf[0]) {
+        for (int i = 0; i < COMMENT_THEMES; i++) {
+            if (i)
+                strlcat(buf, "\t", sizeof(buf));
+            strlcat(buf, comment_themes[i].name, sizeof(buf));
+        }
+    }
+    return buf;
 }
 
 static int s_comment_pref_theme = COMMENT_THEME_SIMPLE;
@@ -448,21 +456,16 @@ print_mark(const char *mark, const char *color)
     return (int)strlen(mark) + 1;
 }
 
-/* Prints "userid: " (spaces if no color), aligned as the theme says;
- * returns its width. */
+/* Prints "userid: ", the userid padded to IDLEN if the theme aligns (so
+ * colons line up, as PTT's aligned pushes); returns its width. */
 static int
 print_commenter(const comment_theme_t *thm, const char *color,
                 const char *user, int user_len)
 {
     int pad = thm->align && user_len < IDLEN ? IDLEN - user_len : 0;
-    prints("%*s", pad, "");
-    if (color) {
-        outs(color);
-        prints("%.*s:", user_len, user);
-        outs(ANSI_RESET " ");
-    } else {
-        prints("%*s", user_len + 2, "");
-    }
+    outs(color);
+    prints("%.*s%*s:", user_len, user, pad, "");
+    outs(ANSI_RESET " ");
     return pad + user_len + 2;
 }
 
@@ -471,10 +474,19 @@ static int
 print_more_prefix(const comment_ctx_t *ctx, const comment_more_t *m)
 {
     const comment_theme_t *thm = comment_get_theme(ctx->theme);
+    const char *color = m->is_op ? thm->color_commenter_more_op :
+                                   thm->color_commenter_more;
     int w = print_mark(thm->mark_more, thm->color_mark_more);
-    return w + print_commenter(thm, m->is_op ? thm->color_commenter_more_op :
-                                               thm->color_commenter_more,
-                               m->user, m->user_len);
+    if (color)
+        return w + print_commenter(thm, color, m->user, m->user_len);
+
+    // Blank up to where the text of the first line starts.
+    int head = (thm->mark_first ? (int)strlen(thm->mark_first) + 1 : 0) +
+               (thm->align && m->user_len < IDLEN ? IDLEN : m->user_len) + 2;
+    if (head <= w)
+        return w;
+    prints("%*s", head - w, "");
+    return head;
 }
 
 /* Prints the text of a comment from p up to the end of its line (or end);
@@ -541,33 +553,18 @@ comment_render_modern_header(comment_ctx_t *ctx,
     const char *eol = comment_render_content(ctx, h.text, end, h.is_op,
                                              h.is_tombstone);
 
-    /* Right: what fits of the address and time, then the floor. */
+    /* Right: the time if it fits, then the floor. As PTT, "MM/DD HH:MM"
+     * without the year or address: raw mode shows them. */
     int floor_width = h.floor_len + 2 + h.is_edited;
     int avail = ctx->max_width - vgetx();
     if (avail >= floor_width + 1) {
-        static const struct { int ip, date_len; } forms[] = {
-            { 1, 10 }, { 1, 5 }, { 0, 10 }, { 0, 5 }, { 0, 0 },
-        };
         const char *info_color = thm->color_commenter_info ?
                                  thm->color_commenter_info : COLOR_COMMENTER_INFO;
-        int room = avail - floor_width - 1, len = 0;
-        char info[64];
-
-        for (size_t i = 0; i < sizeof(forms) / sizeof(forms[0]); i++) {
-            int ip = forms[i].ip, dl = forms[i].date_len;
-            if (ip && (!ctx->show_comment_ip || !h.ip_len))
-                continue;
-            len = snprintf(info, sizeof(info), "%.*s%s%.*s%s%.5s",
-                           ip ? h.ip_len : 0, h.ip, ip ? " " : "",
-                           dl, h.date, dl ? " " : "", h.date + 11);
-            if (len <= room)
-                break;
-            len = 0;
-        }
-        if (len > 0) {
+        const int len = 11;     // "MM/DD HH:MM"
+        if (len <= avail - floor_width - 1) {
             prints("%*s", avail - len - 1 - floor_width, "");
             outs(info_color);
-            outs(info);
+            prints("%.5s %.5s", h.date, h.date + 11);
             outs(ANSI_RESET " ");
         } else if (avail > floor_width) {
             prints("%*s", avail - floor_width, "");
