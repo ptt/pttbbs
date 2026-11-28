@@ -3121,8 +3121,7 @@ pvcm_cmd_history(cmd_ctx_t *ctx) {
                             r->deleted ? "刪除/移除" : "修改",
                             reason[0] ? " 理由: " : "", reason, content);
         }
-        struct pmore_callbacks cb = {0};
-        pmore2_inmemory(buf, len, 0, NULL, &cb);
+        more_inmemory(buf, (int)len, YEA);
         free(buf);
     }
     free(revs);
